@@ -18,6 +18,15 @@ target_sources(${PROJECT_NAME} PRIVATE
     camera/Camera.cpp
     frame/Frame.cpp
     renderer/Renderer.cpp
+    scene/light/Light.cpp
+    scene/surface/geometry/Geometry.cpp
+    scene/surface/material/sampler/Sampler.cpp
+    scene/surface/material/Material.cpp
+    scene/surface/Surface.cpp
+    scene/volume/spatial_field/SpatialField.cpp
+    scene/volume/Volume.cpp
+    scene/Group.cpp
+    scene/Instance.cpp
     scene/World.cpp
     Object.cpp
     VisionarayDevice.cpp
