@@ -48,6 +48,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     VisionarayDeviceDebugFactory.cpp
     VisionarayDeviceQueries.cpp
     VisionarayGlobalState.cpp
+    VisionarayLibrary.cpp
 )
 target_link_libraries(${PROJECT_NAME}
     PUBLIC visionaray::visionaray anari::anari anari::helium anari::anari_library_debug)
