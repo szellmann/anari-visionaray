@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "EXASTITCH_DEVICE",
+    "name": "VISIONARAY_DEVICE",
     "type": "device",
     "dependencies": [
       "anari_core_1_0",
