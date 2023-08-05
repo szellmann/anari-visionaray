@@ -9,33 +9,29 @@
 
 namespace visionaray {
 
+struct PRD
+{
+  int x, y;
+};
+
 struct PixelSample
 {
   float4 color;
   float depth;
 };
 
-enum class RenderMode
+struct VisionarayRenderer
 {
-  DEFAULT,
-  PRIM_ID,
-  GEOM_ID,
-  INST_ID,
-  NG,
-  NG_ABS,
-  NS,
-  NS_ABS,
-  RAY_UVW,
-  HIT_SURFACE,
-  HIT_VOLUME,
-  BACKFACE,
-  HAS_MATERIAL,
-  GEOMETRY_ATTRIBUTE_0,
-  GEOMETRY_ATTRIBUTE_1,
-  GEOMETRY_ATTRIBUTE_2,
-  GEOMETRY_ATTRIBUTE_3,
-  GEOMETRY_ATTRIBUTE_COLOR,
-  OPACITY_HEATMAP
+  VSNRAY_FUNC
+  PixelSample renderSample(Ray ray, PRD &prd) {
+    PixelSample result;
+    result.color = float4(ray.dir,1.f);
+    result.depth = 1.f;
+    return result;
+  }
+
+  float4 m_bgColor{float3(0.f), 1.f};
+  float m_ambientRadiance{1.f};
 };
 
 struct Renderer : public Object
@@ -45,19 +41,13 @@ struct Renderer : public Object
 
   virtual void commit() override;
 
-//  PixelSample renderSample(Ray ray, const World &w) const;
-//
   static Renderer *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
 
-// private:
-//  float3 shadeRay(const Ray &ray, const VolumeRay &vray, const World &w) const;
-//
-//  float4 m_bgColor{float3(0.f), 1.f};
-//  float m_ambientRadiance{1.f};
-//  RenderMode m_mode{RenderMode::DEFAULT};
-//
-//  helium::IntrusivePtr<Array1D> m_heatmap;
+  VisionarayRenderer getInternalRenderer() const { return vrend; }
+
+ private:
+  VisionarayRenderer vrend;
 };
 
 } // namespace visionaray

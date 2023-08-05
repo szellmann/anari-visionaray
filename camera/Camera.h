@@ -4,8 +4,21 @@
 #pragma once
 
 #include "../Object.h"
+// visionaray
+#include "visionaray/pinhole_camera.h"
+#include "visionaray/matrix_camera.h"
 
 namespace visionaray {
+
+struct VisionarayCamera
+{
+  enum Type { Matrix, Pinhole, };
+  Type type;
+  union {
+    matrix_camera asMatrixCam;
+    pinhole_camera asPinholeCam;
+  };
+};
 
 struct Camera : public Object
 {
@@ -17,12 +30,13 @@ struct Camera : public Object
   static Camera *createInstance(
       std::string_view type, VisionarayGlobalState *state);
 
-  virtual visionaray::ray createRay(const vec2f &screen) const = 0;
+  VisionarayCamera getInternalCamera() const { return vcam; }
 
  protected:
-  visionaray::vec3f m_pos;
-  visionaray::vec3f m_dir;
-  visionaray::vec3f m_up;
+  VisionarayCamera vcam;
+  vec3f m_pos;
+  vec3f m_dir;
+  vec3f m_up;
 };
 
 } // namespace visionaray

@@ -5,71 +5,8 @@
 
 namespace visionaray {
 
-// Helper functions ///////////////////////////////////////////////////////////
+// Renderer definitions ///////////////////////////////////////////////////////
 
-static RenderMode renderModeFromString(const std::string &name)
-{
-  if (name == "primID")
-    return RenderMode::PRIM_ID;
-  else if (name == "geomID")
-    return RenderMode::GEOM_ID;
-  else if (name == "instID")
-    return RenderMode::INST_ID;
-  else if (name == "Ng")
-    return RenderMode::NG;
-  else if (name == "Ng.abs")
-    return RenderMode::NG_ABS;
-  else if (name == "uvw")
-    return RenderMode::RAY_UVW;
-  else if (name == "hitSurface")
-    return RenderMode::HIT_SURFACE;
-  else if (name == "hitVolume")
-    return RenderMode::HIT_VOLUME;
-  else if (name == "backface")
-    return RenderMode::BACKFACE;
-  else if (name == "geometry.attribute0")
-    return RenderMode::GEOMETRY_ATTRIBUTE_0;
-  else if (name == "geometry.attribute1")
-    return RenderMode::GEOMETRY_ATTRIBUTE_1;
-  else if (name == "geometry.attribute2")
-    return RenderMode::GEOMETRY_ATTRIBUTE_2;
-  else if (name == "geometry.attribute3")
-    return RenderMode::GEOMETRY_ATTRIBUTE_3;
-  else if (name == "geometry.color")
-    return RenderMode::GEOMETRY_ATTRIBUTE_COLOR;
-  else if (name == "opacityHeatmap")
-    return RenderMode::OPACITY_HEATMAP;
-  else
-    return RenderMode::DEFAULT;
-}
-
-// static float3 makeRandomColor(uint32_t i)
-// {
-//   const uint32_t mx = 13 * 17 * 43;
-//   const uint32_t my = 11 * 29;
-//   const uint32_t mz = 7 * 23 * 63;
-//   const uint32_t g = (i * (3 * 5 * 127) + 12312314);
-//   return float3((g % mx) * (1.f / (mx - 1)),
-//       (g % my) * (1.f / (my - 1)),
-//       (g % mz) * (1.f / (mz - 1)));
-// }
-// 
-// static float3 boolColor(bool pred)
-// {
-//   return pred ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
-// }
-// 
-// static float3 readAttributeValue(Attribute a, const Ray &r, const World &w)
-// {
-//   const Instance *inst = w.instances()[r.instID];
-//   const Surface *surface = inst->group()->surfaces()[r.geomID];
-//   const Geometry *geom = surface->geometry();
-//   const auto v = geom->getAttributeValue(a, r);
-//   return float3(v.x, v.y, v.z);
-// }
-// 
-// // Renderer definitions ///////////////////////////////////////////////////////
-// 
 Renderer::Renderer(VisionarayGlobalState *s) : Object(ANARI_RENDERER, s)
 {
   s->objectCounts.renderers++;
@@ -77,14 +14,6 @@ Renderer::Renderer(VisionarayGlobalState *s) : Object(ANARI_RENDERER, s)
   Array1DMemoryDescriptor md;
   md.elementType = ANARI_FLOAT32_VEC3;
   md.numItems = 4;
-  //m_heatmap = new Array1D(s, md);
-  //m_heatmap->refDec(helium::RefType::PUBLIC);
-
-  //auto *colors = m_heatmap->beginAs<float3>();
-  //colors[0] = float3(0.f, 0.f, 1.f);
-  //colors[1] = float3(1.f, 0.f, 0.f);
-  //colors[2] = float3(1.f, 1.f, 0.f);
-  //colors[3] = float3(1.f, 1.f, 1.f);
 }
 
 Renderer::~Renderer()
@@ -94,9 +23,8 @@ Renderer::~Renderer()
 
 void Renderer::commit()
 {
-//  m_bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
-//  m_ambientRadiance = getParam<float>("ambientRadiance", 1.f);
-//  m_mode = renderModeFromString(getParamString("mode", "default"));
+  vrend.m_bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
+  vrend.m_ambientRadiance = getParam<float>("ambientRadiance", 1.f);
 }
 // 
 // PixelSample Renderer::renderSample(Ray ray, const World &w) const

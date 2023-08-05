@@ -5,6 +5,8 @@
 #include <random>
 #include <thread>
 // visionaray
+#include "visionaray/detail/color_conversion.h"
+#include "visionaray/detail/parallel_for.h"
 
 namespace visionaray {
 
@@ -24,13 +26,7 @@ static uint32_t cvt_uint32(const float4 &v)
 static uint32_t cvt_uint32_srgb(const float4 &v)
 {
   //return cvt_uint32(float4(toneMap(v.x), toneMap(v.y), toneMap(v.z), v.w));
-}
-
-template <typename I, typename FUNC>
-static void serial_for(I size, FUNC &&f)
-{
-  for (I i = 0; i < size; i++)
-    f(i);
+  return cvt_uint32(float4(linear_to_srgb(v.xyz()), v.w));
 }
 
 template <typename R, typename TASK_T>
@@ -152,16 +148,41 @@ void Frame::renderFrame()
   m_frameLastRendered = helium::newTimeStamp();
   state->currentFrame = this;
 
+  static thread_pool pool{std::thread::hardware_concurrency()};
   m_future = async<void>([&, state, start]() {
     //m_world->embreeSceneUpdate();
 
     const auto &size = m_frameData.size;
-    //embree::parallel_for(size.y, [&](int y) {
-    //  serial_for(size.x, [&](int x) {
-    //    Ray ray = m_camera->createRay(screenFromPixel(float2(x, y)));
-    //    writeSample(x, y, m_renderer->renderSample(ray, *m_world));
-    //  });
-    //});
+    VisionarayCamera cam = m_camera->getInternalCamera();
+    VisionarayRenderer rend = m_renderer->getInternalRenderer();
+
+    if (cam.type == VisionarayCamera::Pinhole)
+      cam.asPinholeCam.begin_frame();
+    else if (cam.type == VisionarayCamera::Matrix)
+      cam.asMatrixCam.begin_frame();
+
+    visionaray::parallel_for(pool,tiled_range2d<int>(0,size.x,64,0,size.y,64),
+      [&](range2d<int> r) {
+        for (int y=r.cols().begin(); y!=r.cols().end(); ++y) {
+          for (int x=r.rows().begin(); x!=r.rows().end(); ++x) {
+            Ray ray;
+            if (cam.type == VisionarayCamera::Pinhole)
+              ray = cam.asPinholeCam.primary_ray(
+                Ray{}, float(x), float(y), float(size.x), float(size.y));
+            else if (cam.type == VisionarayCamera::Matrix)
+              ray = cam.asMatrixCam.primary_ray(
+                Ray{}, float(x), float(y), float(size.x), float(size.y));
+
+            PRD prd{x,y};
+            writeSample(x, y, rend.renderSample(ray, prd));
+          }
+        }
+      });
+
+    if (cam.type == VisionarayCamera::Pinhole)
+      cam.asPinholeCam.end_frame();
+    else if (cam.type == VisionarayCamera::Matrix)
+      cam.asMatrixCam.end_frame();
 
     auto end = std::chrono::steady_clock::now();
     m_duration = std::chrono::duration<float>(end - start).count();

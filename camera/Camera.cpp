@@ -3,6 +3,7 @@
 
 #include "Camera.h"
 // specific types
+#include "Perspective.h"
 
 namespace visionaray {
 
@@ -18,11 +19,9 @@ Camera::~Camera()
 
 Camera *Camera::createInstance(std::string_view type, VisionarayGlobalState *s)
 {
-  // if (type == "perspective")
-  //   return new Perspective(s);
-  // else if (type == "orthographic")
-  //   return new Orthographic(s);
-  // else
+  if (type == "perspective")
+    return new Perspective(s);
+  else
     return (Camera *)new UnknownObject(ANARI_CAMERA, s);
 }
 
