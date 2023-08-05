@@ -1,5 +1,5 @@
 
-project(anari_library_generic LANGUAGES C CXX)
+project(anari_library_visionaray LANGUAGES C CXX)
 cmake_minimum_required(VERSION 3.12)
 
 set(CMAKE_CXX_STANDARD 17)
