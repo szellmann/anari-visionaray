@@ -9,8 +9,23 @@ find_package(anari 0.4.0 REQUIRED)
 find_package(GLEW REQUIRED) # required by visionaray (TODO!)
 find_package(visionaray REQUIRED)
 
-add_library(${PROJECT_NAME})
+anari_generate_queries(
+  NAME visionaray
+  PREFIX VisionarayDevice
+  CPP_NAMESPACE visionaray
+  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_device.json
+)
+
+anari_generate_debug_objects(
+  NAME visionaray
+  PREFIX VisionarayDevice
+  CPP_NAMESPACE visionaray
+  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_device.json
+)
+
+add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME} PRIVATE
+    array/Array.cpp
     array/Array1D.cpp
     array/Array2D.cpp
     array/Array3D.cpp
@@ -30,10 +45,12 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/World.cpp
     Object.cpp
     VisionarayDevice.cpp
+    VisionarayDeviceDebugFactory.cpp
+    VisionarayDeviceQueries.cpp
     VisionarayGlobalState.cpp
 )
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC visionaray::visionaray anari::anari anari::helium)
+    PUBLIC visionaray::visionaray anari::anari anari::helium anari::anari_library_debug)
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 )
