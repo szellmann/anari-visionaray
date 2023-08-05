@@ -23,7 +23,7 @@ Camera *Camera::createInstance(std::string_view type, VisionarayGlobalState *s)
   // else if (type == "orthographic")
   //   return new Orthographic(s);
   // else
-  //   return (Camera *)new UnknownObject(ANARI_CAMERA, s);
+    return (Camera *)new UnknownObject(ANARI_CAMERA, s);
 }
 
 void Camera::commit()
