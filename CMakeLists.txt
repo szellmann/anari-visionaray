@@ -36,13 +36,16 @@ target_sources(${PROJECT_NAME} PRIVATE
     renderer/Renderer.cpp
     scene/light/Light.cpp
     scene/surface/geometry/Geometry.cpp
+    scene/surface/geometry/Triangle.cpp
     scene/surface/material/sampler/Sampler.cpp
     scene/surface/material/Material.cpp
+    scene/surface/material/Matte.cpp
     scene/surface/Surface.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/Volume.cpp
     scene/Group.cpp
     scene/Instance.cpp
+    scene/VisionarayScene.cpp
     scene/World.cpp
     Object.cpp
     VisionarayDevice.cpp

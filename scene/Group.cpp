@@ -25,8 +25,8 @@ bool Group::getProperty(
     if (flags & ANARI_WAIT) {
       deviceState()->waitOnCurrentFrame();
       deviceState()->commitBuffer.flush();
-      //embreeSceneConstruct();
-      //embreeSceneCommit();
+      visionaraySceneConstruct();
+      visionaraySceneCommit();
     }
     // auto bounds = getEmbreeSceneBounds(m_embreeScene);
     // for (auto *v : volumes()) {
@@ -98,73 +98,72 @@ const std::vector<Volume *> &Group::volumes() const
 void Group::markCommitted()
 {
   Object::markCommitted();
-//   deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
-//       helium::newTimeStamp();
+  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
+      helium::newTimeStamp();
 }
 
-// RTCScene Group::embreeScene() const
-// {
-//   return m_embreeScene;
-// }
+VisionarayScene Group::visionarayScene() const
+{
+  return vscene;
+}
 
-// void Group::embreeSceneConstruct()
-// {
-//   const auto &state = *deviceState();
-//   if (m_objectUpdates.lastSceneConstruction
-//       > state.objectUpdates.lastBLSReconstructSceneRequest)
-//     return;
-// 
-//   reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding embree scene");
-// 
-//   rtcReleaseScene(m_embreeScene);
+void Group::visionaraySceneConstruct()
+{
+  const auto &state = *deviceState();
+  if (m_objectUpdates.lastSceneConstruction
+      > state.objectUpdates.lastBLSReconstructSceneRequest)
+    return;
+
+  reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding embree scene");
+
+  vscene.release();
 //   m_embreeScene = rtcNewScene(deviceState()->embreeDevice);
-// 
-//   if (m_surfaceData) {
-//     uint32_t id = 0;
-//     std::for_each(m_surfaceData->handlesBegin(),
-//         m_surfaceData->handlesEnd(),
-//         [&](Object *o) {
-//           auto *s = (Surface *)o;
-//           if (s && s->isValid()) {
-//             m_surfaces.push_back(s);
-//             rtcAttachGeometryByID(
-//                 m_embreeScene, s->geometry()->embreeGeometry(), id++);
-//           } else {
-//             reportMessage(ANARI_SEVERITY_DEBUG,
-//                 "visionaray::Group rejecting invalid surface(%p) in building BLS",
-//                 s);
-//             auto *g = s->geometry();
-//             if (!g || !g->isValid()) {
-//               reportMessage(
-//                   ANARI_SEVERITY_DEBUG, "    visionaray::Geometry is invalid");
-//             }
-//             auto *m = s->material();
-//             if (!m || !m->isValid()) {
-//               reportMessage(
-//                   ANARI_SEVERITY_DEBUG, "    visionaray::Material is invalid");
-//             }
-//           }
-//         });
-//   }
-// 
-//   m_objectUpdates.lastSceneConstruction = helium::newTimeStamp();
-//   m_objectUpdates.lastSceneCommit = 0;
-//   embreeSceneCommit();
-// }
+ 
+  if (m_surfaceData) {
+    uint32_t id = 0;
+    std::for_each(m_surfaceData->handlesBegin(),
+        m_surfaceData->handlesEnd(),
+        [&](Object *o) {
+          auto *s = (Surface *)o;
+          if (s && s->isValid()) {
+            m_surfaces.push_back(s);
+            vscene.attachGeometry(
+                s->geometry()->visionarayGeometry(), id++);
+          } else {
+            reportMessage(ANARI_SEVERITY_DEBUG,
+                "visionaray::Group rejecting invalid surface(%p) in building BLS",
+                s);
+            auto *g = s->geometry();
+            if (!g || !g->isValid()) {
+              reportMessage(
+                  ANARI_SEVERITY_DEBUG, "    visionaray::Geometry is invalid");
+            }
+            auto *m = s->material();
+            if (!m || !m->isValid()) {
+              reportMessage(
+                  ANARI_SEVERITY_DEBUG, "    visionaray::Material is invalid");
+            }
+          }
+        });
+  }
+ 
+  m_objectUpdates.lastSceneConstruction = helium::newTimeStamp();
+  m_objectUpdates.lastSceneCommit = 0;
+  visionaraySceneCommit();
+}
 
-// void Group::embreeSceneCommit()
-// {
-//   const auto &state = *deviceState();
-//   if (!m_embreeScene
-//       || m_objectUpdates.lastSceneCommit
-//           > state.objectUpdates.lastBLSCommitSceneRequest)
-//     return;
-// 
-//   reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
-// 
-//   rtcCommitScene(m_embreeScene);
-//   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
-// }
+void Group::visionaraySceneCommit()
+{
+  const auto &state = *deviceState();
+  if (m_objectUpdates.lastSceneCommit
+          > state.objectUpdates.lastBLSCommitSceneRequest)
+    return;
+
+  reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
+
+  vscene.commit();
+  m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
+}
 
 void Group::cleanup()
 {
@@ -179,8 +178,7 @@ void Group::cleanup()
   m_objectUpdates.lastSceneConstruction = 0;
   m_objectUpdates.lastSceneCommit = 0;
 
-//  rtcReleaseScene(m_embreeScene);
-//  m_embreeScene = nullptr;
+  vscene.release();
 }
 
 // box3 getEmbreeSceneBounds(RTCScene scene)

@@ -44,7 +44,7 @@ struct Renderer : public Object
   static Renderer *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
 
-  VisionarayRenderer getInternalRenderer() const { return vrend; }
+  VisionarayRenderer visionarayRenderer() const { return vrend; }
 
  private:
   VisionarayRenderer vrend;

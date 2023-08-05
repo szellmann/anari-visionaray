@@ -9,6 +9,22 @@
 
 namespace visionaray {
 
+struct VisionarayGeometry
+{
+  enum Type { Triangle, Instance, };
+  Type type;
+  union {
+    struct {
+      basic_triangle<3,float> *data;
+      size_t len;
+    } asTriangle;
+    struct {
+      mat4 xfm;
+      VisionarayGeometry *vgeom;
+    } asInstance;
+  };
+};
+
 struct Geometry : public Object
 {
   Geometry(VisionarayGlobalState *s);
@@ -17,7 +33,7 @@ struct Geometry : public Object
   static Geometry *createInstance(
       std::string_view subtype, VisionarayGlobalState *s);
 
-  //RTCGeometry embreeGeometry() const;
+  VisionarayGeometry visionarayGeometry() const;
 
   void commit() override;
   void markCommitted() override;
@@ -27,7 +43,7 @@ struct Geometry : public Object
 
  protected:
 
-  //RTCGeometry m_embreeGeometry{nullptr};
+  VisionarayGeometry vgeom;
 
   std::array<helium::IntrusivePtr<Array1D>, 5> m_attributes;
 };

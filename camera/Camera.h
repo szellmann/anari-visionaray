@@ -30,7 +30,7 @@ struct Camera : public Object
   static Camera *createInstance(
       std::string_view type, VisionarayGlobalState *state);
 
-  VisionarayCamera getInternalCamera() const { return vcam; }
+  VisionarayCamera visionarayCamera() const { return vcam; }
 
  protected:
   VisionarayCamera vcam;

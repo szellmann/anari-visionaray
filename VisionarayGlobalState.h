@@ -30,6 +30,13 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     size_t unknown{0};
   } objectCounts;
 
+  struct ObjectUpdates
+  {
+    helium::TimeStamp lastBLSReconstructSceneRequest{0};
+    helium::TimeStamp lastBLSCommitSceneRequest{0};
+    helium::TimeStamp lastTLSReconstructSceneRequest{0};
+  } objectUpdates;
+
   Frame *currentFrame{nullptr};
 
   // Helper methods //

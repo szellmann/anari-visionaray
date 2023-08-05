@@ -8,7 +8,7 @@
 //#include "Cylinder.h"
 //#include "Quad.h"
 //#include "Sphere.h"
-//#include "Triangle.h"
+#include "Triangle.h"
 // std
 #include <cstring>
 #include <limits>
@@ -23,7 +23,7 @@ Geometry::Geometry(VisionarayGlobalState *s) : Object(ANARI_GEOMETRY, s)
 Geometry::~Geometry()
 {
 //  rtcReleaseGeometry(m_embreeGeometry);
-//  deviceState()->objectCounts.geometries--;
+  deviceState()->objectCounts.geometries--;
 }
 
 Geometry *Geometry::createInstance(
@@ -39,16 +39,16 @@ Geometry *Geometry::createInstance(
 //    return new Quad(s);
 //  else if (subtype == "sphere")
 //    return new Sphere(s);
-//  else if (subtype == "triangle")
-//    return new Triangle(s);
-//  else
+  /*else*/ if (subtype == "triangle")
+    return new Triangle(s);
+  else
     return (Geometry *)new UnknownObject(ANARI_GEOMETRY, s);
 }
 
-// RTCGeometry Geometry::embreeGeometry() const
-// {
-//   return m_embreeGeometry;
-// }
+VisionarayGeometry Geometry::visionarayGeometry() const
+{
+  return vgeom;
+}
 
 void Geometry::commit()
 {
@@ -62,8 +62,8 @@ void Geometry::commit()
 void Geometry::markCommitted()
 {
   Object::markCommitted();
-  // deviceState()->objectUpdates.lastBLSCommitSceneRequest =
-  //     helium::newTimeStamp();
+  deviceState()->objectUpdates.lastBLSCommitSceneRequest =
+      helium::newTimeStamp();
 }
 
 // float4 Geometry::getAttributeValue(const Attribute &attr, const Ray &ray) const

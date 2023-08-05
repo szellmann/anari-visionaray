@@ -8,6 +8,7 @@ namespace visionaray {
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
   s->objectCounts.instances++;
+  vgeom.type = VisionarayGeometry::Instance;
   // m_embreeGeometry =
   //     rtcNewGeometry(s->embreeDevice, RTC_GEOMETRY_TYPE_INSTANCE);
 }
@@ -20,27 +21,27 @@ Instance::~Instance()
 
 void Instance::commit()
 {
-  //m_xfm = getParam<mat4>("transform", mat4(linalg::identity));
-  //m_xfmInvRot = linalg::inverse(extractRotation(m_xfm));
-  //m_group = getParamObject<Group>("group");
-  //if (!m_group)
-  //  reportMessage(ANARI_SEVERITY_WARNING, "missing 'group' on ANARIInstance");
+  m_xfm = getParam<mat4>("transform", mat4::identity());
+  m_xfmInvRot = inverse(top_left(m_xfm));
+  m_group = getParamObject<Group>("group");
+  if (!m_group)
+    reportMessage(ANARI_SEVERITY_WARNING, "missing 'group' on ANARIInstance");
 }
 
-// const mat4 &Instance::xfm() const
-// {
-//   return m_xfm;
-// }
-// 
-// const mat3 &Instance::xfmInvRot() const
-// {
-//   return m_xfmInvRot;
-// }
-// 
-// bool Instance::xfmIsIdentity() const
-// {
-//   return xfm() == mat4(linalg::identity);
-// }
+const mat4 &Instance::xfm() const
+{
+  return m_xfm;
+}
+
+const mat3 &Instance::xfmInvRot() const
+{
+  return m_xfmInvRot;
+}
+
+bool Instance::xfmIsIdentity() const
+{
+  return xfm() == mat4::identity();
+}
 
 const Group *Instance::group() const
 {
@@ -52,11 +53,24 @@ Group *Instance::group()
   return m_group.ptr;
 }
 
+VisionarayGeometry Instance::visionarayGeometry() const
+{
+  return vgeom;
+}
+
+void Instance::visionarayGeometryUpdate()
+{
+  // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
+  // rtcSetGeometryTransform(
+  //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);
+  // rtcCommitGeometry(m_embreeGeometry);
+}
+
 void Instance::markCommitted()
 {
   Object::markCommitted();
-  // deviceState()->objectUpdates.lastTLSReconstructSceneRequest =
-  //     helium::newTimeStamp();
+  deviceState()->objectUpdates.lastTLSReconstructSceneRequest =
+      helium::newTimeStamp();
 }
 
 bool Instance::isValid() const

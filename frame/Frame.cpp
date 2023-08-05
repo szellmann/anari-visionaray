@@ -25,7 +25,6 @@ static uint32_t cvt_uint32(const float4 &v)
 
 static uint32_t cvt_uint32_srgb(const float4 &v)
 {
-  //return cvt_uint32(float4(toneMap(v.x), toneMap(v.y), toneMap(v.z), v.w));
   return cvt_uint32(float4(linear_to_srgb(v.xyz()), v.w));
 }
 
@@ -150,11 +149,11 @@ void Frame::renderFrame()
 
   static thread_pool pool{std::thread::hardware_concurrency()};
   m_future = async<void>([&, state, start]() {
-    //m_world->embreeSceneUpdate();
+    m_world->visionaraySceneUpdate();
 
     const auto &size = m_frameData.size;
-    VisionarayCamera cam = m_camera->getInternalCamera();
-    VisionarayRenderer rend = m_renderer->getInternalRenderer();
+    VisionarayCamera cam = m_camera->visionarayCamera();
+    VisionarayRenderer rend = m_renderer->visionarayRenderer();
 
     if (cam.type == VisionarayCamera::Pinhole)
       cam.asPinholeCam.begin_frame();

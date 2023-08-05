@@ -3,8 +3,8 @@
 
 #pragma once
 
-//#include "Instance.h"
-#include "Object.h"
+#include "Instance.h"
+#include "VisionarayScene.h"
 
 namespace visionaray {
 
@@ -20,41 +20,41 @@ struct World : public Object
 
   void commit() override;
 
-//  const std::vector<Instance *> &instances() const;
-//
+  const std::vector<Instance *> &instances() const;
+
 //  void intersectVolumes(VolumeRay &ray) const;
+
+  VisionarayScene visionarayScene() const;
+  void visionaraySceneUpdate();
+
+ private:
+  void rebuildBLSs();
+  void recommitBLSs();
+  void rebuildTLS();
+  void cleanup();
+
+  helium::IntrusivePtr<ObjectArray> m_zeroSurfaceData;
+  helium::IntrusivePtr<ObjectArray> m_zeroVolumeData;
+
+  helium::IntrusivePtr<ObjectArray> m_instanceData;
+  std::vector<Instance *> m_instances;
+
+  bool m_addZeroInstance{false};
+  helium::IntrusivePtr<Group> m_zeroGroup;
+  helium::IntrusivePtr<Instance> m_zeroInstance;
+
+  size_t m_numSurfaceInstances{0};
+
+  aabb m_surfaceBounds;
+
+  struct ObjectUpdates
+  {
+    helium::TimeStamp lastTLSBuild{0};
+    helium::TimeStamp lastBLSReconstructCheck{0};
+    helium::TimeStamp lastBLSCommitCheck{0};
+  } m_objectUpdates;
 //
-//  RTCScene embreeScene() const;
-//  void embreeSceneUpdate();
-//
-// private:
-//  void rebuildBLSs();
-//  void recommitBLSs();
-//  void rebuildTLS();
-//  void cleanup();
-//
-//  helium::IntrusivePtr<ObjectArray> m_zeroSurfaceData;
-//  helium::IntrusivePtr<ObjectArray> m_zeroVolumeData;
-//
-//  helium::IntrusivePtr<ObjectArray> m_instanceData;
-//  std::vector<Instance *> m_instances;
-//
-//  bool m_addZeroInstance{false};
-//  helium::IntrusivePtr<Group> m_zeroGroup;
-//  helium::IntrusivePtr<Instance> m_zeroInstance;
-//
-//  size_t m_numSurfaceInstances{0};
-//
-//  visionaray::aabb m_surfaceBounds;
-//
-//  struct ObjectUpdates
-//  {
-//    helium::TimeStamp lastTLSBuild{0};
-//    helium::TimeStamp lastBLSReconstructCheck{0};
-//    helium::TimeStamp lastBLSCommitCheck{0};
-//  } m_objectUpdates;
-//
-//  RTCScene m_embreeScene{nullptr};
+  VisionarayScene vscene;
 };
 
 } // namespace visionaray

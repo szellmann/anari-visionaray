@@ -3,8 +3,7 @@
 
 #include "Material.h"
 // subtypes
-// #include "Matte.h"
-// #include "PBM.h"
+#include "Matte.h"
 
 namespace visionaray {
 
@@ -21,11 +20,9 @@ Material::~Material()
 Material *Material::createInstance(
     std::string_view subtype, VisionarayGlobalState *s)
 {
-  // if (subtype == "matte")
-  //   return new Matte(s);
-  // else if (subtype == "physicallyBased")
-  //   return new PBM(s);
-  // else
+  if (subtype == "matte")
+    return new Matte(s);
+  else
     return (Material *)new UnknownObject(ANARI_MATERIAL, s);
 }
 

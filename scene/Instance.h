@@ -14,22 +14,25 @@ struct Instance : public Object
 
   void commit() override;
 
-  // const mat4 &xfm() const;
-  // const mat3 &xfmInvRot() const;
-  // bool xfmIsIdentity() const;
+  const mat4 &xfm() const;
+  const mat3 &xfmInvRot() const;
+  bool xfmIsIdentity() const;
 
   const Group *group() const;
   Group *group();
+
+  VisionarayGeometry visionarayGeometry() const;
+  void visionarayGeometryUpdate();
 
   void markCommitted() override;
 
   bool isValid() const override;
 
  private:
-  // mat4 m_xfm;
-  // mat3 m_xfmInvRot;
+  mat4 m_xfm;
+  mat3 m_xfmInvRot;
   helium::IntrusivePtr<Group> m_group;
-  // RTCGeometry m_embreeGeometry{nullptr};
+  VisionarayGeometry vgeom;
 };
 
 } // namespace visionaray

@@ -7,6 +7,7 @@
 #include "light/Light.h"
 #include "surface/Surface.h"
 #include "volume/Volume.h"
+#include "VisionarayScene.h"
 
 namespace visionaray {
 
@@ -29,9 +30,9 @@ struct Group : public Object
 
   void markCommitted() override;
 
-  // RTCScene embreeScene() const;
-  // void embreeSceneConstruct();
-  // void embreeSceneCommit();
+  VisionarayScene visionarayScene() const;
+  void visionaraySceneConstruct();
+  void visionaraySceneCommit();
 
  private:
   void cleanup();
@@ -54,7 +55,7 @@ struct Group : public Object
     helium::TimeStamp lastSceneCommit{0};
   } m_objectUpdates;
 
-  // RTCScene m_embreeScene{nullptr};
+  VisionarayScene vscene;
 };
 
 // box3 getEmbreeSceneBounds(RTCScene scene);

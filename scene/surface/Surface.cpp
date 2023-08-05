@@ -84,8 +84,8 @@ const Material *Surface::material() const
 void Surface::markCommitted()
 {
   Object::markCommitted();
-  // deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
-  //     helium::newTimeStamp();
+  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
+      helium::newTimeStamp();
 }
 
 bool Surface::isValid() const
