@@ -59,7 +59,7 @@ VisionarayGeometry Instance::visionarayGeometry() const
 void Instance::visionarayGeometryUpdate()
 {
   // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
-  vgeom.asInstance.vscene = group()->visionarayScene().get();
+  vgeom.asInstance.vscene = group()->visionarayScene();
   vgeom.asInstance.xfm = m_xfm;
   // rtcSetGeometryTransform(
   //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);

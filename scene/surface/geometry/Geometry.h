@@ -10,21 +10,20 @@
 namespace visionaray {
 
 struct VisionaraySceneImpl;
+typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
 
 struct VisionarayGeometry
 {
   enum Type { Triangle, Instance, };
   Type type;
-  union {
-    struct {
-      basic_triangle<3,float> *data;
-      size_t len;
-    } asTriangle;
-    struct {
-      mat4 xfm;
-      VisionaraySceneImpl *vscene;
-    } asInstance;
-  };
+  struct {
+    basic_triangle<3,float> *data{nullptr};
+    size_t len{0};
+  } asTriangle;
+  struct {
+    VisionarayScene vscene{nullptr};
+    mat4 xfm;
+  } asInstance;
 };
 
 struct Geometry : public Object
