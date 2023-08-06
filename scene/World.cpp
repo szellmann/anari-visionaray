@@ -33,15 +33,11 @@ bool World::getProperty(
       deviceState()->commitBuffer.flush();
       visionaraySceneUpdate();
     }
-    //auto bounds = getEmbreeSceneBounds(m_embreeScene);
-    //for (auto *i : instances()) {
-    //  for (auto *v : i->group()->volumes()) {
-    //    if (v->isValid())
-    //      bounds.extend(v->bounds());
-    //  }
-    //}
-    //std::memcpy(ptr, &bounds, sizeof(bounds));
-    //return true;
+    if (vscene && vscene->m_TLS.num_nodes()) {
+      auto bounds = vscene->m_TLS.node(0).get_bounds();
+      std::memcpy(ptr, &bounds, sizeof(bounds));
+      return true;
+    }
   }
 
   return Object::getProperty(name, type, ptr, flags);

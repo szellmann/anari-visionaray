@@ -25,12 +25,21 @@ struct VisionarayRenderer
   VSNRAY_FUNC
   PixelSample renderSample(Ray ray, PRD &prd, VisionarayScene scene) {
     PixelSample result;
-    result.color = float4(ray.dir,1.f);
+    result.color = m_bgColor;
     result.depth = 1.f;
 
     auto hr = intersect(ray, scene->onDevice.theTLS);
 
-    if (hr.hit) result.color = float4(1.f);
+    if (hr.hit) {
+      vec3f gn(1.f,0.f,0.f);
+      auto geom = scene->onDevice.geoms[hr.geom_id];
+      if (geom.type == VisionarayGeometry::Triangle) {
+      //printf("%u,%u\n",hr.prim_id,hr.geom_id);
+        auto tri = geom.asTriangle.data[hr.prim_id];
+        gn = normalize(cross(tri.e1,tri.e2));
+      }
+      result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
+    }
 
     return result;
   }

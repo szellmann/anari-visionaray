@@ -68,7 +68,6 @@ void VisionaraySceneImpl::commit()
   // Build TLS
   lbvh_builder tlsBuilder;
   m_TLS = tlsBuilder.build(TLS{}, m_BLSs.data(), m_BLSs.size());
-  onDevice.theTLS = m_TLS.ref();
 
 #if 0
   std::cout << "TLS built\n";
@@ -80,6 +79,9 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num cylinder BLSs: " << cylinderCount << '\n';
   std::cout << "  num instance BLSs: " << instanceCount << '\n';
 #endif
+
+  onDevice.theTLS = m_TLS.ref();
+  onDevice.geoms = m_geometries.data();
 }
 
 void VisionaraySceneImpl::release()
@@ -95,6 +97,13 @@ void VisionaraySceneImpl::attachGeometry(VisionarayGeometry geom, unsigned geomI
 {
   if (m_geometries.size() <= geomID)
     m_geometries.resize(geomID+1);
+
+  // Patch geomID into scene primitives
+  if (geom.type == VisionarayGeometry::Triangle) {
+    for (size_t i=0;i<geom.asTriangle.len;++i) {
+      geom.asTriangle.data[i].geom_id = geomID;
+    }
+  }
 
   m_geometries[geomID] = geom;
 }

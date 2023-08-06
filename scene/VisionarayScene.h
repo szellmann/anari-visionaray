@@ -39,8 +39,8 @@ inline aabb get_bounds(const BLS &bls)
     aabb bound = bls.asInstance.node(0).get_bounds();
     mat3f rot = inverse(bls.asInstance.affine_inv());
     vec3f trans = -bls.asInstance.trans_inv();
-    bound.min = rot * (bound.min + trans);
-    bound.max = rot * (bound.max + trans);
+    bound.min = rot * bound.min + trans;
+    bound.max = rot * bound.max + trans;
     return bound;
   }
 
@@ -71,6 +71,7 @@ struct VisionaraySceneImpl
 {
   struct {
     TLS::bvh_ref theTLS;
+    VisionarayGeometry *geoms{nullptr};
   } onDevice;
 
   // Geometries //
