@@ -4,7 +4,7 @@
 
 namespace visionaray {
 
-void VisionarayScene::commit()
+void VisionaraySceneImpl::commit()
 {
   // std::cout << "commit " << this << '\n';
   // for (auto &g : m_geometries) {
@@ -12,19 +12,24 @@ void VisionarayScene::commit()
   // }
 }
 
-void VisionarayScene::release()
+void VisionaraySceneImpl::release()
 {
   m_geometries.clear();
-  m_triangleBLSs.clear();
+  //m_triangleBLSs.clear();
   m_materials.clear();
 }
 
-void VisionarayScene::attachGeometry(VisionarayGeometry geom, unsigned geomID)
+void VisionaraySceneImpl::attachGeometry(VisionarayGeometry geom, unsigned geomID)
 {
   if (m_geometries.size() <= geomID)
     m_geometries.resize(geomID+1);
 
   m_geometries[geomID] = geom;
+}
+
+VisionarayScene newVisionarayScene()
+{
+  return std::make_shared<VisionaraySceneImpl>();
 }
 
 } // namespace visionaray

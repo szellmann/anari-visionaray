@@ -9,6 +9,8 @@
 
 namespace visionaray {
 
+struct VisionaraySceneImpl;
+
 struct VisionarayGeometry
 {
   enum Type { Triangle, Instance, };
@@ -20,7 +22,7 @@ struct VisionarayGeometry
     } asTriangle;
     struct {
       mat4 xfm;
-      VisionarayGeometry *vgeom;
+      VisionaraySceneImpl *vscene;
     } asInstance;
   };
 };

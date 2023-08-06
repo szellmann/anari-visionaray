@@ -54,7 +54,7 @@ struct World : public Object
     helium::TimeStamp lastBLSCommitCheck{0};
   } m_objectUpdates;
 //
-  VisionarayScene vscene;
+  VisionarayScene vscene{nullptr};
 };
 
 } // namespace visionaray

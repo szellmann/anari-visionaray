@@ -55,7 +55,7 @@ struct Group : public Object
     helium::TimeStamp lastSceneCommit{0};
   } m_objectUpdates;
 
-  VisionarayScene vscene;
+  VisionarayScene vscene{nullptr};
 };
 
 // box3 getEmbreeSceneBounds(RTCScene scene);

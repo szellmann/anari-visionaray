@@ -116,8 +116,9 @@ void Group::visionaraySceneConstruct()
 
   reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding embree scene");
 
-  vscene.release();
-//   m_embreeScene = rtcNewScene(deviceState()->embreeDevice);
+  if (vscene)
+    vscene->release();
+  vscene = newVisionarayScene();
  
   if (m_surfaceData) {
     uint32_t id = 0;
@@ -127,7 +128,7 @@ void Group::visionaraySceneConstruct()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
-            vscene.attachGeometry(
+            vscene->attachGeometry(
                 s->geometry()->visionarayGeometry(), id++);
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
@@ -161,7 +162,7 @@ void Group::visionaraySceneCommit()
 
   reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
 
-  vscene.commit();
+  vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
 }
 
@@ -178,7 +179,9 @@ void Group::cleanup()
   m_objectUpdates.lastSceneConstruction = 0;
   m_objectUpdates.lastSceneCommit = 0;
 
-  vscene.release();
+  if (vscene)
+    vscene->release();
+  vscene = nullptr;
 }
 
 // box3 getEmbreeSceneBounds(RTCScene scene)

@@ -9,8 +9,6 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
   s->objectCounts.instances++;
   vgeom.type = VisionarayGeometry::Instance;
-  // m_embreeGeometry =
-  //     rtcNewGeometry(s->embreeDevice, RTC_GEOMETRY_TYPE_INSTANCE);
 }
 
 Instance::~Instance()
@@ -61,6 +59,8 @@ VisionarayGeometry Instance::visionarayGeometry() const
 void Instance::visionarayGeometryUpdate()
 {
   // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
+  vgeom.asInstance.vscene = group()->visionarayScene().get();
+  vgeom.asInstance.xfm = m_xfm;
   // rtcSetGeometryTransform(
   //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);
   // rtcCommitGeometry(m_embreeGeometry);

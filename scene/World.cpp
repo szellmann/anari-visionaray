@@ -178,13 +178,15 @@ void World::rebuildTLS()
       "visionaray::World rebuilding TLS over %zu instances",
       m_instances.size());
 
-  vscene.release();
+  if (vscene)
+    vscene->release();
+  vscene = newVisionarayScene();
 
   uint32_t id = 0;
   std::for_each(m_instances.begin(), m_instances.end(), [&](auto *i) {
     if (i && i->isValid() && !i->group()->surfaces().empty()) {
       i->visionarayGeometryUpdate();
-      vscene.attachGeometry(i->visionarayGeometry(), id);
+      vscene->attachGeometry(i->visionarayGeometry(), id);
     } else {
       if (i->group()->surfaces().empty()) {
         reportMessage(ANARI_SEVERITY_DEBUG,
@@ -201,7 +203,7 @@ void World::rebuildTLS()
     id++;
   });
 
-  vscene.commit();
+  vscene->commit();
   m_objectUpdates.lastTLSBuild = helium::newTimeStamp();
 }
 
@@ -212,7 +214,9 @@ void World::cleanup()
   if (m_zeroSurfaceData)
     m_zeroSurfaceData->removeCommitObserver(this);
 
-  vscene.release();
+  if (vscene)
+    vscene->release();
+  vscene = nullptr;
 }
 
 } // namespace visionaray
