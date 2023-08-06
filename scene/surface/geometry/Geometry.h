@@ -14,14 +14,14 @@ typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
 
 struct VisionarayGeometry
 {
-  enum Type { Triangle, Instance, };
+  enum Type { Triangle, Sphere, Cylinder, Instance, };
   Type type;
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
   } asTriangle;
   struct {
-    VisionarayScene vscene{nullptr};
+    VisionarayScene scene{nullptr};
     mat4 xfm;
   } asInstance;
 };
