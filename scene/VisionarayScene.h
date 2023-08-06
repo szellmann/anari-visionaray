@@ -37,7 +37,6 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asCylinder.node(0).get_bounds();
   else if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
     aabb bound = bls.asInstance.node(0).get_bounds();
-    std::cout << bound.min << ',' << bound.max << '\n';
     mat3f rot = inverse(bls.asInstance.affine_inv());
     vec3f trans = -bls.asInstance.trans_inv();
     bound.min = rot * (bound.min + trans);
@@ -50,10 +49,30 @@ inline aabb get_bounds(const BLS &bls)
   return inval;
 }
 
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const BLS &bls)
+{
+  if (bls.type == BLS::Triangle)
+    return intersect(ray,bls.asTriangle);
+  if (bls.type == BLS::Sphere)
+    return intersect(ray,bls.asSphere);
+  if (bls.type == BLS::Cylinder)
+    return intersect(ray,bls.asCylinder);
+  else {
+    assert(bls.type == BLS::Instance);
+    return intersect(ray,bls.asInstance);
+  }
+}
+
 typedef index_bvh<BLS> TLS;
 
 struct VisionaraySceneImpl
 {
+  struct {
+    TLS::bvh_ref theTLS;
+  } onDevice;
+
   // Geometries //
   aligned_vector<VisionarayGeometry> m_geometries;
 

@@ -68,6 +68,7 @@ void VisionaraySceneImpl::commit()
   // Build TLS
   lbvh_builder tlsBuilder;
   m_TLS = tlsBuilder.build(TLS{}, m_BLSs.data(), m_BLSs.size());
+  onDevice.theTLS = m_TLS.ref();
 
 #if 0
   std::cout << "TLS built\n";

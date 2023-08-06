@@ -5,7 +5,7 @@
 
 #include "Object.h"
 #include "array/Array1D.h"
-#include "scene/World.h"
+#include "scene/VisionarayScene.h"
 
 namespace visionaray {
 
@@ -23,10 +23,15 @@ struct PixelSample
 struct VisionarayRenderer
 {
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, PRD &prd) {
+  PixelSample renderSample(Ray ray, PRD &prd, VisionarayScene scene) {
     PixelSample result;
     result.color = float4(ray.dir,1.f);
     result.depth = 1.f;
+
+    auto hr = intersect(ray, scene->onDevice.theTLS);
+
+    if (hr.hit) result.color = float4(1.f);
+
     return result;
   }
 

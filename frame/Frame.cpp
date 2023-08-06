@@ -154,6 +154,7 @@ void Frame::renderFrame()
     const auto &size = m_frameData.size;
     VisionarayCamera cam = m_camera->visionarayCamera();
     VisionarayRenderer rend = m_renderer->visionarayRenderer();
+    VisionarayScene scene = m_world->visionarayScene();
 
     if (cam.type == VisionarayCamera::Pinhole)
       cam.asPinholeCam.begin_frame();
@@ -173,7 +174,7 @@ void Frame::renderFrame()
                 Ray{}, float(x), float(y), float(size.x), float(size.y));
 
             PRD prd{x,y};
-            writeSample(x, y, rend.renderSample(ray, prd));
+            writeSample(x, y, rend.renderSample(ray, prd, scene));
           }
         }
       });
