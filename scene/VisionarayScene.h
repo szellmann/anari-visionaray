@@ -41,7 +41,7 @@ inline aabb get_bounds(const BLS &bls)
     vec3f trans = -bls.asInstance.trans_inv();
     bound.min = rot * bound.min + trans;
     bound.max = rot * bound.max + trans;
-    return bound;
+    return aabb{min(bound.min,bound.max),max(bound.min,bound.max)};
   }
 
   aabb inval;
@@ -59,10 +59,11 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
     return intersect(ray,bls.asSphere);
   if (bls.type == BLS::Cylinder)
     return intersect(ray,bls.asCylinder);
-  else {
-    assert(bls.type == BLS::Instance);
+  else if (bls.type == BLS::Instance) {
     return intersect(ray,bls.asInstance);
   }
+
+  return {};
 }
 
 typedef index_bvh<BLS> TLS;
