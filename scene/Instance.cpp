@@ -7,8 +7,9 @@ namespace visionaray {
 
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
-  s->objectCounts.instances++;
   vgeom.type = VisionarayGeometry::Instance;
+  vgeom.asInstance.instID = s->objectCounts.instances;
+  s->objectCounts.instances++;
 }
 
 Instance::~Instance()

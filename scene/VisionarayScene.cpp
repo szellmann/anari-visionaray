@@ -61,6 +61,7 @@ void VisionaraySceneImpl::commit()
                   geom.asInstance.xfm(2,3));
       mat4x3 xfm{rot, trans};
       bls.asInstance = geom.asInstance.scene->m_TLS.inst(xfm);
+      bls.asInstance.set_inst_id(geom.asInstance.instID);
       m_BLSs.push_back(bls);
     }
   }
@@ -87,6 +88,7 @@ void VisionaraySceneImpl::commit()
 void VisionaraySceneImpl::release()
 {
   m_geometries.clear();
+  m_BLSs.clear();
   m_accelStorage.triangleBLSs.clear();
   m_accelStorage.sphereBLSs.clear();
   m_accelStorage.cylinderBLSs.clear();

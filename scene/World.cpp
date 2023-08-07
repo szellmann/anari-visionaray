@@ -155,7 +155,7 @@ void World::recommitBLSs()
   reportMessage(ANARI_SEVERITY_DEBUG,
       "visionaray::World recommitting %zu BLSs",
       m_instances.size());
-  std::for_each(m_instances.begin(), m_instances.end(), [&](auto *inst) {std::cout << "recommitBLSs\n";
+  std::for_each(m_instances.begin(), m_instances.end(), [&](auto *inst) {
     inst->group()->visionaraySceneCommit();
   });
 

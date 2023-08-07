@@ -21,6 +21,7 @@ struct VisionarayGeometry
     size_t len{0};
   } asTriangle;
   struct {
+    unsigned instID{UINT_MAX};
     VisionarayScene scene{nullptr};
     mat4 xfm;
   } asInstance;

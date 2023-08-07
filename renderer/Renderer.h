@@ -33,8 +33,8 @@ struct VisionarayRenderer
     if (hr.hit) {
       vec3f gn(1.f,0.f,0.f);
       auto geom = scene->onDevice.geoms[hr.geom_id];
+      //printf("%u,%u,%u\n",hr.prim_id,hr.geom_id,hr.inst_id);
       if (geom.type == VisionarayGeometry::Triangle) {
-      //printf("%u,%u\n",hr.prim_id,hr.geom_id);
         auto tri = geom.asTriangle.data[hr.prim_id];
         gn = normalize(cross(tri.e1,tri.e2));
       }
