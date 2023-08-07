@@ -3,16 +3,12 @@
 
 #pragma once
 
-// visionaray
-#include "visionaray/generic_material.h"
-#include "visionaray/material.h"
 // ours
+#include "DeviceCopyableObjects.h"
 #include "Object.h"
 #include "sampler/Sampler.h"
 
 namespace visionaray {
-
-typedef generic_material<matte<float>> VisionarayMaterial;
 
 struct Material : public Object
 {
@@ -24,10 +20,10 @@ struct Material : public Object
 
   void commit() override;
 
-  VisionarayMaterial visionarayMaterial() const { return vmat; }
+  dco::Material visionarayMaterial() const { return vmat; }
 
  protected:
-  VisionarayMaterial vmat;
+  dco::Material vmat;
   float4 m_color{1.f, 1.f, 1.f, 1.f};
   helium::IntrusivePtr<Sampler> m_colorSampler;
 };

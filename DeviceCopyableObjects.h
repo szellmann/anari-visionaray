@@ -2,8 +2,10 @@
 #pragma once
 
 // visionaray
+#include "visionaray/texture/texture.h"
 #include "visionaray/aligned_vector.h"
 #include "visionaray/bvh.h"
+#include "visionaray/material.h"
 #include "visionaray/matrix_camera.h"
 #include "visionaray/pinhole_camera.h"
 // ours
@@ -107,6 +109,18 @@ struct Instance
   unsigned instID{UINT_MAX};
   unsigned groupID{UINT_MAX};
   mat4 xfm;
+};
+
+// Material //
+
+struct Material
+{
+  enum Type { Matte, };
+  Type type;
+  struct {
+    matte<float> data;
+    texture_ref<unorm<8>, 2> colorSampler;
+  } asMatte;
 };
 
 // Camera //

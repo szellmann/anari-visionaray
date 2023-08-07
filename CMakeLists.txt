@@ -31,6 +31,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     array/Array3D.cpp
     array/ObjectArray.cpp
     camera/Camera.cpp
+    camera/Matrix.cpp
     camera/Perspective.cpp
     frame/Frame.cpp
     renderer/Renderer.cpp

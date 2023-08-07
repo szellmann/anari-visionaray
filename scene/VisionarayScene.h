@@ -44,7 +44,7 @@ struct VisionaraySceneImpl
   } m_accelStorage;
 
   // Surface properties //
-  aligned_vector<VisionarayMaterial> m_materials;
+  aligned_vector<dco::Material> m_materials;
 
   // Internal state //
   unsigned m_worldID{UINT_MAX};
