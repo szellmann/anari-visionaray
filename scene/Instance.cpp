@@ -92,7 +92,8 @@ void Instance::dispatch()
       = vgeom.asInstance.instID;
   deviceState()->dcos.instances[vgeom.asInstance.instID].groupID
       = vgeom.asInstance.groupID;
-    std::cout << vgeom.asInstance.instID << ',' << vgeom.asInstance.groupID << '\n';
+  deviceState()->dcos.instances[vgeom.asInstance.instID].xfm
+      = vgeom.asInstance.xfm;
 
   // Upload/set accessible pointers
   deviceState()->onDevice.instances = deviceState()->dcos.instances.data();
