@@ -45,7 +45,7 @@ Geometry *Geometry::createInstance(
     return (Geometry *)new UnknownObject(ANARI_GEOMETRY, s);
 }
 
-VisionarayGeometry Geometry::visionarayGeometry() const
+dco::Geometry Geometry::visionarayGeometry() const
 {
   return vgeom;
 }

@@ -25,7 +25,7 @@ void Perspective::commit()
   // m_dir_dv = normalize(cross(m_dir_du, m_dir)) * imgPlaneSize.y;
   // m_dir_00 = m_dir - .5f * m_dir_du - .5f * m_dir_dv;
 
-  vcam.type = VisionarayCamera::Pinhole;
+  vcam.type = dco::Camera::Pinhole;
   vcam.asPinholeCam.perspective(fovy, aspect, .001f, 1000.f);
   vcam.asPinholeCam.look_at(m_pos, m_pos + m_dir, m_up);
 }

@@ -4,6 +4,20 @@
 
 namespace visionaray {
 
+VisionaraySceneImpl::VisionaraySceneImpl(
+    VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
+  : m_state(state)
+{
+  static unsigned nextWorldID = 0;
+  static unsigned nextGroupID = 0;
+
+  this->type = type;
+
+  if (type == World)
+    m_worldID = nextWorldID++;
+  m_groupID = nextGroupID++;
+}
+
 void VisionaraySceneImpl::commit()
 {
   unsigned triangleCount = 0;
@@ -13,16 +27,16 @@ void VisionaraySceneImpl::commit()
 
   for (const auto &geom : m_geometries) {
     switch (geom.type) {
-      case VisionarayGeometry::Triangle:
+      case dco::Geometry::Triangle:
         triangleCount++;
         break;
-      case VisionarayGeometry::Sphere:
+      case dco::Geometry::Sphere:
         sphereCount++;
         break;
-      case VisionarayGeometry::Cylinder:
+      case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
-      case VisionarayGeometry::Instance:
+      case dco::Geometry::Instance:
       default:
         break;
     }
@@ -35,7 +49,7 @@ void VisionaraySceneImpl::commit()
 
   triangleCount = sphereCount = cylinderCount = 0;
   for (const auto &geom : m_geometries) {
-    if (geom.type == VisionarayGeometry::Triangle) {
+    if (geom.type == dco::Geometry::Triangle) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(true);
 
@@ -43,18 +57,18 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.triangleBLSs[index] = builder.build(
         TriangleBVH{}, geom.asTriangle.data, geom.asTriangle.len);
 
-      BLS bls;
-      bls.type = BLS::Triangle;
+      dco::BLS bls;
+      bls.type = dco::BLS::Triangle;
       bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
       m_BLSs.push_back(bls);
-    } else if (geom.type == VisionarayGeometry::Sphere) {
+    } else if (geom.type == dco::Geometry::Sphere) {
       // TODO (equiv.)
-    } else if (geom.type == VisionarayGeometry::Cylinder) {
+    } else if (geom.type == dco::Geometry::Cylinder) {
 
-    } else if (geom.type == VisionarayGeometry::Instance) {
+    } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
-      BLS bls;
-      bls.type = BLS::Instance;
+      dco::BLS bls;
+      bls.type = dco::BLS::Instance;
       mat3f rot = top_left(geom.asInstance.xfm);
       vec3f trans(geom.asInstance.xfm(0,3),
                   geom.asInstance.xfm(1,3),
@@ -81,8 +95,7 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num instance BLSs: " << instanceCount << '\n';
 #endif
 
-  onDevice.theTLS = m_TLS.ref();
-  onDevice.geoms = m_geometries.data();
+  dispatch();
 }
 
 void VisionaraySceneImpl::release()
@@ -95,13 +108,13 @@ void VisionaraySceneImpl::release()
   m_materials.clear();
 }
 
-void VisionaraySceneImpl::attachGeometry(VisionarayGeometry geom, unsigned geomID)
+void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 {
   if (m_geometries.size() <= geomID)
     m_geometries.resize(geomID+1);
 
   // Patch geomID into scene primitives
-  if (geom.type == VisionarayGeometry::Triangle) {
+  if (geom.type == dco::Geometry::Triangle) {
     for (size_t i=0;i<geom.asTriangle.len;++i) {
       geom.asTriangle.data[i].geom_id = geomID;
     }
@@ -110,9 +123,32 @@ void VisionaraySceneImpl::attachGeometry(VisionarayGeometry geom, unsigned geomI
   m_geometries[geomID] = geom;
 }
 
-VisionarayScene newVisionarayScene()
+void VisionaraySceneImpl::dispatch()
 {
-  return std::make_shared<VisionaraySceneImpl>();
+  // Dispatch world
+  if (m_worldID < UINT_MAX) {
+    if (m_state->dcos.TLSs.size() <= m_worldID) {
+      m_state->dcos.TLSs.resize(m_worldID+1);
+    }
+    m_state->dcos.TLSs[m_worldID] = m_TLS.ref();
+  }
+
+  // Dispatch group
+  if (m_state->dcos.groups.size() <= m_groupID) {
+    m_state->dcos.groups.resize(m_groupID+1);
+  }
+  m_state->dcos.groups[m_groupID].groupID = m_groupID;
+  m_state->dcos.groups[m_groupID].geoms = m_geometries.data();
+
+  // Upload/set accessible pointers
+  m_state->onDevice.TLSs = m_state->dcos.TLSs.data();
+  m_state->onDevice.groups = m_state->dcos.groups.data();
+}
+
+VisionarayScene newVisionarayScene(
+    VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
+{
+  return std::make_shared<VisionaraySceneImpl>(type, state);
 }
 
 } // namespace visionaray

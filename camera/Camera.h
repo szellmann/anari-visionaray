@@ -3,22 +3,10 @@
 
 #pragma once
 
-#include "../Object.h"
-// visionaray
-#include "visionaray/pinhole_camera.h"
-#include "visionaray/matrix_camera.h"
+#include "DeviceCopyableObjects.h"
+#include "Object.h"
 
 namespace visionaray {
-
-struct VisionarayCamera
-{
-  enum Type { Matrix, Pinhole, };
-  Type type;
-  union {
-    matrix_camera asMatrixCam;
-    pinhole_camera asPinholeCam;
-  };
-};
 
 struct Camera : public Object
 {
@@ -30,10 +18,10 @@ struct Camera : public Object
   static Camera *createInstance(
       std::string_view type, VisionarayGlobalState *state);
 
-  VisionarayCamera visionarayCamera() const { return vcam; }
+  dco::Camera visionarayCamera() const { return vcam; }
 
  protected:
-  VisionarayCamera vcam;
+  dco::Camera vcam;
   vec3f m_pos;
   vec3f m_dir;
   vec3f m_up;

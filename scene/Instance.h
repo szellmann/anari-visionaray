@@ -21,7 +21,7 @@ struct Instance : public Object
   const Group *group() const;
   Group *group();
 
-  VisionarayGeometry visionarayGeometry() const;
+  dco::Geometry visionarayGeometry() const;
   void visionarayGeometryUpdate();
 
   void markCommitted() override;
@@ -32,7 +32,9 @@ struct Instance : public Object
   mat4 m_xfm;
   mat3 m_xfmInvRot;
   helium::IntrusivePtr<Group> m_group;
-  VisionarayGeometry vgeom;
+  dco::Geometry vgeom;
+
+   void dispatch();
 };
 
 } // namespace visionaray

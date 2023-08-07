@@ -152,13 +152,13 @@ void Frame::renderFrame()
     m_world->visionaraySceneUpdate();
 
     const auto &size = m_frameData.size;
-    VisionarayCamera cam = m_camera->visionarayCamera();
+    dco::Camera cam = m_camera->visionarayCamera();
     VisionarayRenderer rend = m_renderer->visionarayRenderer();
     VisionarayScene scene = m_world->visionarayScene();
 
-    if (cam.type == VisionarayCamera::Pinhole)
+    if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.begin_frame();
-    else if (cam.type == VisionarayCamera::Matrix)
+    else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.begin_frame();
 
     visionaray::parallel_for(pool,tiled_range2d<int>(0,size.x,64,0,size.y,64),
@@ -166,22 +166,23 @@ void Frame::renderFrame()
         for (int y=r.cols().begin(); y!=r.cols().end(); ++y) {
           for (int x=r.rows().begin(); x!=r.rows().end(); ++x) {
             Ray ray;
-            if (cam.type == VisionarayCamera::Pinhole)
+            if (cam.type == dco::Camera::Pinhole)
               ray = cam.asPinholeCam.primary_ray(
                 Ray{}, float(x), float(y), float(size.x), float(size.y));
-            else if (cam.type == VisionarayCamera::Matrix)
+            else if (cam.type == dco::Camera::Matrix)
               ray = cam.asMatrixCam.primary_ray(
                 Ray{}, float(x), float(y), float(size.x), float(size.y));
 
             PRD prd{x,y};
-            writeSample(x, y, rend.renderSample(ray, prd, scene));
+            writeSample(x, y,
+                rend.renderSample(ray, prd, scene->m_worldID, deviceState()->onDevice));
           }
         }
       });
 
-    if (cam.type == VisionarayCamera::Pinhole)
+    if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.end_frame();
-    else if (cam.type == VisionarayCamera::Matrix)
+    else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.end_frame();
 
     auto end = std::chrono::steady_clock::now();

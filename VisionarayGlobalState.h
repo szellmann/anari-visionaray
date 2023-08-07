@@ -2,7 +2,8 @@
 
 // helium
 #include "helium/BaseGlobalDeviceState.h"
-// visionaray
+// ours
+#include "DeviceCopyableObjects.h"
 
 namespace visionaray {
 
@@ -36,6 +37,21 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     helium::TimeStamp lastBLSCommitSceneRequest{0};
     helium::TimeStamp lastTLSReconstructSceneRequest{0};
   } objectUpdates;
+
+  struct DeviceCopyableObjects
+  {
+    // One TLS per world
+    std::vector<dco::TLS> TLSs;
+    std::vector<dco::Group> groups;
+    std::vector<dco::Instance> instances;
+  } dcos;
+
+  struct DeviceObjectRegistry
+  {
+    dco::TLS *TLSs{nullptr};
+    dco::Group *groups{nullptr};
+    dco::Instance *instances{nullptr};
+  } onDevice;
 
   Frame *currentFrame{nullptr};
 

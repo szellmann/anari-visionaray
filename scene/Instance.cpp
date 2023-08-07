@@ -7,9 +7,8 @@ namespace visionaray {
 
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
-  vgeom.type = VisionarayGeometry::Instance;
-  vgeom.asInstance.instID = s->objectCounts.instances;
-  s->objectCounts.instances++;
+  vgeom.type = dco::Geometry::Instance;
+  vgeom.asInstance.instID = s->objectCounts.instances++;
 }
 
 Instance::~Instance()
@@ -25,6 +24,8 @@ void Instance::commit()
   m_group = getParamObject<Group>("group");
   if (!m_group)
     reportMessage(ANARI_SEVERITY_WARNING, "missing 'group' on ANARIInstance");
+
+  dispatch();
 }
 
 const mat4 &Instance::xfm() const
@@ -52,7 +53,7 @@ Group *Instance::group()
   return m_group.ptr;
 }
 
-VisionarayGeometry Instance::visionarayGeometry() const
+dco::Geometry Instance::visionarayGeometry() const
 {
   return vgeom;
 }
@@ -61,10 +62,13 @@ void Instance::visionarayGeometryUpdate()
 {
   // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
   vgeom.asInstance.scene = group()->visionarayScene();
+  vgeom.asInstance.groupID = group()->visionarayScene()->m_groupID;
+  std::cout << vgeom.asInstance.groupID <<'\n';
   vgeom.asInstance.xfm = m_xfm;
   // rtcSetGeometryTransform(
   //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);
   // rtcCommitGeometry(m_embreeGeometry);
+  dispatch();
 }
 
 void Instance::markCommitted()
@@ -77,6 +81,21 @@ void Instance::markCommitted()
 bool Instance::isValid() const
 {
   return m_group;
+}
+
+void Instance::dispatch()
+{
+  if (deviceState()->dcos.instances.size() <= vgeom.asInstance.instID) {
+    deviceState()->dcos.instances.resize(vgeom.asInstance.instID+1);
+  }
+  deviceState()->dcos.instances[vgeom.asInstance.instID].instID
+      = vgeom.asInstance.instID;
+  deviceState()->dcos.instances[vgeom.asInstance.instID].groupID
+      = vgeom.asInstance.groupID;
+    std::cout << vgeom.asInstance.instID << ',' << vgeom.asInstance.groupID << '\n';
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.data();
 }
 
 } // namespace visionaray

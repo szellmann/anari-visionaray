@@ -176,7 +176,7 @@ void World::rebuildTLS()
 
   if (vscene)
     vscene->release();
-  vscene = newVisionarayScene();
+  vscene = newVisionarayScene(VisionaraySceneImpl::World, deviceState());
 
   uint32_t id = 0;
   std::for_each(m_instances.begin(), m_instances.end(), [&](auto *i) {

@@ -23,18 +23,20 @@ struct PixelSample
 struct VisionarayRenderer
 {
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, PRD &prd, VisionarayScene scene) {
+  PixelSample renderSample(Ray ray, PRD &prd, unsigned worldID,
+        VisionarayGlobalState::DeviceObjectRegistry onDevice) {
     PixelSample result;
     result.color = m_bgColor;
     result.depth = 1.f;
 
-    auto hr = intersect(ray, scene->onDevice.theTLS);
+    auto hr = intersect(ray, onDevice.TLSs[worldID]);
 
     if (hr.hit) {
       vec3f gn(1.f,0.f,0.f);
-      auto geom = scene->onDevice.geoms[hr.geom_id];
-      //printf("%u,%u,%u\n",hr.prim_id,hr.geom_id,hr.inst_id);
-      if (geom.type == VisionarayGeometry::Triangle) {
+      auto inst = onDevice.instances[hr.inst_id];
+      const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
+      if (geom.type == dco::Geometry::Triangle) {
+      // TODO: doesn't work for instances yet
         auto tri = geom.asTriangle.data[hr.prim_id];
         gn = normalize(cross(tri.e1,tri.e2));
       }

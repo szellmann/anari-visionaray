@@ -118,7 +118,7 @@ void Group::visionaraySceneConstruct()
 
   if (vscene)
     vscene->release();
-  vscene = newVisionarayScene();
+  vscene = newVisionarayScene(VisionaraySceneImpl::Group, deviceState());
  
   if (m_surfaceData) {
     uint32_t id = 0;

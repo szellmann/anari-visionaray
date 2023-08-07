@@ -9,6 +9,7 @@
 // ours
 #include "surface/geometry/Geometry.h"
 #include "surface/material/Material.h"
+#include "DeviceCopyableObjects.h"
 
 namespace visionaray {
 
@@ -16,71 +17,24 @@ typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
 typedef index_bvh<basic_sphere<float>>     SphereBVH;
 typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
 
-struct BLS
-{
-  enum Type { Triangle, Sphere, Cylinder, Instance, };
-  Type type;
-  TriangleBVH::bvh_ref asTriangle;
-  SphereBVH::bvh_ref asSphere;
-  CylinderBVH::bvh_ref asCylinder;
-  index_bvh<BLS>::bvh_inst asInstance;
-};
-
-VSNRAY_FUNC
-inline aabb get_bounds(const BLS &bls)
-{
-  if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
-    return bls.asTriangle.node(0).get_bounds();
-  else if (bls.type == BLS::Sphere && bls.asSphere.num_nodes())
-    return bls.asSphere.node(0).get_bounds();
-  else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
-    return bls.asCylinder.node(0).get_bounds();
-  else if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
-    aabb bound = bls.asInstance.node(0).get_bounds();
-    mat3f rot = inverse(bls.asInstance.affine_inv());
-    vec3f trans = -bls.asInstance.trans_inv();
-    bound.min = rot * bound.min + trans;
-    bound.max = rot * bound.max + trans;
-    return aabb{min(bound.min,bound.max),max(bound.min,bound.max)};
-  }
-
-  aabb inval;
-  inval.invalidate();
-  return inval;
-}
-
-VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const BLS &bls)
-{
-  if (bls.type == BLS::Triangle)
-    return intersect(ray,bls.asTriangle);
-  if (bls.type == BLS::Sphere)
-    return intersect(ray,bls.asSphere);
-  if (bls.type == BLS::Cylinder)
-    return intersect(ray,bls.asCylinder);
-  else if (bls.type == BLS::Instance) {
-    return intersect(ray,bls.asInstance);
-  }
-
-  return {};
-}
-
-typedef index_bvh<BLS> TLS;
+typedef index_bvh<dco::BLS> TLS;
 
 struct VisionaraySceneImpl
 {
+  enum Type { World, Group, };
+  Type type;
+
   struct {
-    TLS::bvh_ref theTLS;
-    VisionarayGeometry *geoms{nullptr};
+    dco::TLS theTLS;
+    dco::Geometry *geoms{nullptr};
   } onDevice;
 
   // Geometries //
-  aligned_vector<VisionarayGeometry> m_geometries;
+  aligned_vector<dco::Geometry> m_geometries;
 
   // Accels //
   TLS m_TLS;
-  aligned_vector<BLS> m_BLSs;
+  aligned_vector<dco::BLS> m_BLSs;
 
   // Accel storage //
   struct {
@@ -92,12 +46,23 @@ struct VisionaraySceneImpl
   // Surface properties //
   aligned_vector<VisionarayMaterial> m_materials;
 
+  // Internal state //
+  unsigned m_worldID{UINT_MAX};
+  unsigned m_groupID{UINT_MAX};
+  VisionarayGlobalState *m_state{nullptr};
+
+  // Interface //
+  VisionaraySceneImpl(Type type, VisionarayGlobalState *state);
   void commit();
   void release();
-  void attachGeometry(VisionarayGeometry geom, unsigned geomID);
+  void attachGeometry(dco::Geometry geom, unsigned geomID);
+
+private:
+  void dispatch();
 };
 
 typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
-VisionarayScene newVisionarayScene();
+VisionarayScene newVisionarayScene(
+    VisionaraySceneImpl::Type type, VisionarayGlobalState *state);
 
 } // namespace visionaray
