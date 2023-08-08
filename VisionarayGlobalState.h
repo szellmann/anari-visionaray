@@ -44,6 +44,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     std::vector<dco::TLS> TLSs;
     std::vector<dco::Group> groups;
     std::vector<dco::Instance> instances;
+    std::vector<dco::Material> materials;
   } dcos;
 
   struct DeviceObjectRegistry
@@ -51,6 +52,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::TLS *TLSs{nullptr};
     dco::Group *groups{nullptr};
     dco::Instance *instances{nullptr};
+    dco::Material *materials{nullptr};
   } onDevice;
 
   Frame *currentFrame{nullptr};

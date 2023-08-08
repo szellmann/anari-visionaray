@@ -63,7 +63,6 @@ void Instance::visionarayGeometryUpdate()
   // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
   vgeom.asInstance.scene = group()->visionarayScene();
   vgeom.asInstance.groupID = group()->visionarayScene()->m_groupID;
-  std::cout << vgeom.asInstance.groupID <<'\n';
   vgeom.asInstance.xfm = m_xfm;
   // rtcSetGeometryTransform(
   //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);

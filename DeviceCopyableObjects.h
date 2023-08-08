@@ -117,6 +117,7 @@ struct Material
 {
   enum Type { Matte, };
   Type type;
+  unsigned matID{UINT_MAX};
   struct {
     matte<float> data;
     texture_ref<unorm<8>, 2> colorSampler;
@@ -129,6 +130,7 @@ struct Camera
 {
   enum Type { Matrix, Pinhole, };
   Type type;
+  unsigned camID{UINT_MAX};
   union {
     matrix_camera asMatrixCam;
     pinhole_camera asPinholeCam;

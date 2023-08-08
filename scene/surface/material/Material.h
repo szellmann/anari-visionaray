@@ -26,6 +26,8 @@ struct Material : public Object
   dco::Material vmat;
   float4 m_color{1.f, 1.f, 1.f, 1.f};
   helium::IntrusivePtr<Sampler> m_colorSampler;
+
+  void dispatch();
 };
 
 } // namespace visionaray
