@@ -131,10 +131,8 @@ struct Camera
   enum Type { Matrix, Pinhole, };
   Type type;
   unsigned camID{UINT_MAX};
-  union {
-    matrix_camera asMatrixCam;
-    pinhole_camera asPinholeCam;
-  };
+  matrix_camera asMatrixCam;
+  pinhole_camera asPinholeCam;
 };
 
 } // namespace visionaray::dco
