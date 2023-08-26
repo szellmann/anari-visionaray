@@ -45,9 +45,14 @@ inline aabb get_bounds(const BLS &bls)
     aabb bound = bls.asInstance.node(0).get_bounds();
     mat3f rot = inverse(bls.asInstance.affine_inv());
     vec3f trans = -bls.asInstance.trans_inv();
-    bound.min = rot * bound.min + trans;
-    bound.max = rot * bound.max + trans;
-    return aabb{min(bound.min,bound.max),max(bound.min,bound.max)};
+    auto verts = compute_vertices(bound);
+    aabb result;
+    result.invalidate();
+    for (vec3 v : verts) {
+      v = rot * v + trans;
+      result.insert(v);
+    }
+    return result;
   }
 
   aabb inval;
