@@ -7,7 +7,7 @@
 //#include "Curve.h"
 //#include "Cylinder.h"
 //#include "Quad.h"
-//#include "Sphere.h"
+#include "Sphere.h"
 #include "Triangle.h"
 // std
 #include <cstring>
@@ -37,9 +37,9 @@ Geometry *Geometry::createInstance(
 //    return new Cylinder(s);
 //  else if (subtype == "quad")
 //    return new Quad(s);
-//  else if (subtype == "sphere")
-//    return new Sphere(s);
-  /*else*/ if (subtype == "triangle")
+  /*else*/ if (subtype == "sphere")
+    return new Sphere(s);
+  else if (subtype == "triangle")
     return new Triangle(s);
   else
     return (Geometry *)new UnknownObject(ANARI_GEOMETRY, s);

@@ -30,6 +30,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     renderer/Renderer.cpp
     scene/light/Light.cpp
     scene/surface/geometry/Geometry.cpp
+    scene/surface/geometry/Sphere.cpp
     scene/surface/geometry/Triangle.cpp
     scene/surface/material/sampler/Sampler.cpp
     scene/surface/material/Material.cpp

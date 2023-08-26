@@ -92,6 +92,14 @@ struct Geometry
     size_t len{0};
   } asTriangle;
   struct {
+    basic_sphere<float> *data{nullptr};
+    size_t len{0};
+  } asSphere;
+  struct {
+    basic_cylinder<float> *data{nullptr};
+    size_t len{0};
+  } asCylinder;
+  struct {
     unsigned instID{UINT_MAX};
     unsigned groupID{UINT_MAX};
     VisionarayScene scene{nullptr};

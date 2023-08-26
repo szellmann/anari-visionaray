@@ -62,9 +62,19 @@ void VisionaraySceneImpl::commit()
       bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
       m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Sphere) {
-      // TODO (equiv.)
-    } else if (geom.type == dco::Geometry::Cylinder) {
+      binned_sah_builder builder;
+      builder.enable_spatial_splits(true);
 
+      unsigned index = sphereCount++;
+      m_accelStorage.sphereBLSs[index] = builder.build(
+        SphereBVH{}, geom.asSphere.data, geom.asSphere.len);
+
+      dco::BLS bls;
+      bls.type = dco::BLS::Sphere;
+      bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
+      m_BLSs.push_back(bls);
+    } else if (geom.type == dco::Geometry::Cylinder) {
+      // TODO (equiv.)
     } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
       dco::BLS bls;
