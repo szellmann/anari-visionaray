@@ -3,8 +3,6 @@
 
 #include "VisionarayDevice.h"
 
-#include "anari/ext/debug/DebugObject.h"
-
 #include "array/Array1D.h"
 #include "array/Array2D.h"
 #include "array/Array3D.h"
@@ -38,8 +36,6 @@ const void *query_param_info(ANARIDataType type,
     ANARIDataType paramType,
     const char *infoName,
     ANARIDataType infoType);
-
-anari::debug_device::ObjectFactory *getDebugFactory();
 
 const char **query_extensions();
 
@@ -196,7 +192,7 @@ ANARIGroup VisionarayDevice::newGroup()
   return createObjectForAPI<Group, ANARIGroup>(deviceState());
 }
 
-ANARIInstance VisionarayDevice::newInstance()
+ANARIInstance VisionarayDevice::newInstance(const char * /*subtype*/)
 {
   initDevice();
   return createObjectForAPI<Instance, ANARIInstance>(deviceState());
@@ -252,10 +248,7 @@ int VisionarayDevice::getProperty(ANARIObject object,
 {
   if (handleIsDevice(object)) {
     std::string_view prop = name;
-    if (prop == "debugObjects" && type == ANARI_FUNCTION_POINTER) {
-      helium::writeToVoidP(mem, getDebugFactory);
-      return 1;
-    } else if (prop == "feature" && type == ANARI_STRING_LIST) {
+    if (prop == "extension" && type == ANARI_STRING_LIST) {
       helium::writeToVoidP(mem, query_extensions());
       return 1;
     } else if (prop == "visionaray" && type == ANARI_BOOL) {

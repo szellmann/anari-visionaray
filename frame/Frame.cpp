@@ -147,7 +147,6 @@ void Frame::renderFrame()
   m_frameLastRendered = helium::newTimeStamp();
   state->currentFrame = this;
 
-  static thread_pool pool{std::thread::hardware_concurrency()};
   m_future = async<void>([&, state, start]() {
     m_world->visionaraySceneUpdate();
 
@@ -161,10 +160,11 @@ void Frame::renderFrame()
     else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.begin_frame();
 
-    visionaray::parallel_for(pool,tiled_range2d<int>(0,size.x,64,0,size.y,64),
+    parallel_for(state->threadPool,tiled_range2d<int>(0,size.x,64,0,size.y,64),
       [&](range2d<int> r) {
         for (int y=r.cols().begin(); y!=r.cols().end(); ++y) {
           for (int x=r.rows().begin(); x!=r.rows().end(); ++x) {
+//std::cout << x << ',' << y << '\n';
             Ray ray;
             if (cam.type == dco::Camera::Pinhole)
               ray = cam.asPinholeCam.primary_ray(

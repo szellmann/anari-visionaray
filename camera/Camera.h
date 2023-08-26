@@ -25,6 +25,7 @@ struct Camera : public Object
   vec3f m_pos;
   vec3f m_dir;
   vec3f m_up;
+  box2f m_imageRegion;
 };
 
 } // namespace visionaray

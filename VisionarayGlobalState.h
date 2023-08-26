@@ -2,6 +2,8 @@
 
 // helium
 #include "helium/BaseGlobalDeviceState.h"
+// visionaray
+#include "visionaray/detail/thread_pool.h"
 // ours
 #include "DeviceCopyableObjects.h"
 
@@ -11,7 +13,7 @@ struct Frame;
 
 struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 {
-  int numThreads{1};
+  thread_pool threadPool;
 
   struct ObjectCounts
   {

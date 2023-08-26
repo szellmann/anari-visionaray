@@ -33,6 +33,7 @@ void Camera::commit()
   m_pos = getParam<visionaray::vec3f>("position", visionaray::vec3f(0.f));
   m_dir = normalize(getParam<visionaray::vec3f>("direction", visionaray::vec3f(0.f, 0.f, 1.f)));
   m_up = normalize(getParam<visionaray::vec3f>("up", visionaray::vec3f(0.f, 1.f, 0.f)));
+  m_imageRegion = getParam<box2f>("imageRegion", box2f{{0.f,0.f}, {1.f,1.f}});
   markUpdated();
 }
 

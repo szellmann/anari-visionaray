@@ -28,6 +28,7 @@ void Perspective::commit()
   vcam.type = dco::Camera::Pinhole;
   vcam.asPinholeCam.perspective(fovy, aspect, .001f, 1000.f);
   vcam.asPinholeCam.look_at(m_pos, m_pos + m_dir, m_up);
+  vcam.asPinholeCam.set_image_region(m_imageRegion);
 }
 
 } // namespace visionaray

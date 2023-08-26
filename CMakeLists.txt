@@ -5,18 +5,11 @@ cmake_minimum_required(VERSION 3.12)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(anari 0.4.0 REQUIRED)
+find_package(anari 0.7.0 REQUIRED)
 find_package(GLEW REQUIRED) # required by visionaray (TODO!)
 find_package(visionaray REQUIRED)
 
 anari_generate_queries(
-  NAME visionaray
-  PREFIX VisionarayDevice
-  CPP_NAMESPACE visionaray
-  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_device.json
-)
-
-anari_generate_debug_objects(
   NAME visionaray
   PREFIX VisionarayDevice
   CPP_NAMESPACE visionaray
@@ -50,13 +43,12 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/World.cpp
     Object.cpp
     VisionarayDevice.cpp
-    VisionarayDeviceDebugFactory.cpp
     VisionarayDeviceQueries.cpp
     VisionarayGlobalState.cpp
     VisionarayLibrary.cpp
 )
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC visionaray::visionaray anari::anari anari::helium anari::anari_library_debug)
+    PUBLIC visionaray::visionaray anari::anari anari::helium)
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 )

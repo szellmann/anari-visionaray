@@ -5,7 +5,7 @@
 namespace visionaray {
 
 VisionarayGlobalState::VisionarayGlobalState(ANARIDevice d)
-    : helium::BaseGlobalDeviceState(d)
+    : helium::BaseGlobalDeviceState(d), threadPool(std::thread::hardware_concurrency())
 {}
 
 void VisionarayGlobalState::waitOnCurrentFrame() const
