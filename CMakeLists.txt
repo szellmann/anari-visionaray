@@ -29,6 +29,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     frame/Frame.cpp
     renderer/Renderer.cpp
     scene/light/Light.cpp
+    scene/surface/geometry/Cylinder.cpp
     scene/surface/geometry/Geometry.cpp
     scene/surface/geometry/Sphere.cpp
     scene/surface/geometry/Triangle.cpp

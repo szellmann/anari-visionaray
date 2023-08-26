@@ -74,7 +74,17 @@ void VisionaraySceneImpl::commit()
       bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
       m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Cylinder) {
-      // TODO (equiv.)
+      binned_sah_builder builder;
+      builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
+
+      unsigned index = cylinderCount++;
+      m_accelStorage.cylinderBLSs[index] = builder.build(
+        CylinderBVH{}, geom.asCylinder.data, geom.asCylinder.len);
+
+      dco::BLS bls;
+      bls.type = dco::BLS::Cylinder;
+      bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
+      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
       dco::BLS bls;

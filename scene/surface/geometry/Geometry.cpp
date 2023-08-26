@@ -5,7 +5,7 @@
 // subtypes
 //#include "Cone.h"
 //#include "Curve.h"
-//#include "Cylinder.h"
+#include "Cylinder.h"
 //#include "Quad.h"
 #include "Sphere.h"
 #include "Triangle.h"
@@ -33,11 +33,11 @@ Geometry *Geometry::createInstance(
 //    return new Cone(s);
 //  else if (subtype == "curve")
 //    return new Curve(s);
-//  else if (subtype == "cylinder")
-//    return new Cylinder(s);
+  /*else*/ if (subtype == "cylinder")
+    return new Cylinder(s);
 //  else if (subtype == "quad")
 //    return new Quad(s);
-  /*else*/ if (subtype == "sphere")
+  else if (subtype == "sphere")
     return new Sphere(s);
   else if (subtype == "triangle")
     return new Triangle(s);
