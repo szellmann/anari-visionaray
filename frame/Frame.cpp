@@ -164,7 +164,6 @@ void Frame::renderFrame()
       [&](range2d<int> r) {
         for (int y=r.cols().begin(); y!=r.cols().end(); ++y) {
           for (int x=r.rows().begin(); x!=r.rows().end(); ++x) {
-//std::cout << x << ',' << y << '\n';
             Ray ray;
             if (cam.type == dco::Camera::Pinhole)
               ray = cam.asPinholeCam.primary_ray(

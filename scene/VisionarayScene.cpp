@@ -138,6 +138,14 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
     for (size_t i=0;i<geom.asTriangle.len;++i) {
       geom.asTriangle.data[i].geom_id = geomID;
     }
+  } else if (geom.type == dco::Geometry::Sphere) {
+    for (size_t i=0;i<geom.asSphere.len;++i) {
+      geom.asSphere.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::Cylinder) {
+    for (size_t i=0;i<geom.asCylinder.len;++i) {
+      geom.asCylinder.data[i].geom_id = geomID;
+    }
   }
 
   m_geometries[geomID] = geom;

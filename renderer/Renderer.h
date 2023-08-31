@@ -32,10 +32,27 @@ struct VisionarayRenderer
       vec3f gn(1.f,0.f,0.f);
       auto inst = onDevice.instances[hr.inst_id];
       const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
-      if (geom.type == dco::Geometry::Triangle) {
       // TODO: doesn't work for instances yet
+      if (geom.type == dco::Geometry::Triangle) {
         auto tri = geom.asTriangle.data[hr.prim_id];
         gn = normalize(cross(tri.e1,tri.e2));
+      } else if (geom.type == dco::Geometry::Sphere) {
+        auto sph = geom.asSphere.data[hr.prim_id];
+        vec3f hitPos = ray.ori + hr.t * ray.dir;
+        gn = normalize((hitPos-sph.center) / sph.radius);
+      } else if (geom.type == dco::Geometry::Cylinder) {
+        auto cyl = geom.asCylinder.data[hr.prim_id];
+        vec3f hitPos = ray.ori + hr.t * ray.dir;
+        vec3f axis = normalize(cyl.v2-cyl.v1);
+        if (length(hitPos-cyl.v1) < cyl.radius)
+          gn = -axis;
+        else if (length(hitPos-cyl.v2) < cyl.radius)
+          gn = axis;
+        else {
+          float t = dot(hitPos-cyl.v1, axis);
+          vec3f pt = cyl.v1 + t * axis;
+          gn = normalize(hitPos-pt);
+        }
       }
 
       shade_record<float> sr;
