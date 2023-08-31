@@ -26,6 +26,9 @@ struct VisionarayRenderer
     result.color = m_bgColor;
     result.depth = 1.f;
 
+    if (onDevice.TLSs[worldID].num_primitives() == 0)
+      return result; // happens eg with TLSs of unsupported objects
+
     auto hr = intersect(ray, onDevice.TLSs[worldID]);
 
     if (hr.hit) {
