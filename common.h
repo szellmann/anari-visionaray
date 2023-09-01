@@ -14,7 +14,6 @@ namespace visionaray {
     using float2 = vec2f;
     using float3 = vec3f;
     using float4 = vec4f;
-    using box1 = vec2f; // TODO!
     using Ray = basic_ray<float>;
 } // namespace visionaray
 
@@ -26,6 +25,7 @@ ANARI_TYPEFOR_SPECIALIZATION(visionaray::uint4, ANARI_UINT32_VEC4);
 ANARI_TYPEFOR_SPECIALIZATION(visionaray::float2, ANARI_FLOAT32_VEC2);
 ANARI_TYPEFOR_SPECIALIZATION(visionaray::float3, ANARI_FLOAT32_VEC3);
 ANARI_TYPEFOR_SPECIALIZATION(visionaray::float4, ANARI_FLOAT32_VEC4);
+ANARI_TYPEFOR_SPECIALIZATION(visionaray::box1, ANARI_FLOAT32_BOX1);
 ANARI_TYPEFOR_SPECIALIZATION(visionaray::box2, ANARI_FLOAT32_BOX2);
 ANARI_TYPEFOR_SPECIALIZATION(visionaray::aabb, ANARI_FLOAT32_BOX3);
 ANARI_TYPEFOR_SPECIALIZATION(visionaray::mat4, ANARI_FLOAT32_MAT4);
@@ -37,6 +37,7 @@ ANARI_TYPEFOR_DEFINITION(visionaray::uint4);
 ANARI_TYPEFOR_DEFINITION(visionaray::float2);
 ANARI_TYPEFOR_DEFINITION(visionaray::float3);
 ANARI_TYPEFOR_DEFINITION(visionaray::float4);
+ANARI_TYPEFOR_DEFINITION(visionaray::box1);
 ANARI_TYPEFOR_DEFINITION(visionaray::box2);
 ANARI_TYPEFOR_DEFINITION(visionaray::aabb);
 ANARI_TYPEFOR_DEFINITION(visionaray::mat4);

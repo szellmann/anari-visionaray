@@ -47,24 +47,24 @@ struct TransferFunction1D : public Volume
 
 // Inlined defintions /////////////////////////////////////////////////////////
 
-inline const SpatialField *TransferFunction1D::field() const
-{
-  return m_field.ptr;
-}
-
-inline float3 TransferFunction1D::colorOf(float sample) const
-{
-  return m_colorData->valueAtLinear<float3>(normalized(sample));
-}
-
-inline float TransferFunction1D::opacityOf(float sample) const
-{
-  return m_opacityData->valueAtLinear<float>(normalized(sample));
-}
-
-inline float TransferFunction1D::normalized(float sample) const
-{
-  return std::clamp(((sample-m_valueRange.x)/(m_valueRange.y-m_valueRange.x)), 0.f, 1.f);
-}
+// inline const SpatialField *TransferFunction1D::field() const
+// {
+//   return m_field.ptr;
+// }
+// 
+// inline float3 TransferFunction1D::colorOf(float sample) const
+// {
+//   return m_colorData->valueAtLinear<float3>(normalized(sample));
+// }
+// 
+// inline float TransferFunction1D::opacityOf(float sample) const
+// {
+//   return m_opacityData->valueAtLinear<float>(normalized(sample));
+// }
+// 
+// inline float TransferFunction1D::normalized(float sample) const
+// {
+//   return std::clamp(((sample-m_valueRange.x)/(m_valueRange.y-m_valueRange.x)), 0.f, 1.f);
+// }
 
 } // namespace visionaray

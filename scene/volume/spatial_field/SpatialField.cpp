@@ -4,13 +4,14 @@
 #include "SpatialField.h"
 // subtypes
 // #include "StructuredRegularField.h"
+#include "UnstructuredField.h"
 
 namespace visionaray {
 
 SpatialField::SpatialField(VisionarayGlobalState *s)
     : Object(ANARI_SPATIAL_FIELD, s)
 {
-  s->objectCounts.spatialFields++;
+  vfield.fieldID = s->objectCounts.spatialFields++;
 }
 
 SpatialField::~SpatialField()
@@ -23,6 +24,8 @@ SpatialField *SpatialField::createInstance(
 {
   // if (subtype == "structuredRegular")
   //   return new StructuredRegularField(s);
+  /*else*/ if (subtype == "unstructured")
+    return new UnstructuredField(s);
   // else
     return (SpatialField *)new UnknownObject(ANARI_SPATIAL_FIELD, s);
 }
@@ -31,6 +34,17 @@ SpatialField *SpatialField::createInstance(
 // {
 //   m_stepSize = size;
 // }
+
+void SpatialField::dispatch()
+{
+  if (deviceState()->dcos.spatialFields.size() <= vfield.fieldID) {
+    deviceState()->dcos.spatialFields.resize(vfield.fieldID+1);
+  }
+  deviceState()->dcos.spatialFields[vfield.fieldID] = vfield;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.spatialFields = deviceState()->dcos.spatialFields.data();
+}
 
 } // namespace visionaray
 

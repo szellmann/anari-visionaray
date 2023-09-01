@@ -7,7 +7,6 @@ namespace visionaray {
 
 Sphere::Sphere(VisionarayGlobalState *s) : Geometry(s)
 {
-  memset(&vgeom,0,sizeof(vgeom));
   vgeom.type = dco::Geometry::Sphere;
 }
 

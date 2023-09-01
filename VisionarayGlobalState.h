@@ -47,6 +47,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     std::vector<dco::Group> groups;
     std::vector<dco::Instance> instances;
     std::vector<dco::Material> materials;
+    std::vector<dco::SpatialField> spatialFields;
   } dcos;
 
   struct DeviceObjectRegistry
@@ -55,6 +56,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::Group *groups{nullptr};
     dco::Instance *instances{nullptr};
     dco::Material *materials{nullptr};
+    dco::SpatialField *spatialFields{nullptr};
   } onDevice;
 
   Frame *currentFrame{nullptr};

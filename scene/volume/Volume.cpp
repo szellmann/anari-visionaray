@@ -9,6 +9,8 @@ namespace visionaray {
 
 Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s)
 {
+  memset(&vgeom,0,sizeof(vgeom));
+  vgeom.type = dco::Geometry::Volume;
   s->objectCounts.volumes++;
 }
 
@@ -23,6 +25,11 @@ Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *
     return new TransferFunction1D(s);
   else
     return (Volume *)new UnknownObject(ANARI_VOLUME, s);
+}
+
+dco::Geometry Volume::visionarayGeometry() const
+{
+  return vgeom;
 }
 
 } // namespace visionaray

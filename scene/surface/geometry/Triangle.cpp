@@ -9,7 +9,6 @@ namespace visionaray {
 
 Triangle::Triangle(VisionarayGlobalState *s) : Geometry(s)
 {
-  memset(&vgeom,0,sizeof(vgeom));
   vgeom.type = dco::Geometry::Triangle;
 }
 

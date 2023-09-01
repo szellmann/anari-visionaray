@@ -16,6 +16,7 @@ namespace visionaray {
 typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
 typedef index_bvh<basic_sphere<float>>     SphereBVH;
 typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
+typedef index_bvh<dco::Volume>             VolumeBVH;
 
 typedef index_bvh<dco::BLS> TLS;
 
@@ -23,11 +24,6 @@ struct VisionaraySceneImpl
 {
   enum Type { World, Group, };
   Type type;
-
-  struct {
-    dco::TLS theTLS;
-    dco::Geometry *geoms{nullptr};
-  } onDevice;
 
   // Geometries //
   aligned_vector<dco::Geometry> m_geometries;
@@ -41,6 +37,7 @@ struct VisionaraySceneImpl
     aligned_vector<TriangleBVH> triangleBLSs;
     aligned_vector<SphereBVH>   sphereBLSs;
     aligned_vector<CylinderBVH> cylinderBLSs;
+    aligned_vector<VolumeBVH>   volumeBLSs;
   } m_accelStorage;
 
   // Surface properties //

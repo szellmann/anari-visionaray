@@ -120,8 +120,8 @@ void Group::visionaraySceneConstruct()
     vscene->release();
   vscene = newVisionarayScene(VisionaraySceneImpl::Group, deviceState());
  
+  uint32_t id = 0;
   if (m_surfaceData) {
-    uint32_t id = 0;
     std::for_each(m_surfaceData->handlesBegin(),
         m_surfaceData->handlesEnd(),
         [&](Object *o) {
@@ -144,6 +144,23 @@ void Group::visionaraySceneConstruct()
               reportMessage(
                   ANARI_SEVERITY_DEBUG, "    visionaray::Material is invalid");
             }
+          }
+        });
+  }
+ 
+  if (m_volumeData) {
+    std::for_each(m_volumeData->handlesBegin(),
+        m_volumeData->handlesEnd(),
+        [&](Object *o) {
+          auto *v = (Volume *)o;
+          if (v && v->isValid()) {
+            m_volumes.push_back(v);
+            vscene->attachGeometry(
+                v->visionarayGeometry(), id++);
+          } else {
+            reportMessage(ANARI_SEVERITY_DEBUG,
+                "visionaray::Group rejecting invalid volume(%p) in building BLS",
+                v);
           }
         });
   }

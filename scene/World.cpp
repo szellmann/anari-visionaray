@@ -52,7 +52,8 @@ void World::commit()
 
   m_addZeroInstance = m_zeroSurfaceData || m_zeroVolumeData;
   if (m_addZeroInstance)
-    reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::World will add zero instance");
+    reportMessage(
+        ANARI_SEVERITY_DEBUG, "visionaray::World will add zero instance");
 
   if (m_zeroSurfaceData) {
     reportMessage(ANARI_SEVERITY_DEBUG,
@@ -105,11 +106,11 @@ const std::vector<Instance *> &World::instances() const
   return m_instances;
 }
 
-//void World::intersectVolumes(VolumeRay &ray) const
+// void World::intersectVolumes(VolumeRay &ray) const
 //{
-//  for (auto *i : instances())
-//    i->group()->intersectVolumes(ray);
-//}
+//   for (auto *i : instances())
+//     i->group()->intersectVolumes(ray);
+// }
 
 VisionarayScene World::visionarayScene() const
 {
@@ -180,7 +181,9 @@ void World::rebuildTLS()
 
   uint32_t id = 0;
   std::for_each(m_instances.begin(), m_instances.end(), [&](auto *i) {
-    if (i && i->isValid() && !i->group()->surfaces().empty()) {
+    if (i && i->isValid()
+        && (!i->group()->surfaces().empty()
+            || !i->group()->volumes().empty())) {
       i->visionarayGeometryUpdate();
       vscene->attachGeometry(i->visionarayGeometry(), id);
     } else {

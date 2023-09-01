@@ -5,7 +5,11 @@
 
 namespace visionaray {
 
-TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d) : Volume(d) {}
+TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d) : Volume(d)
+{
+  vgeom.type = dco::Geometry::Volume;
+  vgeom.asVolume.data.type = dco::Volume::TransferFunction1D;
+}
 
 void TransferFunction1D::commit()
 {
@@ -19,7 +23,7 @@ void TransferFunction1D::commit()
   m_bounds = m_field ? m_field->bounds() : aabb();
 
   m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
-  m_invSize = 1.f / (m_valueRange.y-m_valueRange.x);
+  m_invSize = 1.f / (m_valueRange.max-m_valueRange.min);
 
   m_colorData = getParamObject<Array1D>("color");
   m_opacityData = getParamObject<Array1D>("opacity");
@@ -36,6 +40,9 @@ void TransferFunction1D::commit()
         "no opacity data provided to transfer function");
     return;
   }
+
+  vgeom.asVolume.data.bounds = m_bounds;
+  vgeom.asVolume.data.asTransferFunction1D.valueRange = m_valueRange;
 }
 
 bool TransferFunction1D::isValid() const

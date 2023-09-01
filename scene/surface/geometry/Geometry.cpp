@@ -17,6 +17,7 @@ namespace visionaray {
 
 Geometry::Geometry(VisionarayGlobalState *s) : Object(ANARI_GEOMETRY, s)
 {
+  memset(&vgeom,0,sizeof(vgeom));
   s->objectCounts.geometries++;
 }
 

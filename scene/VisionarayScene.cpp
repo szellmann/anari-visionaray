@@ -23,6 +23,7 @@ void VisionaraySceneImpl::commit()
   unsigned triangleCount = 0;
   unsigned sphereCount = 0;
   unsigned cylinderCount = 0;
+  unsigned volumeCount = 0;
   unsigned instanceCount = 0;
 
   for (const auto &geom : m_geometries) {
@@ -36,6 +37,9 @@ void VisionaraySceneImpl::commit()
       case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
+      case dco::Geometry::Volume:
+        volumeCount++;
+        break;
       case dco::Geometry::Instance:
       default:
         break;
@@ -45,9 +49,10 @@ void VisionaraySceneImpl::commit()
   m_accelStorage.triangleBLSs.resize(triangleCount);
   m_accelStorage.sphereBLSs.resize(sphereCount);
   m_accelStorage.cylinderBLSs.resize(cylinderCount);
+  m_accelStorage.volumeBLSs.resize(volumeCount);
   // No instance storage: instance BLSs are the TLSs of child scenes
 
-  triangleCount = sphereCount = cylinderCount = 0;
+  triangleCount = sphereCount = cylinderCount = volumeCount = 0;
   for (const auto &geom : m_geometries) {
     if (geom.type == dco::Geometry::Triangle) {
       binned_sah_builder builder;
@@ -85,6 +90,18 @@ void VisionaraySceneImpl::commit()
       bls.type = dco::BLS::Cylinder;
       bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
       m_BLSs.push_back(bls);
+    } else if (geom.type == dco::Geometry::Volume) {
+      binned_sah_builder builder;
+      builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
+
+      unsigned index = volumeCount++;
+      m_accelStorage.volumeBLSs[index] = builder.build(
+        VolumeBVH{}, &geom.asVolume.data, 1);
+
+      dco::BLS bls;
+      bls.type = dco::BLS::Volume;
+      bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
+      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
       dco::BLS bls;
@@ -104,7 +121,7 @@ void VisionaraySceneImpl::commit()
   lbvh_builder tlsBuilder;
   m_TLS = tlsBuilder.build(TLS{}, m_BLSs.data(), m_BLSs.size());
 
-#if 0
+#if 1
   std::cout << "TLS built\n";
   std::cout << "  num nodes: " << m_TLS.num_nodes() << '\n';
   std::cout << "  root bounds: " << m_TLS.node(0).get_bounds().min << ' '
@@ -112,6 +129,7 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num triangle BLSs: " << triangleCount << '\n';
   std::cout << "  num sphere BLSs  : " << sphereCount << '\n';
   std::cout << "  num cylinder BLSs: " << cylinderCount << '\n';
+  std::cout << "  num volume BLSs  : " << volumeCount << '\n';
   std::cout << "  num instance BLSs: " << instanceCount << '\n';
 #endif
 
@@ -146,6 +164,9 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
     for (size_t i=0;i<geom.asCylinder.len;++i) {
       geom.asCylinder.data[i].geom_id = geomID;
     }
+  } else if (geom.type == dco::Geometry::Volume) {
+    geom.asVolume.data.volID = geomID;
+    geom.asVolume.data.fieldID = geomID;
   }
 
   m_geometries[geomID] = geom;

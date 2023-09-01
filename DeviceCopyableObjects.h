@@ -9,6 +9,8 @@
 #include "visionaray/matrix_camera.h"
 #include "visionaray/pinhole_camera.h"
 // ours
+#include "scene/volume/spatial_field/Plane.h"
+#include "scene/volume/spatial_field/UElems.h"
 #include "common.h"
 
 namespace visionaray {
@@ -20,15 +22,61 @@ typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
 
 namespace visionaray::dco {
 
+// Volume //
+
+struct Volume
+{
+  enum Type { TransferFunction1D, };
+  Type type;
+
+  enum FieldType { Unstructured, };
+  FieldType fieldType;
+
+  unsigned volID{UINT_MAX};
+  unsigned fieldID{UINT_MAX}; // _should_ be same as volID
+
+  aabb bounds;
+
+  struct {
+    box1 valueRange;
+  } asTransferFunction1D;
+};
+
+VSNRAY_FUNC
+inline aabb get_bounds(const Volume &vol)
+{
+  return vol.bounds;
+}
+
+inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const Volume &vol)
+{
+  assert(0);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const Volume &vol)
+{
+  auto hr = intersect(ray,vol.bounds);
+  // we just report that we did hit the box; the user
+  // is later expected to intersect the volume bounds
+  // themselves to compute [t0,t1]
+  hit_record<Ray, primitive<unsigned>> result;
+  result.hit = hr.hit;
+  result.t = hr.tnear;
+  return result;
+}
+
 // BLS primitive //
 
 struct BLS
 {
-  enum Type { Triangle, Sphere, Cylinder, Instance, };
+  enum Type { Triangle, Sphere, Cylinder, Volume, Instance, };
   Type type;
   index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
   index_bvh<basic_sphere<float>>::bvh_ref asSphere;
   index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+  index_bvh<dco::Volume>::bvh_ref asVolume;
   index_bvh<BLS>::bvh_inst asInstance;
 };
 
@@ -41,6 +89,8 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asSphere.node(0).get_bounds();
   else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
     return bls.asCylinder.node(0).get_bounds();
+  else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
+    return bls.asVolume.node(0).get_bounds();
   else if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
     aabb bound = bls.asInstance.node(0).get_bounds();
     mat3f rot = inverse(bls.asInstance.affine_inv());
@@ -66,10 +116,12 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 {
   if (bls.type == BLS::Triangle)
     return intersect(ray,bls.asTriangle);
-  if (bls.type == BLS::Sphere)
+  else if (bls.type == BLS::Sphere)
     return intersect(ray,bls.asSphere);
-  if (bls.type == BLS::Cylinder)
+  else if (bls.type == BLS::Cylinder)
     return intersect(ray,bls.asCylinder);
+  else if (bls.type == BLS::Volume)
+    return intersect(ray,bls.asVolume);
   else if (bls.type == BLS::Instance) {
     return intersect(ray,bls.asInstance);
   }
@@ -85,7 +137,7 @@ typedef index_bvh<BLS>::bvh_ref TLS;
 
 struct Geometry
 {
-  enum Type { Triangle, Sphere, Cylinder, Instance, };
+  enum Type { Triangle, Sphere, Cylinder, Volume, Instance, };
   Type type;
   struct {
     basic_triangle<3,float> *data{nullptr};
@@ -99,6 +151,9 @@ struct Geometry
     basic_cylinder<float> *data{nullptr};
     size_t len{0};
   } asCylinder;
+  struct {
+    dco::Volume data;
+  } asVolume;
   struct {
     unsigned instID{UINT_MAX};
     unsigned groupID{UINT_MAX};
@@ -135,6 +190,73 @@ struct Material
     matte<float> data;
     texture_ref<unorm<8>, 2> colorSampler;
   } asMatte;
+};
+
+// Unstructured element primitive //
+
+struct UElem
+{
+  uint64_t begin;
+  uint64_t end;
+  uint64_t elemID;
+  uint64_t *indexBuffer;
+  float4 *vertexBuffer;
+};
+
+VSNRAY_FUNC
+inline aabb get_bounds(const UElem &elem)
+{
+  aabb result;
+  result.invalidate();
+  for (uint64_t i=elem.begin;i<elem.end;++i) {
+    result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
+  }
+  return result;
+}
+
+inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const UElem &elem)
+{
+  assert(0);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const UElem &elem)
+{
+  uint64_t numVerts = elem.end-elem.begin;
+
+  float4 v[8];
+  for (int i=0; i<numVerts; ++i) {
+    uint64_t idx = elem.indexBuffer[elem.begin+i];
+    v[i] = elem.vertexBuffer[idx];
+  }
+
+  float3 pos = ray.ori;
+  float value;
+  bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
+        || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
+        || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
+        || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
+
+  hit_record<Ray, primitive<unsigned>> result;
+  result.hit = hit;
+  if (hit) {
+    result.t = 0.f;
+    result.prim_id = elem.elemID;
+    result.u = value; // misuse "u" to store value
+  }
+  return result;
+}
+// Spatial Field //
+
+struct SpatialField
+{
+  enum Type { Unstructured, };
+  Type type;
+  unsigned fieldID{UINT_MAX};
+  struct {
+    index_bvh<UElem>::bvh_ref samplingBVH;
+  } asUnstructured;
 };
 
 // Camera //
