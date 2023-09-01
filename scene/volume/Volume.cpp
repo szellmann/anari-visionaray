@@ -3,7 +3,7 @@
 
 #include "Volume.h"
 // subtypes
-// #include "TransferFunction1D.h"
+#include "TransferFunction1D.h"
 
 namespace visionaray {
 
@@ -19,9 +19,9 @@ Volume::~Volume()
 
 Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
-  // if (subtype == "transferFunction1D")
-  //   return new TransferFunction1D(s);
-  // else
+  if (subtype == "transferFunction1D")
+    return new TransferFunction1D(s);
+  else
     return (Volume *)new UnknownObject(ANARI_VOLUME, s);
 }
 

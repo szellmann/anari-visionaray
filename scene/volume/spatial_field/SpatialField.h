@@ -16,7 +16,7 @@ struct SpatialField : public Object
 
 //  virtual float sampleAt(const float3 &coord) const = 0;
 //
-//  virtual box3 bounds() const = 0;
+  virtual aabb bounds() const = 0;
 //
 //  float stepSize() const;
 //

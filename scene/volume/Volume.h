@@ -12,7 +12,7 @@ struct Volume : public Object
   Volume(VisionarayGlobalState *d);
   virtual ~Volume();
   static Volume *createInstance(std::string_view subtype, VisionarayGlobalState *d);
-  // virtual box3 bounds() const = 0;
+  virtual aabb bounds() const = 0;
   // virtual void render(
   //     const VolumeRay &vray, float3 &outputColor, float &outputOpacity) = 0;
 };

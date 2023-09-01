@@ -38,6 +38,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/surface/material/Matte.cpp
     scene/surface/Surface.cpp
     scene/volume/spatial_field/SpatialField.cpp
+    scene/volume/TransferFunction1D.cpp
     scene/volume/Volume.cpp
     scene/Group.cpp
     scene/Instance.cpp
