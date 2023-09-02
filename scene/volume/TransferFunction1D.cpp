@@ -53,9 +53,8 @@ void TransferFunction1D::commit()
   transFuncTexture.set_address_mode(Clamp);
 
   vgeom.asVolume.data.bounds = m_bounds;
-  vgeom.asVolume.data.asTransferFunction1D.valueRange = m_valueRange;
-  vgeom.asVolume.data.asTransferFunction1D.transFuncSampler
-      = texture_ref<float4, 1>(transFuncTexture);
+
+  dispatch();
 }
 
 bool TransferFunction1D::isValid() const
@@ -66,6 +65,21 @@ bool TransferFunction1D::isValid() const
 aabb TransferFunction1D::bounds() const
 {
   return m_bounds;
+}
+
+void TransferFunction1D::dispatch()
+{
+  if (deviceState()->dcos.transferFunctions.size() <= vgeom.asVolume.data.volID) {
+    deviceState()->dcos.transferFunctions.resize(vgeom.asVolume.data.volID+1);
+  }
+  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.valueRange
+      = m_valueRange;
+  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.sampler
+      = texture_ref<float4, 1>(transFuncTexture);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.transferFunctions
+      = deviceState()->dcos.transferFunctions.data();
 }
 
 } // namespace visionaray

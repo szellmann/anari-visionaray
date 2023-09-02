@@ -23,12 +23,7 @@ struct TransferFunction1D : public Volume
   aabb bounds() const override;
 
  private:
-  float3 colorOf(float sample) const;
-  float opacityOf(float sample) const;
-
-  const SpatialField *field() const;
-
-  float normalized(float in) const;
+   void dispatch();
 
   // Data //
 

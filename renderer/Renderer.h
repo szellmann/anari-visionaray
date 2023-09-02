@@ -55,7 +55,8 @@ struct VisionarayRenderer
           float3 P = ray.ori+ray.dir*t;
           float v = 0.f;
           if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
-            float4 sample = postClassify(vol,v,debug());
+            float4 sample
+                = postClassify(onDevice.transferFunctions[vol.volID],v);
             color += dt * (1.f-alpha) * sample.w * sample.xyz();
             alpha += dt * (1.f-alpha) * sample.w;
           }

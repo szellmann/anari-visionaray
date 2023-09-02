@@ -36,11 +36,6 @@ struct Volume
   unsigned fieldID{UINT_MAX}; // _should_ be same as volID
 
   aabb bounds;
-
-  struct {
-    box1 valueRange{0.f, 1.f};
-    texture_ref<float4, 1> transFuncSampler;
-  } asTransferFunction1D;
 };
 
 VSNRAY_FUNC
@@ -259,6 +254,18 @@ struct SpatialField
   struct {
     index_bvh<UElem>::bvh_ref samplingBVH;
   } asUnstructured;
+};
+
+// Transfer functions //
+
+struct TransferFunction
+{
+  enum Type { _1D, };
+  Type type;
+  struct {
+    box1 valueRange{0.f, 1.f};
+    texture_ref<float4, 1> sampler;
+  } as1D;
 };
 
 // Camera //
