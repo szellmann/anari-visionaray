@@ -160,24 +160,53 @@ void Frame::renderFrame()
     else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.begin_frame();
 
-    parallel_for(state->threadPool,tiled_range2d<int>(0,size.x,64,0,size.y,64),
-      [&](range2d<int> r) {
-        for (int y=r.cols().begin(); y!=r.cols().end(); ++y) {
-          for (int x=r.rows().begin(); x!=r.rows().end(); ++x) {
-            Ray ray;
-            if (cam.type == dco::Camera::Pinhole)
-              ray = cam.asPinholeCam.primary_ray(
-                Ray{}, float(x), float(y), float(size.x), float(size.y));
-            else if (cam.type == dco::Camera::Matrix)
-              ray = cam.asMatrixCam.primary_ray(
-                Ray{}, float(x), float(y), float(size.x), float(size.y));
+    parallel_for(state->threadPool,
+        tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
+        [&](range2d<int> r) {
+          for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
+            for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
 
-            PRD prd{x,y,size};
-            writeSample(x, y,
-                rend.renderSample(ray, prd, scene->m_worldID, deviceState()->onDevice));
+              PRD prd{x, y, size, {/*RNG*/}};
+              Ray ray;
+
+              if (rend.stochasticRendering()) {
+                // Need an RNG
+                int pixelID = prd.x + prd.frameSize.x * prd.y;
+                prd.random = Random(pixelID, rend.rendererState().accumID);
+              }
+
+              float4 accumColor{0.f};
+              float depth;
+              for (int sampleID=0; sampleID<rend.spp(); ++sampleID) {
+
+                float xf(x), yf(y);
+                if (rend.stochasticRendering()) {
+                  // jitter pixel sample
+                  vec2f jitter(prd.random() - .5f, prd.random() - .5f);
+                  xf += jitter.x;
+                  yf += jitter.y;
+                }
+
+                if (cam.type == dco::Camera::Pinhole)
+                  ray = cam.asPinholeCam.primary_ray(
+                      Ray{}, xf, yf, float(size.x), float(size.y));
+                else if (cam.type == dco::Camera::Matrix)
+                  ray = cam.asMatrixCam.primary_ray(
+                      Ray{}, xf, yf, float(size.x), float(size.y));
+
+                PixelSample ps = rend.renderSample(ray,
+                        prd,
+                        scene->m_worldID,
+                        deviceState()->onDevice,
+                        deviceState()->objectCounts);
+                accumColor += ps.color;
+                if (sampleID == 0) depth = ps.depth;
+              }
+
+              writeSample(x, y, {accumColor*(1.f/rend.spp()),depth});
+            }
           }
-        }
-      });
+        });
 
     if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.end_frame();

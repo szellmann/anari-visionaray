@@ -29,6 +29,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     size_t samplers{0};
     size_t volumes{0};
     size_t spatialFields{0};
+    size_t lights{0};
     size_t arrays{0};
     size_t unknown{0};
   } objectCounts;
@@ -49,6 +50,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     std::vector<dco::Material> materials;
     std::vector<dco::SpatialField> spatialFields;
     std::vector<dco::TransferFunction> transferFunctions;
+    std::vector<dco::Light> lights;
   } dcos;
 
   struct DeviceObjectRegistry
@@ -59,6 +61,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::Material *materials{nullptr};
     dco::SpatialField *spatialFields{nullptr};
     dco::TransferFunction *transferFunctions{nullptr};
+    dco::Light *lights{nullptr};
   } onDevice;
 
   Frame *currentFrame{nullptr};

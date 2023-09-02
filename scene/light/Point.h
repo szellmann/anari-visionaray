@@ -1,0 +1,20 @@
+#pragma once
+
+#include "Light.h"
+
+namespace visionaray {
+
+struct Point : public Light
+{
+  Point(VisionarayGlobalState *s);
+
+  void commit() override;
+
+ private:
+  void dispatch();
+
+  vec3 m_position{0.f, 0.f, 0.f};
+  float m_intensity{1.f};
+};
+
+} // namespace visionaray

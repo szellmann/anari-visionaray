@@ -2,14 +2,33 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "Light.h"
+#include "Point.h"
 
 namespace visionaray {
 
-Light::Light(VisionarayGlobalState *s) : Object(ANARI_LIGHT, s) {}
-
-Light *Light::createInstance(std::string_view /*subtype*/, VisionarayGlobalState *s)
+Light::Light(VisionarayGlobalState *s) : Object(ANARI_LIGHT, s)
 {
-  return (Light *)new UnknownObject(ANARI_LIGHT, s);
+  memset(&vlight,0,sizeof(vlight));
+  vlight.lightID = s->objectCounts.lights++;
+}
+
+Light::~Light()
+{
+  deviceState()->objectCounts.lights--;
+}
+
+void Light::commit()
+{
+  m_color = getParam<vec3>("color", vec3(1.f, 1.f, 1.f));
+}
+
+Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
+{
+  /*if (subtype == "directional")
+  else*/ if (subtype == "point")
+    return new Point(s);
+  else
+    return (Light *)new UnknownObject(ANARI_LIGHT, s);
 }
 
 } // namespace visionaray

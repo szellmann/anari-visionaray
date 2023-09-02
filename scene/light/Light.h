@@ -10,7 +10,17 @@ namespace visionaray {
 struct Light : public Object
 {
   Light(VisionarayGlobalState *d);
+  ~Light() override;
+
+  virtual void commit() override;
+
   static Light *createInstance(std::string_view subtype, VisionarayGlobalState *d);
+
+  dco::Light visionarayLight() const { return vlight; }
+
+ protected:
+  dco::Light vlight;
+  vec3 m_color{1.f, 1.f, 1.f};
 };
 
 } // namespace visionaray

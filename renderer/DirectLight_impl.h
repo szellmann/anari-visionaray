@@ -4,16 +4,18 @@
 
 namespace visionaray {
 
-struct VisionarayRendererRaycast
+struct VisionarayRendererDirectLight
 {
   VSNRAY_FUNC
   PixelSample renderSample(Ray ray, PRD &prd, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
-        VisionarayGlobalState::ObjectCounts /*objCounts*/) {
+        VisionarayGlobalState::ObjectCounts objCounts) {
 
     auto debug = [=]() {
       return prd.x == prd.frameSize.x/2 && prd.y == prd.frameSize.y/2;
     };
+
+    if (debug()) printf("Rendering frame ====\n");
 
     PixelSample result;
     result.color = rendererState.bgColor;
@@ -22,32 +24,23 @@ struct VisionarayRendererRaycast
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
 
+    // Need at least one light..
+    if (objCounts.lights == 0)
+      return result;
+
+    float3 throughput{1.f};
+
     auto hr = intersect(ray, onDevice.TLSs[worldID]);
 
     if (hr.hit) {
+
       auto inst = onDevice.instances[hr.inst_id];
       const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
 
       // TODO: currently, this will arbitrarily pick a volume _or_
       // surface BVH if both are present and do overlap
-      if (geom.type == dco::Geometry::Volume) {
-        const auto &vol = geom.asVolume.data;
-        auto boxHit = intersect(ray, vol.bounds);
-        float dt = onDevice.spatialFields[vol.fieldID].baseDT;
-        float3 color(0.f);
-        float alpha = 0.f;
-        for (float t=boxHit.tnear;t<boxHit.tfar&&alpha<0.99f;t+=dt) {
-          float3 P = ray.ori+ray.dir*t;
-          float v = 0.f;
-          if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
-            float4 sample
-                = postClassify(onDevice.transferFunctions[vol.volID],v);
-            color += dt * (1.f-alpha) * sample.w * sample.xyz();
-            alpha += dt * (1.f-alpha) * sample.w;
-          }
-        }
-        result.color = float4(color,1.f);
-      } else {
+      if (geom.type != dco::Geometry::Volume) {
+
         vec3f gn(1.f,0.f,0.f);
         // TODO: doesn't work for instances yet
         if (geom.type == dco::Geometry::Triangle) {
@@ -72,20 +65,37 @@ struct VisionarayRendererRaycast
           }
         }
 
+        int lightID = uniformSampleOneLight(prd.random, objCounts.lights);
+        assert(onDevice.lights[lightID].type == dco::Light::Point);
+        auto pl = onDevice.lights[lightID].asPoint;
+
+        vec3f hitPos = ray.ori + ray.dir * hr.t;
+        auto ls = pl.sample(hitPos+1e-4f, prd.random);
+
         shade_record<float> sr;
         sr.normal = gn;
         sr.geometric_normal = gn;
         sr.view_dir = -ray.dir;
         sr.tex_color = float3(1.f);
-        sr.light_dir = -ray.dir;
-        sr.light_intensity = float3(1.f);
+        sr.light_dir = ls.dir;
+        sr.light_intensity = pl.intensity(hitPos);
 
         // That doesn't work for instances..
         const auto &mat = onDevice.materials[hr.geom_id];
         float3 shadedColor = to_rgb(mat.asMatte.data.shade(sr));
 
-        result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
-        result.color = float4(shadedColor,1.f);
+        Ray shadowRay;
+        shadowRay.ori = hitPos;
+        shadowRay.dir = ls.dir;
+        shadowRay.tmin = 1e-4f;
+        shadowRay.tmax = ls.dist-1e-4f;
+        auto shadowHR = intersect(shadowRay, onDevice.TLSs[worldID]);
+        if (shadowHR.hit)
+          throughput = float3{0.f};
+        else
+          throughput *= shadedColor;
+
+        result.color = float4(throughput,1.f);
       }
     }
 

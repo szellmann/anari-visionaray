@@ -7,27 +7,53 @@
 #include "scene/VisionarayScene.h"
 // impls
 #include "Raycast_impl.h"
+#include "DirectLight_impl.h"
 
 namespace visionaray {
 
 struct VisionarayRenderer
 {
-  enum Type { Raycast, };
+  enum Type { Raycast, DirectLight, };
   Type type;
 
   VSNRAY_FUNC
   PixelSample renderSample(Ray ray, PRD &prd, unsigned worldID,
-        VisionarayGlobalState::DeviceObjectRegistry onDevice) {
+        VisionarayGlobalState::DeviceObjectRegistry onDevice,
+        VisionarayGlobalState::ObjectCounts objCounts) {
     if (type == Raycast) {
-      return asRaycast.renderer.renderSample(ray, prd, worldID, onDevice);
+      return asRaycast.renderer.renderSample(ray, prd, worldID, onDevice, objCounts);
+    } else if (type == DirectLight) {
+      return asDirectLight.renderer.renderSample(ray, prd, worldID, onDevice, objCounts);
     }
 
     return {};
   }
 
+  VSNRAY_FUNC
+  bool stochasticRendering() const {
+    return type != Raycast;
+  };
+
+  VSNRAY_FUNC
+  int spp() const {
+    return type == Raycast ? 1 : 4;
+  };
+
+  VSNRAY_FUNC
+  const RendererState &rendererState() const {
+    if (type == Raycast)
+      return asRaycast.renderer.rendererState;
+    else
+      return asDirectLight.renderer.rendererState;
+  }
+
   struct {
     VisionarayRendererRaycast renderer;
   } asRaycast;
+
+  struct {
+    VisionarayRendererDirectLight renderer;
+  } asDirectLight;
 };
 
 struct Renderer : public Object

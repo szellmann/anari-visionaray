@@ -8,6 +8,7 @@
 #include "visionaray/material.h"
 #include "visionaray/matrix_camera.h"
 #include "visionaray/pinhole_camera.h"
+#include "visionaray/point_light.h"
 // ours
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
@@ -277,6 +278,16 @@ struct Camera
   unsigned camID{UINT_MAX};
   matrix_camera asMatrixCam;
   pinhole_camera asPinholeCam;
+};
+
+// Light //
+
+struct Light
+{
+  enum Type { Point, };
+  Type type;
+  unsigned lightID{UINT_MAX};
+  point_light<float> asPoint;
 };
 
 } // namespace visionaray::dco

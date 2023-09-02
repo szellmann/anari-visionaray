@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "Raycast.h"
+#include "DirectLight.h"
 #include "Renderer.h"
 
 namespace visionaray {
@@ -32,8 +33,10 @@ void Renderer::commit()
 
 Renderer *Renderer::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
-  if (subtype == "raycast" || subtype == "default")
+  if (subtype == "raycast")
     return new Raycast(s);
+  else if (subtype == "direct_light" || subtype == "default")
+    return new DirectLight(s);
   else
     return {};
 }
