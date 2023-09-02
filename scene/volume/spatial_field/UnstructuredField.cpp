@@ -81,6 +81,8 @@ void UnstructuredField::commit()
 
   vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
 
+  setStepSize(length(bounds().max-bounds().min)/50.f);
+
   dispatch();
 }
 

@@ -12,7 +12,7 @@ inline float4 postClassify(dco::Volume vol, float v) {
   if (vol.type == dco::Volume::TransferFunction1D) {
     box1 valueRange = vol.asTransferFunction1D.valueRange;
     v = (v - valueRange.min) / (valueRange.max - valueRange.min);
-    return float4(v);
+    return tex1D(vol.asTransferFunction1D.transFuncSampler, v);
   }
 
   return {};

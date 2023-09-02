@@ -33,20 +33,15 @@ struct SpatialField : public Object
   static SpatialField *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
 
-//  virtual float sampleAt(const float3 &coord) const = 0;
-//
   virtual aabb bounds() const = 0;
-//
-//  float stepSize() const;
-//
+
+  float stepSize() const;
+
  protected:
   dco::SpatialField vfield;
 
-//  void setStepSize(float size);
+  void setStepSize(float size);
   void dispatch();
-
- private:
-//  float m_stepSize{0.f};
 };
 
 } // namespace visionaray

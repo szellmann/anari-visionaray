@@ -42,10 +42,10 @@ struct VisionarayRenderer
       if (geom.type == dco::Geometry::Volume) {
         const auto &vol = geom.asVolume.data;
         auto boxHit = intersect(ray, vol.bounds);
-        float dt = 0.05f;
+        float dt = onDevice.spatialFields[vol.fieldID].baseDT;
         float3 color(0.f);
         float alpha = 0.f;
-        for (float t=boxHit.tnear;t<boxHit.tfar;t+=dt) {
+        for (float t=boxHit.tnear;t<boxHit.tfar&&alpha<0.99f;t+=dt) {
           float3 P = ray.ori+ray.dir*t;
           float v = 0.f;
           if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {

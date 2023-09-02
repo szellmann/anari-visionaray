@@ -30,10 +30,15 @@ SpatialField *SpatialField::createInstance(
     return (SpatialField *)new UnknownObject(ANARI_SPATIAL_FIELD, s);
 }
 
-// void SpatialField::setStepSize(float size)
-// {
-//   m_stepSize = size;
-// }
+float SpatialField::stepSize() const
+{
+  return vfield.baseDT;
+}
+
+void SpatialField::setStepSize(float size)
+{
+  vfield.baseDT = size;
+}
 
 void SpatialField::dispatch()
 {

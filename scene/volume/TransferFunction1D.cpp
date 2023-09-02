@@ -23,7 +23,6 @@ void TransferFunction1D::commit()
   m_bounds = m_field ? m_field->bounds() : aabb();
 
   m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
-  m_invSize = 1.f / (m_valueRange.max-m_valueRange.min);
 
   m_colorData = getParamObject<Array1D>("color");
   m_opacityData = getParamObject<Array1D>("opacity");
@@ -41,8 +40,22 @@ void TransferFunction1D::commit()
     return;
   }
 
+  auto *colorData = m_colorData->beginAs<vec3>();
+  auto *opacityData = m_opacityData->beginAs<float>();
+
+  std::vector<float4> tf(m_colorData->size());
+  for (size_t i=0; i<tf.size(); ++i) {
+    tf[i] = vec4(colorData[i],opacityData[i]);
+  }
+  transFuncTexture = texture<float4, 1>(tf.size());
+  transFuncTexture.reset(tf.data());
+  transFuncTexture.set_filter_mode(Nearest);
+  transFuncTexture.set_address_mode(Clamp);
+
   vgeom.asVolume.data.bounds = m_bounds;
   vgeom.asVolume.data.asTransferFunction1D.valueRange = m_valueRange;
+  vgeom.asVolume.data.asTransferFunction1D.transFuncSampler
+      = texture_ref<float4, 1>(transFuncTexture);
 }
 
 bool TransferFunction1D::isValid() const
@@ -54,28 +67,5 @@ aabb TransferFunction1D::bounds() const
 {
   return m_bounds;
 }
-
-// void TransferFunction1D::render(
-//     const VolumeRay &vray, float3 &color, float &opacity)
-// {
-//   const float stepSize = field()->stepSize();
-//   const float jitter = 1.f; // NOTE: use uniform rng if/when lower sampling rate
-//   box1 currentInterval = vray.t;
-//   currentInterval.lower += stepSize * jitter;
-// 
-//   while (opacity < 0.99f && size(currentInterval) >= 0.f) {
-//     const float3 p = vray.org + vray.dir * currentInterval.lower;
-//     const float s = field()->sampleAt(p);
-// 
-//     if (!std::isnan(s)) {
-//       const float3 c = colorOf(s);
-//       const float o = opacityOf(s) * m_densityScale;
-//       accumulateValue(color, c * o, opacity);
-//       accumulateValue(opacity, o, opacity);
-//     }
-// 
-//     currentInterval.lower += stepSize;
-//   }
-// }
 
 } // namespace visionaray

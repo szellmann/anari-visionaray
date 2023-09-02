@@ -38,7 +38,8 @@ struct Volume
   aabb bounds;
 
   struct {
-    box1 valueRange;
+    box1 valueRange{0.f, 1.f};
+    texture_ref<float4, 1> transFuncSampler;
   } asTransferFunction1D;
 };
 
@@ -254,6 +255,7 @@ struct SpatialField
   enum Type { Unstructured, };
   Type type;
   unsigned fieldID{UINT_MAX};
+  float baseDT{0.5f};
   struct {
     index_bvh<UElem>::bvh_ref samplingBVH;
   } asUnstructured;
