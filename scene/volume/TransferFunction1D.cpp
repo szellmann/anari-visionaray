@@ -49,7 +49,7 @@ void TransferFunction1D::commit()
   }
   transFuncTexture = texture<float4, 1>(tf.size());
   transFuncTexture.reset(tf.data());
-  transFuncTexture.set_filter_mode(Nearest);
+  transFuncTexture.set_filter_mode(Linear);
   transFuncTexture.set_address_mode(Clamp);
 
   vgeom.asVolume.data.bounds = m_bounds;

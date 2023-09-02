@@ -172,7 +172,7 @@ void Frame::renderFrame()
               ray = cam.asMatrixCam.primary_ray(
                 Ray{}, float(x), float(y), float(size.x), float(size.y));
 
-            PRD prd{x,y};
+            PRD prd{x,y,size};
             writeSample(x, y,
                 rend.renderSample(ray, prd, scene->m_worldID, deviceState()->onDevice));
           }

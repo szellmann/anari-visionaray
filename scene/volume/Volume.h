@@ -8,11 +8,15 @@
 namespace visionaray {
 
 VSNRAY_FUNC
-inline float4 postClassify(dco::Volume vol, float v) {
+inline float4 postClassify(dco::Volume vol, float v, bool dbg=false) {
   if (vol.type == dco::Volume::TransferFunction1D) {
     box1 valueRange = vol.asTransferFunction1D.valueRange;
     v = (v - valueRange.min) / (valueRange.max - valueRange.min);
-    return tex1D(vol.asTransferFunction1D.transFuncSampler, v);
+    float4 clr = tex1D(vol.asTransferFunction1D.transFuncSampler, v);
+    if (dbg) {
+      printf("v: %f, clr: (%f,%f,%f)\n",v,clr.x,clr.y,clr.z);
+    }
+    return clr;
   }
 
   return {};

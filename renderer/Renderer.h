@@ -11,6 +11,7 @@ namespace visionaray {
 struct PRD
 {
   int x, y;
+  uint2 frameSize;
 };
 
 struct PixelSample
@@ -24,6 +25,11 @@ struct VisionarayRenderer
   VSNRAY_FUNC
   PixelSample renderSample(Ray ray, PRD &prd, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice) {
+
+    auto debug = [=]() {
+      return prd.x == prd.frameSize.x/2 && prd.y == prd.frameSize.y/2;
+    };
+
     PixelSample result;
     result.color = m_bgColor;
     result.depth = 1.f;
@@ -49,7 +55,7 @@ struct VisionarayRenderer
           float3 P = ray.ori+ray.dir*t;
           float v = 0.f;
           if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
-            float4 sample = postClassify(vol,v);
+            float4 sample = postClassify(vol,v,debug());
             color += dt * (1.f-alpha) * sample.w * sample.xyz();
             alpha += dt * (1.f-alpha) * sample.w;
           }
@@ -95,6 +101,10 @@ struct VisionarayRenderer
         result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
         result.color = float4(shadedColor,1.f);
       }
+    }
+
+    if (prd.x == prd.frameSize.x/2 || prd.y == prd.frameSize.y/2) {
+      result.color = float4(1.f) - result.color;
     }
 
     return result;
