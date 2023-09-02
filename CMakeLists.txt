@@ -27,6 +27,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     camera/Matrix.cpp
     camera/Perspective.cpp
     frame/Frame.cpp
+    renderer/Raycast.cpp
     renderer/Renderer.cpp
     scene/light/Light.cpp
     scene/surface/geometry/Cylinder.cpp

@@ -1,6 +1,7 @@
 // Copyright 2022 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
+#include "Raycast.h"
 #include "Renderer.h"
 
 namespace visionaray {
@@ -23,14 +24,18 @@ Renderer::~Renderer()
 
 void Renderer::commit()
 {
-  vrend.m_bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
-  vrend.m_ambientRadiance = getParam<float>("ambientRadiance", 1.f);
+  auto &raycastState = vrend.asRaycast.renderer.rendererState;
+
+  raycastState.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
+  raycastState.ambientRadiance = getParam<float>("ambientRadiance", 1.f);
 }
 
-Renderer *Renderer::createInstance(
-    std::string_view /* subtype */, VisionarayGlobalState *s)
+Renderer *Renderer::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
-  return new Renderer(s);
+  if (subtype == "raycast" || subtype == "default")
+    return new Raycast(s);
+  else
+    return {};
 }
 
 } // namespace visionaray
