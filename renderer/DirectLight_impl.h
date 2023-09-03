@@ -40,36 +40,12 @@ struct VisionarayRendererDirectLight
       // TODO: currently, this will arbitrarily pick a volume _or_
       // surface BVH if both are present and do overlap
       if (geom.type != dco::Geometry::Volume) {
-
-        vec3f gn(1.f,0.f,0.f);
-        // TODO: doesn't work for instances yet
-        if (geom.type == dco::Geometry::Triangle) {
-          auto tri = geom.asTriangle.data[hr.prim_id];
-          gn = normalize(cross(tri.e1,tri.e2));
-        } else if (geom.type == dco::Geometry::Sphere) {
-          auto sph = geom.asSphere.data[hr.prim_id];
-          vec3f hitPos = ray.ori + hr.t * ray.dir;
-          gn = normalize((hitPos-sph.center) / sph.radius);
-        } else if (geom.type == dco::Geometry::Cylinder) {
-          auto cyl = geom.asCylinder.data[hr.prim_id];
-          vec3f hitPos = ray.ori + hr.t * ray.dir;
-          vec3f axis = normalize(cyl.v2-cyl.v1);
-          if (length(hitPos-cyl.v1) < cyl.radius)
-            gn = -axis;
-          else if (length(hitPos-cyl.v2) < cyl.radius)
-            gn = axis;
-          else {
-            float t = dot(hitPos-cyl.v1, axis);
-            vec3f pt = cyl.v1 + t * axis;
-            gn = normalize(hitPos-pt);
-          }
-        }
+        vec3f hitPos = ray.ori + hr.t * ray.dir;
+        vec3f gn = getNormal(geom, hr.prim_id, hitPos);
 
         int lightID = uniformSampleOneLight(prd.random, objCounts.lights);
         assert(onDevice.lights[lightID].type == dco::Light::Point);
         auto pl = onDevice.lights[lightID].asPoint;
-
-        vec3f hitPos = ray.ori + ray.dir * hr.t;
         auto ls = pl.sample(hitPos+1e-4f, prd.random);
 
         shade_record<float> sr;
