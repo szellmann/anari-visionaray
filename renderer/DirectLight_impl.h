@@ -69,7 +69,7 @@ struct VisionarayRendererDirectLight
         if (shadowHR.hit)
           throughput = float3{0.f};
         else
-          throughput *= shadedColor;
+          throughput *= shadedColor / (ls.dist*ls.dist);
 
         result.color = float4(throughput,1.f);
       }
