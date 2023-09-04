@@ -107,4 +107,30 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
   return gn;
 }
 
+inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)
+{
+  return A + (1.f-A.w)*B;
+}
+
+VSNRAY_FUNC
+inline void print(const float3 &v)
+{
+  printf("float3: (%f,%f,%f)\n", v.x, v.y, v.z);
+}
+
+VSNRAY_FUNC
+inline void print(const aabb &box)
+{
+  printf("aabb: [min: (%f,%f,%f), max: (%f,%f,%f)]\n",
+      box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z);
+}
+
+VSNRAY_FUNC
+inline void print(const Ray &ray)
+{
+  printf("ray: [ori: (%f,%f,%f), dir: (%f,%f,%f), tmin: %f, %f, mask: %u]\n",
+      ray.ori.x, ray.ori.y, ray.ori.z, ray.dir.x, ray.dir.y, ray.dir.z,
+      ray.tmin, ray.tmax, ray.intersectionMask);
+}
+
 } // visionaray

@@ -16,8 +16,24 @@
 
 namespace visionaray {
 
+// Forward decls //
+
 struct VisionaraySceneImpl;
 typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
+
+// Ray //
+
+struct Ray : basic_ray<float>
+{
+  enum IntersectionMask {
+    All = 0xffffffff,
+    Triangle = 0x1,
+    Sphere = 0x2,
+    Cylinder = 0x4,
+    Volume = 0x8,
+  };
+  unsigned intersectionMask = All;
+};
 
 } // namespace visionaray
 
@@ -111,17 +127,16 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(
     const Ray &ray, const BLS &bls)
 {
-  if (bls.type == BLS::Triangle)
+  if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
     return intersect(ray,bls.asTriangle);
-  else if (bls.type == BLS::Sphere)
+  else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
     return intersect(ray,bls.asSphere);
-  else if (bls.type == BLS::Cylinder)
+  else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
     return intersect(ray,bls.asCylinder);
-  else if (bls.type == BLS::Volume)
+  else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
     return intersect(ray,bls.asVolume);
-  else if (bls.type == BLS::Instance) {
+  else if (bls.type == BLS::Instance)
     return intersect(ray,bls.asInstance);
-  }
 
   return {};
 }
@@ -129,6 +144,22 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 // TLS //
 
 typedef index_bvh<BLS>::bvh_ref TLS;
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
+    Ray ray, const TLS &tls)
+{
+  ray.intersectionMask = Ray::Triangle | Ray::Sphere | Ray::Cylinder;
+  return intersect(ray, tls);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
+    Ray ray, const TLS &tls)
+{
+  ray.intersectionMask = Ray::Volume;
+  return intersect(ray, tls);
+}
 
 // Geometry //
 

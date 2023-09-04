@@ -14,7 +14,6 @@ namespace visionaray {
     using float2 = vec2f;
     using float3 = vec3f;
     using float4 = vec4f;
-    using Ray = basic_ray<float>;
 } // namespace visionaray
 
 namespace anari {
