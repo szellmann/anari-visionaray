@@ -9,7 +9,11 @@ namespace visionaray {
 
 VSNRAY_FUNC
 inline bool sampleField(dco::SpatialField sf, vec3 P, float &value) {
-  if (sf.type == dco::SpatialField::Unstructured) {
+  if (sf.type == dco::SpatialField::StructuredRegular) {
+    value = tex3D(sf.asStructuredRegular.sampler,
+        sf.asStructuredRegular.objectToTexCoord(P));
+    return true;
+  } else if (sf.type == dco::SpatialField::Unstructured) {
     Ray ray;
     ray.ori = P;
     ray.dir = float3(1.f);

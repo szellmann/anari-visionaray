@@ -279,10 +279,28 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
 struct SpatialField
 {
-  enum Type { Unstructured, };
+  enum Type { StructuredRegular, Unstructured, };
   Type type;
   unsigned fieldID{UINT_MAX};
   float baseDT{0.5f};
+  struct {
+    texture_ref<float, 3> sampler;
+    float3 origin{0.f,0.f,0.f}, spacing{1.f,1.f,1.f};
+    uint3 dims{0,0,0};
+
+    VSNRAY_FUNC
+    inline float3 objectToLocal(const float3 &object) const
+    {
+      return 1.f / (spacing) * (object - origin);
+    }
+
+    VSNRAY_FUNC
+    inline float3 objectToTexCoord(const float3 &object) const
+    {
+      return objectToLocal(object) / float3(dims);
+    }
+
+  } asStructuredRegular;
   struct {
     index_bvh<UElem>::bvh_ref samplingBVH;
   } asUnstructured;
