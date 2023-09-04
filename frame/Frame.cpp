@@ -104,6 +104,7 @@ void Frame::commit()
   m_pixelBuffer.resize(numPixels * m_perPixelBytes);
 
   m_depthBuffer.resize(m_depthType == ANARI_FLOAT32 ? numPixels : 0);
+  m_accumBuffer.resize(numPixels, vec4{0.f});
   m_frameChanged = true;
 }
 
@@ -140,9 +141,13 @@ void Frame::renderFrame()
   }
 
   if (state->commitBuffer.lastFlush() <= m_frameLastRendered) {
-    this->refDec(helium::RefType::INTERNAL);
-    return;
+    if (!m_renderer->stochasticRendering()) {
+      this->refDec(helium::RefType::INTERNAL);
+      return;
+    }
   }
+
+  checkAccumulationReset();
 
   m_frameLastRendered = helium::newTimeStamp();
   state->currentFrame = this;
@@ -152,13 +157,19 @@ void Frame::renderFrame()
 
     const auto &size = m_frameData.size;
     dco::Camera cam = m_camera->visionarayCamera();
-    VisionarayRenderer rend = m_renderer->visionarayRenderer();
+    VisionarayRenderer &rend = m_renderer->visionarayRenderer();
     VisionarayScene scene = m_world->visionarayScene();
 
     if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.begin_frame();
     else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.begin_frame();
+
+    if (m_nextFrameReset) {
+      std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
+      rend.rendererState().accumID = 0;
+      m_nextFrameReset = false;
+    }
 
     parallel_for(state->threadPool,
         tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
@@ -212,6 +223,8 @@ void Frame::renderFrame()
       cam.asPinholeCam.end_frame();
     else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.end_frame();
+
+    rend.rendererState().accumID++;
 
     auto end = std::chrono::steady_clock::now();
     m_duration = std::chrono::duration<float>(end - start).count();
@@ -292,10 +305,17 @@ float2 Frame::screenFromPixel(const float2 &p) const
   return p * m_frameData.invSize;
 }
 
-void Frame::writeSample(int x, int y, const PixelSample &s)
+void Frame::writeSample(int x, int y, PixelSample s)
 {
   const auto idx = y * m_frameData.size.x + x;
   auto *color = m_pixelBuffer.data() + (idx * m_perPixelBytes);
+
+  if (m_renderer->stochasticRendering()) {
+    float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
+    m_accumBuffer[idx] = (1-alpha)*m_accumBuffer[idx] + alpha*s.color;
+    s.color = m_accumBuffer[idx];
+  }
+
   switch (m_colorType) {
   case ANARI_UFIXED8_VEC4: {
     auto c = cvt_uint32(s.color);
@@ -316,6 +336,22 @@ void Frame::writeSample(int x, int y, const PixelSample &s)
   }
   if (!m_depthBuffer.empty())
     m_depthBuffer[idx] = s.depth;
+}
+
+void Frame::checkAccumulationReset()
+{
+  if (m_nextFrameReset)
+    return;
+
+  auto &state = *deviceState();
+  if (m_lastCommitOccured < state.commitBuffer.lastFlush()) {
+    m_lastCommitOccured = state.commitBuffer.lastFlush();
+    m_nextFrameReset = true;
+  }
+  // if (m_lastUploadOccured < state.uploadBuffer.lastFlush()) {
+  //   m_lastUploadOccured = state.uploadBuffer.lastFlush();
+  //   m_nextFrameReset = true;
+  // }
 }
 
 } // namespace visionaray

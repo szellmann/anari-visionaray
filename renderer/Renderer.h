@@ -32,11 +32,12 @@ struct VisionarayRenderer
   VSNRAY_FUNC
   bool stochasticRendering() const {
     return type != Raycast;
-  };
+  }
 
   VSNRAY_FUNC
   int spp() const {
-    return type == Raycast ? 1 : 4;
+//  return type == Raycast ? 1 : 4;
+    return 1;
   };
 
   VSNRAY_FUNC
@@ -45,6 +46,16 @@ struct VisionarayRenderer
       return asRaycast.renderer.rendererState;
     else
       return asDirectLight.renderer.rendererState;
+  }
+
+  VSNRAY_FUNC
+  const RendererState &constRendererState() const {
+    return rendererState();
+  }
+
+  VSNRAY_FUNC
+  RendererState &rendererState() {
+    return const_cast<RendererState &>(constRendererState());
   }
 
   struct {
@@ -66,7 +77,10 @@ struct Renderer : public Object
   static Renderer *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
 
-  VisionarayRenderer visionarayRenderer() const { return vrend; }
+  VisionarayRenderer &visionarayRenderer() { return vrend; }
+  const VisionarayRenderer &visionarayRenderer() const { return vrend; }
+
+  bool stochasticRendering() const { return vrend.stochasticRendering(); }
 
  protected:
   VisionarayRenderer vrend;

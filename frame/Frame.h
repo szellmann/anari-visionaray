@@ -45,7 +45,8 @@ struct Frame : public helium::BaseFrame
 
  private:
   float2 screenFromPixel(const float2 &p) const;
-  void writeSample(int x, int y, const PixelSample &s);
+  void writeSample(int x, int y, PixelSample s);
+  void checkAccumulationReset();
 
   //// Data ////
 
@@ -64,6 +65,7 @@ struct Frame : public helium::BaseFrame
 
   std::vector<uint8_t> m_pixelBuffer;
   std::vector<float> m_depthBuffer;
+  std::vector<vec4> m_accumBuffer;
 
   helium::IntrusivePtr<Renderer> m_renderer;
   helium::IntrusivePtr<Camera> m_camera;
@@ -72,6 +74,7 @@ struct Frame : public helium::BaseFrame
   float m_duration{0.f};
 
   bool m_frameChanged{false};
+  bool m_nextFrameReset{false};
   helium::TimeStamp m_cameraLastChanged{0};
   helium::TimeStamp m_rendererLastChanged{0};
   helium::TimeStamp m_worldLastChanged{0};

@@ -15,7 +15,7 @@ struct VisionarayRendererDirectLight
       return prd.x == prd.frameSize.x/2 && prd.y == prd.frameSize.y/2;
     };
 
-    if (debug()) printf("Rendering frame ====\n");
+    if (debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
 
     PixelSample result;
     result.color = rendererState.bgColor;
@@ -25,7 +25,7 @@ struct VisionarayRendererDirectLight
       return result; // happens eg with TLSs of unsupported objects
 
     // Need at least one light..
-    if (objCounts.lights == 0)
+    if (!onDevice.lights || objCounts.lights == 0)
       return result;
 
     float3 throughput{1.f};
