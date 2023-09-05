@@ -38,63 +38,7 @@
     },
     {
       "type": "ANARI_RENDERER",
-      "name": "pathtracer",
-      "parameters": [
-        {
-          "name": "name",
-          "types": [
-            "ANARI_STRING"
-          ],
-          "tags": [],
-          "description": "optional object name"
-        },
-        {
-          "name": "backgroundColor",
-          "types": [
-            "ANARI_FLOAT32_VEC4"
-          ],
-          "tags": [],
-          "default": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "description": "background color and alpha (RGBA)"
-        }
-      ]
-    },
-    {
-      "type": "ANARI_RENDERER",
-      "name": "directlighting",
-      "parameters": [
-        {
-          "name": "name",
-          "types": [
-            "ANARI_STRING"
-          ],
-          "tags": [],
-          "description": "optional object name"
-        },
-        {
-          "name": "backgroundColor",
-          "types": [
-            "ANARI_FLOAT32_VEC4"
-          ],
-          "tags": [],
-          "default": [
-            1.0,
-            1.0,
-            1.0,
-            1.0
-          ],
-          "description": "background color and alpha (RGBA)"
-        }
-      ]
-    },
-    {
-      "type": "ANARI_RENDERER",
-      "name": "raymarcher",
+      "name": "direct_light",
       "parameters": [
         {
           "name": "name",
