@@ -25,7 +25,7 @@ void TransferFunction1D::commit()
     return;
   }
 
-  m_bounds = m_field ? m_field->bounds() : aabb();
+  m_bounds = m_field->bounds();
 
   m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
 
@@ -58,6 +58,7 @@ void TransferFunction1D::commit()
   transFuncTexture.set_address_mode(Clamp);
 
   vgeom.asVolume.data.bounds = m_bounds;
+  vgeom.asVolume.data.fieldID = m_field->visionaraySpatialField().fieldID;
 
   dispatch();
 }

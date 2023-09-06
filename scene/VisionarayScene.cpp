@@ -121,7 +121,7 @@ void VisionaraySceneImpl::commit()
   lbvh_builder tlsBuilder;
   m_TLS = tlsBuilder.build(TLS{}, m_BLSs.data(), m_BLSs.size());
 
-#if 1
+#if 0
   std::cout << "TLS built\n";
   std::cout << "  num nodes: " << m_TLS.num_nodes() << '\n';
   std::cout << "  root bounds: " << m_TLS.node(0).get_bounds().min << ' '
@@ -168,7 +168,6 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
     }
   } else if (geom.type == dco::Geometry::Volume) {
     geom.asVolume.data.volID = geomID;
-    geom.asVolume.data.fieldID = geomID;
   }
 
   m_geometries[geomID] = geom;

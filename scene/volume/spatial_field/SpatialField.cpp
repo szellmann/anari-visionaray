@@ -32,6 +32,11 @@ SpatialField *SpatialField::createInstance(
     return (SpatialField *)new UnknownObject(ANARI_SPATIAL_FIELD, s);
 }
 
+dco::SpatialField SpatialField::visionaraySpatialField() const
+{
+  return vfield;
+}
+
 float SpatialField::stepSize() const
 {
   return vfield.baseDT;
