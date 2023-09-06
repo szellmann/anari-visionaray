@@ -77,6 +77,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   hit_record<Ray, primitive<unsigned>> result;
   result.hit = hr.hit;
   result.t = hr.tnear;
+  result.geom_id = vol.volID;
   return result;
 }
 
