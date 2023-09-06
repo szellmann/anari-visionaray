@@ -54,8 +54,9 @@ struct VisionaraySceneImpl
   void release();
   void attachGeometry(dco::Geometry geom, unsigned geomID);
 
-private:
+ private:
   void dispatch();
+  void detach();
 };
 
 typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;

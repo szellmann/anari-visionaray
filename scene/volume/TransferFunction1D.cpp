@@ -11,6 +11,11 @@ TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d) : Volume(d)
   vgeom.asVolume.data.type = dco::Volume::TransferFunction1D;
 }
 
+TransferFunction1D::~TransferFunction1D()
+{
+  detach();
+}
+
 void TransferFunction1D::commit()
 {
   m_field = getParamObject<SpatialField>("field");
@@ -72,10 +77,27 @@ void TransferFunction1D::dispatch()
   if (deviceState()->dcos.transferFunctions.size() <= vgeom.asVolume.data.volID) {
     deviceState()->dcos.transferFunctions.resize(vgeom.asVolume.data.volID+1);
   }
+  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].volID
+      = vgeom.asVolume.data.volID;
   deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.valueRange
       = m_valueRange;
   deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.sampler
       = texture_ref<float4, 1>(transFuncTexture);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.transferFunctions
+      = deviceState()->dcos.transferFunctions.data();
+}
+
+void TransferFunction1D::detach()
+{
+  if (deviceState()->dcos.transferFunctions.size() > vgeom.asVolume.data.volID) {
+    if (deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].volID
+        == vgeom.asVolume.data.volID) {
+      deviceState()->dcos.transferFunctions.erase(
+          deviceState()->dcos.transferFunctions.begin() + vgeom.asVolume.data.volID);
+    }
+  }
 
   // Upload/set accessible pointers
   deviceState()->onDevice.transferFunctions

@@ -28,6 +28,7 @@ struct Material : public Object
   helium::IntrusivePtr<Sampler> m_colorSampler;
 
   void dispatch();
+  void detach();
 };
 
 } // namespace visionaray

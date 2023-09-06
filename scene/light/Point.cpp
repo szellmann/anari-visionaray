@@ -7,6 +7,11 @@ Point::Point(VisionarayGlobalState *s) : Light(s)
   vlight.type = dco::Light::Point;
 }
 
+Point::~Point()
+{
+  detach();
+}
+
 void Point::commit()
 {
   Light::commit();
@@ -28,6 +33,19 @@ void Point::dispatch()
   deviceState()->dcos.lights[vlight.lightID].asPoint.set_constant_attenuation(1.f);
   deviceState()->dcos.lights[vlight.lightID].asPoint.set_linear_attenuation(0.f);
   deviceState()->dcos.lights[vlight.lightID].asPoint.set_quadratic_attenuation(0.f);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
+}
+
+void Point::detach()
+{
+  if (deviceState()->dcos.lights.size() > vlight.lightID) {
+    if (deviceState()->dcos.lights[vlight.lightID].lightID == vlight.lightID) {
+      deviceState()->dcos.lights.erase(
+          deviceState()->dcos.lights.begin() + vlight.lightID);
+    }
+  }
 
   // Upload/set accessible pointers
   deviceState()->onDevice.lights = deviceState()->dcos.lights.data();

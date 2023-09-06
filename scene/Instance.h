@@ -34,7 +34,8 @@ struct Instance : public Object
   helium::IntrusivePtr<Group> m_group;
   dco::Geometry vgeom;
 
-   void dispatch();
+  void dispatch();
+  void detach();
 };
 
 } // namespace visionaray

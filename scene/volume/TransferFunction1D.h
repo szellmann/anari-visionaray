@@ -15,6 +15,7 @@ namespace visionaray {
 struct TransferFunction1D : public Volume
 {
   TransferFunction1D(VisionarayGlobalState *d);
+  ~TransferFunction1D() override;
 
   void commit() override;
 
@@ -23,7 +24,8 @@ struct TransferFunction1D : public Volume
   aabb bounds() const override;
 
  private:
-   void dispatch();
+  void dispatch();
+  void detach();
 
   // Data //
 

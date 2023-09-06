@@ -138,6 +138,8 @@ void VisionaraySceneImpl::commit()
 
 void VisionaraySceneImpl::release()
 {
+//detach();
+
   m_geometries.clear();
   m_BLSs.clear();
   m_accelStorage.triangleBLSs.clear();
@@ -192,6 +194,23 @@ void VisionaraySceneImpl::dispatch()
   // Upload/set accessible pointers
   m_state->onDevice.TLSs = m_state->dcos.TLSs.data();
   m_state->onDevice.groups = m_state->dcos.groups.data();
+}
+
+void VisionaraySceneImpl::detach()
+{
+  // Detach world
+  if (m_state->dcos.TLSs.size() > m_worldID) {
+    if (m_state->dcos.TLSs[m_worldID] == m_TLS.ref()) {
+      m_state->dcos.TLSs.erase(m_state->dcos.TLSs.begin() + m_worldID);
+    }
+  }
+
+  // Detach group
+  if (m_state->dcos.groups.size() > m_groupID) {
+    if (m_state->dcos.groups[m_groupID].groupID == m_groupID) {
+      m_state->dcos.groups.erase(m_state->dcos.groups.begin() + m_groupID);
+    }
+  }
 }
 
 VisionarayScene newVisionarayScene(

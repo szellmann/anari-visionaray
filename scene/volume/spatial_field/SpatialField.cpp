@@ -16,6 +16,8 @@ SpatialField::SpatialField(VisionarayGlobalState *s)
 
 SpatialField::~SpatialField()
 {
+  detach();
+
   deviceState()->objectCounts.spatialFields--;
 }
 
@@ -46,6 +48,19 @@ void SpatialField::dispatch()
     deviceState()->dcos.spatialFields.resize(vfield.fieldID+1);
   }
   deviceState()->dcos.spatialFields[vfield.fieldID] = vfield;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.spatialFields = deviceState()->dcos.spatialFields.data();
+}
+
+void SpatialField::detach()
+{
+  if (deviceState()->dcos.spatialFields.size() > vfield.fieldID) {
+    if (deviceState()->dcos.spatialFields[vfield.fieldID].fieldID == vfield.fieldID) {
+      deviceState()->dcos.spatialFields.erase(
+          deviceState()->dcos.spatialFields.begin() + vfield.fieldID);
+    }
+  }
 
   // Upload/set accessible pointers
   deviceState()->onDevice.spatialFields = deviceState()->dcos.spatialFields.data();

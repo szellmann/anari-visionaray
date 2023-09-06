@@ -7,11 +7,13 @@ namespace visionaray {
 struct Point : public Light
 {
   Point(VisionarayGlobalState *s);
+  ~Point() override;
 
   void commit() override;
 
  private:
   void dispatch();
+  void detach();
 
   vec3 m_position{0.f, 0.f, 0.f};
   float m_intensity{1.f};

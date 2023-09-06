@@ -13,6 +13,8 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 
 Instance::~Instance()
 {
+  detach();
+
   // rtcReleaseGeometry(m_embreeGeometry);
   deviceState()->objectCounts.instances--;
 }
@@ -93,6 +95,20 @@ void Instance::dispatch()
       = vgeom.asInstance.groupID;
   deviceState()->dcos.instances[vgeom.asInstance.instID].xfm
       = vgeom.asInstance.xfm;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.data();
+}
+
+void Instance::detach()
+{
+  if (deviceState()->dcos.instances.size() > vgeom.asInstance.instID) {
+    if (deviceState()->dcos.instances[vgeom.asInstance.instID].instID
+        == vgeom.asInstance.instID) {
+      deviceState()->dcos.instances.erase(
+          deviceState()->dcos.instances.begin() + vgeom.asInstance.instID);
+    }
+  }
 
   // Upload/set accessible pointers
   deviceState()->onDevice.instances = deviceState()->dcos.instances.data();

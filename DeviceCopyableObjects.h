@@ -313,6 +313,7 @@ struct TransferFunction
 {
   enum Type { _1D, };
   Type type;
+  unsigned volID{UINT_MAX};
   struct {
     box1 valueRange{0.f, 1.f};
     texture_ref<float4, 1> sampler;

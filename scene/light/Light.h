@@ -10,7 +10,7 @@ namespace visionaray {
 struct Light : public Object
 {
   Light(VisionarayGlobalState *d);
-  ~Light() override;
+  virtual ~Light();
 
   virtual void commit() override;
 

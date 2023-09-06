@@ -14,6 +14,8 @@ Material::Material(VisionarayGlobalState *s) : Object(ANARI_MATERIAL, s)
 
 Material::~Material()
 {
+  detach();
+
   deviceState()->objectCounts.materials--;
 }
 
@@ -38,6 +40,19 @@ void Material::dispatch()
     deviceState()->dcos.materials.resize(vmat.matID+1);
   }
   deviceState()->dcos.materials[vmat.matID] = vmat;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.materials = deviceState()->dcos.materials.data();
+}
+
+void Material::detach()
+{
+  if (deviceState()->dcos.materials.size() > vmat.matID) {
+    if (deviceState()->dcos.materials[vmat.matID].matID == vmat.matID) {
+      deviceState()->dcos.materials.erase(
+          deviceState()->dcos.materials.begin() + vmat.matID);
+    }
+  }
 
   // Upload/set accessible pointers
   deviceState()->onDevice.materials = deviceState()->dcos.materials.data();
