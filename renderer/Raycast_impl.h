@@ -76,7 +76,7 @@ struct VisionarayRendererRaycast
         }
       }
 
-      result.color = over(float4(color,1.f), result.color);
+      result.color = over(float4(color,alpha), result.color);
     }
 
     if (prd.x == prd.frameSize.x/2 || prd.y == prd.frameSize.y/2) {

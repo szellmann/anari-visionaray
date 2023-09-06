@@ -167,7 +167,7 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
       geom.asCylinder.data[i].geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Volume) {
-    geom.asVolume.data.volID = geomID;
+    /* volumes do this themselves, on commit! */
   }
 
   m_geometries[geomID] = geom;

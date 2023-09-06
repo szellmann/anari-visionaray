@@ -58,6 +58,7 @@ void TransferFunction1D::commit()
   transFuncTexture.set_address_mode(Clamp);
 
   vgeom.asVolume.data.bounds = m_bounds;
+  vgeom.asVolume.data.volID = m_field->visionaraySpatialField().fieldID;
   vgeom.asVolume.data.fieldID = m_field->visionaraySpatialField().fieldID;
 
   dispatch();
