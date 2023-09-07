@@ -48,9 +48,25 @@ void TransferFunction1D::commit()
   auto *colorData = m_colorData->beginAs<vec3>();
   auto *opacityData = m_opacityData->beginAs<float>();
 
-  std::vector<float4> tf(m_colorData->size());
-  for (size_t i=0; i<tf.size(); ++i) {
-    tf[i] = vec4(colorData[i],opacityData[i]);
+  size_t tfSize = max(m_colorData->size(), m_opacityData->size());
+
+  std::vector<float4> tf(tfSize);
+  for (size_t i=0; i<tfSize; ++i) {
+    float colorPos = (float(i)/(tfSize-1))*(m_colorData->size()-1);
+    float colorFrac = colorPos-floorf(colorPos);
+
+    vec3f color0 = colorData[int(floorf(colorPos))];
+    vec3f color1 = colorData[int(ceilf(colorPos))];
+    vec3f color = lerp(color0, color1, colorFrac);
+
+    float alphaPos = (float(i)/(tfSize-1))*(m_opacityData->size()-1);
+    float alphaFrac = alphaPos-floorf(alphaPos);
+
+    float alpha0 = opacityData[int(floorf(alphaPos))];
+    float alpha1 = opacityData[int(ceilf(alphaPos))];
+    float alpha = lerp(alpha0, alpha1, alphaFrac);
+
+    tf[i] = vec4(color, alpha);
   }
   transFuncTexture = texture<float4, 1>(tf.size());
   transFuncTexture.reset(tf.data());
