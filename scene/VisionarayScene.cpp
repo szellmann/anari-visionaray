@@ -4,18 +4,25 @@
 
 namespace visionaray {
 
+unsigned VisionaraySceneImpl::nextWorldID = 0;
+unsigned VisionaraySceneImpl::nextGroupID = 0;
+
 VisionaraySceneImpl::VisionaraySceneImpl(
     VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
   : m_state(state)
 {
-  static unsigned nextWorldID = 0;
-  static unsigned nextGroupID = 0;
-
   this->type = type;
 
   if (type == World)
     m_worldID = nextWorldID++;
   m_groupID = nextGroupID++;
+}
+
+VisionaraySceneImpl::~VisionaraySceneImpl()
+{
+  if (type == World)
+    nextWorldID--;
+  nextGroupID--;
 }
 
 void VisionaraySceneImpl::commit()

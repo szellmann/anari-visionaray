@@ -50,6 +50,7 @@ struct VisionaraySceneImpl
 
   // Interface //
   VisionaraySceneImpl(Type type, VisionarayGlobalState *state);
+  ~VisionaraySceneImpl();
   void commit();
   void release();
   void attachGeometry(dco::Geometry geom, unsigned geomID);
@@ -57,6 +58,9 @@ struct VisionaraySceneImpl
  private:
   void dispatch();
   void detach();
+
+  static unsigned nextWorldID;
+  static unsigned nextGroupID;
 };
 
 typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
