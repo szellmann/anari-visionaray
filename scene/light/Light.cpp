@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "Light.h"
+// subtypes
+#include "Directional.h"
 #include "Point.h"
 
 namespace visionaray {
@@ -24,8 +26,9 @@ void Light::commit()
 
 Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
-  /*if (subtype == "directional")
-  else*/ if (subtype == "point")
+  if (subtype == "directional")
+    return new Directional(s);
+  else if (subtype == "point")
     return new Point(s);
   else
     return (Light *)new UnknownObject(ANARI_LIGHT, s);

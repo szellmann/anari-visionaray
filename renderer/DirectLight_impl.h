@@ -44,9 +44,16 @@ struct VisionarayRendererDirectLight
         vec3f gn = getNormal(geom, hr.prim_id, hitPos);
 
         int lightID = uniformSampleOneLight(prd.random, objCounts.lights);
-        assert(onDevice.lights[lightID].type == dco::Light::Point);
-        auto pl = onDevice.lights[lightID].asPoint;
-        auto ls = pl.sample(hitPos+1e-4f, prd.random);
+
+        light_sample<float> ls;
+        vec3f intensity(0.f);
+        if (onDevice.lights[lightID].type == dco::Light::Point) {
+          ls = onDevice.lights[lightID].asPoint.sample(hitPos+1e-4f, prd.random);
+          intensity = onDevice.lights[lightID].asPoint.intensity(hitPos);
+        } else if (onDevice.lights[lightID].type == dco::Light::Directional) {
+          ls = onDevice.lights[lightID].asDirectional.sample(hitPos+1e-4f, prd.random);
+          intensity = onDevice.lights[lightID].asDirectional.intensity(hitPos);
+        }
 
         shade_record<float> sr;
         sr.normal = gn;
@@ -54,7 +61,7 @@ struct VisionarayRendererDirectLight
         sr.view_dir = -ray.dir;
         sr.tex_color = float3(1.f);
         sr.light_dir = ls.dir;
-        sr.light_intensity = pl.intensity(hitPos);
+        sr.light_intensity = intensity;
 
         // That doesn't work for instances..
         const auto &mat = onDevice.materials[hr.geom_id];
@@ -68,8 +75,11 @@ struct VisionarayRendererDirectLight
         auto shadowHR = intersect(shadowRay, onDevice.TLSs[worldID]);
         if (shadowHR.hit)
           throughput = float3{0.f};
-        else
-          throughput *= shadedColor / (ls.dist*ls.dist);
+        else {
+          float dist
+              = onDevice.lights[lightID].type == dco::Light::Directional ? 1.f : ls.dist;
+          throughput *= shadedColor / ls.pdf / (dist*dist);
+        }
 
         result.color = float4(throughput,1.f);
       }

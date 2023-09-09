@@ -5,6 +5,7 @@
 #include "visionaray/texture/texture.h"
 #include "visionaray/aligned_vector.h"
 #include "visionaray/bvh.h"
+#include "visionaray/directional_light.h"
 #include "visionaray/material.h"
 #include "visionaray/matrix_camera.h"
 #include "visionaray/pinhole_camera.h"
@@ -345,9 +346,10 @@ struct Camera
 
 struct Light
 {
-  enum Type { Point, };
+  enum Type { Directional, Point, };
   Type type;
   unsigned lightID{UINT_MAX};
+  directional_light<float> asDirectional;
   point_light<float> asPoint;
 };
 
