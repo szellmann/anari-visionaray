@@ -28,6 +28,7 @@ VisionaraySceneImpl::~VisionaraySceneImpl()
 void VisionaraySceneImpl::commit()
 {
   unsigned triangleCount = 0;
+  unsigned quadCount = 0;
   unsigned sphereCount = 0;
   unsigned cylinderCount = 0;
   unsigned volumeCount = 0;
@@ -37,6 +38,9 @@ void VisionaraySceneImpl::commit()
     switch (geom.type) {
       case dco::Geometry::Triangle:
         triangleCount++;
+        break;
+      case dco::Geometry::Quad:
+        quadCount++;
         break;
       case dco::Geometry::Sphere:
         sphereCount++;
@@ -54,12 +58,13 @@ void VisionaraySceneImpl::commit()
   }
 
   m_accelStorage.triangleBLSs.resize(triangleCount);
+  m_accelStorage.quadBLSs.resize(quadCount);
   m_accelStorage.sphereBLSs.resize(sphereCount);
   m_accelStorage.cylinderBLSs.resize(cylinderCount);
   m_accelStorage.volumeBLSs.resize(volumeCount);
   // No instance storage: instance BLSs are the TLSs of child scenes
 
-  triangleCount = sphereCount = cylinderCount = volumeCount = 0;
+  triangleCount = quadCount = sphereCount = cylinderCount = volumeCount = 0;
   for (const auto &geom : m_geometries) {
     if (geom.type == dco::Geometry::Triangle) {
       binned_sah_builder builder;
@@ -72,6 +77,18 @@ void VisionaraySceneImpl::commit()
       dco::BLS bls;
       bls.type = dco::BLS::Triangle;
       bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
+      m_BLSs.push_back(bls);
+    } else if (geom.type == dco::Geometry::Quad) {
+      binned_sah_builder builder;
+      builder.enable_spatial_splits(true);
+
+      unsigned index = quadCount++;
+      m_accelStorage.quadBLSs[index] = builder.build(
+        TriangleBVH{}, geom.asQuad.data, geom.asQuad.len);
+
+      dco::BLS bls;
+      bls.type = dco::BLS::Quad;
+      bls.asQuad = m_accelStorage.quadBLSs[index].ref();
       m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Sphere) {
       binned_sah_builder builder;
@@ -164,6 +181,10 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
   if (geom.type == dco::Geometry::Triangle) {
     for (size_t i=0;i<geom.asTriangle.len;++i) {
       geom.asTriangle.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::Quad) {
+    for (size_t i=0;i<geom.asQuad.len;++i) {
+      geom.asQuad.data[i].geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Sphere) {
     for (size_t i=0;i<geom.asSphere.len;++i) {

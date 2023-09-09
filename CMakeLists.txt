@@ -34,6 +34,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/light/Point.cpp
     scene/surface/geometry/Cylinder.cpp
     scene/surface/geometry/Geometry.cpp
+    scene/surface/geometry/Quad.cpp
     scene/surface/geometry/Sphere.cpp
     scene/surface/geometry/Triangle.cpp
     scene/surface/material/sampler/Sampler.cpp

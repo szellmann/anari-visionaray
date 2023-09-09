@@ -28,9 +28,10 @@ struct Ray : basic_ray<float>
   enum IntersectionMask {
     All = 0xffffffff,
     Triangle = 0x1,
-    Sphere = 0x2,
-    Cylinder = 0x4,
-    Volume = 0x8,
+    Quad = 0x2,
+    Sphere = 0x4,
+    Cylinder = 0x8,
+    Volume = 0x10,
   };
   unsigned intersectionMask = All;
 };
@@ -85,9 +86,10 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
 struct BLS
 {
-  enum Type { Triangle, Sphere, Cylinder, Volume, Instance, };
+  enum Type { Triangle, Quad, Sphere, Cylinder, Volume, Instance, };
   Type type;
   index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+  index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
   index_bvh<basic_sphere<float>>::bvh_ref asSphere;
   index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
   index_bvh<dco::Volume>::bvh_ref asVolume;
@@ -99,6 +101,8 @@ inline aabb get_bounds(const BLS &bls)
 {
   if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
     return bls.asTriangle.node(0).get_bounds();
+  if (bls.type == BLS::Quad && bls.asQuad.num_nodes())
+    return bls.asQuad.node(0).get_bounds();
   else if (bls.type == BLS::Sphere && bls.asSphere.num_nodes())
     return bls.asSphere.node(0).get_bounds();
   else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
@@ -130,6 +134,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 {
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
     return intersect(ray,bls.asTriangle);
+  if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
+    return intersect(ray,bls.asQuad);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
     return intersect(ray,bls.asSphere);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
@@ -150,7 +156,7 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     Ray ray, const TLS &tls)
 {
-  ray.intersectionMask = Ray::Triangle | Ray::Sphere | Ray::Cylinder;
+  ray.intersectionMask = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cylinder;
   return intersect(ray, tls);
 }
 
@@ -166,12 +172,16 @@ inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
 
 struct Geometry
 {
-  enum Type { Triangle, Sphere, Cylinder, Volume, Instance, };
+  enum Type { Triangle, Quad, Sphere, Cylinder, Volume, Instance, };
   Type type;
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
   } asTriangle;
+  struct {
+    basic_triangle<3,float> *data{nullptr};
+    size_t len{0};
+  } asQuad;
   struct {
     basic_sphere<float> *data{nullptr};
     size_t len{0};

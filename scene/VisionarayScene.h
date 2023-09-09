@@ -14,6 +14,7 @@
 namespace visionaray {
 
 typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
+typedef index_bvh<basic_triangle<3,float>> QuadBVH;
 typedef index_bvh<basic_sphere<float>>     SphereBVH;
 typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
 typedef index_bvh<dco::Volume>             VolumeBVH;
@@ -35,6 +36,7 @@ struct VisionaraySceneImpl
   // Accel storage //
   struct {
     aligned_vector<TriangleBVH> triangleBLSs;
+    aligned_vector<QuadBVH>     quadBLSs;
     aligned_vector<SphereBVH>   sphereBLSs;
     aligned_vector<CylinderBVH> cylinderBLSs;
     aligned_vector<VolumeBVH>   volumeBLSs;
