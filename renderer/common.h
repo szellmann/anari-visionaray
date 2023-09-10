@@ -53,7 +53,7 @@ struct LCG
 
 typedef LCG<4> Random;
 
-struct PRD
+struct ScreenSample
 {
   int x, y;
   uint2 frameSize;

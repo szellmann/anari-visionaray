@@ -177,13 +177,13 @@ void Frame::renderFrame()
           for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
             for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
 
-              PRD prd{x, y, size, {/*RNG*/}};
+              ScreenSample ss{x, y, size, {/*RNG*/}};
               Ray ray;
 
               if (rend.stochasticRendering()) {
                 // Need an RNG
-                int pixelID = prd.x + prd.frameSize.x * prd.y;
-                prd.random = Random(pixelID, rend.rendererState().accumID);
+                int pixelID = ss.x + ss.frameSize.x * ss.y;
+                ss.random = Random(pixelID, rend.rendererState().accumID);
               }
 
               float4 accumColor{0.f};
@@ -193,7 +193,7 @@ void Frame::renderFrame()
                 float xf(x), yf(y);
                 if (rend.stochasticRendering()) {
                   // jitter pixel sample
-                  vec2f jitter(prd.random() - .5f, prd.random() - .5f);
+                  vec2f jitter(ss.random() - .5f, ss.random() - .5f);
                   xf += jitter.x;
                   yf += jitter.y;
                 }
@@ -206,7 +206,7 @@ void Frame::renderFrame()
                       Ray{}, xf, yf, float(size.x), float(size.y));
 
                 PixelSample ps = rend.renderSample(ray,
-                        prd,
+                        ss,
                         scene->m_worldID,
                         deviceState()->onDevice,
                         deviceState()->objectCounts);

@@ -7,12 +7,12 @@ namespace visionaray {
 struct VisionarayRendererDirectLight
 {
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, PRD &prd, unsigned worldID,
+  PixelSample renderSample(Ray ray, ScreenSample &ss, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
         VisionarayGlobalState::ObjectCounts objCounts) {
 
     auto debug = [=]() {
-      return prd.x == prd.frameSize.x/2 && prd.y == prd.frameSize.y/2;
+      return ss.x == ss.frameSize.x/2 && ss.y == ss.frameSize.y/2;
     };
 
     // if (debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
@@ -43,15 +43,15 @@ struct VisionarayRendererDirectLight
         vec3f hitPos = ray.ori + hr.t * ray.dir;
         vec3f gn = getNormal(geom, hr.prim_id, hitPos);
 
-        int lightID = uniformSampleOneLight(prd.random, objCounts.lights);
+        int lightID = uniformSampleOneLight(ss.random, objCounts.lights);
 
         light_sample<float> ls;
         vec3f intensity(0.f);
         if (onDevice.lights[lightID].type == dco::Light::Point) {
-          ls = onDevice.lights[lightID].asPoint.sample(hitPos+1e-4f, prd.random);
+          ls = onDevice.lights[lightID].asPoint.sample(hitPos+1e-4f, ss.random);
           intensity = onDevice.lights[lightID].asPoint.intensity(hitPos);
         } else if (onDevice.lights[lightID].type == dco::Light::Directional) {
-          ls = onDevice.lights[lightID].asDirectional.sample(hitPos+1e-4f, prd.random);
+          ls = onDevice.lights[lightID].asDirectional.sample(hitPos+1e-4f, ss.random);
           intensity = onDevice.lights[lightID].asDirectional.intensity(hitPos);
         }
 
@@ -85,7 +85,7 @@ struct VisionarayRendererDirectLight
       }
     }
 
-    if (prd.x == prd.frameSize.x/2 || prd.y == prd.frameSize.y/2) {
+    if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
       result.color = float4(1.f) - result.color;
     }
 

@@ -7,12 +7,12 @@ namespace visionaray {
 struct VisionarayRendererRaycast
 {
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, PRD &prd, unsigned worldID,
+  PixelSample renderSample(Ray ray, ScreenSample &ss, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
         VisionarayGlobalState::ObjectCounts /*objCounts*/) {
 
     auto debug = [=]() {
-      return prd.x == prd.frameSize.x/2 && prd.y == prd.frameSize.y/2;
+      return ss.x == ss.frameSize.x/2 && ss.y == ss.frameSize.y/2;
     };
 
     PixelSample result;
@@ -79,7 +79,7 @@ struct VisionarayRendererRaycast
       result.color = over(float4(color,alpha), result.color);
     }
 
-    if (prd.x == prd.frameSize.x/2 || prd.y == prd.frameSize.y/2) {
+    if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
       result.color = float4(1.f) - result.color;
     }
 
