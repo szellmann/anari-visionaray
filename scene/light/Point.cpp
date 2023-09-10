@@ -28,6 +28,7 @@ void Point::dispatch()
     deviceState()->dcos.lights.resize(vlight.lightID+1);
   }
   deviceState()->dcos.lights[vlight.lightID].lightID = vlight.lightID;
+  deviceState()->dcos.lights[vlight.lightID].type = vlight.type;
   deviceState()->dcos.lights[vlight.lightID].asPoint.set_position(m_position);
   deviceState()->dcos.lights[vlight.lightID].asPoint.set_cl(m_color);
   deviceState()->dcos.lights[vlight.lightID].asPoint.set_kl(m_intensity);

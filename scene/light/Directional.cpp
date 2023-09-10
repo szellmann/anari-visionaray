@@ -29,6 +29,7 @@ void Directional::dispatch()
     deviceState()->dcos.lights.resize(vlight.lightID+1);
   }
   deviceState()->dcos.lights[vlight.lightID].lightID = vlight.lightID;
+  deviceState()->dcos.lights[vlight.lightID].type = vlight.type;
   deviceState()->dcos.lights[vlight.lightID].asDirectional.set_direction(-m_direction);
   deviceState()->dcos.lights[vlight.lightID].asDirectional.set_cl(m_color);
   deviceState()->dcos.lights[vlight.lightID].asDirectional.set_kl(m_irradiance); // TODO!
