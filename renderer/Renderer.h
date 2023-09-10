@@ -17,13 +17,13 @@ struct VisionarayRenderer
   Type type;
 
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, ScreenSample &ss, unsigned worldID,
+  PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
         VisionarayGlobalState::ObjectCounts objCounts) {
     if (type == Raycast) {
-      return asRaycast.renderer.renderSample(ray, ss, worldID, onDevice, objCounts);
+      return asRaycast.renderer.renderSample(ss, ray, worldID, onDevice, objCounts);
     } else if (type == DirectLight) {
-      return asDirectLight.renderer.renderSample(ray, ss, worldID, onDevice, objCounts);
+      return asDirectLight.renderer.renderSample(ss, ray, worldID, onDevice, objCounts);
     }
 
     return {};

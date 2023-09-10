@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common.h>
+#include <DeviceCopyableObjects.h>
 
 namespace visionaray {
 

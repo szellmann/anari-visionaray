@@ -3,24 +3,10 @@
 
 #pragma once
 
+#include "renderer/common.h"
 #include "Object.h"
 
 namespace visionaray {
-
-VSNRAY_FUNC
-inline float4 postClassify(dco::TransferFunction tf, float v, bool dbg=false) {
-  if (tf.type == dco::TransferFunction::_1D) {
-    box1 valueRange = tf.as1D.valueRange;
-    v = (v - valueRange.min) / (valueRange.max - valueRange.min);
-    float4 clr = tex1D(tf.as1D.sampler, v);
-    if (dbg) {
-      printf("v: %f, clr: (%f,%f,%f)\n",v,clr.x,clr.y,clr.z);
-    }
-    return clr;
-  }
-
-  return {};
-}
 
 struct Volume : public Object
 {

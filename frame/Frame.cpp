@@ -205,8 +205,8 @@ void Frame::renderFrame()
                   ray = cam.asMatrixCam.primary_ray(
                       Ray{}, xf, yf, float(size.x), float(size.y));
 
-                PixelSample ps = rend.renderSample(ray,
-                        ss,
+                PixelSample ps = rend.renderSample(ss,
+                        ray,
                         scene->m_worldID,
                         deviceState()->onDevice,
                         deviceState()->objectCounts);

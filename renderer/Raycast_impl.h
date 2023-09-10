@@ -1,13 +1,14 @@
 #pragma once
 
 #include "renderer/common.h"
+#include "renderer/VolumeIntegration.h"
 
 namespace visionaray {
 
 struct VisionarayRendererRaycast
 {
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, ScreenSample &ss, unsigned worldID,
+  PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
         VisionarayGlobalState::ObjectCounts /*objCounts*/) {
 
@@ -52,26 +53,10 @@ struct VisionarayRendererRaycast
       const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
 
       const auto &vol = geom.asVolume.data;
-      auto boxHit = intersect(ray, vol.bounds);
-      float dt = onDevice.spatialFields[vol.fieldID].baseDT;
       float3 color(0.f);
       float alpha = 0.f;
-      // if (ss.debug()) {
-      //   printf("boxHit: %f,%f\n",boxHit.tnear,boxHit.tfar);
-      //   print(ray);
-      //   print(vol.bounds);
-      // }
-      for (float t=boxHit.tnear;t<boxHit.tfar&&alpha<0.99f;t+=dt) {
-        float3 P = ray.ori+ray.dir*t;
-        float v = 0.f;
-        if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
-          float4 sample
-              = postClassify(onDevice.transferFunctions[vol.volID],v);
-          color += dt * (1.f-alpha) * sample.w * sample.xyz();
-          alpha += dt * (1.f-alpha) * sample.w;
-        }
-      }
 
+      rayMarchVolume(ss, ray, vol, onDevice, color, alpha);
       result.color = over(float4(color,alpha), result.color);
     }
 

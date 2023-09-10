@@ -1,13 +1,14 @@
 #pragma once
 
 #include "renderer/common.h"
+#include "renderer/VolumeIntegration.h"
 
 namespace visionaray {
 
 struct VisionarayRendererDirectLight
 {
   VSNRAY_FUNC
-  PixelSample renderSample(Ray ray, ScreenSample &ss, unsigned worldID,
+  PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
         VisionarayGlobalState::ObjectCounts objCounts) {
 

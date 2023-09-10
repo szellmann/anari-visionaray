@@ -7,29 +7,6 @@
 
 namespace visionaray {
 
-VSNRAY_FUNC
-inline bool sampleField(dco::SpatialField sf, vec3 P, float &value) {
-  if (sf.type == dco::SpatialField::StructuredRegular) {
-    value = tex3D(sf.asStructuredRegular.sampler,
-        sf.asStructuredRegular.objectToTexCoord(P));
-    return true;
-  } else if (sf.type == dco::SpatialField::Unstructured) {
-    Ray ray;
-    ray.ori = P;
-    ray.dir = float3(1.f);
-    ray.tmin = ray.tmax = 0.f;
-    auto hr = intersect(ray, sf.asUnstructured.samplingBVH);
-
-    if (!hr.hit)
-      return false;
-
-    value = hr.u; // value is stored in "u"!
-    return true;
-  }
-
-  return false;
-}
-
 struct SpatialField : public Object
 {
   SpatialField(VisionarayGlobalState *d);
