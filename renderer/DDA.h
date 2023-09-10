@@ -14,7 +14,9 @@ namespace visionaray {
                    const box3f &modelBounds,
                    const Func  &func)
   {
-    const vec3f rcp_dir = 1.f/ray.dir;
+    const vec3 rcp_dir(ray.dir.x != 0.f ? 1.f / ray.dir.x : 0.f,
+        ray.dir.y != 0.f ? 1.f / ray.dir.y : 0.f,
+        ray.dir.z != 0.f ? 1.f / ray.dir.z : 0.f);
 
     const vec3f lo = (modelBounds.min - ray.ori) * rcp_dir;
     const vec3f hi = (modelBounds.max - ray.ori) * rcp_dir;
