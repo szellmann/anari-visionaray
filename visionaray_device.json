@@ -33,12 +33,26 @@
           ],
           "tags": [],
           "description": "optional object name"
+        },
+        {
+          "name": "backgroundColor",
+          "types": [
+            "ANARI_FLOAT32_VEC4"
+          ],
+          "tags": [],
+          "default": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "description": "background color and alpha (RGBA)"
         }
       ]
     },
     {
       "type": "ANARI_RENDERER",
-      "name": "direct_light",
+      "name": "raycast",
       "parameters": [
         {
           "name": "name",
