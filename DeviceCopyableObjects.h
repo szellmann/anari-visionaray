@@ -78,7 +78,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   // themselves to compute [t0,t1]
   hit_record<Ray, primitive<unsigned>> result;
   result.hit = hr.hit;
-  result.t = hr.tnear;
+  result.t = max(ray.tmin,hr.tnear);
   result.geom_id = vol.volID;
   return result;
 }

@@ -26,19 +26,32 @@ struct VisionarayRendererDirectLight
       return result;
 
     float3 throughput{1.f};
+    float3 shadedColor{0.f};
 
-    auto hr = intersect(ray, onDevice.TLSs[worldID]);
+    for (unsigned bounceID=0;bounceID<2;++bounceID) {
+      auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+      auto hrv = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
+      const bool volumeHit = hrv.hit && (!hr.hit || hrv.t < hr.t);
 
-    if (hr.hit) {
+      if (bounceID == 0) {
 
-      auto inst = onDevice.instances[hr.inst_id];
-      const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
+        if (!hr.hit && !hrv.hit) {
+          throughput = float3{0.f};
+          break;
+        }
 
-      // TODO: currently, this will arbitrarily pick a volume _or_
-      // surface BVH if both are present and do overlap
-      if (geom.type != dco::Geometry::Volume) {
-        vec3f hitPos = ray.ori + hr.t * ray.dir;
-        vec3f gn = getNormal(geom, hr.prim_id, hitPos);
+        float3 gn{0.f};
+        float3 hitPos{0.f};
+
+        if (volumeHit) {
+          hitPos = ray.ori + hrv.t * ray.dir;
+        } else {
+          auto inst = onDevice.instances[hr.inst_id];
+          const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
+
+          hitPos = ray.ori + hr.t * ray.dir;
+          gn = getNormal(geom, hr.prim_id, hitPos);
+        }
 
         int lightID = uniformSampleOneLight(ss.random, objCounts.lights);
 
@@ -52,35 +65,42 @@ struct VisionarayRendererDirectLight
           intensity = onDevice.lights[lightID].asDirectional.intensity(hitPos);
         }
 
-        shade_record<float> sr;
-        sr.normal = gn;
-        sr.geometric_normal = gn;
-        sr.view_dir = -ray.dir;
-        sr.tex_color = float3(1.f);
-        sr.light_dir = ls.dir;
-        sr.light_intensity = intensity;
+        if (volumeHit) {
+          shadedColor = hrv.albedo * intensity;
+        } else {
+          shade_record<float> sr;
+          sr.normal = gn;
+          sr.geometric_normal = gn;
+          sr.view_dir = -ray.dir;
+          sr.tex_color = float3(1.f);
+          sr.light_dir = ls.dir;
+          sr.light_intensity = intensity;
 
-        // That doesn't work for instances..
-        const auto &mat = onDevice.materials[hr.geom_id];
-        float3 shadedColor = to_rgb(mat.asMatte.data.shade(sr));
-
-        Ray shadowRay;
-        shadowRay.ori = hitPos;
-        shadowRay.dir = ls.dir;
-        shadowRay.tmin = 1e-4f;
-        shadowRay.tmax = ls.dist-1e-4f;
-        auto shadowHR = intersect(shadowRay, onDevice.TLSs[worldID]);
-        if (shadowHR.hit)
-          throughput = float3{0.f};
-        else {
           float dist
               = onDevice.lights[lightID].type == dco::Light::Directional ? 1.f : ls.dist;
-          throughput *= shadedColor / ls.pdf / (dist*dist);
+
+          // That doesn't work for instances..
+          const auto &mat = onDevice.materials[hr.geom_id];
+          shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
         }
 
-        result.color = float4(throughput,1.f);
+        // Convert primary to shadow ray
+        ray.ori = hitPos;
+        ray.dir = ls.dir;
+        ray.tmin = 1e-4f;
+        ray.tmax = ls.dist-1e-4f;
+      } else { // bounceID == 1
+        if (!hr.hit && !volumeHit) {
+          throughput *= shadedColor;
+        } else if (volumeHit) {
+          throughput *= hrv.Tr;
+        } else {
+          throughput = float3{0.f};
+        }
       }
     }
+
+    result.color = float4(throughput,1.f);
 
     if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
       result.color = float4(1.f) - result.color;
