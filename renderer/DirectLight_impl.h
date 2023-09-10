@@ -15,7 +15,7 @@ struct VisionarayRendererDirectLight
       return prd.x == prd.frameSize.x/2 && prd.y == prd.frameSize.y/2;
     };
 
-    if (debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
+    // if (debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
 
     PixelSample result;
     result.color = rendererState.bgColor;
