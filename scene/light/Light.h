@@ -21,6 +21,9 @@ struct Light : public Object
  protected:
   dco::Light vlight;
   vec3 m_color{1.f, 1.f, 1.f};
+
+  void dispatch();
+  void detach();
 };
 
 } // namespace visionaray

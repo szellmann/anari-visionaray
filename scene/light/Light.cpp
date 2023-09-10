@@ -34,6 +34,30 @@ Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
     return (Light *)new UnknownObject(ANARI_LIGHT, s);
 }
 
+void Light::dispatch()
+{
+  if (deviceState()->dcos.lights.size() <= vlight.lightID) {
+    deviceState()->dcos.lights.resize(vlight.lightID+1);
+  }
+  deviceState()->dcos.lights[vlight.lightID] = vlight;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
+}
+
+void Light::detach()
+{
+  if (deviceState()->dcos.lights.size() > vlight.lightID) {
+    if (deviceState()->dcos.lights[vlight.lightID].lightID == vlight.lightID) {
+      deviceState()->dcos.lights.erase(
+          deviceState()->dcos.lights.begin() + vlight.lightID);
+    }
+  }
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
+}
+
 } // namespace visionaray
 
 VISIONARAY_ANARI_TYPEFOR_DEFINITION(visionaray::Light *);

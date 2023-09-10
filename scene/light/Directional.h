@@ -12,9 +12,6 @@ struct Directional : public Light
   void commit() override;
 
  private:
-  void dispatch();
-  void detach();
-
   vec3 m_direction{0.f, 0.f, -1.f};
   float m_irradiance{1.f};
 };

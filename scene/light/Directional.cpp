@@ -20,36 +20,15 @@ void Directional::commit()
   m_irradiance = std::clamp(getParam<float>("irradiance", 1.f),
       0.f,
       std::numeric_limits<float>::max());
+
+  vlight.lightID = vlight.lightID;
+  vlight.type = vlight.type;
+  vlight.asDirectional.set_direction(-m_direction);
+  vlight.asDirectional.set_cl(m_color);
+  vlight.asDirectional.set_kl(m_irradiance); // TODO!
+  vlight.asDirectional.set_angular_diameter(15.f); // TODO!
+
   dispatch();
-}
-
-void Directional::dispatch()
-{
-  if (deviceState()->dcos.lights.size() <= vlight.lightID) {
-    deviceState()->dcos.lights.resize(vlight.lightID+1);
-  }
-  deviceState()->dcos.lights[vlight.lightID].lightID = vlight.lightID;
-  deviceState()->dcos.lights[vlight.lightID].type = vlight.type;
-  deviceState()->dcos.lights[vlight.lightID].asDirectional.set_direction(-m_direction);
-  deviceState()->dcos.lights[vlight.lightID].asDirectional.set_cl(m_color);
-  deviceState()->dcos.lights[vlight.lightID].asDirectional.set_kl(m_irradiance); // TODO!
-  deviceState()->dcos.lights[vlight.lightID].asDirectional.set_angular_diameter(15.f); // TODO!
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
-}
-
-void Directional::detach()
-{
-  if (deviceState()->dcos.lights.size() > vlight.lightID) {
-    if (deviceState()->dcos.lights[vlight.lightID].lightID == vlight.lightID) {
-      deviceState()->dcos.lights.erase(
-          deviceState()->dcos.lights.begin() + vlight.lightID);
-    }
-  }
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
 }
 
 } // namespace visionaray
