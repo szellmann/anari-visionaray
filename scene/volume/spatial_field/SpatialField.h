@@ -4,6 +4,8 @@
 #pragma once
 
 #include "Object.h"
+// space skipping
+#include "GridAccel.h"
 
 namespace visionaray {
 
@@ -16,12 +18,18 @@ struct SpatialField : public Object
 
   dco::SpatialField visionaraySpatialField() const;
 
+  GridAccel &gridAccel();
+
   virtual aabb bounds() const = 0;
+
+  virtual void buildGrid();
 
   float stepSize() const;
 
  protected:
   dco::SpatialField vfield;
+
+  GridAccel m_gridAccel;
 
   void setStepSize(float size);
   void dispatch();

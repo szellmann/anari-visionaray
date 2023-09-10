@@ -12,11 +12,14 @@ SpatialField::SpatialField(VisionarayGlobalState *s)
     : Object(ANARI_SPATIAL_FIELD, s)
 {
   vfield.fieldID = s->objectCounts.spatialFields++;
+  m_gridAccel.visionarayAccel().fieldID = vfield.fieldID;
 }
 
 SpatialField::~SpatialField()
 {
   detach();
+
+  m_gridAccel.cleanup();
 
   deviceState()->objectCounts.spatialFields--;
 }
@@ -37,6 +40,17 @@ dco::SpatialField SpatialField::visionaraySpatialField() const
   return vfield;
 }
 
+GridAccel &SpatialField::gridAccel()
+{
+  return m_gridAccel;
+}
+
+void SpatialField::buildGrid()
+{
+  reportMessage(ANARI_SEVERITY_WARNING,
+      "buildGrid() not implemented for field type");
+}
+
 float SpatialField::stepSize() const
 {
   return vfield.baseDT;
@@ -49,6 +63,8 @@ void SpatialField::setStepSize(float size)
 
 void SpatialField::dispatch()
 {
+  m_gridAccel.dispatch(deviceState());
+
   if (deviceState()->dcos.spatialFields.size() <= vfield.fieldID) {
     deviceState()->dcos.spatialFields.resize(vfield.fieldID+1);
   }
@@ -60,6 +76,8 @@ void SpatialField::dispatch()
 
 void SpatialField::detach()
 {
+  m_gridAccel.detach(deviceState());
+
   if (deviceState()->dcos.spatialFields.size() > vfield.fieldID) {
     if (deviceState()->dcos.spatialFields[vfield.fieldID].fieldID == vfield.fieldID) {
       deviceState()->dcos.spatialFields.erase(

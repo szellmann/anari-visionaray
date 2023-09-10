@@ -322,6 +322,7 @@ struct SpatialField
 
 struct GridAccel
 {
+  unsigned fieldID{UINT_MAX}; // the field this grid belongs to
   int3 dims;
   box3 worldBounds;
   box1 *valueRanges; // min/max ranges
@@ -336,6 +337,7 @@ struct TransferFunction
   Type type;
   unsigned volID{UINT_MAX};
   struct {
+    unsigned numValues;
     box1 valueRange{0.f, 1.f};
     texture_ref<float4, 1> sampler;
   } as1D;

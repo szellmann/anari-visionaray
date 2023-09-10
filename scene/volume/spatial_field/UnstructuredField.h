@@ -15,7 +15,9 @@ struct UnstructuredField : public SpatialField
   bool isValid() const override;
 
   aabb bounds() const override;
- 
+
+  void buildGrid() override;
+
  private:
 
   aligned_vector<float4> m_vertices;

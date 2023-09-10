@@ -1,0 +1,103 @@
+#include "GridAccel.h"
+
+namespace visionaray {
+
+void GridAccel::init(int3 dims, box3 worldBounds)
+{
+  m_dims = dims;
+  m_worldBounds = worldBounds;
+
+  size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
+
+  delete[] m_valueRanges;
+  delete[] m_maxOpacities;
+
+  m_valueRanges = new box1[numMCs];
+  m_maxOpacities = new float[numMCs];
+
+  for (size_t i=0; i<numMCs; ++i) {
+    auto &vr = m_valueRanges[i];
+    vr = {HUGE_VAL, -HUGE_VAL};
+  }
+
+  vaccel.dims = m_dims;
+  vaccel.worldBounds = m_worldBounds;
+  vaccel.valueRanges = m_valueRanges;
+  vaccel.maxOpacities = m_maxOpacities;
+}
+
+void GridAccel::cleanup()
+{
+  delete[] m_valueRanges;
+  delete[] m_maxOpacities;
+}
+
+dco::GridAccel &GridAccel::visionarayAccel()
+{
+  return vaccel;
+}
+
+box1 *GridAccel::valueRanges()
+{
+  return m_valueRanges;
+}
+
+void GridAccel::computeMaxOpacities(dco::TransferFunction tf)
+{
+  size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
+
+  for (size_t threadID=0; threadID<numMCs; ++threadID) {
+    box1 valueRange = m_valueRanges[threadID];
+
+    if (valueRange.max < valueRange.min) {
+      m_maxOpacities[threadID] = 0.f;
+      continue;
+    }
+
+    if (tf.type == dco::TransferFunction::_1D) {
+      valueRange.min -= tf.as1D.valueRange.min;
+      valueRange.min /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
+      valueRange.max -= tf.as1D.valueRange.min;
+      valueRange.max /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
+    }
+
+    int numValues = tf.as1D.numValues;
+
+    int lo = clamp(
+        int(valueRange.min * (numValues - 1)), 0, numValues - 1);
+    int hi = clamp(
+        int(valueRange.max * (numValues - 1)) + 1, 0, numValues - 1);
+
+    float maxOpacity = 0.f;
+    for (int i = lo; i <= hi; ++i) {
+      float tc = (i + .5f) / numValues;
+      maxOpacity = fmaxf(maxOpacity, tex1D(tf.as1D.sampler, tc).w);
+    }
+    m_maxOpacities[threadID] = maxOpacity;
+  }
+}
+
+void GridAccel::dispatch(VisionarayGlobalState *s)
+{
+  if (s->dcos.gridAccels.size() <= vaccel.fieldID) {
+    s->dcos.gridAccels.resize(vaccel.fieldID+1);
+  }
+  s->dcos.gridAccels[vaccel.fieldID] = vaccel;
+
+  // Upload/set accessible pointers
+  s->onDevice.gridAccels = s->dcos.gridAccels.data();
+}
+
+void GridAccel::detach(VisionarayGlobalState *s)
+{
+  if (s->dcos.gridAccels.size() > vaccel.fieldID) {
+    if (s->dcos.gridAccels[vaccel.fieldID].fieldID == vaccel.fieldID) {
+      s->dcos.gridAccels.erase(s->dcos.gridAccels.begin() + vaccel.fieldID);
+    }
+  }
+
+  // Upload/set accessible pointers
+  s->onDevice.gridAccels = s->dcos.gridAccels.data();
+}
+
+} // namespace visionaray

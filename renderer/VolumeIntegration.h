@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderer/common.h"
+#include "renderer/DDA.h"
 #include "DeviceCopyableObjects.h"
 
 namespace visionaray {
@@ -91,8 +92,11 @@ inline HitRecordVolume sampleFreeFlightDistance(
 
   const float dt = onDevice.spatialFields[vol.fieldID].baseDT;
 
+  dco::GridAccel grid = onDevice.gridAccels[vol.fieldID];
+
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
-    const float majorant = 1.f; // TODO: grid!
+    const float majorant
+        = onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
 
     while (1) {
@@ -125,9 +129,13 @@ inline HitRecordVolume sampleFreeFlightDistance(
 
   };
 
-  // TODO: replace with DDA
   auto boxHit = intersect(ray, vol.bounds);
-  woodcockFunc(-1, max(ray.tmin,boxHit.tnear), min(ray.tmax,boxHit.tfar));
+  ray.tmin = max(ray.tmin, boxHit.tnear);
+  ray.tmax = min(ray.tmax, boxHit.tfar);
+  if (onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured)
+    dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
+  else
+    woodcockFunc(-1, ray.tmin, ray.tmax);
 
   return hr;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "scene/volume/spatial_field/GridAccel.h"
 #include "DeviceCopyableObjects.h"
 
 namespace visionaray {
@@ -13,50 +14,48 @@ namespace visionaray {
                    const box3f &modelBounds,
                    const Func  &func)
   {
-    using namespace owl;
+    const vec3f rcp_dir = 1.f/ray.dir;
 
-    const vec3f rcp_dir = rcp(ray.direction);
-
-    const vec3f lo = (modelBounds.lower - ray.origin) * rcp_dir;
-    const vec3f hi = (modelBounds.upper - ray.origin) * rcp_dir;
+    const vec3f lo = (modelBounds.min - ray.ori) * rcp_dir;
+    const vec3f hi = (modelBounds.max - ray.ori) * rcp_dir;
 
     const vec3f tnear = min(lo,hi);
     const vec3f tfar  = max(lo,hi);
 
-    vec3i cellID = projectOnGrid(ray.origin,gridDims,modelBounds);
+    vec3i cellID = projectOnGrid(ray.ori,gridDims,modelBounds);
 
     // Distance in world space to get from cell to cell
     const vec3f dist((tfar-tnear)/vec3f(gridDims));
 
     // Cell increment
     const vec3i step = {
-      ray.direction.x > 0.f ? 1 : -1,
-      ray.direction.y > 0.f ? 1 : -1,
-      ray.direction.z > 0.f ? 1 : -1
+      ray.dir.x > 0.f ? 1 : -1,
+      ray.dir.y > 0.f ? 1 : -1,
+      ray.dir.z > 0.f ? 1 : -1
     };
 
     // Stop when we reach grid borders
     const vec3i stop = {
-      ray.direction.x > 0.f ? gridDims.x : -1,
-      ray.direction.y > 0.f ? gridDims.y : -1,
-      ray.direction.z > 0.f ? gridDims.z : -1
+      ray.dir.x > 0.f ? gridDims.x : -1,
+      ray.dir.y > 0.f ? gridDims.y : -1,
+      ray.dir.z > 0.f ? gridDims.z : -1
     };
 
     // Increment in world space
     vec3f tnext = {
-      ray.direction.x > 0.f ? tnear.x + float(cellID.x+1) * dist.x
-                            : tnear.x + float(gridDims.x-cellID.x) * dist.x,
-      ray.direction.y > 0.f ? tnear.y + float(cellID.y+1) * dist.y
-                            : tnear.y + float(gridDims.y-cellID.y) * dist.y,
-      ray.direction.z > 0.f ? tnear.z + float(cellID.z+1) * dist.z
-                            : tnear.z + float(gridDims.z-cellID.z) * dist.z
+      ray.dir.x > 0.f ? tnear.x + float(cellID.x+1) * dist.x
+                      : tnear.x + float(gridDims.x-cellID.x) * dist.x,
+      ray.dir.y > 0.f ? tnear.y + float(cellID.y+1) * dist.y
+                      : tnear.y + float(gridDims.y-cellID.y) * dist.y,
+      ray.dir.z > 0.f ? tnear.z + float(cellID.z+1) * dist.z
+                      : tnear.z + float(gridDims.z-cellID.z) * dist.z
     };
 
 
     float t0 = max(ray.tmin,0.f);
 
     while (1) { // loop over grid cells
-      const float t1 = min(reduce_min(tnext),ray.tmax);
+      const float t1 = min(min_element(tnext),ray.tmax);
       if (!func(linearIndex(cellID,gridDims),t0,t1))
         return;
 
@@ -68,7 +67,7 @@ namespace visionaray {
         break;
       }
 #else
-      const float t_closest = reduce_min(tnext);
+      const float t_closest = min_element(tnext);
       if (tnext.x == t_closest) {
         tnext.x += dist.x;
         cellID.x += step.x;

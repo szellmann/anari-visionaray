@@ -78,6 +78,9 @@ void TransferFunction1D::commit()
   vgeom.asVolume.data.fieldID = m_field->visionaraySpatialField().fieldID;
 
   dispatch();
+
+  m_field->gridAccel().computeMaxOpacities(
+      deviceState()->onDevice.transferFunctions[vgeom.asVolume.data.volID]);
 }
 
 bool TransferFunction1D::isValid() const
@@ -97,6 +100,8 @@ void TransferFunction1D::dispatch()
   }
   deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].volID
       = vgeom.asVolume.data.volID;
+  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.numValues
+      = transFuncTexture.size()[0];
   deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.valueRange
       = m_valueRange;
   deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.sampler

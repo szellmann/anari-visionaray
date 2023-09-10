@@ -83,6 +83,8 @@ void UnstructuredField::commit()
 
   setStepSize(length(bounds().max-bounds().min)/50.f);
 
+  buildGrid();
+
   dispatch();
 }
 
@@ -94,6 +96,36 @@ bool UnstructuredField::isValid() const
 aabb UnstructuredField::bounds() const
 {
   return m_samplingBVH.node(0).get_bounds();
+}
+
+void UnstructuredField::buildGrid()
+{
+  int3 dims{64, 64, 64};
+  box3f worldBounds = {bounds().min,bounds().max};
+  m_gridAccel.init(dims, worldBounds);
+
+  for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
+    box3f cellBounds{vec3{HUGE_VAL}, vec3{-HUGE_VAL}};
+    box1f valueRange{HUGE_VAL, -HUGE_VAL};
+
+    for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
+      const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
+      cellBounds.extend(V.xyz());
+      valueRange.extend(V.w);
+    }
+
+    const vec3i loMC = projectOnGrid(cellBounds.min,dims,worldBounds);
+    const vec3i upMC = projectOnGrid(cellBounds.max,dims,worldBounds);
+
+    for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
+      for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
+        for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
+          const vec3i mcID(mcx,mcy,mcz);
+          updateMC(mcID,dims,valueRange,m_gridAccel.valueRanges());
+        }
+      }
+    }
+  }
 }
 
 } // visionaray
