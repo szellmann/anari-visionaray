@@ -318,6 +318,16 @@ struct SpatialField
   } asUnstructured;
 };
 
+// Grid accelerator to traverse spatial fields //
+
+struct GridAccel
+{
+  int3 dims;
+  box3 worldBounds;
+  box1 *valueRanges; // min/max ranges
+  float *maxOpacities; // used as majorants
+};
+
 // Transfer functions //
 
 struct TransferFunction
