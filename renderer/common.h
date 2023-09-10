@@ -58,6 +58,14 @@ struct ScreenSample
   int x, y;
   uint2 frameSize;
   Random random;
+
+  inline VSNRAY_FUNC bool debug() {
+#if 1
+    return x == frameSize.x/2 && y == frameSize.y/2;
+#else
+    return false;
+#endif
+  }
 };
 
 struct PixelSample

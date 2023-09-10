@@ -11,10 +11,6 @@ struct VisionarayRendererRaycast
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
         VisionarayGlobalState::ObjectCounts /*objCounts*/) {
 
-    auto debug = [=]() {
-      return ss.x == ss.frameSize.x/2 && ss.y == ss.frameSize.y/2;
-    };
-
     PixelSample result;
     result.color = rendererState.bgColor;
     result.depth = 1.f;
@@ -60,7 +56,7 @@ struct VisionarayRendererRaycast
       float dt = onDevice.spatialFields[vol.fieldID].baseDT;
       float3 color(0.f);
       float alpha = 0.f;
-      // if (debug()) {
+      // if (ss.debug()) {
       //   printf("boxHit: %f,%f\n",boxHit.tnear,boxHit.tfar);
       //   print(ray);
       //   print(vol.bounds);
