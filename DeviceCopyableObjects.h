@@ -202,14 +202,6 @@ struct Geometry
   } asInstance;
 };
 
-// Group //
-
-struct Group
-{
-  unsigned groupID{UINT_MAX};
-  Geometry *geoms{nullptr};
-};
-
 // Instance //
 
 struct Instance
@@ -230,6 +222,15 @@ struct Material
     matte<float> data;
     texture_ref<unorm<8>, 2> colorSampler;
   } asMatte;
+};
+
+// Group //
+
+struct Group
+{
+  unsigned groupID{UINT_MAX};
+  Geometry *geoms{nullptr};
+  Material *materials{nullptr};
 };
 
 // Unstructured element primitive //

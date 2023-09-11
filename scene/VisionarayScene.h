@@ -26,8 +26,9 @@ struct VisionaraySceneImpl
   enum Type { World, Group, };
   Type type;
 
-  // Geometries //
+  // Surface data //
   aligned_vector<dco::Geometry> m_geometries;
+  aligned_vector<dco::Material> m_materials;
 
   // Accels //
   TLS m_TLS;
@@ -42,9 +43,6 @@ struct VisionaraySceneImpl
     aligned_vector<VolumeBVH>   volumeBLSs;
   } m_accelStorage;
 
-  // Surface properties //
-  aligned_vector<dco::Material> m_materials;
-
   // Internal state //
   unsigned m_worldID{UINT_MAX};
   unsigned m_groupID{UINT_MAX};
@@ -56,6 +54,7 @@ struct VisionaraySceneImpl
   void commit();
   void release();
   void attachGeometry(dco::Geometry geom, unsigned geomID);
+  void attachGeometry(dco::Geometry geom, dco::Material mat, unsigned geomID);
 
  private:
   void dispatch();

@@ -27,8 +27,6 @@ struct Material : public Object
   float4 m_color{1.f, 1.f, 1.f, 1.f};
   helium::IntrusivePtr<Sampler> m_colorSampler;
 
-  void dispatch();
-  void detach();
 };
 
 } // namespace visionaray

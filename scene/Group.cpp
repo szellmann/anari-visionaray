@@ -72,7 +72,7 @@ const std::vector<Volume *> &Group::volumes() const
 // {
 //   Volume *originalVolume = ray.volume;
 //   box1 t = ray.t;
-// 
+//
 //   for (auto *v : volumes()) {
 //     if (!v->isValid())
 //       continue;
@@ -81,16 +81,16 @@ const std::vector<Volume *> &Group::volumes() const
 //     const float3 maxs = (bounds.upper - ray.org) * (1.f / ray.dir);
 //     const float3 nears = linalg::min(mins, maxs);
 //     const float3 fars = linalg::max(mins, maxs);
-// 
+//
 //     const box1 lt(linalg::maxelem(nears), linalg::minelem(fars));
-// 
+//
 //     if (lt.lower < lt.upper && (!ray.volume || lt.lower < t.lower)) {
 //       t.lower = clamp(lt.lower, t);
 //       t.upper = clamp(lt.upper, t);
 //       ray.volume = v;
 //     }
 //   }
-// 
+//
 //   if (ray.volume != originalVolume)
 //     ray.t = t;
 // }
@@ -114,12 +114,13 @@ void Group::visionaraySceneConstruct()
       > state.objectUpdates.lastBLSReconstructSceneRequest)
     return;
 
-  reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding embree scene");
+  reportMessage(
+      ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding embree scene");
 
   if (vscene)
     vscene->release();
   vscene = newVisionarayScene(VisionaraySceneImpl::Group, deviceState());
- 
+
   uint32_t id = 0;
   if (m_surfaceData) {
     std::for_each(m_surfaceData->handlesBegin(),
@@ -128,8 +129,9 @@ void Group::visionaraySceneConstruct()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
-            vscene->attachGeometry(
-                s->geometry()->visionarayGeometry(), id++);
+            vscene->attachGeometry(s->geometry()->visionarayGeometry(),
+                s->material()->visionarayMaterial(),
+                id++);
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid surface(%p) in building BLS",
@@ -147,7 +149,7 @@ void Group::visionaraySceneConstruct()
           }
         });
   }
- 
+
   if (m_volumeData) {
     std::for_each(m_volumeData->handlesBegin(),
         m_volumeData->handlesEnd(),
@@ -155,8 +157,7 @@ void Group::visionaraySceneConstruct()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
-            vscene->attachGeometry(
-                v->visionarayGeometry(), id++);
+            vscene->attachGeometry(v->visionarayGeometry(), id++);
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid volume(%p) in building BLS",
@@ -164,7 +165,7 @@ void Group::visionaraySceneConstruct()
           }
         });
   }
- 
+
   m_objectUpdates.lastSceneConstruction = helium::newTimeStamp();
   m_objectUpdates.lastSceneCommit = 0;
   visionaraySceneCommit();
@@ -174,10 +175,11 @@ void Group::visionaraySceneCommit()
 {
   const auto &state = *deviceState();
   if (m_objectUpdates.lastSceneCommit
-          > state.objectUpdates.lastBLSCommitSceneRequest)
+      > state.objectUpdates.lastBLSCommitSceneRequest)
     return;
 
-  reportMessage(ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
+  reportMessage(
+      ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
 
   vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();

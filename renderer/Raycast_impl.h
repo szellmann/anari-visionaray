@@ -37,7 +37,7 @@ struct VisionarayRendererRaycast
       sr.light_intensity = float3(1.f);
 
       // That doesn't work for instances..
-      const auto &mat = onDevice.materials[hr.geom_id];
+      const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
       float3 shadedColor = to_rgb(mat.asMatte.data.shade(sr));
 
       result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);

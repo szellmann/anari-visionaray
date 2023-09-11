@@ -80,7 +80,8 @@ struct VisionarayRendererDirectLight
               = onDevice.lights[lightID].type == dco::Light::Directional ? 1.f : ls.dist;
 
           // That doesn't work for instances..
-          const auto &mat = onDevice.materials[hr.geom_id];
+          auto inst = onDevice.instances[hr.inst_id];
+          const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
           shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
         }
 

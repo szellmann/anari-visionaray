@@ -201,6 +201,17 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
   m_geometries[geomID] = geom;
 }
 
+void VisionaraySceneImpl::attachGeometry(
+    dco::Geometry geom, dco::Material mat, unsigned geomID)
+{
+  attachGeometry(geom, geomID);
+
+  if (m_materials.size() <= geomID)
+    m_materials.resize(geomID+1);
+
+  m_materials[geomID] = mat;
+}
+
 void VisionaraySceneImpl::dispatch()
 {
   // Dispatch world
@@ -217,6 +228,7 @@ void VisionaraySceneImpl::dispatch()
   }
   m_state->dcos.groups[m_groupID].groupID = m_groupID;
   m_state->dcos.groups[m_groupID].geoms = m_geometries.data();
+  m_state->dcos.groups[m_groupID].materials = m_materials.data();
 
   // Upload/set accessible pointers
   m_state->onDevice.TLSs = m_state->dcos.TLSs.data();
