@@ -90,12 +90,15 @@ void UnstructuredField::commit()
 
 bool UnstructuredField::isValid() const
 {
-  return true;
+  return m_samplingBVH.num_nodes();
 }
 
 aabb UnstructuredField::bounds() const
 {
-  return m_samplingBVH.node(0).get_bounds();
+  if (isValid())
+    return m_samplingBVH.node(0).get_bounds();
+
+  return {};
 }
 
 void UnstructuredField::buildGrid()
