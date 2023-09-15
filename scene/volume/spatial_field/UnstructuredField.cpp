@@ -108,8 +108,8 @@ void UnstructuredField::buildGrid()
   m_gridAccel.init(dims, worldBounds);
 
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
-    box3f cellBounds{vec3{HUGE_VAL}, vec3{-HUGE_VAL}};
-    box1f valueRange{HUGE_VAL, -HUGE_VAL};
+    box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
+    box1f valueRange{FLT_MAX, -FLT_MAX};
 
     for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
       const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];

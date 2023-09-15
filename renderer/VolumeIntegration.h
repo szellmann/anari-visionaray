@@ -76,7 +76,7 @@ struct HitRecordVolume
 {
   bool hit{false};
   unsigned volID{UINT_MAX};
-  float t{HUGE_VAL};
+  float t{FLT_MAX};
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
