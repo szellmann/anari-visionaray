@@ -14,7 +14,7 @@ struct VisionarayRendererRaycast
 
     PixelSample result;
     result.color = rendererState.bgColor;
-    result.depth = 1.f;
+    result.depth = 1e31f;
 
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
@@ -42,6 +42,7 @@ struct VisionarayRendererRaycast
 
       result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
       result.color = float4(shadedColor,1.f);
+      result.depth = hr.t;
 
       ray.tmax = hr.t;
     }

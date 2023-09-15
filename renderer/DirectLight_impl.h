@@ -16,7 +16,7 @@ struct VisionarayRendererDirectLight
 
     PixelSample result;
     result.color = rendererState.bgColor;
-    result.depth = 1.f;
+    result.depth = 1e31f;
 
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
@@ -46,6 +46,8 @@ struct VisionarayRendererDirectLight
         if (volumeHit) {
           hitPos = ray.ori + hrv.t * ray.dir;
         } else {
+          result.depth = hr.t;
+
           auto inst = onDevice.instances[hr.inst_id];
           const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
 
