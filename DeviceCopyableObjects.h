@@ -10,6 +10,7 @@
 #include "visionaray/matrix_camera.h"
 #include "visionaray/pinhole_camera.h"
 #include "visionaray/point_light.h"
+#include "visionaray/spot_light.h"
 // ours
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
@@ -359,11 +360,12 @@ struct Camera
 
 struct Light
 {
-  enum Type { Directional, Point, };
+  enum Type { Directional, Point, Spot, };
   Type type;
   unsigned lightID{UINT_MAX};
   directional_light<float> asDirectional;
   point_light<float> asPoint;
+  spot_light<float> asSpot;
 };
 
 } // namespace visionaray::dco
