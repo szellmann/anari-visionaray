@@ -24,8 +24,6 @@ struct StructuredRegularField : public SpatialField
   aabb bounds() const override;
 
  private:
-  float3 objectToLocal(const float3 &object) const;
-//float valueAtVoxel(const uint3 &index) const;
 
   // Data //
 

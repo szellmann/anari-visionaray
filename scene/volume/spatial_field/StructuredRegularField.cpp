@@ -71,75 +71,9 @@ bool StructuredRegularField::isValid() const
   return m_dataArray;
 }
 
-// float StructuredRegularField::sampleAt(const float3 &coord) const
-// {
-//   const float3 local = objectToLocal(coord);
-// 
-//   if (local.x < 0.f || local.x > m_dims.x - 1.f || local.y < 0.f
-//       || local.y > m_dims.y - 1.f || local.z < 0.f
-//       || local.z > m_dims.z - 1.f) {
-//     return NAN;
-//   }
-// 
-//   const float3 clampedLocal =
-//       linalg::clamp(local, float3(0.f), m_coordUpperBound);
-// 
-//   const uint3 vi0 = uint3(clampedLocal);
-//   const uint3 vi1 = linalg::clamp(vi0 + 1, uint3(0u), m_dims - 1);
-// 
-//   const float3 fracLocal = clampedLocal - float3(vi0);
-// 
-//   const float voxel_000 = valueAtVoxel(uint3(vi0.x, vi0.y, vi0.z));
-//   const float voxel_001 = valueAtVoxel(uint3(vi1.x, vi0.y, vi0.z));
-//   const float voxel_010 = valueAtVoxel(uint3(vi0.x, vi1.y, vi0.z));
-//   const float voxel_011 = valueAtVoxel(uint3(vi1.x, vi1.y, vi0.z));
-//   const float voxel_100 = valueAtVoxel(uint3(vi0.x, vi0.y, vi1.z));
-//   const float voxel_101 = valueAtVoxel(uint3(vi1.x, vi0.y, vi1.z));
-//   const float voxel_110 = valueAtVoxel(uint3(vi0.x, vi1.y, vi1.z));
-//   const float voxel_111 = valueAtVoxel(uint3(vi1.x, vi1.y, vi1.z));
-// 
-//   const float voxel_00 = linalg::lerp(voxel_000, voxel_001, fracLocal.x);
-//   const float voxel_01 = linalg::lerp(voxel_010, voxel_011, fracLocal.x);
-//   const float voxel_10 = linalg::lerp(voxel_100, voxel_101, fracLocal.x);
-//   const float voxel_11 = linalg::lerp(voxel_110, voxel_111, fracLocal.x);
-//   const float voxel_0 = linalg::lerp(voxel_00, voxel_01, fracLocal.y);
-//   const float voxel_1 = linalg::lerp(voxel_10, voxel_11, fracLocal.y);
-// 
-//   return linalg::lerp(voxel_0, voxel_1, fracLocal.z);
-// }
-
 aabb StructuredRegularField::bounds() const
 {
   return aabb(m_origin, m_origin + ((float3(m_dims) - 1.f) * m_spacing));
 }
-
-float3 StructuredRegularField::objectToLocal(const float3 &object) const
-{
-  return 1.f / (m_spacing) * (object - m_origin);
-}
-
-// float StructuredRegularField::valueAtVoxel(const uint3 &index) const
-// {
-//   const size_t i = size_t(index.x)
-//       + m_dims.x * (size_t(index.y) + m_dims.y * size_t(index.z));
-// 
-//   switch (m_type) {
-//   case ANARI_FLOAT32:
-//     return ((float *)m_data)[i];
-//   case ANARI_FLOAT64:
-//     return ((double *)m_data)[i];
-//   case ANARI_UFIXED8:
-//     return ((uint8_t *)m_data)[i] / float(std::numeric_limits<uint8_t>::max());
-//   case ANARI_UFIXED16:
-//     return ((uint16_t *)m_data)[i]
-//         / float(std::numeric_limits<uint16_t>::max());
-//   case ANARI_FIXED16:
-//     return ((int16_t *)m_data)[i] / float(std::numeric_limits<int16_t>::max());
-//   default:
-//     break;
-//   }
-// 
-//   return NAN;
-// }
 
 } // namespace visionaray
