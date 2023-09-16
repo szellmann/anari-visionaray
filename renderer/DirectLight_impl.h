@@ -2,6 +2,7 @@
 
 #include "renderer/common.h"
 #include "renderer/VolumeIntegration.h"
+#include "sampleCDF.h"
 
 namespace visionaray {
 
@@ -36,7 +37,13 @@ struct VisionarayRendererDirectLight
       if (bounceID == 0) {
 
         if (!hr.hit && !hrv.hit) {
-          throughput = float3{0.f};
+          if (rendererState.envID >= 0) {
+            auto hdri = onDevice.lights[rendererState.envID].asHDRI;
+            float2 uv = toUV(ray.dir);
+            throughput = tex2D(hdri.radiance, uv);
+          } else {
+            throughput = float3{0.f};
+          }
           break;
         }
 
@@ -65,6 +72,9 @@ struct VisionarayRendererDirectLight
         } else if (onDevice.lights[lightID].type == dco::Light::Directional) {
           ls = onDevice.lights[lightID].asDirectional.sample(hitPos+1e-4f, ss.random);
           intensity = onDevice.lights[lightID].asDirectional.intensity(hitPos);
+        } else if (onDevice.lights[lightID].type == dco::Light::HDRI) {
+          ls = onDevice.lights[lightID].asHDRI.sample(hitPos+1e-4f, ss.random);
+          intensity = onDevice.lights[lightID].asHDRI.intensity(ls.dir);
         }
 
         if (volumeHit) {
@@ -79,12 +89,13 @@ struct VisionarayRendererDirectLight
           sr.light_intensity = intensity;
 
           float dist
-              = onDevice.lights[lightID].type == dco::Light::Directional ? 1.f : ls.dist;
+              = onDevice.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
 
           // That doesn't work for instances..
           auto inst = onDevice.instances[hr.inst_id];
           const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
           shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+          //if (ss.debug()) std::cout << ls.pdf << '\n';
         }
 
         // Convert primary to shadow ray

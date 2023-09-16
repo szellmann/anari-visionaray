@@ -1,4 +1,3 @@
-#include "Frame.h"
 // std
 #include <algorithm>
 #include <chrono>
@@ -7,6 +6,9 @@
 // visionaray
 #include "visionaray/detail/color_conversion.h"
 #include "visionaray/detail/parallel_for.h"
+// ours
+#include "scene/light/HDRI.h"
+#include "Frame.h"
 
 namespace visionaray {
 
@@ -170,6 +172,8 @@ void Frame::renderFrame()
       rend.rendererState().accumID = 0;
       m_nextFrameReset = false;
     }
+
+    rend.rendererState().envID = HDRI::backgroundID;
 
     parallel_for(state->threadPool,
         tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),

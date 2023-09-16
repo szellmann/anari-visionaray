@@ -80,6 +80,7 @@ struct RendererState
   float4 bgColor{float3(0.f), 1.f};
   float ambientRadiance{1.f};
   int accumID{0};
+  int envID{-1};
 };
 
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)

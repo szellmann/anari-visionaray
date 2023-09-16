@@ -15,6 +15,7 @@
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
 #include "common.h"
+#include "sampleCDF.h"
 
 namespace visionaray {
 
@@ -360,12 +361,42 @@ struct Camera
 
 struct Light
 {
-  enum Type { Directional, Point, Spot, };
+  enum Type { Directional, Point, Spot, HDRI, };
   Type type;
   unsigned lightID{UINT_MAX};
   directional_light<float> asDirectional;
   point_light<float> asPoint;
   spot_light<float> asSpot;
+  struct {
+    texture_ref<float3, 2> radiance;
+    struct CDF {
+      float *rows{nullptr};
+      float *lastCol{nullptr};
+      unsigned width{0};
+      unsigned height{0};
+    } cdf;
+
+    template <typename RNG>
+    VSNRAY_FUNC
+    inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+    {
+      CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol, cdf.width, cdf.height, rng(), rng());
+      float invjacobian = cdf.width*cdf.height/float(4*M_PI);
+      float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
+      light_sample<float> ls;
+      ls.dir = L;
+      ls.dist = FLT_MAX;
+      ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
+      return ls;
+    }
+
+    VSNRAY_FUNC
+    inline float3 intensity(const float3 dir)
+    {
+      return tex2D(radiance, toUV(dir));
+    }
+
+  } asHDRI;
 };
 
 } // namespace visionaray::dco

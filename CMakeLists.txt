@@ -32,6 +32,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     renderer/Renderer.cpp
     scene/light/Light.cpp
     scene/light/Directional.cpp
+    scene/light/HDRI.cpp
     scene/light/Point.cpp
     scene/light/Spot.cpp
     scene/surface/geometry/Cylinder.cpp
