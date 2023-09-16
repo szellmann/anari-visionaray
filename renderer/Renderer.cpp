@@ -25,10 +25,19 @@ Renderer::~Renderer()
 
 void Renderer::commit()
 {
-  auto &raycastState = vrend.asRaycast.renderer.rendererState;
+  // variables supported by ALL renderers
+  auto commitCommonState = [this](auto &state) {
+    state.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
+    state.ambientRadiance = getParam<float>("ambientRadiance", 1.f);
+  };
 
-  raycastState.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
-  raycastState.ambientRadiance = getParam<float>("ambientRadiance", 1.f);
+  if (vrend.type == VisionarayRenderer::Raycast) {
+    auto &renderState = vrend.asRaycast.renderer.rendererState;
+    commitCommonState(renderState);
+  } else if (vrend.type == VisionarayRenderer::DirectLight) {
+    auto &renderState = vrend.asDirectLight.renderer.rendererState;
+    commitCommonState(renderState);
+  }
 }
 
 Renderer *Renderer::createInstance(std::string_view subtype, VisionarayGlobalState *s)
