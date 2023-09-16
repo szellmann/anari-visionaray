@@ -17,7 +17,7 @@ void GridAccel::init(int3 dims, box3 worldBounds)
 
   for (size_t i=0; i<numMCs; ++i) {
     auto &vr = m_valueRanges[i];
-    vr = {HUGE_VAL, -HUGE_VAL};
+    vr = {FLT_MAX, -FLT_MAX};
   }
 
   vaccel.dims = m_dims;
