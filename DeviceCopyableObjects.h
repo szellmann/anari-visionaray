@@ -369,6 +369,7 @@ struct Light
   spot_light<float> asSpot;
   struct {
     texture_ref<float3, 2> radiance;
+    float scale{1.f};
     struct CDF {
       float *rows{nullptr};
       float *lastCol{nullptr};
@@ -393,7 +394,7 @@ struct Light
     VSNRAY_FUNC
     inline float3 intensity(const float3 dir)
     {
-      return tex2D(radiance, toUV(dir));
+      return tex2D(radiance, toUV(dir))*scale;
     }
 
   } asHDRI;
