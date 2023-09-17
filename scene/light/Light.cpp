@@ -23,6 +23,8 @@ Light::~Light()
 void Light::commit()
 {
   m_color = getParam<vec3>("color", vec3(1.f, 1.f, 1.f));
+  m_visible = getParam<bool>("visible", true);
+
 }
 
 Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)

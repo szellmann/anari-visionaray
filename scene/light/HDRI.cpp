@@ -75,7 +75,7 @@ HDRI::HDRI(VisionarayGlobalState *s) : Light(s)
 
 HDRI::~HDRI()
 {
-  if (m_useAsBackground)
+  if (m_visible)
     backgroundID = -1; // reset!
 
   detach();
@@ -96,8 +96,6 @@ void HDRI::commit()
     return;
   }
 
-  m_useAsBackground = getParam<bool>("useAsBackground", false);
-
   unsigned width = m_radiance->size().x, height = m_radiance->size().y;
   makeCDF(m_radiance->data(), 3, width, height, m_cdfRows, m_cdfLastCol);
 
@@ -113,7 +111,7 @@ void HDRI::commit()
   vlight.asHDRI.cdf.width = width;
   vlight.asHDRI.cdf.height = height;
 
-  if (m_useAsBackground) {
+  if (m_visible) {
     backgroundID = vlight.lightID;
   } else {
     if (backgroundID == vlight.lightID)

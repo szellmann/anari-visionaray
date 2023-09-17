@@ -21,6 +21,7 @@ struct Light : public Object
  protected:
   dco::Light vlight;
   vec3 m_color{1.f, 1.f, 1.f};
+  bool m_visible{true};
 
   void dispatch();
   void detach();

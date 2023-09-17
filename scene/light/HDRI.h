@@ -24,8 +24,6 @@ struct HDRI : public Light
   float3 m_direction{1.f, 0.f, 0.f};
   helium::IntrusivePtr<Array2D> m_radiance;
   float m_scale{1.f};
-  // Extension
-  bool m_useAsBackground{false};
 
   texture<float3, 2> m_radianceTexture;
   aligned_vector<float> m_cdfRows;
