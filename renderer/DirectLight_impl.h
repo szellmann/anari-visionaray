@@ -77,8 +77,11 @@ struct VisionarayRendererDirectLight
           intensity = onDevice.lights[lightID].asHDRI.intensity(ls.dir);
         }
 
+        float dist
+            = onDevice.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
+
         if (volumeHit) {
-          shadedColor = hrv.albedo * intensity;
+          shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
         } else {
           shade_record<float> sr;
           sr.normal = gn;
@@ -87,9 +90,6 @@ struct VisionarayRendererDirectLight
           sr.tex_color = float3(1.f);
           sr.light_dir = ls.dir;
           sr.light_intensity = intensity;
-
-          float dist
-              = onDevice.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
 
           // That doesn't work for instances..
           auto inst = onDevice.instances[hr.inst_id];
