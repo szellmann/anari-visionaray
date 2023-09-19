@@ -81,6 +81,7 @@ struct RendererState
   float ambientRadiance{1.f};
   int accumID{0};
   int envID{-1};
+  bool gradientShading{true};
 };
 
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)

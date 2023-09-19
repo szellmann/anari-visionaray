@@ -52,6 +52,8 @@ struct VisionarayRendererDirectLight
 
         if (volumeHit) {
           hitPos = ray.ori + hrv.t * ray.dir;
+          if (sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn))
+            gn = normalize(gn);
         } else {
           result.depth = hr.t;
 
@@ -81,7 +83,25 @@ struct VisionarayRendererDirectLight
             = onDevice.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
 
         if (volumeHit) {
-          shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
+          gn = faceforward(gn, ray.dir, gn);
+
+          shade_record<float> sr;
+          sr.normal = gn;
+          sr.geometric_normal = gn;
+          sr.view_dir = -ray.dir;
+          sr.tex_color = float3(1.f);
+          sr.light_dir = ls.dir;
+          sr.light_intensity = intensity;
+
+          dco::Material mat;
+          mat.asMatte.data.cd() = from_rgb(hrv.albedo);
+          mat.asMatte.data.kd() = 1.f;
+
+          if (rendererState.gradientShading && length(gn) > 1e-10f)
+            shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+          else
+            shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
+
         } else {
           shade_record<float> sr;
           sr.normal = gn;

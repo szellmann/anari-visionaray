@@ -30,6 +30,24 @@ inline bool sampleField(dco::SpatialField sf, vec3 P, float &value) {
 }
 
 VSNRAY_FUNC
+inline bool sampleGradient(dco::SpatialField sf, vec3 P, float3 &value) {
+  float x0=0, x1=0, y0=0, y1=0, z0=0, z1=0;
+  bool b0 = sampleField(sf, P+float3{sf.baseDT, 0.f, 0.f}, x1);
+  bool b1 = sampleField(sf, P-float3{sf.baseDT, 0.f, 0.f}, x0);
+  bool b2 = sampleField(sf, P+float3{0.f, sf.baseDT, 0.f}, y1);
+  bool b3 = sampleField(sf, P-float3{0.f, sf.baseDT, 0.f}, y0);
+  bool b4 = sampleField(sf, P+float3{0.f, 0.f, sf.baseDT}, z1);
+  bool b5 = sampleField(sf, P-float3{0.f, 0.f, sf.baseDT}, z0);
+  if (b0 && b1 && b2 && b3 && b4 && b5) {
+    value = float3{x1,y1,z1}-float3{x0,y0,z0};
+    return true; // TODO
+  } else {
+    value = float3{0.f};
+    return false;
+  }
+}
+
+VSNRAY_FUNC
 inline float4 postClassify(ScreenSample &ss, dco::TransferFunction tf, float v) {
   if (tf.type == dco::TransferFunction::_1D) {
     box1 valueRange = tf.as1D.valueRange;
@@ -76,6 +94,7 @@ struct HitRecordVolume
 {
   bool hit{false};
   unsigned volID{UINT_MAX};
+  unsigned fieldID{UINT_MAX};
   float t{FLT_MAX};
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
@@ -118,6 +137,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
         float u = ss.random();
         if (hr.extinction >= u * majorant) {
           hr.hit = true;
+          hr.volID = vol.volID;
+          hr.fieldID = vol.fieldID;
           hr.Tr = 0.f;
           hr.t = t;
           return false; // stop traversal
