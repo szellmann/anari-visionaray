@@ -88,7 +88,7 @@ struct VisionarayRendererDirectLight
           sr.geometric_normal = gn;
           sr.view_dir = -ray.dir;
           sr.tex_color = float3(1.f);
-          sr.light_dir = ls.dir;
+          sr.light_dir = normalize(ls.dir);
           sr.light_intensity = intensity;
 
           dco::Material mat;
@@ -106,7 +106,7 @@ struct VisionarayRendererDirectLight
           sr.geometric_normal = gn;
           sr.view_dir = -ray.dir;
           sr.tex_color = float3(1.f);
-          sr.light_dir = ls.dir;
+          sr.light_dir = normalize(ls.dir);
           sr.light_intensity = intensity;
 
           // That doesn't work for instances..
