@@ -83,8 +83,6 @@ struct VisionarayRendererDirectLight
             = onDevice.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
 
         if (volumeHit) {
-          gn = faceforward(gn, ray.dir, gn);
-
           shade_record<float> sr;
           sr.normal = gn;
           sr.geometric_normal = gn;
