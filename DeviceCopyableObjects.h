@@ -306,7 +306,7 @@ struct SpatialField
     VSNRAY_FUNC
     inline float3 objectToLocal(const float3 &object) const
     {
-      return 1.f / (spacing) * (object - origin);
+      return 1.f / (spacing) * (object + float3(0.5f) - origin);
     }
 
     VSNRAY_FUNC
