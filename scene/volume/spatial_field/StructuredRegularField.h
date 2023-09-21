@@ -19,9 +19,9 @@ struct StructuredRegularField : public SpatialField
 
   bool isValid() const override;
 
-  //float sampleAt(const float3 &coord) const override;
-
   aabb bounds() const override;
+
+  void buildGrid() override;
 
  private:
 

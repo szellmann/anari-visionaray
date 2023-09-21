@@ -63,6 +63,8 @@ void StructuredRegularField::commit()
   vfield.asStructuredRegular.dims = m_dims;
   vfield.asStructuredRegular.sampler = texture_ref<float, 3>(m_dataTexture);
 
+  buildGrid();
+
   dispatch();
 }
 
@@ -74,6 +76,38 @@ bool StructuredRegularField::isValid() const
 aabb StructuredRegularField::bounds() const
 {
   return aabb(m_origin, m_origin + ((float3(m_dims) - 1.f) * m_spacing));
+}
+
+void StructuredRegularField::buildGrid()
+{
+  int3 gridDims{16, 16, 16};
+  box3f worldBounds = {bounds().min,bounds().max};
+  m_gridAccel.init(gridDims, worldBounds);
+
+  for (unsigned z=0; z<m_dims.z; ++z) {
+    for (unsigned y=0; y<m_dims.y; ++y) {
+      for (unsigned x=0; x<m_dims.x; ++x) {
+        float3 texCoord = (float3{x,y,z}+float3{0.5f})/float3(m_dims);
+        float value = tex3D(vfield.asStructuredRegular.sampler, texCoord);
+        box3f cellBounds{
+          m_origin+float3{x,y,z}*m_spacing,
+          m_origin+float3{x+1,y+1,z+1}*m_spacing
+        };
+
+        const vec3i loMC = projectOnGrid(cellBounds.min,gridDims,worldBounds);
+        const vec3i upMC = projectOnGrid(cellBounds.max,gridDims,worldBounds);
+
+        for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
+          for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
+            for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
+              const vec3i mcID(mcx,mcy,mcz);
+              updateMC(mcID,gridDims,value,m_gridAccel.valueRanges());
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 } // namespace visionaray

@@ -25,6 +25,19 @@ vec3i projectOnGrid(const vec3f V,
 VSNRAY_FUNC
 inline void updateMC(const vec3i  mcID,
                      const vec3i  gridDims,
+                     const float  value,
+                     box1f       *valueRanges)
+{
+  // TODO: atomic or locked..
+  valueRanges[linearIndex(mcID,gridDims)].min
+      = min(valueRanges[linearIndex(mcID,gridDims)].min, value);
+  valueRanges[linearIndex(mcID,gridDims)].max
+      = max(valueRanges[linearIndex(mcID,gridDims)].max, value);
+}
+
+VSNRAY_FUNC
+inline void updateMC(const vec3i  mcID,
+                     const vec3i  gridDims,
                      const box1f  valueRange,
                      box1f       *valueRanges)
 {

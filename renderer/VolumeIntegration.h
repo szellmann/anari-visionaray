@@ -153,7 +153,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
   auto boxHit = intersect(ray, vol.bounds);
   ray.tmin = max(ray.tmin, boxHit.tnear);
   ray.tmax = min(ray.tmax, boxHit.tfar);
-  if (onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured)
+  if (onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured)// ||
+//    onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::StructuredRegular)
     dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
