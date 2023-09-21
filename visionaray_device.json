@@ -47,6 +47,19 @@
             1.0
           ],
           "description": "background color and alpha (RGBA)"
+        },
+        {
+          "name": "mode",
+          "types": [
+            "ANARI_STRING"
+          ],
+          "tags": [],
+          "default": "default",
+          "values": [
+            "default",
+            "Ng"
+          ],
+          "description": "visualization modes"
         }
       ]
     },

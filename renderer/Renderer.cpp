@@ -29,6 +29,11 @@ void Renderer::commit()
   auto commitCommonState = [this](auto &state) {
     state.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
     state.ambientRadiance = getParam<float>("ambientRadiance", 1.f);
+    std::string renderMode = getParamString("mode", "default");
+    if (renderMode == "default")
+      state.renderMode = RenderMode::Default;
+    else if (renderMode == "Ng")
+      state.renderMode = RenderMode::Ng;
   };
 
   if (vrend.type == VisionarayRenderer::Raycast) {

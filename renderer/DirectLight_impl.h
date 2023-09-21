@@ -95,10 +95,14 @@ struct VisionarayRendererDirectLight
           mat.asMatte.data.cd() = from_rgb(hrv.albedo);
           mat.asMatte.data.kd() = 1.f;
 
-          if (rendererState.gradientShading && length(gn) > 1e-10f)
-            shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
-          else
-            shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
+          if (rendererState.renderMode == RenderMode::Default) {
+            if (rendererState.gradientShading && length(gn) > 1e-10f)
+              shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+            else
+              shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
+          } else if (rendererState.renderMode == RenderMode::Ng) {
+            shadedColor = gn;
+          }
 
         } else {
           shade_record<float> sr;
@@ -112,7 +116,10 @@ struct VisionarayRendererDirectLight
           // That doesn't work for instances..
           auto inst = onDevice.instances[hr.inst_id];
           const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
-          shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+          if (rendererState.renderMode == RenderMode::Default)
+            shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+          else if (rendererState.renderMode == RenderMode::Ng)
+            shadedColor = (gn + float3(1.f)) * float3(0.5f);
           //if (ss.debug()) std::cout << ls.pdf << '\n';
         }
 
