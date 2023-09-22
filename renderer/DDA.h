@@ -9,10 +9,11 @@ namespace visionaray {
   
   template <typename Func>
   VSNRAY_FUNC
-  inline void dda3(const Ray   &ray,
-                   const vec3i &gridDims,
-                   const box3f &modelBounds,
-                   const Func  &func)
+  inline void dda3(ScreenSample &ss,
+                   const Ray    &ray,
+                   const vec3i  &gridDims,
+                   const box3f  &modelBounds,
+                   const Func   &func)
   {
     const vec3 rcp_dir(ray.dir.x != 0.f ? 1.f / ray.dir.x : 0.f,
         ray.dir.y != 0.f ? 1.f / ray.dir.y : 0.f,
