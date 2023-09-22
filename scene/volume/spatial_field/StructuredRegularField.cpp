@@ -30,11 +30,6 @@ void StructuredRegularField::commit()
   m_origin = getParam<float3>("origin", float3(0.f));
   m_spacing = getParam<float3>("spacing", float3(1.f));
 
-  m_invSpacing = 1.f / m_spacing;
-  m_coordUpperBound = float3(std::nextafter(m_dims.x - 1, 0),
-      std::nextafter(m_dims.y - 1, 0),
-      std::nextafter(m_dims.z - 1, 0));
-
   setStepSize(min_element(m_spacing / 2.f));
 
   m_dataTexture = texture<float, 3>(m_dims.x, m_dims.y, m_dims.z);

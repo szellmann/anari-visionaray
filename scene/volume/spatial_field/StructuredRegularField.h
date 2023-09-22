@@ -30,12 +30,9 @@ struct StructuredRegularField : public SpatialField
   uint3 m_dims{0u};
   float3 m_origin;
   float3 m_spacing;
-  float3 m_invSpacing;
-  float3 m_coordUpperBound;
 
   helium::IntrusivePtr<Array3D> m_dataArray;
 
-//void *m_data{nullptr};
   texture<float, 3> m_dataTexture;
   anari::DataType m_type{ANARI_UNKNOWN};
 };
