@@ -114,8 +114,11 @@ inline HitRecordVolume sampleFreeFlightDistance(
   dco::GridAccel grid = onDevice.gridAccels[vol.fieldID];
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
-    const float majorant
-        = onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured ? grid.maxOpacities[leafID] : 1.f;
+    const bool hasMajorant =
+        onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured ||
+        onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::StructuredRegular;
+    const float majorant = grid.maxOpacities[leafID]
+        = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
 
     while (1) {
