@@ -10,11 +10,17 @@ namespace visionaray {
   template <typename Func>
   VSNRAY_FUNC
   inline void dda3(ScreenSample &ss,
-                   const Ray    &ray,
+                   Ray           ray,
                    const vec3i  &gridDims,
                    const box3f  &modelBounds,
                    const Func   &func)
   {
+    // move ray so tmin becomes 0
+    const float ray_tmin = ray.tmin;
+    ray.ori = ray.ori + ray.tmin * ray.dir;
+    ray.tmin = 0.f;
+    ray.tmax -= ray_tmin;
+
     const vec3 rcp_dir(ray.dir.x != 0.f ? 1.f / ray.dir.x : 0.f,
         ray.dir.y != 0.f ? 1.f / ray.dir.y : 0.f,
         ray.dir.z != 0.f ? 1.f / ray.dir.z : 0.f);
@@ -55,11 +61,11 @@ namespace visionaray {
     };
 
 
-    float t0 = max(ray.tmin,0.f);
+    float t0 = 0.f;
 
     while (1) { // loop over grid cells
       const float t1 = min(min_element(tnext),ray.tmax);
-      if (!func(linearIndex(cellID,gridDims),t0,t1))
+      if (!func(linearIndex(cellID,gridDims),ray_tmin+t0,ray_tmin+t1))
         return;
 
 #if 0
