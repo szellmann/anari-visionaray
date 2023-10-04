@@ -82,12 +82,13 @@ void StructuredRegularField::buildGrid()
   for (unsigned z=0; z<m_dims.z; ++z) {
     for (unsigned y=0; y<m_dims.y; ++y) {
       for (unsigned x=0; x<m_dims.x; ++x) {
-        float3 P = m_origin + float3{x,y,z} * m_spacing;
+        uint3 xyz{x,y,z};
+        float3 P = m_origin + float3{xyz} * m_spacing;
         float3 texCoord = vfield.asStructuredRegular.objectToTexCoord(P);
         float value = tex3D(vfield.asStructuredRegular.sampler, texCoord);
         box3f cellBounds{
-          m_origin+float3{x,y,z}*m_spacing,
-          m_origin+float3{x+1,y+1,z+1}*m_spacing
+          m_origin+float3{xyz}*m_spacing,
+          m_origin+float3{xyz+uint3{1}}*m_spacing
         };
 
         const vec3i loMC = projectOnGrid(cellBounds.min,gridDims,worldBounds);
