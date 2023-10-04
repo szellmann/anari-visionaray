@@ -28,12 +28,14 @@ struct VisionarayRendererRaycast
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
 
+      float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
+
       shade_record<float> sr;
       sr.normal = gn;
       sr.geometric_normal = gn;
-      sr.view_dir = -ray.dir;
+      sr.view_dir = -xfmDir;
       sr.tex_color = float3(1.f);
-      sr.light_dir = -ray.dir;
+      sr.light_dir = -xfmDir;
       sr.light_intensity = float3(1.f);
 
       // That doesn't work for instances..

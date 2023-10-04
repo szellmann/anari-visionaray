@@ -49,6 +49,7 @@ struct VisionarayRendererDirectLight
 
         float3 gn{0.f};
         float3 hitPos{0.f};
+        float3 xfmDir = ray.dir;
 
         if (volumeHit) {
           hitPos = ray.ori + hrv.t * ray.dir;
@@ -62,6 +63,8 @@ struct VisionarayRendererDirectLight
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
+
+          xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
         }
 
         int lightID = uniformSampleOneLight(ss.random, objCounts.lights);
@@ -86,7 +89,7 @@ struct VisionarayRendererDirectLight
           shade_record<float> sr;
           sr.normal = gn;
           sr.geometric_normal = gn;
-          sr.view_dir = -ray.dir;
+          sr.view_dir = -xfmDir;
           sr.tex_color = float3(1.f);
           sr.light_dir = normalize(ls.dir);
           sr.light_intensity = intensity;
@@ -108,7 +111,7 @@ struct VisionarayRendererDirectLight
           shade_record<float> sr;
           sr.normal = gn;
           sr.geometric_normal = gn;
-          sr.view_dir = -ray.dir;
+          sr.view_dir = -xfmDir;
           sr.tex_color = float3(1.f);
           sr.light_dir = normalize(ls.dir);
           sr.light_intensity = intensity;

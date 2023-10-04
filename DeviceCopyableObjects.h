@@ -211,6 +211,7 @@ struct Instance
   unsigned instID{UINT_MAX};
   unsigned groupID{UINT_MAX};
   mat4 xfm;
+  mat4 invXfm;
 };
 
 // Material //
