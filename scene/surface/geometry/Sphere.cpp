@@ -19,11 +19,11 @@ void Sphere::commit()
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
   m_vertexRadius = getParamObject<Array1D>("vertex.radius");
-  //m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
-  //m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
-  //m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
-  //m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
-  //m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+  m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
+  m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
+  m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
+  m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
+  m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
 
   if (!m_vertexPosition) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -74,6 +74,18 @@ void Sphere::commit()
 
   vgeom.asSphere.data = m_spheres.data();
   vgeom.asSphere.len = m_spheres.size();
+
+  if (m_index) {
+    vgeom.asSphere.index.data = m_index->begin();
+    vgeom.asSphere.index.len = m_index->size();
+    vgeom.asSphere.index.type = m_index->elementType();
+  }
+
+  if (m_vertexAttributes[4]) {
+    vgeom.asSphere.vertex.color.data = m_vertexAttributes[4]->begin();
+    vgeom.asSphere.vertex.color.len = m_vertexAttributes[4]->size();
+    vgeom.asSphere.vertex.color.type = m_vertexAttributes[4]->elementType();
+  }
 }
 
 // float4 Sphere::getAttributeValue(const Attribute &attr, const Ray &ray) const

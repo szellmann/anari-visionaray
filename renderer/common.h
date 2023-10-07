@@ -147,6 +147,16 @@ inline vec4 getColor(const dco::Geometry &geom, unsigned primID, const vec2 uv)
       color = lerp(c1, c2, c3, uv.x, uv.y);
     }
   }
+  else if (geom.type == dco::Geometry::Sphere && geom.asSphere.vertex.color.len > 0) {
+    if (geom.asSphere.vertex.color.type == ANARI_FLOAT32_VEC4) {
+      if (geom.asSphere.index.len > 0) {
+        uint32_t index = ((uint32_t *)geom.asSphere.index.data)[primID];
+        color = ((vec4f *)geom.asSphere.vertex.color.data)[index];
+      } else {
+        color = ((vec4f *)geom.asSphere.vertex.color.data)[primID];
+      }
+    }
+  }
   else if (geom.primitive.color.len > 0) {
     if (geom.primitive.color.type == ANARI_FLOAT32_VEC4) {
       color = ((vec4f *)geom.primitive.color.data)[primID];

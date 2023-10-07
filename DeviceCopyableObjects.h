@@ -204,6 +204,14 @@ struct Geometry
   struct {
     basic_sphere<float> *data{nullptr};
     size_t len{0};
+    struct {
+      Array color;
+      Array attribute0;
+      Array attribute1;
+      Array attribute2;
+      Array attribute3;
+    } vertex;
+    Array index;
   } asSphere;
   struct {
     basic_cylinder<float> *data{nullptr};
