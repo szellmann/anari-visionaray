@@ -20,11 +20,11 @@ void Triangle::commit()
 
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
-  //m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
-  //m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
-  //m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
-  //m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
-  //m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+  m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
+  m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
+  m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
+  m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
+  m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
 
   if (!m_vertexPosition) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -66,6 +66,18 @@ void Triangle::commit()
 
   vgeom.asTriangle.data = m_triangles.data();
   vgeom.asTriangle.len = m_triangles.size();
+
+  if (m_index) {
+    vgeom.asTriangle.index.data = m_index->begin();
+    vgeom.asTriangle.index.len = m_index->size();
+    vgeom.asTriangle.index.type = m_index->elementType();
+  }
+
+  if (m_vertexAttributes[4]) {
+    vgeom.asTriangle.vertex.color.data = m_vertexAttributes[4]->begin();
+    vgeom.asTriangle.vertex.color.len = m_vertexAttributes[4]->size();
+    vgeom.asTriangle.vertex.color.type = m_vertexAttributes[4]->elementType();
+  }
 }
 
 // float4 Triangle::getAttributeValue(const Attribute &attr, const Ray &ray) const

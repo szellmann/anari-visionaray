@@ -27,6 +27,7 @@ struct VisionarayRendererRaycast
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
+      vec4f color = getColor(geom, hr.prim_id, float2{hr.u,hr.v});
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
 
@@ -34,7 +35,7 @@ struct VisionarayRendererRaycast
       sr.normal = gn;
       sr.geometric_normal = gn;
       sr.view_dir = -xfmDir;
-      sr.tex_color = float3(1.f);
+      sr.tex_color = color.xyz();
       sr.light_dir = -xfmDir;
       sr.light_intensity = float3(1.f);
 

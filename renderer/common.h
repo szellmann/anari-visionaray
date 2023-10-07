@@ -125,6 +125,37 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
   return gn;
 }
 
+VSNRAY_FUNC
+inline vec4 getColor(const dco::Geometry &geom, unsigned primID, const vec2 uv)
+{
+  vec4f color(1.f);
+
+  // vertex colors take precedence over primitive colors
+  if (geom.type == dco::Geometry::Triangle && geom.asTriangle.vertex.color.len > 0) {
+    if (geom.asTriangle.vertex.color.type == ANARI_FLOAT32_VEC4) {
+      vec4f c1, c2, c3;
+      if (geom.asTriangle.index.len > 0) {
+        uint3 index = ((uint3 *)geom.asTriangle.index.data)[primID];
+        c1 = ((vec4f *)geom.asTriangle.vertex.color.data)[index.x];
+        c2 = ((vec4f *)geom.asTriangle.vertex.color.data)[index.y];
+        c3 = ((vec4f *)geom.asTriangle.vertex.color.data)[index.z];
+      } else {
+        c1 = ((vec4f *)geom.asTriangle.vertex.color.data)[primID * 3];
+        c2 = ((vec4f *)geom.asTriangle.vertex.color.data)[primID * 3 + 1];
+        c3 = ((vec4f *)geom.asTriangle.vertex.color.data)[primID * 3 + 2];
+      }
+      color = lerp(c1, c2, c3, uv.x, uv.y);
+    }
+  }
+  else if (geom.primitive.color.len > 0) {
+    if (geom.primitive.color.type == ANARI_FLOAT32_VEC4) {
+      color = ((vec4f *)geom.primitive.color.data)[primID];
+    }
+  }
+
+  return color;
+}
+
 inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)
 {
   return A + (1.f-A.w)*B;

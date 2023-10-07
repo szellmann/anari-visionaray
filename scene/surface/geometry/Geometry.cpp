@@ -6,7 +6,7 @@
 //#include "Cone.h"
 //#include "Curve.h"
 #include "Cylinder.h"
-//#include "Quad.h"
+#include "Quad.h"
 #include "Sphere.h"
 #include "Triangle.h"
 // std
@@ -36,8 +36,8 @@ Geometry *Geometry::createInstance(
 //    return new Curve(s);
   /*else*/ if (subtype == "cylinder")
     return new Cylinder(s);
-//  else if (subtype == "quad")
-//    return new Quad(s);
+  else if (subtype == "quad")
+    return new Quad(s);
   else if (subtype == "sphere")
     return new Sphere(s);
   else if (subtype == "triangle")
@@ -53,11 +53,17 @@ dco::Geometry Geometry::visionarayGeometry() const
 
 void Geometry::commit()
 {
-//  m_attributes[0] = getParamObject<Array1D>("primitive.attribute0");
-//  m_attributes[1] = getParamObject<Array1D>("primitive.attribute1");
-//  m_attributes[2] = getParamObject<Array1D>("primitive.attribute2");
-//  m_attributes[3] = getParamObject<Array1D>("primitive.attribute3");
-//  m_attributes[4] = getParamObject<Array1D>("primitive.color");
+  m_attributes[0] = getParamObject<Array1D>("primitive.attribute0");
+  m_attributes[1] = getParamObject<Array1D>("primitive.attribute1");
+  m_attributes[2] = getParamObject<Array1D>("primitive.attribute2");
+  m_attributes[3] = getParamObject<Array1D>("primitive.attribute3");
+  m_attributes[4] = getParamObject<Array1D>("primitive.color");
+
+  if (m_attributes[4]) {
+    vgeom.primitive.color.data = m_attributes[4]->begin();
+    vgeom.primitive.color.len = m_attributes[4]->size();
+    vgeom.primitive.color.type = m_attributes[4]->elementType();
+  }
 }
 
 void Geometry::markCommitted()

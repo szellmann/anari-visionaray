@@ -3,7 +3,6 @@
 
 // visionaray
 #include "visionaray/texture/texture.h"
-#include "visionaray/aligned_vector.h"
 #include "visionaray/bvh.h"
 #include "visionaray/directional_light.h"
 #include "visionaray/material.h"
@@ -171,6 +170,15 @@ inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
   return intersect(ray, tls);
 }
 
+// Array //
+
+struct Array
+{
+  void *data{nullptr};
+  size_t len{0};
+  ANARIDataType type{ANARI_UNKNOWN};
+};
+
 // Geometry //
 
 struct Geometry
@@ -180,6 +188,14 @@ struct Geometry
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
+    struct {
+      Array color;
+      Array attribute0;
+      Array attribute1;
+      Array attribute2;
+      Array attribute3;
+    } vertex;
+    Array index;
   } asTriangle;
   struct {
     basic_triangle<3,float> *data{nullptr};
@@ -202,6 +218,15 @@ struct Geometry
     VisionarayScene scene{nullptr};
     mat4 xfm;
   } asInstance;
+
+  struct {
+    Array color;
+    Array attribute0;
+    Array attribute1;
+    Array attribute2;
+    Array attribute3;
+    Array id;
+  } primitive;
 };
 
 // Instance //

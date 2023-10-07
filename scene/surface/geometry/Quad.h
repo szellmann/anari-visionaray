@@ -25,7 +25,7 @@ struct Quad : public Geometry
   aligned_vector<basic_triangle<3, float>> m_triangles;
   helium::IntrusivePtr<Array1D> m_index;
   helium::IntrusivePtr<Array1D> m_vertexPosition;
-  //std::array<helium::IntrusivePtr<Array1D>, 5> m_vertexAttributes;
+  std::array<helium::IntrusivePtr<Array1D>, 5> m_vertexAttributes;
 };
 
 } // namespace visionaray
