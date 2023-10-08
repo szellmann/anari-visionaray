@@ -179,6 +179,11 @@ struct Array
   ANARIDataType type{ANARI_UNKNOWN};
 };
 
+enum class Attribute
+{
+  _0, _1, _2, _3, Color, None,
+};
+
 // Geometry //
 
 struct Geometry
@@ -188,13 +193,7 @@ struct Geometry
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
-    struct {
-      Array color;
-      Array attribute0;
-      Array attribute1;
-      Array attribute2;
-      Array attribute3;
-    } vertex;
+    Array vertexAttributes[5];
     Array index;
   } asTriangle;
   struct {
@@ -204,13 +203,7 @@ struct Geometry
   struct {
     basic_sphere<float> *data{nullptr};
     size_t len{0};
-    struct {
-      Array color;
-      Array attribute0;
-      Array attribute1;
-      Array attribute2;
-      Array attribute3;
-    } vertex;
+    Array vertexAttributes[5];
     Array index;
   } asSphere;
   struct {
@@ -227,14 +220,7 @@ struct Geometry
     mat4 xfm;
   } asInstance;
 
-  struct {
-    Array color;
-    Array attribute0;
-    Array attribute1;
-    Array attribute2;
-    Array attribute3;
-    Array id;
-  } primitive;
+  Array primitiveAttributes[5];
 };
 
 // Instance //
@@ -254,6 +240,7 @@ struct Material
   enum Type { Matte, };
   Type type;
   unsigned matID{UINT_MAX};
+  Attribute colorAttribute{Attribute::None};
   struct {
     matte<float> data;
     texture_ref<unorm<8>, 2> colorSampler;

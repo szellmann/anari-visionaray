@@ -81,10 +81,12 @@ void Sphere::commit()
     vgeom.asSphere.index.type = m_index->elementType();
   }
 
-  if (m_vertexAttributes[4]) {
-    vgeom.asSphere.vertex.color.data = m_vertexAttributes[4]->begin();
-    vgeom.asSphere.vertex.color.len = m_vertexAttributes[4]->size();
-    vgeom.asSphere.vertex.color.type = m_vertexAttributes[4]->elementType();
+  for (int i = 0; i < 5; ++i ) {
+    if (m_vertexAttributes[i]) {
+      vgeom.asSphere.vertexAttributes[i].data = m_vertexAttributes[i]->begin();
+      vgeom.asSphere.vertexAttributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.asSphere.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
+    }
   }
 }
 

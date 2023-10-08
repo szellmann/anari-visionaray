@@ -98,6 +98,7 @@ inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 }
 
 VSNRAY_FUNC
+VSNRAY_FUNC
 inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hitPos)
 {
   vec3f gn(1.f,0.f,0.f);
@@ -126,40 +127,69 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
 }
 
 VSNRAY_FUNC
-inline vec4 getColor(const dco::Geometry &geom, unsigned primID, const vec2 uv)
+inline dco::Array getVertexColors(const dco::Geometry &geom, const dco::Material &mat)
+{
+  dco::Array arr;
+
+  if (mat.colorAttribute != dco::Attribute::None) {
+    if (geom.type == dco::Geometry::Triangle)
+      return geom.asTriangle.vertexAttributes[(int)mat.colorAttribute];
+    else if (geom.type == dco::Geometry::Sphere)
+      return geom.asSphere.vertexAttributes[(int)mat.colorAttribute];
+  }
+
+  return arr;
+}
+
+VSNRAY_FUNC
+inline dco::Array getPrimitiveColors(const dco::Geometry &geom, const dco::Material &mat)
+{
+  dco::Array arr;
+
+  if (mat.colorAttribute != dco::Attribute::None)
+    return geom.primitiveAttributes[(int)mat.colorAttribute];
+
+  return arr;
+}
+
+VSNRAY_FUNC
+inline vec4 getColor(
+    const dco::Geometry &geom, const dco::Material &mat, unsigned primID, const vec2 uv)
 {
   vec4f color(1.f);
+  dco::Array vertexColors = getVertexColors(geom, mat);
+  dco::Array primitiveColors = getPrimitiveColors(geom, mat);
 
   // vertex colors take precedence over primitive colors
-  if (geom.type == dco::Geometry::Triangle && geom.asTriangle.vertex.color.len > 0) {
-    if (geom.asTriangle.vertex.color.type == ANARI_FLOAT32_VEC4) {
+  if (geom.type == dco::Geometry::Triangle && vertexColors.len > 0) {
+    if (vertexColors.type == ANARI_FLOAT32_VEC4) {
       vec4f c1, c2, c3;
       if (geom.asTriangle.index.len > 0) {
         uint3 index = ((uint3 *)geom.asTriangle.index.data)[primID];
-        c1 = ((vec4f *)geom.asTriangle.vertex.color.data)[index.x];
-        c2 = ((vec4f *)geom.asTriangle.vertex.color.data)[index.y];
-        c3 = ((vec4f *)geom.asTriangle.vertex.color.data)[index.z];
+        c1 = ((vec4f *)vertexColors.data)[index.x];
+        c2 = ((vec4f *)vertexColors.data)[index.y];
+        c3 = ((vec4f *)vertexColors.data)[index.z];
       } else {
-        c1 = ((vec4f *)geom.asTriangle.vertex.color.data)[primID * 3];
-        c2 = ((vec4f *)geom.asTriangle.vertex.color.data)[primID * 3 + 1];
-        c3 = ((vec4f *)geom.asTriangle.vertex.color.data)[primID * 3 + 2];
+        c1 = ((vec4f *)vertexColors.data)[primID * 3];
+        c2 = ((vec4f *)vertexColors.data)[primID * 3 + 1];
+        c3 = ((vec4f *)vertexColors.data)[primID * 3 + 2];
       }
       color = lerp(c1, c2, c3, uv.x, uv.y);
     }
   }
-  else if (geom.type == dco::Geometry::Sphere && geom.asSphere.vertex.color.len > 0) {
-    if (geom.asSphere.vertex.color.type == ANARI_FLOAT32_VEC4) {
+  else if (geom.type == dco::Geometry::Sphere && vertexColors.len > 0) {
+    if (vertexColors.type == ANARI_FLOAT32_VEC4) {
       if (geom.asSphere.index.len > 0) {
         uint32_t index = ((uint32_t *)geom.asSphere.index.data)[primID];
-        color = ((vec4f *)geom.asSphere.vertex.color.data)[index];
+        color = ((vec4f *)vertexColors.data)[index];
       } else {
-        color = ((vec4f *)geom.asSphere.vertex.color.data)[primID];
+        color = ((vec4f *)vertexColors.data)[primID];
       }
     }
   }
-  else if (geom.primitive.color.len > 0) {
-    if (geom.primitive.color.type == ANARI_FLOAT32_VEC4) {
-      color = ((vec4f *)geom.primitive.color.data)[primID];
+  else if (primitiveColors.len > 0) {
+    if (primitiveColors.type == ANARI_FLOAT32_VEC4) {
+      color = ((vec4f *)primitiveColors.data)[primID];
     }
   }
 

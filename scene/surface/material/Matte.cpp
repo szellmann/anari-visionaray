@@ -1,6 +1,7 @@
 // Copyright 2022 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
+#include "scene/surface/common.h"
 #include "Matte.h"
 
 namespace visionaray {
@@ -15,8 +16,10 @@ void Matte::commit()
   getParam("color", ANARI_FLOAT32_VEC3, &m_color);
   getParam("color", ANARI_FLOAT32_VEC4, &m_color);
   m_colorSampler = getParamObject<Sampler>("color");
+  m_colorAttribute = toAttribute(getParamString("color", "none"));
 
   vmat.type = dco::Material::Matte;
+  vmat.colorAttribute = m_colorAttribute;
   vmat.asMatte.data.cd() = from_rgb(m_color.xyz());
   vmat.asMatte.data.kd() = m_color.w;
 }

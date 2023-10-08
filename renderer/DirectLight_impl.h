@@ -61,10 +61,11 @@ struct VisionarayRendererDirectLight
 
           auto inst = onDevice.instances[hr.inst_id];
           const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
+          const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
-          color = getColor(geom, hr.prim_id, float2{hr.u,hr.v});
+          color = getColor(geom, mat, hr.prim_id, float2{hr.u,hr.v});
 
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
         }

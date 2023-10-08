@@ -8,15 +8,15 @@
 #include "visionaray/math/math.h"
 
 namespace visionaray {
-    using int2 = vec2i;
-    using int3 = vec3i;
-    using int4 = vec4i;
-    using uint2 = vec2ui;
-    using uint3 = vec3ui;
-    using uint4 = vec4ui;
-    using float2 = vec2f;
-    using float3 = vec3f;
-    using float4 = vec4f;
+  using int2 = vec2i;
+  using int3 = vec3i;
+  using int4 = vec4i;
+  using uint2 = vec2ui;
+  using uint3 = vec3ui;
+  using uint4 = vec4ui;
+  using float2 = vec2f;
+  using float3 = vec3f;
+  using float4 = vec4f;
 } // namespace visionaray
 
 namespace anari {

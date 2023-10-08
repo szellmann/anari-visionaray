@@ -59,10 +59,12 @@ void Geometry::commit()
   m_attributes[3] = getParamObject<Array1D>("primitive.attribute3");
   m_attributes[4] = getParamObject<Array1D>("primitive.color");
 
-  if (m_attributes[4]) {
-    vgeom.primitive.color.data = m_attributes[4]->begin();
-    vgeom.primitive.color.len = m_attributes[4]->size();
-    vgeom.primitive.color.type = m_attributes[4]->elementType();
+  for (int i = 0; i < 5; ++i) {
+    if (m_attributes[i]) {
+      vgeom.primitiveAttributes[i].data = m_attributes[i]->begin();
+      vgeom.primitiveAttributes[i].len = m_attributes[i]->size();
+      vgeom.primitiveAttributes[i].type = m_attributes[i]->elementType();
+    }
   }
 }
 

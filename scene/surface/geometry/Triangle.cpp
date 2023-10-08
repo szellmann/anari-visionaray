@@ -73,10 +73,12 @@ void Triangle::commit()
     vgeom.asTriangle.index.type = m_index->elementType();
   }
 
-  if (m_vertexAttributes[4]) {
-    vgeom.asTriangle.vertex.color.data = m_vertexAttributes[4]->begin();
-    vgeom.asTriangle.vertex.color.len = m_vertexAttributes[4]->size();
-    vgeom.asTriangle.vertex.color.type = m_vertexAttributes[4]->elementType();
+  for (int i = 0; i < 5; ++i ) {
+    if (m_vertexAttributes[i]) {
+      vgeom.asTriangle.vertexAttributes[i].data = m_vertexAttributes[i]->begin();
+      vgeom.asTriangle.vertexAttributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.asTriangle.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
+    }
   }
 }
 

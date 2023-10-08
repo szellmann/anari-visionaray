@@ -24,10 +24,11 @@ struct VisionarayRendererRaycast
     if (hr.hit) {
       auto inst = onDevice.instances[hr.inst_id];
       const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
+      const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
-      vec4f color = getColor(geom, hr.prim_id, float2{hr.u,hr.v});
+      vec4f color = getColor(geom, mat, hr.prim_id, float2{hr.u,hr.v});
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
 
@@ -40,7 +41,6 @@ struct VisionarayRendererRaycast
       sr.light_intensity = float3(1.f);
 
       // That doesn't work for instances..
-      const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
       float3 shadedColor = to_rgb(mat.asMatte.data.shade(sr));
 
       result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
