@@ -32,6 +32,8 @@ struct VisionarayRendererRaycast
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
 
+      float2 uv{hr.u,hr.v};
+
       shade_record<float> sr;
       sr.normal = gn;
       sr.geometric_normal = gn;
@@ -41,7 +43,22 @@ struct VisionarayRendererRaycast
       sr.light_intensity = float3(1.f);
 
       // That doesn't work for instances..
-      float3 shadedColor = to_rgb(mat.asMatte.data.shade(sr));
+      float3 shadedColor{0.f};
+
+      if (rendererState.renderMode == RenderMode::Default)
+        shadedColor = to_rgb(mat.asMatte.data.shade(sr));
+      else if (rendererState.renderMode == RenderMode::Ng)
+        shadedColor = (gn + float3(1.f)) * float3(0.5f);
+      else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
+        shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
+      else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
+        shadedColor = getAttribute(geom, dco::Attribute::_1, hr.prim_id, uv).xyz();
+      else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
+        shadedColor = getAttribute(geom, dco::Attribute::_2, hr.prim_id, uv).xyz();
+      else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
+        shadedColor = getAttribute(geom, dco::Attribute::_3, hr.prim_id, uv).xyz();
+      else if (rendererState.renderMode == RenderMode::GeometryColor)
+        shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
 
       result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
       result.color = float4(shadedColor,1.f);

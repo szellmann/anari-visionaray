@@ -263,12 +263,45 @@ static const void * ANARI_RENDERER_raycast_background_info(ANARIDataType paramTy
       default: return nullptr;
    }
 }
+static const void * ANARI_RENDERER_raycast_mode_info(ANARIDataType paramType, int infoName, ANARIDataType infoType) {
+   (void)paramType;
+   switch(infoName) {
+      case 0: // required
+         if(infoType == ANARI_BOOL) {
+            return &anari_false;
+         } else {
+            return nullptr;
+         }
+      case 1: // default
+         if(paramType == ANARI_STRING && infoType == ANARI_STRING) {
+            static const char *default_value = "default";
+            return default_value;
+         } else {
+            return nullptr;
+         }
+      case 4: // description
+         {
+            static const char *description = "visualization modes";
+            return description;
+         }
+      case 6: // value
+         if(paramType == ANARI_STRING && infoType == ANARI_STRING_LIST) {
+            static const char *values[] = {"default", "Ng", "geometry.attribute0", "geometry.attribute1", "geometry.attribute2", "geometry.attribute3", "geometry.color", nullptr};
+            return values;
+         } else {
+            return nullptr;
+         }
+      default: return nullptr;
+   }
+}
 static const void * ANARI_RENDERER_raycast_param_info(const char *paramName, ANARIDataType paramType, int infoName, ANARIDataType infoType) {
    switch(param_hash(paramName)) {
       case 26:
          return ANARI_RENDERER_raycast_name_info(paramType, infoName, infoType);
       case 3:
          return ANARI_RENDERER_raycast_background_info(paramType, infoName, infoType);
+      case 25:
+         return ANARI_RENDERER_raycast_mode_info(paramType, infoName, infoType);
       default:
          return nullptr;
    }
@@ -5884,6 +5917,7 @@ static const void * ANARI_RENDERER_raycast_info(int infoName, ANARIDataType info
             static const ANARIParameter parameters[] = {
                {"name", ANARI_STRING},
                {"background", ANARI_FLOAT32_VEC4},
+               {"mode", ANARI_STRING},
                {0, ANARI_UNKNOWN}
             };
             return parameters;
