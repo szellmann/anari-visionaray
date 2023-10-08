@@ -47,6 +47,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     std::vector<dco::TLS> TLSs;
     std::vector<dco::Group> groups;
     std::vector<dco::Instance> instances;
+    std::vector<dco::Sampler> samplers;
     std::vector<dco::SpatialField> spatialFields;
     std::vector<dco::GridAccel> gridAccels;
     std::vector<dco::TransferFunction> transferFunctions;
@@ -58,6 +59,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::TLS *TLSs{nullptr};
     dco::Group *groups{nullptr};
     dco::Instance *instances{nullptr};
+    dco::Sampler *samplers{nullptr};
     dco::SpatialField *spatialFields{nullptr};
     dco::GridAccel *gridAccels{nullptr};
     dco::TransferFunction *transferFunctions{nullptr};

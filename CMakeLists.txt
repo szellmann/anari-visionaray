@@ -40,6 +40,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/surface/geometry/Quad.cpp
     scene/surface/geometry/Sphere.cpp
     scene/surface/geometry/Triangle.cpp
+    scene/surface/material/sampler/Image1D.cpp
     scene/surface/material/sampler/Sampler.cpp
     scene/surface/material/Material.cpp
     scene/surface/material/Matte.cpp

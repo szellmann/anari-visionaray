@@ -22,6 +22,10 @@ void Matte::commit()
   vmat.colorAttribute = m_colorAttribute;
   vmat.asMatte.data.cd() = from_rgb(m_color.xyz());
   vmat.asMatte.data.kd() = m_color.w;
+
+  if (m_colorSampler) {
+    vmat.asMatte.colorSampler = m_colorSampler->visionaraySampler();
+  }
 }
 
 } // namespace visionaray

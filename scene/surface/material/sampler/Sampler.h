@@ -14,10 +14,16 @@ struct Sampler : public Object
   Sampler(VisionarayGlobalState *d);
   virtual ~Sampler();
 
-  // virtual float4 getSample(const Geometry &g, const Ray &r) const = 0;
-
   static Sampler *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
+
+  dco::Sampler visionaraySampler() const;
+
+ protected:
+  void dispatch();
+  void detach();
+
+  dco::Sampler vsampler;
 };
 
 } // namespace visionaray

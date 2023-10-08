@@ -28,4 +28,19 @@ dco::Attribute toAttribute(std::string str)
   return res;
 }
 
+inline
+tex_address_mode toAddressMode(std::string str)
+{
+  tex_address_mode res;
+
+  if (str == "clampToEdge")
+    res = Clamp;
+  else if (str == "repeat")
+    return Wrap;
+  else if (str == "mirrorRepeat")
+    return Mirror;
+
+  return res;
+}
+
 } // namespace visionaray

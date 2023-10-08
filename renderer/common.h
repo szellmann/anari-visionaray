@@ -212,12 +212,31 @@ inline vec4 getAttribute(
 }
 
 VSNRAY_FUNC
+inline vec4 getSample(
+    const dco::Sampler &samp, const dco::Geometry geom, unsigned primID, const vec2 uv)
+{
+  vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
+
+  if (samp.type == dco::Sampler::Image1D)
+    return tex1D(samp.asImage1D, inAttr.x);
+  else if (samp.type == dco::Sampler::Image2D)
+    return tex2D(samp.asImage2D, inAttr.xy());
+
+  return vec4{0.f};
+}
+
+VSNRAY_FUNC
 inline vec4 getColor(
     const dco::Geometry &geom, const dco::Material &mat, unsigned primID, const vec2 uv)
 {
   vec4f defaultColor(1.f);
-  if (mat.type == dco::Material::Matte)
-    defaultColor = vec4f(to_rgb(mat.asMatte.data.cd()), 1.f);
+  if (mat.type == dco::Material::Matte) {
+    if (mat.asMatte.colorSampler.isValid()) {
+      defaultColor = getSample(mat.asMatte.colorSampler, geom, primID, uv);
+    } else {
+      defaultColor = vec4f(to_rgb(mat.asMatte.data.cd()), 1.f);
+    }
+  }
   return getAttribute(geom, mat.colorAttribute, primID, uv, defaultColor);
 }
 

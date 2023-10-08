@@ -233,6 +233,26 @@ struct Instance
   mat4 invXfm;
 };
 
+// Sampler //
+
+struct Sampler
+{
+  enum Type { Image1D, Image2D, };
+  Type type;
+  unsigned samplerID{UINT_MAX};
+  Attribute inAttribute{Attribute::_0};
+  texture_ref<vector<4, unorm<8>>, 1> asImage1D;
+  texture_ref<vector<4, unorm<8>>, 2> asImage2D;
+
+  VSNRAY_FUNC
+  bool isValid() const
+  {
+    return samplerID < UINT_MAX &&
+        (type == Image1D && asImage1D) ||
+        (type == Image2D && asImage2D);
+  }
+};
+
 // Material //
 
 struct Material
@@ -242,8 +262,8 @@ struct Material
   unsigned matID{UINT_MAX};
   Attribute colorAttribute{Attribute::None};
   struct {
+    Sampler colorSampler;
     matte<float> data;
-    texture_ref<unorm<8>, 2> colorSampler;
   } asMatte;
 };
 
