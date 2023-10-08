@@ -51,6 +51,7 @@ struct VisionarayRendererDirectLight
         float4 color{1.f};
         float3 hitPos{0.f};
         float3 xfmDir = ray.dir;
+        float2 uv{hr.u,hr.v};
 
         if (volumeHit) {
           hitPos = ray.ori + hrv.t * ray.dir;
@@ -65,7 +66,7 @@ struct VisionarayRendererDirectLight
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
-          color = getColor(geom, mat, hr.prim_id, float2{hr.u,hr.v});
+          color = getColor(geom, mat, hr.prim_id, uv);
 
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
         }
@@ -121,11 +122,22 @@ struct VisionarayRendererDirectLight
 
           // That doesn't work for instances..
           auto inst = onDevice.instances[hr.inst_id];
+          const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
           const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
           if (rendererState.renderMode == RenderMode::Default)
             shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
           else if (rendererState.renderMode == RenderMode::Ng)
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
+          else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
+            shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
+          else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
+            shadedColor = getAttribute(geom, dco::Attribute::_1, hr.prim_id, uv).xyz();
+          else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
+            shadedColor = getAttribute(geom, dco::Attribute::_2, hr.prim_id, uv).xyz();
+          else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
+            shadedColor = getAttribute(geom, dco::Attribute::_3, hr.prim_id, uv).xyz();
+          else if (rendererState.renderMode == RenderMode::GeometryColor)
+            shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
           //if (ss.debug()) std::cout << ls.pdf << '\n';
         }
 

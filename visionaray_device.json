@@ -57,7 +57,12 @@
           "default": "default",
           "values": [
             "default",
-            "Ng"
+            "Ng",
+            "geometry.attribute0",
+            "geometry.attribute1",
+            "geometry.attribute2",
+            "geometry.attribute3",
+            "geometry.color"
           ],
           "description": "visualization modes"
         }

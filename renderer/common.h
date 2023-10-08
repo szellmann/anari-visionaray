@@ -79,6 +79,11 @@ enum class RenderMode
 {
   Default,
   Ng,
+  GeometryAttribute0,
+  GeometryAttribute1,
+  GeometryAttribute2,
+  GeometryAttribute3,
+  GeometryColor,
 };
 
 struct RendererState
@@ -127,38 +132,39 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
 }
 
 VSNRAY_FUNC
-inline dco::Array getVertexColors(const dco::Geometry &geom, const dco::Material &mat)
+inline dco::Array getVertexColors(const dco::Geometry &geom, dco::Attribute attrib)
 {
   dco::Array arr;
 
-  if (mat.colorAttribute != dco::Attribute::None) {
+  if (attrib != dco::Attribute::None) {
     if (geom.type == dco::Geometry::Triangle)
-      return geom.asTriangle.vertexAttributes[(int)mat.colorAttribute];
+      return geom.asTriangle.vertexAttributes[(int)attrib];
     else if (geom.type == dco::Geometry::Sphere)
-      return geom.asSphere.vertexAttributes[(int)mat.colorAttribute];
+      return geom.asSphere.vertexAttributes[(int)attrib];
   }
 
   return arr;
 }
 
 VSNRAY_FUNC
-inline dco::Array getPrimitiveColors(const dco::Geometry &geom, const dco::Material &mat)
+inline dco::Array getPrimitiveColors(const dco::Geometry &geom, dco::Attribute attrib)
 {
   dco::Array arr;
 
-  if (mat.colorAttribute != dco::Attribute::None)
-    return geom.primitiveAttributes[(int)mat.colorAttribute];
+  if (attrib != dco::Attribute::None)
+    return geom.primitiveAttributes[(int)attrib];
 
   return arr;
 }
 
 VSNRAY_FUNC
-inline vec4 getColor(
-    const dco::Geometry &geom, const dco::Material &mat, unsigned primID, const vec2 uv)
+inline vec4 getAttribute(
+    const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv,
+    const vec4 dflt = vec4(0.f))
 {
-  vec4f color(1.f);
-  dco::Array vertexColors = getVertexColors(geom, mat);
-  dco::Array primitiveColors = getPrimitiveColors(geom, mat);
+  vec4f color = dflt;
+  dco::Array vertexColors = getVertexColors(geom, attrib);
+  dco::Array primitiveColors = getPrimitiveColors(geom, attrib);
 
   // vertex colors take precedence over primitive colors
   if (geom.type == dco::Geometry::Triangle && vertexColors.len > 0) {
@@ -178,7 +184,16 @@ inline vec4 getColor(
     }
   }
   else if (geom.type == dco::Geometry::Sphere && vertexColors.len > 0) {
-    if (vertexColors.type == ANARI_FLOAT32_VEC4) {
+    if (vertexColors.type == ANARI_FLOAT32) {
+      float val = 0.f;
+      if (geom.asSphere.index.len > 0) {
+        uint32_t index = ((uint32_t *)geom.asSphere.index.data)[primID];
+        val = ((float *)vertexColors.data)[index];
+      } else {
+        val = ((float *)vertexColors.data)[primID];
+      }
+      color = {val,0.f,0.f,0.f};
+    } else if (vertexColors.type == ANARI_FLOAT32_VEC4) {
       if (geom.asSphere.index.len > 0) {
         uint32_t index = ((uint32_t *)geom.asSphere.index.data)[primID];
         color = ((vec4f *)vertexColors.data)[index];
@@ -194,6 +209,16 @@ inline vec4 getColor(
   }
 
   return color;
+}
+
+VSNRAY_FUNC
+inline vec4 getColor(
+    const dco::Geometry &geom, const dco::Material &mat, unsigned primID, const vec2 uv)
+{
+  vec4f defaultColor(1.f);
+  if (mat.type == dco::Material::Matte)
+    defaultColor = vec4f(to_rgb(mat.asMatte.data.cd()), 1.f);
+  return getAttribute(geom, mat.colorAttribute, primID, uv, defaultColor);
 }
 
 inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)

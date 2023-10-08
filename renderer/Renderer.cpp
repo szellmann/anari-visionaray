@@ -34,6 +34,16 @@ void Renderer::commit()
       state.renderMode = RenderMode::Default;
     else if (renderMode == "Ng")
       state.renderMode = RenderMode::Ng;
+    else if (renderMode == "geometry.attribute0")
+      state.renderMode = RenderMode::GeometryAttribute0;
+    else if (renderMode == "geometry.attribute1")
+      state.renderMode = RenderMode::GeometryAttribute1;
+    else if (renderMode == "geometry.attribute2")
+      state.renderMode = RenderMode::GeometryAttribute2;
+    else if (renderMode == "geometry.attribute3")
+      state.renderMode = RenderMode::GeometryAttribute3;
+    else if (renderMode == "geometry.color")
+      state.renderMode = RenderMode::GeometryColor;
   };
 
   if (vrend.type == VisionarayRenderer::Raycast) {
