@@ -171,7 +171,20 @@ inline vec4 getAttribute(
 
   // vertex colors take precedence over primitive colors
   if (geom.type == dco::Geometry::Triangle && vertexColors.len > 0) {
-    if (vertexColors.type == ANARI_FLOAT32_VEC4) {
+    if (vertexColors.type == ANARI_FLOAT32_VEC2) {
+      vec2f c1, c2, c3;
+      if (geom.asTriangle.index.len > 0) {
+        uint3 index = ((uint3 *)geom.asTriangle.index.data)[primID];
+        c1 = ((vec2f *)vertexColors.data)[index.x];
+        c2 = ((vec2f *)vertexColors.data)[index.y];
+        c3 = ((vec2f *)vertexColors.data)[index.z];
+      } else {
+        c1 = ((vec2f *)vertexColors.data)[primID * 3];
+        c2 = ((vec2f *)vertexColors.data)[primID * 3 + 1];
+        c3 = ((vec2f *)vertexColors.data)[primID * 3 + 2];
+      }
+      color = vec4f(lerp(c1, c2, c3, uv.x, uv.y), 0.f, 0.f);
+    } else if (vertexColors.type == ANARI_FLOAT32_VEC4) {
       vec4f c1, c2, c3;
       if (geom.asTriangle.index.len > 0) {
         uint3 index = ((uint3 *)geom.asTriangle.index.data)[primID];

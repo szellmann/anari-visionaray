@@ -4,7 +4,7 @@
 #include "Sampler.h"
 // subtypes
 #include "Image1D.h"
-// #include "Image2D.h"
+#include "Image2D.h"
 // #include "Image3D.h"
 // #include "PrimitiveSampler.h"
 // #include "TransformSampler.h"
@@ -27,8 +27,8 @@ Sampler *Sampler::createInstance(std::string_view subtype, VisionarayGlobalState
 {
   if (subtype == "image1D")
     return new Image1D(s);
-  // else if (subtype == "image2D")
-  //   return new Image2D(s);
+  else if (subtype == "image2D")
+    return new Image2D(s);
   // else if (subtype == "image3D")
   //   return new Image3D(s);
   // else if (subtype == "transform")
