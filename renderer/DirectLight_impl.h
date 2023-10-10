@@ -28,6 +28,7 @@ struct VisionarayRendererDirectLight
 
     float3 throughput{1.f};
     float3 shadedColor{0.f};
+    bool hit = false;
 
     for (unsigned bounceID=0;bounceID<2;++bounceID) {
       auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
@@ -46,6 +47,8 @@ struct VisionarayRendererDirectLight
           }
           break;
         }
+
+        hit = true;
 
         float3 gn{0.f};
         float4 color{1.f};
@@ -165,7 +168,9 @@ struct VisionarayRendererDirectLight
       }
     }
 
-    result.color = float4(throughput,1.f);
+    if (hit) {
+      result.color = float4(throughput,1.f);
+    }
 
     if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
       result.color = float4(1.f) - result.color;
