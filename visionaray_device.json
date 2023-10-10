@@ -68,6 +68,24 @@
             "geometry.color"
           ],
           "description": "visualization modes"
+        },
+        {
+          "name": "heatMapEnabled",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "heat map visualizating clock cycles per pixel"
+        },
+        {
+          "name": "heatMapScale",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.1,
+          "description": "heat map scaling factor"
         }
       ]
     },
@@ -114,6 +132,24 @@
             "geometry.color"
           ],
           "description": "visualization modes"
+        },
+        {
+          "name": "heatMapEnabled",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "heat map visualizing clock cycles per pixel"
+        },
+        {
+          "name": "heatMapScale",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.1,
+          "description": "heat map scaling factor"
         }
       ]
     }

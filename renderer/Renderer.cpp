@@ -44,6 +44,8 @@ void Renderer::commit()
       state.renderMode = RenderMode::GeometryAttribute3;
     else if (renderMode == "geometry.color")
       state.renderMode = RenderMode::GeometryColor;
+    state.heatMapEnabled = getParam<bool>("heatMapEnabled", false);
+    state.heatMapScale = getParam<float>("heatMapScale", 0.1f);
   };
 
   if (vrend.type == VisionarayRenderer::Raycast) {

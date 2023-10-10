@@ -97,6 +97,8 @@ struct RendererState
   int accumID{0};
   int envID{-1};
   bool gradientShading{true};
+  bool heatMapEnabled{false};
+  float heatMapScale{.1f};
 };
 
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
@@ -262,6 +264,37 @@ inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)
   return A + (1.f-A.w)*B;
 }
 
+inline VSNRAY_FUNC vec3f hue_to_rgb(float hue)
+{
+  float s = saturate( hue ) * 6.0f;
+  float r = saturate( fabsf(s - 3.f) - 1.0f );
+  float g = saturate( 2.0f - fabsf(s - 2.0f) );
+  float b = saturate( 2.0f - fabsf(s - 4.0f) );
+  return vec3f(r, g, b); 
+}
+  
+inline VSNRAY_FUNC vec3f temperature_to_rgb(float t)
+{
+  float K = 4.0f / 6.0f;
+  float h = K - K * t;
+  float v = .5f + 0.5f * t;    return v * hue_to_rgb(h);
+}
+  
+                                  
+inline VSNRAY_FUNC
+vec3f heatMap(float t)
+{
+#if 1
+  return temperature_to_rgb(t);
+#else
+  if (t < .25f) return lerp(vec3f(0.f,1.f,0.f),vec3f(0.f,1.f,1.f),(t-0.f)/.25f);
+  if (t < .5f)  return lerp(vec3f(0.f,1.f,1.f),vec3f(0.f,0.f,1.f),(t-.25f)/.25f);
+  if (t < .75f) return lerp(vec3f(0.f,0.f,1.f),vec3f(1.f,1.f,1.f),(t-.5f)/.25f);
+  if (t < 1.f)  return lerp(vec3f(1.f,1.f,1.f),vec3f(1.f,0.f,0.f),(t-.75f)/.25f);
+  return vec3f(1.f,0.f,0.f);
+#endif
+}
+  
 VSNRAY_FUNC
 inline void print(const float3 &v)
 {

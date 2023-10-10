@@ -199,6 +199,8 @@ void Frame::renderFrame()
               ScreenSample ss{x, y, size, {/*RNG*/}};
               Ray ray;
 
+              uint64_t clock_begin = clock64();
+
               if (rend.stochasticRendering()) {
                 // Need an RNG
                 int pixelID = ss.x + ss.frameSize.x * ss.y;
@@ -233,6 +235,13 @@ void Frame::renderFrame()
                 if (sampleID == 0) {
                   firstSample = ps;
                 }
+              }
+
+              uint64_t clock_end = clock64();
+              if (rend.rendererState().heatMapEnabled > 0.f) {
+                  float t = (clock_end - clock_begin)
+                      * (rend.rendererState().heatMapScale / rend.spp());
+                  accumColor = over(vec4f(heatMap(t), .5f), accumColor);
               }
 
               // Color gets accumulated, depth, IDs, etc. are
