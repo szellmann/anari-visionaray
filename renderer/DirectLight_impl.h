@@ -59,6 +59,9 @@ struct VisionarayRendererDirectLight
             gn = normalize(gn);
         } else {
           result.depth = hr.t;
+          result.primId = hr.prim_id;
+          result.objId = hr.geom_id;
+          result.instId = hr.inst_id;
 
           auto inst = onDevice.instances[hr.inst_id];
           const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];

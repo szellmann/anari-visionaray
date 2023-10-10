@@ -63,6 +63,9 @@ struct VisionarayRendererRaycast
       result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
       result.color = float4(shadedColor,1.f);
       result.depth = hr.t;
+      result.primId = hr.prim_id;
+      result.objId = hr.geom_id;
+      result.instId = hr.inst_id;
 
       ray.tmax = hr.t;
     }
@@ -79,6 +82,9 @@ struct VisionarayRendererRaycast
 
       rayMarchVolume(ss, ray, vol, onDevice, color, alpha);
       result.color = over(float4(color,alpha), result.color);
+      result.primId = hr.prim_id;
+      result.objId = hr.geom_id;
+      result.instId = hr.inst_id;
     }
 
     if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {

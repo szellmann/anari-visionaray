@@ -96,6 +96,10 @@ void Frame::commit()
 
   m_colorType = getParam<anari::DataType>("channel.color", ANARI_UNKNOWN);
   m_depthType = getParam<anari::DataType>("channel.depth", ANARI_UNKNOWN);
+  m_primIdType =
+      getParam<anari::DataType>("channel.primitiveId", ANARI_UNKNOWN);
+  m_objIdType = getParam<anari::DataType>("channel.objectId", ANARI_UNKNOWN);
+  m_instIdType = getParam<anari::DataType>("channel.instanceId", ANARI_UNKNOWN);
 
   m_frameData.size = getParam<uint2>("size", uint2(10));
   m_frameData.invSize = 1.f / float2(m_frameData.size);
@@ -108,6 +112,17 @@ void Frame::commit()
   m_depthBuffer.resize(m_depthType == ANARI_FLOAT32 ? numPixels : 0);
   m_accumBuffer.resize(numPixels, vec4{0.f});
   m_frameChanged = true;
+
+  m_primIdBuffer.clear();
+  m_objIdBuffer.clear();
+  m_instIdBuffer.clear();
+
+  if (m_primIdType == ANARI_UINT32)
+    m_primIdBuffer.resize(numPixels);
+  if (m_objIdType == ANARI_UINT32)
+    m_objIdBuffer.resize(numPixels);
+  if (m_instIdType == ANARI_UINT32)
+    m_instIdBuffer.resize(numPixels);
 }
 
 bool Frame::getProperty(
@@ -191,7 +206,7 @@ void Frame::renderFrame()
               }
 
               float4 accumColor{0.f};
-              float depth;
+              PixelSample firstSample;
               for (int sampleID=0; sampleID<rend.spp(); ++sampleID) {
 
                 float xf(x), yf(y);
@@ -215,10 +230,16 @@ void Frame::renderFrame()
                         deviceState()->onDevice,
                         deviceState()->objectCounts);
                 accumColor += ps.color;
-                if (sampleID == 0) depth = ps.depth;
+                if (sampleID == 0) {
+                  firstSample = ps;
+                }
               }
 
-              writeSample(x, y, {accumColor*(1.f/rend.spp()),depth});
+              // Color gets accumulated, depth, IDs, etc. are
+              // taken from first sample
+              PixelSample finalSample = firstSample;
+              finalSample.color = accumColor*(1.f/rend.spp());
+              writeSample(x, y, finalSample);
             }
           }
         });
@@ -251,7 +272,16 @@ void *Frame::map(std::string_view channel,
   } else if (channel == "depth" || channel == "channel.depth") {
     *pixelType = ANARI_FLOAT32;
     return mapDepthBuffer();
-  } else {
+  }  else if (channel == "channel.primitiveId" && !m_primIdBuffer.empty()) {
+    *pixelType = ANARI_UINT32;
+    return m_primIdBuffer.data();
+  } else if (channel == "channel.objectId" && !m_objIdBuffer.empty()) {
+    *pixelType = ANARI_UINT32;
+    return m_objIdBuffer.data();
+  } else if (channel == "channel.instanceId" && !m_instIdBuffer.empty()) {
+    *pixelType = ANARI_UINT32;
+    return m_instIdBuffer.data();
+  }else {
     *width = 0;
     *height = 0;
     *pixelType = ANARI_UNKNOWN;
@@ -340,6 +370,12 @@ void Frame::writeSample(int x, int y, PixelSample s)
   }
   if (!m_depthBuffer.empty())
     m_depthBuffer[idx] = s.depth;
+  if (!m_primIdBuffer.empty())
+    m_primIdBuffer[idx] = s.primId;
+  if (!m_objIdBuffer.empty())
+    m_objIdBuffer[idx] = s.objId;
+  if (!m_instIdBuffer.empty())
+    m_instIdBuffer[idx] = s.instId;
 }
 
 void Frame::checkAccumulationReset()
