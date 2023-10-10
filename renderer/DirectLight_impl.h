@@ -158,13 +158,11 @@ struct VisionarayRendererDirectLight
         ray.tmin = 1e-4f;
         ray.tmax = ls.dist-1e-4f;
       } else { // bounceID == 1
-        if (!hr.hit && !volumeHit) {
-          throughput *= shadedColor;
-        } else if (volumeHit) {
-          throughput *= hrv.Tr;
-        } else {
-          throughput = float3{0.f};
-        }
+        int surfV = hr.hit ? 0 : 1;
+        int volV = volumeHit ? 0 : 1;
+        // visibility term
+        float V = surfV * volV * hrv.Tr;
+        throughput *= shadedColor * V;
       }
     }
 
