@@ -24,7 +24,7 @@ void Matte::commit()
   vmat.asMatte.data.kd() = m_color.w;
 
   if (m_colorSampler) {
-    vmat.asMatte.colorSampler = m_colorSampler->visionaraySampler();
+    vmat.asMatte.samplerID = m_colorSampler->visionaraySampler().samplerID;
   }
 }
 

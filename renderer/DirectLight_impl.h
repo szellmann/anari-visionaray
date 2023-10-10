@@ -69,7 +69,12 @@ struct VisionarayRendererDirectLight
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
-          color = getColor(geom, mat, hr.prim_id, uv);
+          if (mat.type == dco::Material::Matte && mat.asMatte.samplerID < UINT_MAX) {
+            const auto &samp = onDevice.samplers[mat.asMatte.samplerID];
+            color = getSample(samp, geom, hr.prim_id, uv);
+          } else {
+            color = getColor(geom, mat, hr.prim_id, uv);
+          }
 
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
         }

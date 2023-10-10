@@ -262,7 +262,7 @@ struct Material
   unsigned matID{UINT_MAX};
   Attribute colorAttribute{Attribute::None};
   struct {
-    Sampler colorSampler;
+    unsigned samplerID{UINT_MAX};
     matte<float> data;
   } asMatte;
 };

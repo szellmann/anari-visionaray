@@ -28,11 +28,16 @@ struct VisionarayRendererRaycast
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
-      vec4f color = getColor(geom, mat, hr.prim_id, float2{hr.u,hr.v});
+      vec2f uv{hr.u,hr.v};
+      vec4f color{1.f};
+      if (mat.type == dco::Material::Matte && mat.asMatte.samplerID < UINT_MAX) {
+        const auto &samp = onDevice.samplers[mat.asMatte.samplerID];
+        color = getSample(samp, geom, hr.prim_id, uv);
+      } else {
+        color = getColor(geom, mat, hr.prim_id, uv);
+      }
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
-
-      float2 uv{hr.u,hr.v};
 
       shade_record<float> sr;
       sr.normal = gn;
