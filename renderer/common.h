@@ -233,12 +233,18 @@ inline vec4 getSample(
 {
   vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
 
-  if (samp.type == dco::Sampler::Image1D)
-    return tex1D(samp.asImage1D, inAttr.x);
-  else if (samp.type == dco::Sampler::Image2D)
-    return tex2D(samp.asImage2D, inAttr.xy());
+  inAttr = samp.inTransform * inAttr + samp.inOffset;
 
-  return vec4{0.f};
+  vec4f s{0.f};
+
+  if (samp.type == dco::Sampler::Image1D)
+    s = tex1D(samp.asImage1D, inAttr.x);
+  else if (samp.type == dco::Sampler::Image2D)
+    s = tex2D(samp.asImage2D, inAttr.xy());
+
+  s = samp.outTransform * s + samp.outOffset;
+
+  return s;
 }
 
 VSNRAY_FUNC

@@ -241,6 +241,10 @@ struct Sampler
   Type type;
   unsigned samplerID{UINT_MAX};
   Attribute inAttribute{Attribute::_0};
+  mat4 inTransform{mat4::identity()};
+  float4 inOffset{0.f};
+  mat4 outTransform{mat4::identity()};
+  float4 outOffset{0.f};
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
   texture_ref<vector<4, unorm<8>>, 2> asImage2D;
 

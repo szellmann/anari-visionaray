@@ -30,6 +30,10 @@ void Image1D::commit()
 
   updateImageData();
   vsampler.inAttribute = m_inAttribute;
+  vsampler.inTransform = m_inTransform;
+  vsampler.inOffset = m_inOffset;
+  vsampler.outTransform = m_outTransform;
+  vsampler.outOffset = m_outOffset;
   vsampler.asImage1D = texture_ref<vector<4, unorm<8>>, 1>(vimage);
 
   Sampler::dispatch();
