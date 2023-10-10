@@ -7,9 +7,9 @@
 #include "visionaray/directional_light.h"
 #include "visionaray/material.h"
 #include "visionaray/matrix_camera.h"
-#include "visionaray/pinhole_camera.h"
 #include "visionaray/point_light.h"
 #include "visionaray/spot_light.h"
+#include "visionaray/thin_lens_camera.h"
 // ours
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
@@ -399,7 +399,7 @@ struct Camera
   Type type;
   unsigned camID{UINT_MAX};
   matrix_camera asMatrixCam;
-  pinhole_camera asPinholeCam;
+  thin_lens_camera asPinholeCam;
 };
 
 // Light //

@@ -16,6 +16,8 @@ void Perspective::commit()
   if (!getParam("fovy", ANARI_FLOAT32, &fovy))
     fovy = 60.f * constants::degrees_to_radians<float>();
   float aspect = getParam<float>("aspect", 1.f);
+  float apertureRadius = getParam<float>("apertureRadius", 0.f);
+  float focusDistance = getParam<float>("focusDistance", 1.f);
 
   // float2 imgPlaneSize;
   // imgPlaneSize.y = 2.f * tanf(0.5f * fovy);
@@ -29,6 +31,8 @@ void Perspective::commit()
   vcam.asPinholeCam.perspective(fovy, aspect, .001f, 1000.f);
   vcam.asPinholeCam.look_at(m_pos, m_pos + m_dir, m_up);
   vcam.asPinholeCam.set_image_region(m_imageRegion);
+  vcam.asPinholeCam.set_lens_radius(apertureRadius);
+  vcam.asPinholeCam.set_focal_distance(focusDistance);
 }
 
 } // namespace visionaray
