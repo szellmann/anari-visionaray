@@ -36,18 +36,11 @@ void Image1D::commit()
 
 void Image1D::updateImageData()
 {
-  // TODO: generalize for other image sampler types!
-  using InternalType = vector<4, unorm<8>>;
-  std::vector<InternalType> data(m_image->size());
-  if (m_image->elementType() == ANARI_FLOAT32_VEC3) {
-    auto *in = m_image->beginAs<vec3>();
-    for (size_t i = 0; i < m_image->size(); ++i) {
-      data[i] = InternalType(in[i].x, in[i].y, in[i].z, 1.f);
-    }
-  }
+  vimage = texture<vector<4, unorm<8>>, 1>(m_image->size());
 
-  vimage = texture<InternalType, 1>(data.size());
-  vimage.reset(data.data());
+  if (m_image->elementType() == ANARI_FLOAT32_VEC3)
+    vimage.reset(m_image->dataAs<vec3>(), PF_RGB32F, PF_RGBA8, AlphaIsOne);
+
   vimage.set_filter_mode(m_linearFilter?Linear:Nearest);
   vimage.set_address_mode(m_wrapMode);
 }
