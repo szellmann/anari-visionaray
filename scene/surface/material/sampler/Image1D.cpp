@@ -29,6 +29,7 @@ void Image1D::commit()
   m_outOffset = getParam<float4>("outOffset", float4(0.f, 0.f, 0.f, 0.f));
 
   updateImageData();
+  vsampler.inAttribute = m_inAttribute;
   vsampler.asImage1D = texture_ref<vector<4, unorm<8>>, 1>(vimage);
 
   Sampler::dispatch();
