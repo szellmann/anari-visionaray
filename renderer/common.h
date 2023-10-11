@@ -92,13 +92,20 @@ enum class RenderMode
 struct RendererState
 {
   float4 bgColor{float3(0.f), 1.f};
-  float ambientRadiance{1.f};
   RenderMode renderMode{RenderMode::Default};
   int accumID{0};
   int envID{-1};
+  // Volume
   bool gradientShading{true};
+  // AO
+  float3 ambientColor{1.f, 1.f, 1.f};
+  float ambientRadiance{1.f};
+  float occlusionDistance{1e20f};
+  int ambientSamples{1};
+  // Heat map
   bool heatMapEnabled{false};
   float heatMapScale{.1f};
+
 };
 
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "renderer/AO.h"
 #include "renderer/common.h"
 #include "renderer/VolumeIntegration.h"
 #include "sampleCDF.h"
@@ -27,7 +28,10 @@ struct VisionarayRendererDirectLight
       return result;
 
     float3 throughput{1.f};
+    float3 baseColor{0.f};
     float3 shadedColor{0.f};
+    float3 gn{0.f};
+    float3 hitPos{0.f};
     bool hit = false;
     bool hdriMiss = false;
 
@@ -52,9 +56,7 @@ struct VisionarayRendererDirectLight
 
         hit = true;
 
-        float3 gn{0.f};
         float4 color{1.f};
-        float3 hitPos{0.f};
         float3 xfmDir = ray.dir;
         float2 uv{hr.u,hr.v};
 
@@ -124,6 +126,7 @@ struct VisionarayRendererDirectLight
             shadedColor = gn;
           }
 
+          baseColor = float3{1.f};
         } else {
           shade_record<float> sr;
           sr.normal = gn;
@@ -151,6 +154,8 @@ struct VisionarayRendererDirectLight
             shadedColor = getAttribute(geom, dco::Attribute::_3, hr.prim_id, uv).xyz();
           else if (rendererState.renderMode == RenderMode::GeometryColor)
             shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
+
+          baseColor = color.xyz();
           //if (ss.debug()) std::cout << ls.pdf << '\n';
         }
 
@@ -162,9 +167,13 @@ struct VisionarayRendererDirectLight
       } else { // bounceID == 1
         int surfV = hr.hit ? 0 : 1;
         int volV = volumeHit ? 0 : 1;
+        float aoV = 1.f-computeAO(ss, worldID, onDevice, gn, hitPos,
+            rendererState.ambientSamples, rendererState.occlusionDistance);
         // visibility term
         float V = surfV * volV * hrv.Tr;
-        throughput *= shadedColor * V;
+        throughput *= shadedColor * V
+            + (baseColor * rendererState.ambientColor
+             * rendererState.ambientRadiance * aoV);
       }
     }
 

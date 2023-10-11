@@ -86,6 +86,38 @@
           "tags": [],
           "default": 0.1,
           "description": "heat map scaling factor"
+        },
+        {
+          "name": "ambientSamples",
+          "types": [
+            "ANARI_INT32"
+          ],
+          "tags": [],
+          "default": 1,
+          "minimum": 0,
+          "description": "AO samples per-pixel, per-frame"
+        },
+        {
+          "name": "ambientColor",
+          "types": [
+            "ANARI_FLOAT32_VEC3"
+          ],
+          "tags": [],
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "description": "ambient light color (RGB)"
+        },
+        {
+          "name": "ambientRadiance",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.0,
+          "description": "ambient light intensity"
         }
       ]
     },
