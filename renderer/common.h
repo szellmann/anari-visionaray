@@ -99,7 +99,7 @@ struct RendererState
   bool gradientShading{true};
   // AO
   float3 ambientColor{1.f, 1.f, 1.f};
-  float ambientRadiance{1.f};
+  float ambientRadiance{0.2f};
   float occlusionDistance{1e20f};
   int ambientSamples{1};
   // Heat map

@@ -337,7 +337,7 @@ static const void * ANARI_RENDERER_default_ambientRadiance_info(ANARIDataType pa
          }
       case 1: // default
          if(paramType == ANARI_FLOAT32 && infoType == ANARI_FLOAT32) {
-            static const float default_value[1] = {0.000000f};
+            static const float default_value[1] = {0.200000f};
             return default_value;
          } else {
             return nullptr;

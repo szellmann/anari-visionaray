@@ -28,7 +28,6 @@ void Renderer::commit()
   // variables supported by ALL renderers
   auto commitCommonState = [this](auto &state) {
     state.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
-    state.ambientRadiance = getParam<float>("ambientRadiance", 1.f);
     std::string renderMode = getParamString("mode", "default");
     if (renderMode == "default")
       state.renderMode = RenderMode::Default;
