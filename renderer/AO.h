@@ -18,8 +18,9 @@ inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
 VSNRAY_FUNC
 inline float computeAO(ScreenSample &ss, unsigned worldID,
     VisionarayGlobalState::DeviceObjectRegistry onDevice,
-    const vec3 Ng, const vec3 isectPos, int AO_samples, float AO_radius)
+    vec3 Ng, const vec3 viewDir, const vec3 isectPos, int AO_samples, float AO_radius)
 {
+  Ng = faceforward(Ng, viewDir, Ng);
   vec3 u, v, w = Ng;
   make_orthonormal_basis(u,v,w);
   float weights = 0.f;

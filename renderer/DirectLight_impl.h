@@ -24,13 +24,14 @@ struct VisionarayRendererDirectLight
       return result; // happens eg with TLSs of unsupported objects
 
     // Need at least one light..
-    if (!onDevice.lights || objCounts.lights == 0)
-      return result;
+    //if (!onDevice.lights || objCounts.lights == 0)
+    //  return result;
 
     float3 throughput{1.f};
     float3 baseColor{0.f};
     float3 shadedColor{0.f};
     float3 gn{0.f};
+    float3 viewDir{0.f};
     float3 hitPos{0.f};
     bool hit = false;
     bool hdriMiss = false;
@@ -86,6 +87,8 @@ struct VisionarayRendererDirectLight
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
         }
 
+        viewDir = -xfmDir;
+
         int lightID = uniformSampleOneLight(ss.random, objCounts.lights);
 
         light_sample<float> ls;
@@ -108,7 +111,7 @@ struct VisionarayRendererDirectLight
           shade_record<float> sr;
           sr.normal = gn;
           sr.geometric_normal = gn;
-          sr.view_dir = -xfmDir;
+          sr.view_dir = viewDir;
           sr.tex_color = float3(1.f);
           sr.light_dir = normalize(ls.dir);
           sr.light_intensity = intensity;
@@ -131,7 +134,7 @@ struct VisionarayRendererDirectLight
           shade_record<float> sr;
           sr.normal = gn;
           sr.geometric_normal = gn;
-          sr.view_dir = -xfmDir;
+          sr.view_dir = viewDir;
           sr.tex_color = color.xyz();//float3(1.f);
           sr.light_dir = normalize(ls.dir);
           sr.light_intensity = intensity;
@@ -167,7 +170,7 @@ struct VisionarayRendererDirectLight
       } else { // bounceID == 1
         int surfV = hr.hit ? 0 : 1;
         int volV = volumeHit ? 0 : 1;
-        float aoV = 1.f-computeAO(ss, worldID, onDevice, gn, hitPos,
+        float aoV = 1.f-computeAO(ss, worldID, onDevice, gn, viewDir, hitPos,
             rendererState.ambientSamples, rendererState.occlusionDistance);
         // visibility term
         float V = surfV * volV * hrv.Tr;
