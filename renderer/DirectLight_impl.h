@@ -158,7 +158,10 @@ struct VisionarayRendererDirectLight
           else if (rendererState.renderMode == RenderMode::GeometryColor)
             shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
 
-          baseColor = color.xyz();
+          if (rendererState.renderMode == RenderMode::Default)
+            baseColor = color.xyz();
+          else
+            baseColor = shadedColor;
           //if (ss.debug()) std::cout << ls.pdf << '\n';
         }
 
