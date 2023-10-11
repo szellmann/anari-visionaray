@@ -129,7 +129,7 @@ struct VisionarayRendererDirectLight
             shadedColor = gn;
           }
 
-          baseColor = float3{1.f};
+          baseColor = hrv.albedo;
         } else {
           shade_record<float> sr;
           sr.normal = gn;
