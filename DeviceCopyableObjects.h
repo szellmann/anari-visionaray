@@ -409,6 +409,7 @@ struct Light
   enum Type { Directional, Point, Spot, HDRI, };
   Type type;
   unsigned lightID{UINT_MAX};
+  bool visible{true};
   directional_light<float> asDirectional;
   point_light<float> asPoint;
   spot_light<float> asSpot;

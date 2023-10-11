@@ -39,7 +39,7 @@ struct VisionarayRendererDirectLight
       if (bounceID == 0) {
 
         if (!hr.hit && !hrv.hit) {
-          if (rendererState.envID >= 0) {
+          if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
             auto hdri = onDevice.lights[rendererState.envID].asHDRI;
             float2 uv = toUV(ray.dir);
             throughput = tex2D(hdri.radiance, uv);
