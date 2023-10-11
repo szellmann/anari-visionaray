@@ -29,6 +29,7 @@ struct VisionarayRendererDirectLight
     float3 throughput{1.f};
     float3 shadedColor{0.f};
     bool hit = false;
+    bool hdriMiss = false;
 
     for (unsigned bounceID=0;bounceID<2;++bounceID) {
       auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
@@ -42,6 +43,7 @@ struct VisionarayRendererDirectLight
             auto hdri = onDevice.lights[rendererState.envID].asHDRI;
             float2 uv = toUV(ray.dir);
             throughput = tex2D(hdri.radiance, uv);
+            hdriMiss = true;
           } else {
             throughput = float3{0.f};
           }
@@ -166,7 +168,7 @@ struct VisionarayRendererDirectLight
       }
     }
 
-    if (hit) {
+    if (hit || hdriMiss) {
       result.color = float4(throughput,1.f);
     }
 
