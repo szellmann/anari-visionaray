@@ -173,8 +173,10 @@ struct VisionarayRendererDirectLight
       } else { // bounceID == 1
         int surfV = hr.hit ? 0 : 1;
         int volV = volumeHit ? 0 : 1;
-        float aoV = 1.f-computeAO(ss, worldID, onDevice, gn, viewDir, hitPos,
-            rendererState.ambientSamples, rendererState.occlusionDistance);
+        float aoV = rendererState.ambientSamples == 0 ? 1.f
+            : 1.f-computeAO(ss, worldID, onDevice, gn, viewDir, hitPos,
+                            rendererState.ambientSamples,
+                            rendererState.occlusionDistance);
         // visibility term
         float V = surfV * volV * hrv.Tr;
         throughput *= shadedColor * V
