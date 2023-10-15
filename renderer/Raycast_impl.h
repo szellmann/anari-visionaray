@@ -54,6 +54,8 @@ struct VisionarayRendererRaycast
         shadedColor = to_rgb(mat.asMatte.data.shade(sr));
       else if (rendererState.renderMode == RenderMode::Ng)
         shadedColor = (gn + float3(1.f)) * float3(0.5f);
+      else if (rendererState.renderMode == RenderMode::Albedo)
+        shadedColor = color.xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
         shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
@@ -68,6 +70,8 @@ struct VisionarayRendererRaycast
       result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
       result.color = float4(shadedColor,1.f);
       result.depth = hr.t;
+      result.Ng = gn;
+      result.albedo = color.xyz();
       result.primId = hr.prim_id;
       result.objId = hr.geom_id;
       result.instId = hr.inst_id;
@@ -87,6 +91,8 @@ struct VisionarayRendererRaycast
 
       rayMarchVolume(ss, ray, vol, onDevice, color, alpha);
       result.color = over(float4(color,alpha), result.color);
+      result.Ng = float3{}; // TODO: gradient
+      result.albedo = float3{}; // TODO..
       result.primId = hr.prim_id;
       result.objId = hr.geom_id;
       result.instId = hr.inst_id;

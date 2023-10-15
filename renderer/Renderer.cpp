@@ -33,6 +33,8 @@ void Renderer::commit()
       state.renderMode = RenderMode::Default;
     else if (renderMode == "Ng")
       state.renderMode = RenderMode::Ng;
+    else if (renderMode == "albedo")
+      state.renderMode = RenderMode::Albedo;
     else if (renderMode == "geometry.attribute0")
       state.renderMode = RenderMode::GeometryAttribute0;
     else if (renderMode == "geometry.attribute1")

@@ -96,6 +96,8 @@ void Frame::commit()
 
   m_colorType = getParam<anari::DataType>("channel.color", ANARI_UNKNOWN);
   m_depthType = getParam<anari::DataType>("channel.depth", ANARI_UNKNOWN);
+  m_normalType = getParam<anari::DataType>("channel.normal", ANARI_UNKNOWN);
+  m_albedoType = getParam<anari::DataType>("channel.albedo", ANARI_UNKNOWN);
   m_primIdType =
       getParam<anari::DataType>("channel.primitiveId", ANARI_UNKNOWN);
   m_objIdType = getParam<anari::DataType>("channel.objectId", ANARI_UNKNOWN);
@@ -113,10 +115,16 @@ void Frame::commit()
   m_accumBuffer.resize(numPixels, vec4{0.f});
   m_frameChanged = true;
 
+  m_normalBuffer.clear();
+  m_albedoBuffer.clear();
   m_primIdBuffer.clear();
   m_objIdBuffer.clear();
   m_instIdBuffer.clear();
 
+  if (m_normalType == ANARI_FLOAT32_VEC3)
+    m_normalBuffer.resize(numPixels);
+  if (m_albedoType == ANARI_FLOAT32_VEC3)
+    m_albedoBuffer.resize(numPixels);
   if (m_primIdType == ANARI_UINT32)
     m_primIdBuffer.resize(numPixels);
   if (m_objIdType == ANARI_UINT32)
@@ -281,7 +289,13 @@ void *Frame::map(std::string_view channel,
   } else if (channel == "depth" || channel == "channel.depth") {
     *pixelType = ANARI_FLOAT32;
     return mapDepthBuffer();
-  }  else if (channel == "channel.primitiveId" && !m_primIdBuffer.empty()) {
+  } else if (channel == "channel.normal" && !m_normalBuffer.empty()) {
+    *pixelType = ANARI_FLOAT32_VEC3;
+    return m_normalBuffer.data();
+  } else if (channel == "channel.albedo" && !m_albedoBuffer.empty()) {
+    *pixelType = ANARI_FLOAT32_VEC3;
+    return m_albedoBuffer.data();
+  } else if (channel == "channel.primitiveId" && !m_primIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
     return m_primIdBuffer.data();
   } else if (channel == "channel.objectId" && !m_objIdBuffer.empty()) {
@@ -379,6 +393,10 @@ void Frame::writeSample(int x, int y, PixelSample s)
   }
   if (!m_depthBuffer.empty())
     m_depthBuffer[idx] = s.depth;
+  if (!m_normalBuffer.empty())
+    m_normalBuffer[idx] = s.Ng;
+  if (!m_albedoBuffer.empty())
+    m_albedoBuffer[idx] = s.albedo;
   if (!m_primIdBuffer.empty())
     m_primIdBuffer[idx] = s.primId;
   if (!m_objIdBuffer.empty())

@@ -84,6 +84,9 @@ struct VisionarayRendererDirectLight
             color = getColor(geom, mat, hr.prim_id, uv);
           }
 
+          result.Ng = gn;
+          result.albedo = color.xyz();
+
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
         }
 
@@ -147,6 +150,8 @@ struct VisionarayRendererDirectLight
             shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
           else if (rendererState.renderMode == RenderMode::Ng)
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
+          else if (rendererState.renderMode == RenderMode::Albedo)
+            shadedColor = color.xyz();
           else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
             shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
           else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
