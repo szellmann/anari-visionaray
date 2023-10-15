@@ -91,6 +91,16 @@
           "description": "heat map scaling factor"
         },
         {
+          "name": "pixelSamples",
+          "types": [
+            "ANARI_INT32"
+          ],
+          "tags": [],
+          "default": 1,
+          "minimum": 1,
+          "description": "samples per-pixel"
+        },
+        {
           "name": "ambientSamples",
           "types": [
             "ANARI_INT32"

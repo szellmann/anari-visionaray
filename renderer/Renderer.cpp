@@ -59,6 +59,7 @@ void Renderer::commit()
     renderState.ambientRadiance = getParam<float>("ambientRadiance", 0.f);
     renderState.occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
     renderState.ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
+    renderState.pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);
   }
 }
 

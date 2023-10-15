@@ -36,8 +36,10 @@ struct VisionarayRenderer
 
   VSNRAY_FUNC
   int spp() const {
-//  return type == Raycast ? 1 : 4;
-    return 1;
+    if (type == DirectLight)
+      return asDirectLight.renderer.rendererState.pixelSamples;
+    else
+      return 1;
   };
 
   VSNRAY_FUNC

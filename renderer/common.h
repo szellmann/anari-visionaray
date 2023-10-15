@@ -97,6 +97,7 @@ struct RendererState
 {
   float4 bgColor{float3(0.f), 1.f};
   RenderMode renderMode{RenderMode::Default};
+  int pixelSamples{1};
   int accumID{0};
   int envID{-1};
   // Volume
