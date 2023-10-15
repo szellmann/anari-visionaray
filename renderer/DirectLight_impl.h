@@ -65,6 +65,10 @@ struct VisionarayRendererDirectLight
           hitPos = ray.ori + hrv.t * ray.dir;
           if (sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn))
             gn = normalize(gn);
+
+          result.Ng = gn;
+          result.Ns = gn;
+          result.albedo = hrv.albedo;
         } else {
           result.depth = hr.t;
           result.primId = hr.prim_id;
@@ -85,6 +89,7 @@ struct VisionarayRendererDirectLight
           }
 
           result.Ng = gn;
+          result.Ns = gn;
           result.albedo = color.xyz();
 
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
@@ -130,6 +135,8 @@ struct VisionarayRendererDirectLight
               shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
           } else if (rendererState.renderMode == RenderMode::Ng) {
             shadedColor = gn;
+          } else if (rendererState.renderMode == RenderMode::Albedo) {
+            shadedColor = hrv.albedo;
           }
 
           baseColor = hrv.albedo;

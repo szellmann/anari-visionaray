@@ -71,6 +71,7 @@ struct VisionarayRendererRaycast
       result.color = float4(shadedColor,1.f);
       result.depth = hr.t;
       result.Ng = gn;
+      result.Ns = gn;
       result.albedo = color.xyz();
       result.primId = hr.prim_id;
       result.objId = hr.geom_id;
@@ -92,6 +93,7 @@ struct VisionarayRendererRaycast
       rayMarchVolume(ss, ray, vol, onDevice, color, alpha);
       result.color = over(float4(color,alpha), result.color);
       result.Ng = float3{}; // TODO: gradient
+      result.Ns = float3{}; // TODO..
       result.albedo = float3{}; // TODO..
       result.primId = hr.prim_id;
       result.objId = hr.geom_id;
