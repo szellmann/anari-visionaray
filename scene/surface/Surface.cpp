@@ -7,12 +7,13 @@ namespace visionaray {
 
 Surface::Surface(VisionarayGlobalState *s) : Object(ANARI_SURFACE, s)
 {
-  s->objectCounts.surfaces++;
+  vsurf.surfID = s->objectCounts.surfaces++;
 }
 
 Surface::~Surface()
 {
   deviceState()->objectCounts.surfaces--;
+  detach();
 }
 
 void Surface::commit()
@@ -29,6 +30,11 @@ void Surface::commit()
     reportMessage(ANARI_SEVERITY_WARNING, "missing 'geometry' on ANARISurface");
     return;
   }
+
+  vsurf.geomID = m_geometry->visionarayGeometry().geomID;
+  vsurf.matID = m_material->visionarayMaterial().matID;
+
+  dispatch();
 }
 
 const Geometry *Surface::geometry() const
@@ -39,6 +45,21 @@ const Geometry *Surface::geometry() const
 const Material *Surface::material() const
 {
   return m_material.ptr;
+}
+
+void Surface::dispatch()
+{
+  if (deviceState()->dcos.surfaces.size() <= vsurf.surfID) {
+    deviceState()->dcos.surfaces.resize(vsurf.surfID+1);
+  }
+  deviceState()->dcos.surfaces[vsurf.surfID] = vsurf;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.data();
+}
+
+void Surface::detach()
+{
 }
 
 // float4 Surface::getSurfaceColor(const Ray &ray) const

@@ -185,7 +185,7 @@ void World::rebuildTLS()
         && (!i->group()->surfaces().empty()
             || !i->group()->volumes().empty())) {
       i->visionarayGeometryUpdate();
-      vscene->attachGeometry(i->visionarayGeometry(), id);
+      vscene->attachGeometry(i->visionarayGeometry(), dco::makeDefaultMaterial(), id);
     } else {
       if (i->group()->surfaces().empty()) {
         reportMessage(ANARI_SEVERITY_DEBUG,

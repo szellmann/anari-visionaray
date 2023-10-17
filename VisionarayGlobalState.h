@@ -46,6 +46,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     // One TLS per world
     std::vector<dco::TLS> TLSs;
     std::vector<dco::Group> groups;
+    std::vector<dco::Surface> surfaces;
     std::vector<dco::Instance> instances;
     std::vector<dco::Sampler> samplers;
     std::vector<dco::SpatialField> spatialFields;
@@ -58,6 +59,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   {
     dco::TLS *TLSs{nullptr};
     dco::Group *groups{nullptr};
+    dco::Surface *surfaces{nullptr};
     dco::Instance *instances{nullptr};
     dco::Sampler *samplers{nullptr};
     dco::SpatialField *spatialFields{nullptr};

@@ -177,6 +177,8 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
   if (m_geometries.size() <= geomID)
     m_geometries.resize(geomID+1);
 
+  geom.geomID = geomID;
+
   // Patch geomID into scene primitives
   if (geom.type == dco::Geometry::Triangle) {
     for (size_t i=0;i<geom.asTriangle.len;++i) {

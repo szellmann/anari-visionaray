@@ -184,12 +184,22 @@ enum class Attribute
   _0, _1, _2, _3, Color, None,
 };
 
+// Surface //
+
+struct Surface
+{
+  unsigned surfID{UINT_MAX};
+  unsigned geomID{UINT_MAX};
+  unsigned matID{UINT_MAX};
+};
+
 // Geometry //
 
 struct Geometry
 {
   enum Type { Triangle, Quad, Sphere, Cylinder, Volume, Instance, };
   Type type;
+  unsigned geomID{UINT_MAX};
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
@@ -270,6 +280,16 @@ struct Material
     matte<float> data;
   } asMatte;
 };
+
+VSNRAY_FUNC
+inline Material makeDefaultMaterial()
+{
+  Material mat;
+  mat.type = Material::Matte;
+  mat.asMatte.data.cd() = from_rgb(vec3(0,1,0));
+  mat.asMatte.data.kd() = 1.f;
+  return mat;
+}
 
 // Group //
 

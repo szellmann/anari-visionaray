@@ -26,9 +26,16 @@ struct Surface : public Object
   void markCommitted() override;
   bool isValid() const override;
 
+  dco::Surface visionaraySurface() const { return vsurf; }
+
  private:
+  void dispatch();
+  void detach();
+
   helium::IntrusivePtr<Geometry> m_geometry;
   helium::IntrusivePtr<Material> m_material;
+
+  dco::Surface vsurf;
 };
 
 // Inlined definitions ////////////////////////////////////////////////////////
