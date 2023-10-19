@@ -76,6 +76,10 @@ struct Frame : public helium::BaseFrame
   std::vector<uint32_t> m_objIdBuffer;
   std::vector<uint32_t> m_instIdBuffer;
   std::vector<vec4> m_accumBuffer;
+  // For TAA
+  std::vector<float4> m_prevColorBuffer;
+  std::vector<float4> m_currColorBuffer;
+  std::vector<float4> m_motionVecBuffer;
 
   helium::IntrusivePtr<Renderer> m_renderer;
   helium::IntrusivePtr<Camera> m_camera;

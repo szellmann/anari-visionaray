@@ -19,6 +19,7 @@ struct VisionarayRendererDirectLight
     PixelSample result;
     result.color = rendererState.bgColor;
     result.depth = 1e31f;
+    result.motionVec = float4(0,0,0,1);
 
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
@@ -97,6 +98,14 @@ struct VisionarayRendererDirectLight
 
         viewDir = -xfmDir;
 
+        // Compute motion vector; assume for now the hit was diffuse!
+        recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
+        vec3 prevWP, currWP;
+        project(prevWP, hitPos, rendererState.prevMV, rendererState.prevPR, viewport);
+        project(currWP, hitPos, rendererState.currMV, rendererState.currPR, viewport);
+
+        result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
+
         int lightID = uniformSampleOneLight(ss.random, objCounts.lights);
 
         light_sample<float> ls;
@@ -137,6 +146,8 @@ struct VisionarayRendererDirectLight
             shadedColor = gn;
           } else if (rendererState.renderMode == RenderMode::Albedo) {
             shadedColor = hrv.albedo;
+          } else if (rendererState.renderMode == RenderMode::MotionVec) {
+            shadedColor = result.motionVec.xyz();
           }
 
           baseColor = hrv.albedo;
@@ -159,6 +170,8 @@ struct VisionarayRendererDirectLight
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
           else if (rendererState.renderMode == RenderMode::Albedo)
             shadedColor = color.xyz();
+          else if (rendererState.renderMode == RenderMode::MotionVec)
+            shadedColor = result.motionVec.xyz();
           else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
             shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
           else if (rendererState.renderMode == RenderMode::GeometryAttribute1)

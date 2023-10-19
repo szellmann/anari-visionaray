@@ -57,6 +57,7 @@ typedef LCG<4> Random;
 struct ScreenSample
 {
   int x, y;
+  int frameID;
   uint2 frameSize;
   Random random;
 
@@ -76,6 +77,7 @@ struct PixelSample
   float3 Ng;
   float3 Ns;
   float3 albedo;
+  float4 motionVec;
   uint32_t primId{~0u};
   uint32_t objId{~0u};
   uint32_t instId{~0u};
@@ -86,6 +88,7 @@ enum class RenderMode
   Default,
   Ng,
   Albedo,
+  MotionVec,
   GeometryAttribute0,
   GeometryAttribute1,
   GeometryAttribute2,
@@ -100,6 +103,11 @@ struct RendererState
   int pixelSamples{1};
   int accumID{0};
   int envID{-1};
+  // TAA
+  mat4 prevMV{mat4::identity()};
+  mat4 prevPR{mat4::identity()};
+  mat4 currMV{mat4::identity()};
+  mat4 currPR{mat4::identity()};
   // Volume
   bool gradientShading{true};
   // AO

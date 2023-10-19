@@ -35,12 +35,17 @@ struct VisionarayRenderer
   }
 
   VSNRAY_FUNC
+  bool taa() const {
+    return type == DirectLight;
+  }
+
+  VSNRAY_FUNC
   int spp() const {
     if (type == DirectLight)
       return asDirectLight.renderer.rendererState.pixelSamples;
     else
       return 1;
-  };
+  }
 
   VSNRAY_FUNC
   const RendererState &rendererState() const {

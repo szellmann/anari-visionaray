@@ -217,7 +217,7 @@ static const void * ANARI_RENDERER_default_mode_info(ANARIDataType paramType, in
          }
       case 6: // value
          if(paramType == ANARI_STRING && infoType == ANARI_STRING_LIST) {
-            static const char *values[] = {"default", "Ng", "albedo", "geometry.attribute0", "geometry.attribute1", "geometry.attribute2", "geometry.attribute3", "geometry.color", nullptr};
+            static const char *values[] = {"default", "Ng", "albedo", "motionVec", "geometry.attribute0", "geometry.attribute1", "geometry.attribute2", "geometry.attribute3", "geometry.color", nullptr};
             return values;
          } else {
             return nullptr;

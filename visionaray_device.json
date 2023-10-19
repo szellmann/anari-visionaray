@@ -64,6 +64,7 @@
             "default",
             "Ng",
             "albedo",
+            "motionVec",
             "geometry.attribute0",
             "geometry.attribute1",
             "geometry.attribute2",

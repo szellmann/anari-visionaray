@@ -131,6 +131,12 @@ void Frame::commit()
     m_objIdBuffer.resize(numPixels);
   if (m_instIdType == ANARI_UINT32)
     m_instIdBuffer.resize(numPixels);
+  
+  if (m_renderer->visionarayRenderer().taa()) {
+    m_prevColorBuffer.resize(numPixels, vec4{0.f});
+    m_currColorBuffer.resize(numPixels, vec4{0.f});
+    m_motionVecBuffer.resize(numPixels);
+  }
 }
 
 bool Frame::getProperty(
@@ -192,11 +198,19 @@ void Frame::renderFrame()
 
     if (m_nextFrameReset) {
       std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
-      rend.rendererState().accumID = 0;
+      //rend.rendererState().accumID = 0;
       m_nextFrameReset = false;
     }
 
     rend.rendererState().envID = HDRI::backgroundID;
+
+    if (cam.type == dco::Camera::Pinhole) {
+      rend.rendererState().currMV = cam.asPinholeCam.get_view_matrix();
+      rend.rendererState().currPR = cam.asPinholeCam.get_proj_matrix();
+    } else if (cam.type == dco::Camera::Matrix) {
+      rend.rendererState().currMV = cam.asMatrixCam.get_view_matrix();
+      rend.rendererState().currPR = cam.asMatrixCam.get_proj_matrix();
+    }
 
     parallel_for(state->threadPool,
         tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
@@ -204,7 +218,7 @@ void Frame::renderFrame()
           for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
             for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
 
-              ScreenSample ss{x, y, size, {/*RNG*/}};
+              ScreenSample ss{x, y, m_frameData.frameID, size, {/*RNG*/}};
               Ray ray;
 
               uint64_t clock_begin = clock64();
@@ -266,7 +280,15 @@ void Frame::renderFrame()
     else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.end_frame();
 
+    rend.rendererState().prevMV = rend.rendererState().currMV;
+    rend.rendererState().prevPR = rend.rendererState().currPR;
+
     rend.rendererState().accumID++;
+
+    if (m_renderer->visionarayRenderer().taa()) {
+      memcpy(m_prevColorBuffer.data(), m_accumBuffer.data(),
+          sizeof(m_accumBuffer[0]) * m_accumBuffer.size());
+    }
 
     auto end = std::chrono::steady_clock::now();
     m_duration = std::chrono::duration<float>(end - start).count();
@@ -367,7 +389,15 @@ void Frame::writeSample(int x, int y, PixelSample s)
   const auto idx = y * m_frameData.size.x + x;
   auto *color = m_pixelBuffer.data() + (idx * m_perPixelBytes);
 
-  if (m_renderer->stochasticRendering()) {
+  if (m_renderer->visionarayRenderer().taa()) {
+    // int2 prevID = int2(float2(x,y) + m_motionVecBuffer[idx].xy());
+    // prevID = clamp(prevID, int2(0), int2(m_frameData.size));
+    // const auto prevIdx = prevID.y * m_frameData.size.x + prevID.x;
+    // float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
+    // //if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
+    // m_accumBuffer[idx] = (1-alpha)*m_prevColorBuffer[prevIdx] + alpha*s.color;
+    // s.color = m_accumBuffer[idx];
+  } else if (m_renderer->stochasticRendering()) {
     float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
     m_accumBuffer[idx] = (1-alpha)*m_accumBuffer[idx] + alpha*s.color;
     s.color = m_accumBuffer[idx];
@@ -397,6 +427,8 @@ void Frame::writeSample(int x, int y, PixelSample s)
     m_normalBuffer[idx] = s.Ng;
   if (!m_albedoBuffer.empty())
     m_albedoBuffer[idx] = s.albedo;
+  if (!m_motionVecBuffer.empty())
+    m_motionVecBuffer[idx] = s.motionVec;
   if (!m_primIdBuffer.empty())
     m_primIdBuffer[idx] = s.primId;
   if (!m_objIdBuffer.empty())
