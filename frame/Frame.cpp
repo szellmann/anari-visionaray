@@ -198,7 +198,8 @@ void Frame::renderFrame()
 
     if (m_nextFrameReset) {
       std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
-      //rend.rendererState().accumID = 0;
+      if (!rend.taa())
+        rend.rendererState().accumID = 0;
       m_nextFrameReset = false;
     }
 
@@ -390,13 +391,13 @@ void Frame::writeSample(int x, int y, PixelSample s)
   auto *color = m_pixelBuffer.data() + (idx * m_perPixelBytes);
 
   if (m_renderer->visionarayRenderer().taa()) {
-    // int2 prevID = int2(float2(x,y) + m_motionVecBuffer[idx].xy());
-    // prevID = clamp(prevID, int2(0), int2(m_frameData.size));
-    // const auto prevIdx = prevID.y * m_frameData.size.x + prevID.x;
-    // float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
-    // //if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
-    // m_accumBuffer[idx] = (1-alpha)*m_prevColorBuffer[prevIdx] + alpha*s.color;
-    // s.color = m_accumBuffer[idx];
+    int2 prevID = int2(float2(x,y) + m_motionVecBuffer[idx].xy());
+    prevID = clamp(prevID, int2(0), int2(m_frameData.size));
+    const auto prevIdx = prevID.y * m_frameData.size.x + prevID.x;
+    float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
+    //if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
+    m_accumBuffer[idx] = (1-alpha)*m_prevColorBuffer[prevIdx] + alpha*s.color;
+    s.color = m_accumBuffer[idx];
   } else if (m_renderer->stochasticRendering()) {
     float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
     m_accumBuffer[idx] = (1-alpha)*m_accumBuffer[idx] + alpha*s.color;

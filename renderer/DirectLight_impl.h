@@ -147,7 +147,14 @@ struct VisionarayRendererDirectLight
           } else if (rendererState.renderMode == RenderMode::Albedo) {
             shadedColor = hrv.albedo;
           } else if (rendererState.renderMode == RenderMode::MotionVec) {
-            shadedColor = result.motionVec.xyz();
+            vec2 xy = normalize(result.motionVec.xy());
+            float angle = (1.f+ sinf(xy.x)) *.5f;
+            float mag = 1.f;//length(result.motionVec.xy());
+            if (ss.debug()) {
+              std::cout << angle << '\n';
+            }
+            vec3 hsv(angle,1.f,mag);
+            shadedColor = hsv2rgb(hsv);
           }
 
           baseColor = hrv.albedo;
@@ -170,9 +177,23 @@ struct VisionarayRendererDirectLight
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
           else if (rendererState.renderMode == RenderMode::Albedo)
             shadedColor = color.xyz();
-          else if (rendererState.renderMode == RenderMode::MotionVec)
-            shadedColor = result.motionVec.xyz();
-          else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
+          else if (rendererState.renderMode == RenderMode::MotionVec) {
+            vec2 xy = result.motionVec.xy();
+            //xy.x /= float(ss.frameSize.x);
+            //xy.y /= float(ss.frameSize.y);
+            float x = xy.x, y = xy.y;
+            vec2 plr = length(xy) < 1e-10f ? vec2(0.f) : vec2(sqrt(x * x + y * y),atan(y / x));
+            //float angle = length(xy) < 1e-8f ? 0 : acos(dot(xy, vec2(1,0))/length(xy)) * visionaray::constants::radians_to_degrees<float>();
+            //float angle = (plr.y+M_PI*.5f) * visionaray::constants::radians_to_degrees<float>();
+            float angle = 180+plr.y * visionaray::constants::radians_to_degrees<float>();
+            float mag = plr.x;
+            vec3 hsv(angle,1.f,mag);
+            if (ss.debug()) {
+              std::cout << xy  << ',' << angle << ',' << hsv2rgb(hsv) << '\n';
+            }
+            shadedColor = hsv2rgb(hsv);
+           // shadedColor = result.motionVec.xyz();
+          } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
             shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
           else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
             shadedColor = getAttribute(geom, dco::Attribute::_1, hr.prim_id, uv).xyz();

@@ -121,6 +121,65 @@ struct RendererState
 
 };
 
+inline VSNRAY_FUNC
+vec3 hsv2rgb(vec3 in)
+{
+    float      hh, p, q, t, ff;
+    long        i;
+    vec3         out;
+
+    if(in.y <= 0.0) {       // < is bogus, just shuts up warnings
+        out.x = in.z;
+        out.y = in.z;
+        out.z = in.z;
+        return out;
+    }
+    hh = in.x;
+    if(hh >= 360.0) hh = 0.0;
+    hh /= 60.0;
+    i = (long)hh;
+    ff = hh - i;
+    p = in.z * (1.0 - in.y);
+    q = in.z * (1.0 - (in.y * ff));
+    t = in.z * (1.0 - (in.y * (1.0 - ff)));
+
+    switch(i) {
+        case 0:
+            out.x = in.z;
+            out.y = t;
+            out.z = p;
+            break;
+        case 1:
+            out.x = q;
+            out.y = in.z;
+            out.z = p;
+            break;
+        case 2:
+            out.x = p;
+            out.y = in.z;
+            out.z = t;
+            break;
+
+        case 3:
+            out.x = p;
+            out.y = q;
+            out.z = in.z;
+            break;
+        case 4:
+            out.x = t;
+            out.y = p;
+            out.z = in.z;
+            break;
+        case 5:
+        default:
+            out.x = in.z;
+            out.y = p;
+            out.z = q;
+            break;
+    }
+    return out;
+}
+
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 {
   int which = int(rnd() * numLights); if (which == numLights) which = 0;
