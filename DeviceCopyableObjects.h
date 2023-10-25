@@ -11,6 +11,7 @@
 #include "visionaray/spot_light.h"
 #include "visionaray/thin_lens_camera.h"
 // ours
+#include "frame/common.h"
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
 #include "common.h"
@@ -420,6 +421,108 @@ struct Camera
   unsigned camID{UINT_MAX};
   matrix_camera asMatrixCam;
   thin_lens_camera asPinholeCam;
+};
+
+// Frame //
+
+struct Frame
+{
+  unsigned frameID{UINT_MAX};
+  uint2 size;
+  float2 invSize;
+  int perPixelBytes{1};
+  bool stochasticRendering{false};
+
+  anari::DataType colorType{ANARI_UNKNOWN};
+  anari::DataType depthType{ANARI_UNKNOWN};
+  anari::DataType normalType{ANARI_UNKNOWN};
+  anari::DataType albedoType{ANARI_UNKNOWN};
+  anari::DataType primIdType{ANARI_UNKNOWN};
+  anari::DataType objIdType{ANARI_UNKNOWN};
+  anari::DataType instIdType{ANARI_UNKNOWN};
+
+  uint8_t *pixelBuffer{nullptr};
+  float *depthBuffer{nullptr};
+  float3 *normalBuffer{nullptr};
+  float3 *albedoBuffer{nullptr};
+  uint32_t *primIdBuffer{nullptr};
+  uint32_t *objIdBuffer{nullptr};
+  uint32_t *instIdBuffer{nullptr};
+  float4 *accumBuffer{nullptr};
+
+  VSNRAY_FUNC
+  inline PixelSample accumSample(int x, int y, int accumID, PixelSample s)
+  {
+    const auto idx = y * size.x + x;
+
+    if (0/*&&taa*/) {
+      //int2 prevID = int2(float2(x,y) + m_motionVecBuffer[idx].xy());
+      //prevID = clamp(prevID, int2(0), int2(m_frameData.size));
+      //const auto prevIdx = prevID.y * m_frameData.size.x + prevID.x;
+      //float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
+      ////if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
+      //m_accumBuffer[idx] = (1-alpha)*m_prevColorBuffer[prevIdx] + alpha*s.color;
+      //s.color = m_accumBuffer[idx];
+    } else if (stochasticRendering) {
+      float alpha = 1.f / (accumID+1);
+      accumBuffer[idx] = (1-alpha)*accumBuffer[idx] + alpha*s.color;
+      s.color = accumBuffer[idx];
+    }
+
+    return s;
+  }
+
+  VSNRAY_FUNC
+  inline void toneMap(int x, int y, PixelSample s)
+  {
+    const auto idx = y * size.x + x;
+    auto *color = pixelBuffer + (idx * perPixelBytes);
+
+    switch (colorType) {
+    case ANARI_UFIXED8_VEC4: {
+      auto c = cvt_uint32(s.color);
+      std::memcpy(color, &c, sizeof(c));
+      break;
+    }
+    case ANARI_UFIXED8_RGBA_SRGB: {
+      auto c = cvt_uint32_srgb(s.color);
+      std::memcpy(color, &c, sizeof(c));
+      break;
+    }
+    case ANARI_FLOAT32_VEC4: {
+      std::memcpy(color, &s.color, sizeof(s.color));
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
+  VSNRAY_FUNC
+  inline void fillGBuffer(int x, int y, PixelSample s)
+  {
+    const auto idx = y * size.x + x;
+
+    if (depthBuffer)
+      depthBuffer[idx] = s.depth;
+    if (normalBuffer)
+      normalBuffer[idx] = s.Ng;
+    if (albedoBuffer)
+      albedoBuffer[idx] = s.albedo;
+    if (primIdBuffer)
+      primIdBuffer[idx] = s.primId;
+    if (objIdBuffer)
+      objIdBuffer[idx] = s.objId;
+    if (instIdBuffer)
+      instIdBuffer[idx] = s.instId;
+  }
+
+  VSNRAY_FUNC
+  inline void writeSample(int x, int y, int accumID, PixelSample s)
+  {
+    toneMap(x, y, accumSample(x, y, accumID, s));
+    fillGBuffer(x, y, s);
+  }
 };
 
 // Light //

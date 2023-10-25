@@ -44,29 +44,16 @@ struct Frame : public helium::BaseFrame
   void wait() const;
 
  private:
-  float2 screenFromPixel(const float2 &p) const;
-  void writeSample(int x, int y, PixelSample s);
   void checkAccumulationReset();
+
+  void dispatch();
+  void detach();
 
   //// Data ////
 
   bool m_valid{false};
-  int m_perPixelBytes{1};
 
-  struct FrameData
-  {
-    int frameID{0};
-    uint2 size;
-    float2 invSize;
-  } m_frameData;
-
-  anari::DataType m_colorType{ANARI_UNKNOWN};
-  anari::DataType m_depthType{ANARI_UNKNOWN};
-  anari::DataType m_normalType{ANARI_UNKNOWN};
-  anari::DataType m_albedoType{ANARI_UNKNOWN};
-  anari::DataType m_primIdType{ANARI_UNKNOWN};
-  anari::DataType m_objIdType{ANARI_UNKNOWN};
-  anari::DataType m_instIdType{ANARI_UNKNOWN};
+  dco::Frame vframe;
 
   std::vector<uint8_t> m_pixelBuffer;
   std::vector<float> m_depthBuffer;
