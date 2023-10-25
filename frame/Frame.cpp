@@ -4,31 +4,13 @@
 #include <random>
 #include <thread>
 // visionaray
-#include "visionaray/detail/color_conversion.h"
 #include "visionaray/detail/parallel_for.h"
 // ours
+#include "frame/common.h"
 #include "scene/light/HDRI.h"
 #include "Frame.h"
 
 namespace visionaray {
-
-// Helper functions ///////////////////////////////////////////////////////////
-
-static uint32_t cvt_uint32(const float &f)
-{
-  return static_cast<uint32_t>(255.f * std::clamp(f, 0.f, 1.f));
-}
-
-static uint32_t cvt_uint32(const float4 &v)
-{
-  return (cvt_uint32(v.x) << 0) | (cvt_uint32(v.y) << 8)
-      | (cvt_uint32(v.z) << 16) | (cvt_uint32(v.w) << 24);
-}
-
-static uint32_t cvt_uint32_srgb(const float4 &v)
-{
-  return cvt_uint32(float4(linear_to_srgb(v.xyz()), v.w));
-}
 
 template <typename R, typename TASK_T>
 static std::future<R> async(TASK_T &&fcn)
@@ -52,12 +34,13 @@ static bool is_ready(const std::future<R> &f)
 
 Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
 {
-  s->objectCounts.frames++;
+  vframe.frameID = s->objectCounts.frames++;
 }
 
 Frame::~Frame()
 {
   wait();
+  detach();
   deviceState()->objectCounts.frames--;
 }
 
@@ -94,24 +77,26 @@ void Frame::commit()
   m_valid = m_renderer && m_renderer->isValid() && m_camera
       && m_camera->isValid() && m_world && m_world->isValid();
 
-  m_colorType = getParam<anari::DataType>("channel.color", ANARI_UNKNOWN);
-  m_depthType = getParam<anari::DataType>("channel.depth", ANARI_UNKNOWN);
-  m_normalType = getParam<anari::DataType>("channel.normal", ANARI_UNKNOWN);
-  m_albedoType = getParam<anari::DataType>("channel.albedo", ANARI_UNKNOWN);
-  m_primIdType =
+  vframe.colorType = getParam<anari::DataType>("channel.color", ANARI_UNKNOWN);
+  vframe.depthType = getParam<anari::DataType>("channel.depth", ANARI_UNKNOWN);
+  vframe.normalType = getParam<anari::DataType>("channel.normal", ANARI_UNKNOWN);
+  vframe.albedoType = getParam<anari::DataType>("channel.albedo", ANARI_UNKNOWN);
+  vframe.primIdType =
       getParam<anari::DataType>("channel.primitiveId", ANARI_UNKNOWN);
-  m_objIdType = getParam<anari::DataType>("channel.objectId", ANARI_UNKNOWN);
-  m_instIdType = getParam<anari::DataType>("channel.instanceId", ANARI_UNKNOWN);
+  vframe.objIdType = getParam<anari::DataType>("channel.objectId", ANARI_UNKNOWN);
+  vframe.instIdType = getParam<anari::DataType>("channel.instanceId", ANARI_UNKNOWN);
 
-  m_frameData.size = getParam<uint2>("size", uint2(10));
-  m_frameData.invSize = 1.f / float2(m_frameData.size);
+  vframe.size = getParam<uint2>("size", uint2(10));
+  vframe.invSize = 1.f / float2(vframe.size);
 
-  const auto numPixels = m_frameData.size.x * m_frameData.size.y;
+  const auto numPixels = vframe.size.x * vframe.size.y;
 
-  m_perPixelBytes = 4 * (m_colorType == ANARI_FLOAT32_VEC4 ? 4 : 1);
-  m_pixelBuffer.resize(numPixels * m_perPixelBytes);
+  vframe.stochasticRendering = m_renderer->stochasticRendering();
 
-  m_depthBuffer.resize(m_depthType == ANARI_FLOAT32 ? numPixels : 0);
+  vframe.perPixelBytes = 4 * (vframe.colorType == ANARI_FLOAT32_VEC4 ? 4 : 1);
+  m_pixelBuffer.resize(numPixels * vframe.perPixelBytes);
+
+  m_depthBuffer.resize(vframe.depthType == ANARI_FLOAT32 ? numPixels : 0);
   m_accumBuffer.resize(numPixels, vec4{0.f});
   m_frameChanged = true;
 
@@ -121,16 +106,27 @@ void Frame::commit()
   m_objIdBuffer.clear();
   m_instIdBuffer.clear();
 
-  if (m_normalType == ANARI_FLOAT32_VEC3)
+  if (vframe.normalType == ANARI_FLOAT32_VEC3)
     m_normalBuffer.resize(numPixels);
-  if (m_albedoType == ANARI_FLOAT32_VEC3)
+  if (vframe.albedoType == ANARI_FLOAT32_VEC3)
     m_albedoBuffer.resize(numPixels);
-  if (m_primIdType == ANARI_UINT32)
+  if (vframe.primIdType == ANARI_UINT32)
     m_primIdBuffer.resize(numPixels);
-  if (m_objIdType == ANARI_UINT32)
+  if (vframe.objIdType == ANARI_UINT32)
     m_objIdBuffer.resize(numPixels);
-  if (m_instIdType == ANARI_UINT32)
+  if (vframe.instIdType == ANARI_UINT32)
     m_instIdBuffer.resize(numPixels);
+
+  vframe.pixelBuffer = m_pixelBuffer.data();
+  vframe.depthBuffer = m_depthBuffer.data();
+  vframe.normalBuffer = m_normalBuffer.data();
+  vframe.albedoBuffer = m_albedoBuffer.data();
+  vframe.primIdBuffer = m_primIdBuffer.data();
+  vframe.objIdBuffer = m_objIdBuffer.data();
+  vframe.instIdBuffer = m_instIdBuffer.data();
+  vframe.accumBuffer = m_accumBuffer.data();
+
+  dispatch();
 }
 
 bool Frame::getProperty(
@@ -180,7 +176,7 @@ void Frame::renderFrame()
   m_future = async<void>([&, state, start]() {
     m_world->visionaraySceneUpdate();
 
-    const auto &size = m_frameData.size;
+    const auto &size = vframe.size;
     dco::Camera cam = m_camera->visionarayCamera();
     VisionarayRenderer &rend = m_renderer->visionarayRenderer();
     VisionarayScene scene = m_world->visionarayScene();
@@ -256,7 +252,7 @@ void Frame::renderFrame()
               // taken from first sample
               PixelSample finalSample = firstSample;
               finalSample.color = accumColor*(1.f/rend.spp());
-              writeSample(x, y, finalSample);
+              vframe.writeSample(x, y, rend.rendererState().accumID, finalSample);
             }
           }
         });
@@ -280,11 +276,11 @@ void *Frame::map(std::string_view channel,
 {
   wait();
 
-  *width = m_frameData.size.x;
-  *height = m_frameData.size.y;
+  *width = vframe.size.x;
+  *height = vframe.size.y;
 
   if (channel == "color" || channel == "channel.color") {
-    *pixelType = m_colorType;
+    *pixelType = vframe.colorType;
     return mapColorBuffer();
   } else if (channel == "depth" || channel == "channel.depth") {
     *pixelType = ANARI_FLOAT32;
@@ -357,54 +353,6 @@ void Frame::wait() const
   }
 }
 
-float2 Frame::screenFromPixel(const float2 &p) const
-{
-  return p * m_frameData.invSize;
-}
-
-void Frame::writeSample(int x, int y, PixelSample s)
-{
-  const auto idx = y * m_frameData.size.x + x;
-  auto *color = m_pixelBuffer.data() + (idx * m_perPixelBytes);
-
-  if (m_renderer->stochasticRendering()) {
-    float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
-    m_accumBuffer[idx] = (1-alpha)*m_accumBuffer[idx] + alpha*s.color;
-    s.color = m_accumBuffer[idx];
-  }
-
-  switch (m_colorType) {
-  case ANARI_UFIXED8_VEC4: {
-    auto c = cvt_uint32(s.color);
-    std::memcpy(color, &c, sizeof(c));
-    break;
-  }
-  case ANARI_UFIXED8_RGBA_SRGB: {
-    auto c = cvt_uint32_srgb(s.color);
-    std::memcpy(color, &c, sizeof(c));
-    break;
-  }
-  case ANARI_FLOAT32_VEC4: {
-    std::memcpy(color, &s.color, sizeof(s.color));
-    break;
-  }
-  default:
-    break;
-  }
-  if (!m_depthBuffer.empty())
-    m_depthBuffer[idx] = s.depth;
-  if (!m_normalBuffer.empty())
-    m_normalBuffer[idx] = s.Ng;
-  if (!m_albedoBuffer.empty())
-    m_albedoBuffer[idx] = s.albedo;
-  if (!m_primIdBuffer.empty())
-    m_primIdBuffer[idx] = s.primId;
-  if (!m_objIdBuffer.empty())
-    m_objIdBuffer[idx] = s.objId;
-  if (!m_instIdBuffer.empty())
-    m_instIdBuffer[idx] = s.instId;
-}
-
 void Frame::checkAccumulationReset()
 {
   if (m_nextFrameReset)
@@ -419,6 +367,30 @@ void Frame::checkAccumulationReset()
   //   m_lastUploadOccured = state.uploadBuffer.lastFlush();
   //   m_nextFrameReset = true;
   // }
+}
+
+void Frame::dispatch()
+{
+  if (deviceState()->dcos.frames.size() <= vframe.frameID) {
+    deviceState()->dcos.frames.resize(vframe.frameID+1);
+  }
+  deviceState()->dcos.frames[vframe.frameID] = vframe;
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.frames = deviceState()->dcos.frames.data();
+}
+
+void Frame::detach()
+{
+  if (deviceState()->dcos.frames.size() > vframe.frameID) {
+    if (deviceState()->dcos.frames[vframe.frameID].frameID == vframe.frameID) {
+      deviceState()->dcos.frames.erase(
+          deviceState()->dcos.frames.begin() + vframe.frameID);
+    }
+  }
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.frames = deviceState()->dcos.frames.data();
 }
 
 } // namespace visionaray

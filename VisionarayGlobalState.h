@@ -53,6 +53,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     std::vector<dco::GridAccel> gridAccels;
     std::vector<dco::TransferFunction> transferFunctions;
     std::vector<dco::Light> lights;
+    std::vector<dco::Frame> frames;
   } dcos;
 
   struct DeviceObjectRegistry
@@ -66,6 +67,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::GridAccel *gridAccels{nullptr};
     dco::TransferFunction *transferFunctions{nullptr};
     dco::Light *lights{nullptr};
+    dco::Frame *frames{nullptr};
   } onDevice;
 
   Frame *currentFrame{nullptr};
