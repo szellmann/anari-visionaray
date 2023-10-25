@@ -445,27 +445,30 @@ struct Frame
   float *depthBuffer{nullptr};
   float3 *normalBuffer{nullptr};
   float3 *albedoBuffer{nullptr};
+  float4 *motionVecBuffer{nullptr};
   uint32_t *primIdBuffer{nullptr};
   uint32_t *objIdBuffer{nullptr};
   uint32_t *instIdBuffer{nullptr};
   float4 *accumBuffer{nullptr};
-  float4 *prevColorBuffer{nullptr};
-  float4 *currColorBuffer{nullptr};
-  float4 *motionVecBuffer{nullptr};
+
+  struct {
+    bool enabled{false};
+    float4 *currBuffer{nullptr};
+    float4 *prevBuffer{nullptr};
+  } taa;
 
   VSNRAY_FUNC
   inline PixelSample accumSample(int x, int y, int accumID, PixelSample s)
   {
     const auto idx = y * size.x + x;
 
-    if (1/*taa*/) {
+    if (taa.enabled) {
       int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
       prevID = clamp(prevID, int2(0), int2(size));
       const auto prevIdx = prevID.y * size.x + prevID.x;
-      float alpha = 1.f / (accumID+1);
-      //if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
-      accumBuffer[idx] = (1-alpha)*prevColorBuffer[prevIdx] + alpha*s.color;
-      s.color = accumBuffer[idx];
+      float alpha = 0.2f;//accumID == 0 ? 0.2f : 1.f / (accumID+1);
+      taa.currBuffer[idx] = (1-alpha)*taa.prevBuffer[prevIdx] + alpha*s.color;
+      s.color = taa.currBuffer[idx];
     } else if (stochasticRendering) {
       float alpha = 1.f / (accumID+1);
       accumBuffer[idx] = (1-alpha)*accumBuffer[idx] + alpha*s.color;

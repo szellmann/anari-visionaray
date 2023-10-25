@@ -92,6 +92,7 @@ void Frame::commit()
   const auto numPixels = vframe.size.x * vframe.size.y;
 
   vframe.stochasticRendering = m_renderer->stochasticRendering();
+  vframe.taa.enabled = m_renderer->visionarayRenderer().taa();
 
   vframe.perPixelBytes = 4 * (vframe.colorType == ANARI_FLOAT32_VEC4 ? 4 : 1);
   m_pixelBuffer.resize(numPixels * vframe.perPixelBytes);
@@ -118,8 +119,8 @@ void Frame::commit()
     m_instIdBuffer.resize(numPixels);
   
   if (m_renderer->visionarayRenderer().taa()) {
-    m_prevColorBuffer.resize(numPixels, vec4{0.f});
-    m_currColorBuffer.resize(numPixels, vec4{0.f});
+    taa.currBuffer.resize(numPixels, vec4{0.f});
+    taa.prevBuffer.resize(numPixels, vec4{0.f});
     m_motionVecBuffer.resize(numPixels);
   }
 
@@ -127,13 +128,14 @@ void Frame::commit()
   vframe.depthBuffer = m_depthBuffer.data();
   vframe.normalBuffer = m_normalBuffer.data();
   vframe.albedoBuffer = m_albedoBuffer.data();
+  vframe.motionVecBuffer = m_motionVecBuffer.data();
   vframe.primIdBuffer = m_primIdBuffer.data();
   vframe.objIdBuffer = m_objIdBuffer.data();
   vframe.instIdBuffer = m_instIdBuffer.data();
   vframe.accumBuffer = m_accumBuffer.data();
-  vframe.prevColorBuffer = m_prevColorBuffer.data();
-  vframe.currColorBuffer = m_currColorBuffer.data();
-  vframe.motionVecBuffer = m_motionVecBuffer.data();
+
+  vframe.taa.currBuffer = taa.currBuffer.data();
+  vframe.taa.prevBuffer = taa.prevBuffer.data();
 
   dispatch();
 }
@@ -197,8 +199,7 @@ void Frame::renderFrame()
 
     if (m_nextFrameReset) {
       std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
-      if (!rend.taa())
-        rend.rendererState().accumID = 0;
+      rend.rendererState().accumID = 0;
       m_nextFrameReset = false;
     }
 
@@ -286,8 +287,8 @@ void Frame::renderFrame()
     rend.rendererState().accumID++;
 
     if (m_renderer->visionarayRenderer().taa()) {
-      memcpy(m_prevColorBuffer.data(), m_accumBuffer.data(),
-          sizeof(m_accumBuffer[0]) * m_accumBuffer.size());
+      memcpy(taa.prevBuffer.data(), taa.currBuffer.data(),
+          sizeof(taa.currBuffer[0]) * taa.currBuffer.size());
     }
 
     auto end = std::chrono::steady_clock::now();
