@@ -116,14 +116,12 @@ void Frame::commit()
     m_objIdBuffer.resize(numPixels);
   if (vframe.instIdType == ANARI_UINT32)
     m_instIdBuffer.resize(numPixels);
-<<<<<<< HEAD
   
   if (m_renderer->visionarayRenderer().taa()) {
     m_prevColorBuffer.resize(numPixels, vec4{0.f});
     m_currColorBuffer.resize(numPixels, vec4{0.f});
     m_motionVecBuffer.resize(numPixels);
   }
-=======
 
   vframe.pixelBuffer = m_pixelBuffer.data();
   vframe.depthBuffer = m_depthBuffer.data();
@@ -133,9 +131,11 @@ void Frame::commit()
   vframe.objIdBuffer = m_objIdBuffer.data();
   vframe.instIdBuffer = m_instIdBuffer.data();
   vframe.accumBuffer = m_accumBuffer.data();
+  vframe.prevColorBuffer = m_prevColorBuffer.data();
+  vframe.currColorBuffer = m_currColorBuffer.data();
+  vframe.motionVecBuffer = m_motionVecBuffer.data();
 
   dispatch();
->>>>>>> main
 }
 
 bool Frame::getProperty(
@@ -218,7 +218,7 @@ void Frame::renderFrame()
           for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
             for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
 
-              ScreenSample ss{x, y, m_frameData.frameID, size, {/*RNG*/}};
+              ScreenSample ss{x, y, (int)vframe.frameID, size, {/*RNG*/}};
               Ray ray;
 
               uint64_t clock_begin = clock64();

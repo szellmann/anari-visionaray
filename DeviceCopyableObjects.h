@@ -449,20 +449,23 @@ struct Frame
   uint32_t *objIdBuffer{nullptr};
   uint32_t *instIdBuffer{nullptr};
   float4 *accumBuffer{nullptr};
+  float4 *prevColorBuffer{nullptr};
+  float4 *currColorBuffer{nullptr};
+  float4 *motionVecBuffer{nullptr};
 
   VSNRAY_FUNC
   inline PixelSample accumSample(int x, int y, int accumID, PixelSample s)
   {
     const auto idx = y * size.x + x;
 
-    if (0/*&&taa*/) {
-      //int2 prevID = int2(float2(x,y) + m_motionVecBuffer[idx].xy());
-      //prevID = clamp(prevID, int2(0), int2(m_frameData.size));
-      //const auto prevIdx = prevID.y * m_frameData.size.x + prevID.x;
-      //float alpha = 1.f / (m_renderer->visionarayRenderer().rendererState().accumID+1);
-      ////if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
-      //m_accumBuffer[idx] = (1-alpha)*m_prevColorBuffer[prevIdx] + alpha*s.color;
-      //s.color = m_accumBuffer[idx];
+    if (1/*taa*/) {
+      int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
+      prevID = clamp(prevID, int2(0), int2(size));
+      const auto prevIdx = prevID.y * size.x + prevID.x;
+      float alpha = 1.f / (accumID+1);
+      //if (length(m_motionVecBuffer[idx].xy()) > 1.f) alpha = 1.f;
+      accumBuffer[idx] = (1-alpha)*prevColorBuffer[prevIdx] + alpha*s.color;
+      s.color = accumBuffer[idx];
     } else if (stochasticRendering) {
       float alpha = 1.f / (accumID+1);
       accumBuffer[idx] = (1-alpha)*accumBuffer[idx] + alpha*s.color;
@@ -509,6 +512,8 @@ struct Frame
       normalBuffer[idx] = s.Ng;
     if (albedoBuffer)
       albedoBuffer[idx] = s.albedo;
+    if (motionVecBuffer)
+      motionVecBuffer[idx] = s.motionVec;
     if (primIdBuffer)
       primIdBuffer[idx] = s.primId;
     if (objIdBuffer)
