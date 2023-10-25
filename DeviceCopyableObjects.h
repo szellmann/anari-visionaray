@@ -451,16 +451,24 @@ struct Frame
   float4 *accumBuffer{nullptr};
 
   VSNRAY_FUNC
-  inline void writeSample(int x, int y, int accumID, PixelSample s)
+  inline PixelSample accumSample(int x, int y, int accumID, PixelSample s)
   {
     const auto idx = y * size.x + x;
-    auto *color = pixelBuffer + (idx * perPixelBytes);
 
     if (stochasticRendering) {
       float alpha = 1.f / (accumID+1);
       accumBuffer[idx] = (1-alpha)*accumBuffer[idx] + alpha*s.color;
       s.color = accumBuffer[idx];
     }
+
+    return s;
+  }
+
+  VSNRAY_FUNC
+  inline void toneMap(int x, int y, PixelSample s)
+  {
+    const auto idx = y * size.x + x;
+    auto *color = pixelBuffer + (idx * perPixelBytes);
 
     switch (colorType) {
     case ANARI_UFIXED8_VEC4: {
@@ -480,6 +488,13 @@ struct Frame
     default:
       break;
     }
+  }
+
+  VSNRAY_FUNC
+  inline void fillGBuffer(int x, int y, PixelSample s)
+  {
+    const auto idx = y * size.x + x;
+
     if (depthBuffer)
       depthBuffer[idx] = s.depth;
     if (normalBuffer)
@@ -492,6 +507,13 @@ struct Frame
       objIdBuffer[idx] = s.objId;
     if (instIdBuffer)
       instIdBuffer[idx] = s.instId;
+  }
+
+  VSNRAY_FUNC
+  inline void writeSample(int x, int y, int accumID, PixelSample s)
+  {
+    toneMap(x, y, accumSample(x, y, accumID, s));
+    fillGBuffer(x, y, s);
   }
 };
 
