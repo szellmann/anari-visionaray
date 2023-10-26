@@ -92,6 +92,26 @@
           "description": "heat map scaling factor"
         },
         {
+          "name": "taa",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": true,
+          "description": "Toggle TAA and accumulation"
+        },
+        {
+          "name": "taaAlpha",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.3,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "TAA weighting factor"
+        },
+        {
           "name": "pixelSamples",
           "types": [
             "ANARI_INT32"

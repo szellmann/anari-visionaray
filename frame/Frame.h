@@ -45,6 +45,7 @@ struct Frame : public helium::BaseFrame
 
  private:
   void checkAccumulationReset();
+  bool checkTAAReset();
 
   void dispatch();
   void detach();

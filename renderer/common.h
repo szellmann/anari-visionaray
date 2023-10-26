@@ -91,6 +91,8 @@ struct RendererState
   int accumID{0};
   int envID{-1};
   // TAA
+  bool taaEnabled{true};
+  float taaAlpha{0.3f};
   mat4 prevMV{mat4::identity()};
   mat4 prevPR{mat4::identity()};
   mat4 currMV{mat4::identity()};

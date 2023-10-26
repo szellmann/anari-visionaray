@@ -36,7 +36,7 @@ struct VisionarayRenderer
 
   VSNRAY_FUNC
   bool taa() const {
-    return type == DirectLight;
+    return type == DirectLight && rendererState().taaEnabled;
   }
 
   VSNRAY_FUNC

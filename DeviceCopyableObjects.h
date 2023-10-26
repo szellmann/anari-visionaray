@@ -428,6 +428,7 @@ struct Camera
 struct Frame
 {
   unsigned frameID{UINT_MAX};
+  unsigned frameCounter{0};
   uint2 size;
   float2 invSize;
   int perPixelBytes{1};
@@ -453,6 +454,7 @@ struct Frame
 
   struct {
     bool enabled{false};
+    float alpha{0.3f};
     float4 *currBuffer{nullptr};
     float4 *prevBuffer{nullptr};
     float3 *currAlbedoBuffer{nullptr};
@@ -468,13 +470,13 @@ struct Frame
       int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
       prevID = clamp(prevID, int2(0), int2(size));
       const auto prevIdx = prevID.y * size.x + prevID.x;
-      float alpha = 0.2f;
-      if (!(fabsf(taa.prevAlbedoBuffer[prevIdx].x-taa.currAlbedoBuffer[idx].x) < 1e-20f
-         && fabsf(taa.prevAlbedoBuffer[prevIdx].y-taa.currAlbedoBuffer[idx].y) < 1e-20f
-         && fabsf(taa.prevAlbedoBuffer[prevIdx].z-taa.currAlbedoBuffer[idx].z) < 1e-20f)) {
-        alpha = 1.f;
+      float alpha = taa.alpha; // TODO!
+      if (!(fabsf(taa.prevAlbedoBuffer[prevIdx].x-taa.currAlbedoBuffer[idx].x) < 1e-2f
+         && fabsf(taa.prevAlbedoBuffer[prevIdx].y-taa.currAlbedoBuffer[idx].y) < 1e-2f
+         && fabsf(taa.prevAlbedoBuffer[prevIdx].z-taa.currAlbedoBuffer[idx].z) < 1e-2f)) {
+        alpha = 0.f;
       }
-      taa.currBuffer[idx] = (1-alpha)*taa.prevBuffer[prevIdx] + alpha*s.color;
+      taa.currBuffer[idx] = (1-alpha)*s.color + alpha*taa.prevBuffer[prevIdx];
       s.color = taa.currBuffer[idx];
     } else if (stochasticRendering) {
       float alpha = 1.f / (accumID+1);

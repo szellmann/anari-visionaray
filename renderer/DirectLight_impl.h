@@ -19,6 +19,7 @@ struct VisionarayRendererDirectLight
     PixelSample result;
     result.color = rendererState.bgColor;
     result.depth = 1e31f;
+    result.albedo = float3(0.f);
     result.motionVec = float4(0,0,0,1);
 
     if (onDevice.TLSs[worldID].num_primitives() == 0)
@@ -150,9 +151,6 @@ struct VisionarayRendererDirectLight
             vec2 xy = normalize(result.motionVec.xy());
             float angle = (1.f+ sinf(xy.x)) *.5f;
             float mag = 1.f;//length(result.motionVec.xy());
-            if (ss.debug()) {
-              std::cout << angle << '\n';
-            }
             vec3 hsv(angle,1.f,mag);
             shadedColor = hsv2rgb(hsv);
           }
@@ -188,11 +186,7 @@ struct VisionarayRendererDirectLight
             float angle = 180+plr.y * visionaray::constants::radians_to_degrees<float>();
             float mag = plr.x;
             vec3 hsv(angle,1.f,mag);
-            if (ss.debug()) {
-              std::cout << xy  << ',' << angle << ',' << hsv2rgb(hsv) << '\n';
-            }
             shadedColor = hsv2rgb(hsv);
-           // shadedColor = result.motionVec.xyz();
           } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
             shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
           else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
@@ -208,7 +202,6 @@ struct VisionarayRendererDirectLight
             baseColor = color.xyz();
           else
             baseColor = shadedColor;
-          //if (ss.debug()) std::cout << ls.pdf << '\n';
         }
 
         // Convert primary to shadow ray

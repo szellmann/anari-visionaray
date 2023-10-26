@@ -92,13 +92,13 @@ void Frame::commit()
   const auto numPixels = vframe.size.x * vframe.size.y;
 
   vframe.stochasticRendering = m_renderer->stochasticRendering();
-  vframe.taa.enabled = m_renderer->visionarayRenderer().taa();
 
   vframe.perPixelBytes = 4 * (vframe.colorType == ANARI_FLOAT32_VEC4 ? 4 : 1);
   m_pixelBuffer.resize(numPixels * vframe.perPixelBytes);
 
   m_depthBuffer.resize(vframe.depthType == ANARI_FLOAT32 ? numPixels : 0);
   m_accumBuffer.resize(numPixels, vec4{0.f});
+  m_motionVecBuffer.resize(numPixels, vec4{0,0,0,1});
   m_frameChanged = true;
 
   m_normalBuffer.clear();
@@ -118,28 +118,17 @@ void Frame::commit()
   if (vframe.instIdType == ANARI_UINT32)
     m_instIdBuffer.resize(numPixels);
   
-  if (m_renderer->visionarayRenderer().taa()) {
-    taa.currBuffer.resize(numPixels, vec4{0.f});
-    taa.prevBuffer.resize(numPixels, vec4{0.f});
-    taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
-    taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
-    m_motionVecBuffer.resize(numPixels);
-  }
-
   vframe.pixelBuffer = m_pixelBuffer.data();
   vframe.depthBuffer = m_depthBuffer.data();
   vframe.normalBuffer = m_normalBuffer.data();
   vframe.albedoBuffer = m_albedoBuffer.data();
-  vframe.motionVecBuffer = m_motionVecBuffer.data();
   vframe.primIdBuffer = m_primIdBuffer.data();
   vframe.objIdBuffer = m_objIdBuffer.data();
   vframe.instIdBuffer = m_instIdBuffer.data();
   vframe.accumBuffer = m_accumBuffer.data();
+  vframe.motionVecBuffer = m_motionVecBuffer.data();
 
-  vframe.taa.currBuffer = taa.currBuffer.data();
-  vframe.taa.prevBuffer = taa.prevBuffer.data();
-  vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
-  vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
+  checkTAAReset();
 
   dispatch();
 }
@@ -184,6 +173,10 @@ void Frame::renderFrame()
   }
 
   checkAccumulationReset();
+  // TAA is a parameter on the renderer; we check it here to
+  // avoid having to use commit observers on the renderer
+  if (checkTAAReset())
+    dispatch();
 
   m_frameLastRendered = helium::newTimeStamp();
   state->currentFrame = this;
@@ -223,7 +216,7 @@ void Frame::renderFrame()
           for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
             for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
 
-              ScreenSample ss{x, y, (int)vframe.frameID, size, {/*RNG*/}};
+              ScreenSample ss{x, y, (int)vframe.frameCounter++, size, {/*RNG*/}};
               Ray ray;
 
               uint64_t clock_begin = clock64();
@@ -231,7 +224,7 @@ void Frame::renderFrame()
               if (rend.stochasticRendering()) {
                 // Need an RNG
                 int pixelID = ss.x + ss.frameSize.x * ss.y;
-                ss.random = Random(pixelID, rend.rendererState().accumID);
+                ss.random = Random(pixelID, vframe.frameCounter);
               }
 
               float4 accumColor{0.f};
@@ -400,6 +393,29 @@ void Frame::checkAccumulationReset()
   //   m_lastUploadOccured = state.uploadBuffer.lastFlush();
   //   m_nextFrameReset = true;
   // }
+}
+
+bool Frame::checkTAAReset()
+{
+  bool reset = vframe.taa.enabled != m_renderer->visionarayRenderer().taa();
+  vframe.taa.enabled = m_renderer->visionarayRenderer().taa();
+  vframe.taa.alpha = m_renderer->visionarayRenderer().rendererState().taaAlpha;
+
+  const auto numPixels = vframe.size.x * vframe.size.y;
+
+  if (m_renderer->visionarayRenderer().taa()) {
+    taa.currBuffer.resize(numPixels, vec4{0.f});
+    taa.prevBuffer.resize(numPixels, vec4{0.f});
+    taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
+    taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
+
+    vframe.taa.currBuffer = taa.currBuffer.data();
+    vframe.taa.prevBuffer = taa.prevBuffer.data();
+    vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
+    vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
+  }
+
+  return reset;
 }
 
 void Frame::dispatch()
