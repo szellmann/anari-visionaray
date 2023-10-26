@@ -455,6 +455,8 @@ struct Frame
     bool enabled{false};
     float4 *currBuffer{nullptr};
     float4 *prevBuffer{nullptr};
+    float3 *currAlbedoBuffer{nullptr};
+    float3 *prevAlbedoBuffer{nullptr};
   } taa;
 
   VSNRAY_FUNC
@@ -466,7 +468,12 @@ struct Frame
       int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
       prevID = clamp(prevID, int2(0), int2(size));
       const auto prevIdx = prevID.y * size.x + prevID.x;
-      float alpha = 0.2f;//accumID == 0 ? 0.2f : 1.f / (accumID+1);
+      float alpha = 0.2f;
+      if (!(fabsf(taa.prevAlbedoBuffer[prevIdx].x-taa.currAlbedoBuffer[idx].x) < 1e-20f
+         && fabsf(taa.prevAlbedoBuffer[prevIdx].y-taa.currAlbedoBuffer[idx].y) < 1e-20f
+         && fabsf(taa.prevAlbedoBuffer[prevIdx].z-taa.currAlbedoBuffer[idx].z) < 1e-20f)) {
+        alpha = 1.f;
+      }
       taa.currBuffer[idx] = (1-alpha)*taa.prevBuffer[prevIdx] + alpha*s.color;
       s.color = taa.currBuffer[idx];
     } else if (stochasticRendering) {
@@ -523,6 +530,8 @@ struct Frame
       objIdBuffer[idx] = s.objId;
     if (instIdBuffer)
       instIdBuffer[idx] = s.instId;
+    if (taa.currAlbedoBuffer)
+      taa.currAlbedoBuffer[idx] = s.albedo;
   }
 
   VSNRAY_FUNC

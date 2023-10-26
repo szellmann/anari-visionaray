@@ -69,6 +69,8 @@ struct Frame : public helium::BaseFrame
     bool enabled{false};
     std::vector<float4> currBuffer;
     std::vector<float4> prevBuffer;
+    std::vector<float3> currAlbedoBuffer;
+    std::vector<float3> prevAlbedoBuffer;
   } taa;
 
   helium::IntrusivePtr<Renderer> m_renderer;

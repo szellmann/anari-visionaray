@@ -121,6 +121,8 @@ void Frame::commit()
   if (m_renderer->visionarayRenderer().taa()) {
     taa.currBuffer.resize(numPixels, vec4{0.f});
     taa.prevBuffer.resize(numPixels, vec4{0.f});
+    taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
+    taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
     m_motionVecBuffer.resize(numPixels);
   }
 
@@ -136,6 +138,8 @@ void Frame::commit()
 
   vframe.taa.currBuffer = taa.currBuffer.data();
   vframe.taa.prevBuffer = taa.prevBuffer.data();
+  vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
+  vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
 
   dispatch();
 }
@@ -289,6 +293,8 @@ void Frame::renderFrame()
     if (m_renderer->visionarayRenderer().taa()) {
       memcpy(taa.prevBuffer.data(), taa.currBuffer.data(),
           sizeof(taa.currBuffer[0]) * taa.currBuffer.size());
+      memcpy(taa.prevAlbedoBuffer.data(), taa.currAlbedoBuffer.data(),
+          sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size());
     }
 
     auto end = std::chrono::steady_clock::now();
