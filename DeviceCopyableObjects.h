@@ -470,13 +470,13 @@ struct Frame
       int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
       prevID = clamp(prevID, int2(0), int2(size));
       const auto prevIdx = prevID.y * size.x + prevID.x;
-      float alpha = taa.alpha; // TODO!
+      float alpha = taa.alpha;
       if (!(fabsf(taa.prevAlbedoBuffer[prevIdx].x-taa.currAlbedoBuffer[idx].x) < 1e-2f
          && fabsf(taa.prevAlbedoBuffer[prevIdx].y-taa.currAlbedoBuffer[idx].y) < 1e-2f
          && fabsf(taa.prevAlbedoBuffer[prevIdx].z-taa.currAlbedoBuffer[idx].z) < 1e-2f)) {
-        alpha = 0.f;
+        alpha = 1.f;
       }
-      taa.currBuffer[idx] = (1-alpha)*s.color + alpha*taa.prevBuffer[prevIdx];
+      taa.currBuffer[idx] = (1-alpha)*taa.prevBuffer[prevIdx] + alpha*s.color;
       s.color = taa.currBuffer[idx];
     } else if (stochasticRendering) {
       float alpha = 1.f / (accumID+1);
