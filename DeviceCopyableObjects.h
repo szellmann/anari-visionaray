@@ -512,8 +512,8 @@ struct Frame
   VSNRAY_FUNC
   inline void writeSample(int x, int y, int accumID, PixelSample s)
   {
-    toneMap(x, y, accumSample(x, y, accumID, s));
     fillGBuffer(x, y, s);
+    toneMap(x, y, accumSample(x, y, accumID, s));
   }
 };
 
