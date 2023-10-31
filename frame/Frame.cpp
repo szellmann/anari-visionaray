@@ -287,6 +287,9 @@ void Frame::renderFrame()
     rend.rendererState().accumID++;
 
     if (m_renderer->visionarayRenderer().taa()) {
+      // Initialize history texture
+      vframe.initHistory();
+
       // TAA pass
       parallel_for(state->threadPool,
           tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),

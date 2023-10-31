@@ -459,7 +459,23 @@ struct Frame
     float4 *prevBuffer{nullptr};
     float3 *currAlbedoBuffer{nullptr};
     float3 *prevAlbedoBuffer{nullptr};
+    texture<float4, 2> history;
+    texture_ref<float4, 2> historyRef;
   } taa;
+
+  inline void initHistory()
+  {
+    if (size.x != taa.history.width() || size.y != taa.history.height()) {
+      taa.history = texture<float4, 2>(size.x, size.y);
+    }
+    taa.history.reset(taa.prevBuffer);
+    taa.history.set_filter_mode(CardinalSpline);
+    taa.history.set_filter_mode(Nearest);
+    //taa.history.set_filter_mode(Linear);
+    taa.history.set_address_mode(Clamp);
+    taa.history.set_normalized_coords(true);
+    taa.historyRef = texture_ref<float4, 2>(taa.history);
+  }
 
   VSNRAY_FUNC
   inline PixelSample pixelSample(int x, int y)
@@ -511,7 +527,11 @@ struct Frame
          && fabsf(taa.prevAlbedoBuffer[prevIdx].z-taa.currAlbedoBuffer[idx].z) < 1e-2f)) {
         alpha = 1.f;
       }
-      taa.currBuffer[idx] = (1-alpha)*taa.prevBuffer[prevIdx] + alpha*s.color;
+      float prevX = x + motionVecBuffer[idx].x;
+      float prevY = y + motionVecBuffer[idx].y;
+      float2 texCoord((prevX+0.5f)/size.x, (prevY+0.5f)/size.y);
+      float4 history = tex2D(taa.historyRef, texCoord);
+      taa.currBuffer[idx] = (1-alpha)*history + alpha*s.color;
       s.color = taa.currBuffer[idx];
     } else if (stochasticRendering) {
       float alpha = 1.f / (accumID+1);
