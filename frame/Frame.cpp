@@ -268,7 +268,10 @@ void Frame::renderFrame()
               // taken from first sample
               PixelSample finalSample = firstSample;
               finalSample.color = accumColor*(1.f/rend.spp());
-              vframe.writeSample(x, y, rend.rendererState().accumID, finalSample);
+              if (rend.taa())
+                vframe.fillGBuffer(x, y, finalSample);
+              else
+                vframe.writeSample(x, y, rend.rendererState().accumID, finalSample);
             }
           }
         });
@@ -284,6 +287,19 @@ void Frame::renderFrame()
     rend.rendererState().accumID++;
 
     if (m_renderer->visionarayRenderer().taa()) {
+      // TAA pass
+      parallel_for(state->threadPool,
+          tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
+          [&](range2d<int> r) {
+            for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
+              for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
+                vframe.toneMap(
+                    x, y, vframe.accumSample(x, y, ~0, vframe.pixelSample(x, y)));
+              }
+            }
+          });
+
+      // Copy buffers for next pass
       memcpy(taa.prevBuffer.data(), taa.currBuffer.data(),
           sizeof(taa.currBuffer[0]) * taa.currBuffer.size());
       memcpy(taa.prevAlbedoBuffer.data(), taa.currAlbedoBuffer.data(),

@@ -462,6 +462,41 @@ struct Frame
   } taa;
 
   VSNRAY_FUNC
+  inline PixelSample pixelSample(int x, int y)
+  {
+    const auto idx = y * size.x + x;
+
+    PixelSample s;
+
+    if (taa.enabled) {
+      if (taa.currBuffer)
+        s.color = taa.currBuffer[idx];
+      if (taa.currAlbedoBuffer)
+        s.albedo = taa.currAlbedoBuffer[idx];
+    } else {
+      if (accumBuffer)
+        s.color = accumBuffer[idx];
+      if (albedoBuffer)
+        s.albedo = albedoBuffer[idx];
+    }
+
+    if (depthBuffer)
+      s.depth = depthBuffer[idx];
+    if (normalBuffer)
+      s.Ng = normalBuffer[idx];
+    if (motionVecBuffer)
+      s.motionVec = motionVecBuffer[idx];
+    if (primIdBuffer)
+      s.primId = primIdBuffer[idx];
+    if (objIdBuffer)
+      s.objId = objIdBuffer[idx];
+    if (instIdBuffer)
+      s.instId = instIdBuffer[idx];
+
+    return s;
+  }
+
+  VSNRAY_FUNC
   inline PixelSample accumSample(int x, int y, int accumID, PixelSample s)
   {
     const auto idx = y * size.x + x;
@@ -532,6 +567,8 @@ struct Frame
       objIdBuffer[idx] = s.objId;
     if (instIdBuffer)
       instIdBuffer[idx] = s.instId;
+    if (taa.currBuffer)
+      taa.currBuffer[idx] = s.color;
     if (taa.currAlbedoBuffer)
       taa.currAlbedoBuffer[idx] = s.albedo;
   }
