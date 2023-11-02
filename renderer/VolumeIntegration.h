@@ -69,7 +69,7 @@ inline float rayMarchVolume(ScreenSample &ss,
                             VisionarayGlobalState::DeviceObjectRegistry onDevice,
                             float3 &color,
                             float &alpha) {
-  float dt = onDevice.spatialFields[vol.fieldID].baseDT;
+  float dt = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].baseDT;
   auto boxHit = intersect(ray, vol.bounds);
   // if (ss.debug()) {
   //   printf("boxHit: %f,%f\n",boxHit.tnear,boxHit.tfar);
@@ -80,7 +80,7 @@ inline float rayMarchVolume(ScreenSample &ss,
   for (;t<boxHit.tfar&&alpha<0.99f;t+=dt) {
     float3 P = ray.ori+ray.dir*t;
     float v = 0.f;
-    if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
+    if (sampleField(onDevice.spatialFields[vol.asTransferFunction1D.fieldID],P,v)) {
       float4 sample
           = postClassify(ss,onDevice.transferFunctions[vol.volID],v);
       color += dt * (1.f-alpha) * sample.w * sample.xyz();
@@ -109,14 +109,16 @@ inline HitRecordVolume sampleFreeFlightDistance(
   HitRecordVolume hr;
   hr.t = ray.tmax;
 
-  const float dt = onDevice.spatialFields[vol.fieldID].baseDT;
+  const float dt = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].baseDT;
 
-  dco::GridAccel grid = onDevice.gridAccels[vol.fieldID];
+  dco::GridAccel grid = onDevice.gridAccels[vol.asTransferFunction1D.fieldID];
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
     const bool hasMajorant =
-        onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured ||
-        onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::StructuredRegular;
+        onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type
+            == dco::SpatialField::Unstructured ||
+        onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type
+            == dco::SpatialField::StructuredRegular;
     const float majorant = grid.maxOpacities[leafID]
         = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
@@ -132,7 +134,7 @@ inline HitRecordVolume sampleFreeFlightDistance(
 
       float3 P = ray.ori+ray.dir*t;
       float v = 0.f;
-      if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
+      if (sampleField(onDevice.spatialFields[vol.asTransferFunction1D.fieldID],P,v)) {
         float4 sample
             = postClassify(ss,onDevice.transferFunctions[vol.volID],v);
         hr.albedo = sample.xyz();
@@ -141,7 +143,7 @@ inline HitRecordVolume sampleFreeFlightDistance(
         if (hr.extinction >= u * majorant) {
           hr.hit = true;
           hr.volID = vol.volID;
-          hr.fieldID = vol.fieldID;
+          hr.fieldID = vol.asTransferFunction1D.fieldID;
           hr.Tr = 0.f;
           hr.t = t;
           return false; // stop traversal
@@ -156,8 +158,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
   auto boxHit = intersect(ray, vol.bounds);
   ray.tmin = max(ray.tmin, boxHit.tnear);
   ray.tmax = min(ray.tmax, boxHit.tfar);
-  if (onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::Unstructured ||
-      onDevice.spatialFields[vol.fieldID].type == dco::SpatialField::StructuredRegular)
+  if (onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::Unstructured ||
+      onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::StructuredRegular)
     dda3(ss, ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);

@@ -50,11 +50,11 @@ struct Volume
   enum Type { TransferFunction1D, };
   Type type;
 
-  enum FieldType { Unstructured, };
-  FieldType fieldType;
-
   unsigned volID{UINT_MAX};
-  unsigned fieldID{UINT_MAX}; // _should_ be same as volID
+
+  struct {
+    unsigned fieldID{UINT_MAX}; // _should_ be same as volID
+  } asTransferFunction1D;
 
   aabb bounds;
 };
