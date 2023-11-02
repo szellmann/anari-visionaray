@@ -44,15 +44,17 @@ const char **query_extensions();
 ///////////////////////////////////////////////////////////////////////////////
 
 template <typename HANDLE_T, typename OBJECT_T>
-inline HANDLE_T getHandleForAPI(OBJECT_T *object)
+inline HANDLE_T finalizeHandleForAPI(OBJECT_T *object)
 {
+  auto *s = object->deviceState();
+  s->commitBuffer.addObject(object);
   return (HANDLE_T)object;
 }
 
 template <typename OBJECT_T, typename HANDLE_T, typename... Args>
 inline HANDLE_T createObjectForAPI(VisionarayGlobalState *s, Args &&...args)
 {
-  return getHandleForAPI<HANDLE_T>(
+  return finalizeHandleForAPI<HANDLE_T>(
       new OBJECT_T(s, std::forward<Args>(args)...));
 }
 
@@ -130,28 +132,28 @@ ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
 ANARILight VisionarayDevice::newLight(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARILight>(
+  return finalizeHandleForAPI<ANARILight>(
       Light::createInstance(subtype, deviceState()));
 }
 
 ANARICamera VisionarayDevice::newCamera(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARICamera>(
+  return finalizeHandleForAPI<ANARICamera>(
       Camera::createInstance(subtype, deviceState()));
 }
 
 ANARIGeometry VisionarayDevice::newGeometry(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIGeometry>(
+  return finalizeHandleForAPI<ANARIGeometry>(
       Geometry::createInstance(subtype, deviceState()));
 }
 
 ANARISpatialField VisionarayDevice::newSpatialField(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARISpatialField>(
+  return finalizeHandleForAPI<ANARISpatialField>(
       SpatialField::createInstance(subtype, deviceState()));
 }
 
@@ -164,7 +166,7 @@ ANARISurface VisionarayDevice::newSurface()
 ANARIVolume VisionarayDevice::newVolume(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIVolume>(
+  return finalizeHandleForAPI<ANARIVolume>(
       Volume::createInstance(subtype, deviceState()));
 }
 
@@ -173,14 +175,14 @@ ANARIVolume VisionarayDevice::newVolume(const char *subtype)
 ANARIMaterial VisionarayDevice::newMaterial(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIMaterial>(
+  return finalizeHandleForAPI<ANARIMaterial>(
       Material::createInstance(subtype, deviceState()));
 }
 
 ANARISampler VisionarayDevice::newSampler(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARISampler>(
+  return finalizeHandleForAPI<ANARISampler>(
       Sampler::createInstance(subtype, deviceState()));
 }
 
@@ -280,7 +282,7 @@ ANARIFrame VisionarayDevice::newFrame()
 ANARIRenderer VisionarayDevice::newRenderer(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIRenderer>(
+  return finalizeHandleForAPI<ANARIRenderer>(
       Renderer::createInstance(subtype, deviceState()));
 }
 
