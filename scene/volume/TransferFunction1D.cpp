@@ -52,14 +52,14 @@ void TransferFunction1D::commit()
 
   std::vector<float4> tf(tfSize);
   for (size_t i=0; i<tfSize; ++i) {
-    float colorPos = (float(i)/(tfSize-1))*(m_colorData->size()-1);
+    float colorPos = tfSize > 1 ? (float(i)/(tfSize-1))*(m_colorData->size()-1) : 0.f;
     float colorFrac = colorPos-floorf(colorPos);
 
     vec3f color0 = colorData[int(floorf(colorPos))];
     vec3f color1 = colorData[int(ceilf(colorPos))];
     vec3f color = lerp(color0, color1, colorFrac);
 
-    float alphaPos = (float(i)/(tfSize-1))*(m_opacityData->size()-1);
+    float alphaPos = tfSize > 1 ? (float(i)/(tfSize-1))*(m_opacityData->size()-1) : 0.f;
     float alphaFrac = alphaPos-floorf(alphaPos);
 
     float alpha0 = opacityData[int(floorf(alphaPos))];
