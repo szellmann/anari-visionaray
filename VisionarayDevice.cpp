@@ -40,23 +40,6 @@ const void *query_param_info(ANARIDataType type,
 const char **query_extensions();
 
 ///////////////////////////////////////////////////////////////////////////////
-// Helper functions ///////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-template <typename HANDLE_T, typename OBJECT_T>
-inline HANDLE_T getHandleForAPI(OBJECT_T *object)
-{
-  return (HANDLE_T)object;
-}
-
-template <typename OBJECT_T, typename HANDLE_T, typename... Args>
-inline HANDLE_T createObjectForAPI(VisionarayGlobalState *s, Args &&...args)
-{
-  return getHandleForAPI<HANDLE_T>(
-      new OBJECT_T(s, std::forward<Args>(args)...));
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // VisionarayDevice definitions ///////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -78,9 +61,9 @@ ANARIArray1D VisionarayDevice::newArray1D(const void *appMemory,
   md.numItems = numItems;
 
   if (anari::isObject(type))
-    return createObjectForAPI<ObjectArray, ANARIArray1D>(deviceState(), md);
+    return (ANARIArray1D) new ObjectArray(deviceState(), md);
   else
-    return createObjectForAPI<Array1D, ANARIArray1D>(deviceState(), md);
+    return (ANARIArray1D) new Array1D(deviceState(), md);
 }
 
 ANARIArray2D VisionarayDevice::newArray2D(const void *appMemory,
@@ -100,7 +83,7 @@ ANARIArray2D VisionarayDevice::newArray2D(const void *appMemory,
   md.numItems1 = numItems1;
   md.numItems2 = numItems2;
 
-  return createObjectForAPI<Array2D, ANARIArray2D>(deviceState(), md);
+  return (ANARIArray2D) new Array2D(deviceState(), md);
 }
 
 ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
@@ -122,7 +105,7 @@ ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
   md.numItems2 = numItems2;
   md.numItems3 = numItems3;
 
-  return createObjectForAPI<Array3D, ANARIArray3D>(deviceState(), md);
+  return (ANARIArray3D) new Array3D(deviceState(), md);
 }
 
 // Renderable Objects /////////////////////////////////////////////////////////
@@ -130,42 +113,37 @@ ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
 ANARILight VisionarayDevice::newLight(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARILight>(
-      Light::createInstance(subtype, deviceState()));
+  return (ANARILight)Light::createInstance(subtype, deviceState());
 }
 
 ANARICamera VisionarayDevice::newCamera(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARICamera>(
-      Camera::createInstance(subtype, deviceState()));
+  return (ANARICamera)Camera::createInstance(subtype, deviceState());
 }
 
 ANARIGeometry VisionarayDevice::newGeometry(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIGeometry>(
-      Geometry::createInstance(subtype, deviceState()));
+  return (ANARIGeometry)Geometry::createInstance(subtype, deviceState());
 }
 
 ANARISpatialField VisionarayDevice::newSpatialField(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARISpatialField>(
-      SpatialField::createInstance(subtype, deviceState()));
+  return (ANARISpatialField)SpatialField::createInstance(subtype, deviceState());
 }
 
 ANARISurface VisionarayDevice::newSurface()
 {
   initDevice();
-  return createObjectForAPI<Surface, ANARISurface>(deviceState());
+  return (ANARISurface) new Surface(deviceState());
 }
 
 ANARIVolume VisionarayDevice::newVolume(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIVolume>(
-      Volume::createInstance(subtype, deviceState()));
+  return (ANARIVolume)Volume::createInstance(subtype, deviceState());
 }
 
 // Surface Meta-Data //////////////////////////////////////////////////////////
@@ -173,15 +151,13 @@ ANARIVolume VisionarayDevice::newVolume(const char *subtype)
 ANARIMaterial VisionarayDevice::newMaterial(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIMaterial>(
-      Material::createInstance(subtype, deviceState()));
+  return (ANARIMaterial)Material::createInstance(subtype, deviceState());
 }
 
 ANARISampler VisionarayDevice::newSampler(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARISampler>(
-      Sampler::createInstance(subtype, deviceState()));
+  return (ANARISampler)Sampler::createInstance(subtype, deviceState());
 }
 
 // Instancing /////////////////////////////////////////////////////////////////
@@ -189,13 +165,13 @@ ANARISampler VisionarayDevice::newSampler(const char *subtype)
 ANARIGroup VisionarayDevice::newGroup()
 {
   initDevice();
-  return createObjectForAPI<Group, ANARIGroup>(deviceState());
+  return (ANARIGroup) new Group(deviceState());
 }
 
 ANARIInstance VisionarayDevice::newInstance(const char * /*subtype*/)
 {
   initDevice();
-  return createObjectForAPI<Instance, ANARIInstance>(deviceState());
+  return (ANARIInstance) new Instance(deviceState());
 }
 
 // Top-level Worlds ///////////////////////////////////////////////////////////
@@ -203,7 +179,7 @@ ANARIInstance VisionarayDevice::newInstance(const char * /*subtype*/)
 ANARIWorld VisionarayDevice::newWorld()
 {
   initDevice();
-  return createObjectForAPI<World, ANARIWorld>(deviceState());
+  return (ANARIWorld) new World(deviceState());
 }
 
 // Query functions ////////////////////////////////////////////////////////////
@@ -272,7 +248,7 @@ int VisionarayDevice::getProperty(ANARIObject object,
 ANARIFrame VisionarayDevice::newFrame()
 {
   initDevice();
-  return createObjectForAPI<Frame, ANARIFrame>(deviceState());
+  return (ANARIFrame) new Frame(deviceState());
 }
 
 // Frame Rendering ////////////////////////////////////////////////////////////
@@ -280,8 +256,7 @@ ANARIFrame VisionarayDevice::newFrame()
 ANARIRenderer VisionarayDevice::newRenderer(const char *subtype)
 {
   initDevice();
-  return getHandleForAPI<ANARIRenderer>(
-      Renderer::createInstance(subtype, deviceState()));
+  return (ANARIRenderer)Renderer::createInstance(subtype, deviceState());
 }
 
 // Other VisionarayDevice definitions /////////////////////////////////////////
