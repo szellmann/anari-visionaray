@@ -287,8 +287,8 @@ void Frame::renderFrame()
     rend.rendererState().accumID++;
 
     if (m_renderer->visionarayRenderer().taa()) {
-      // Initialize history texture
-      vframe.initHistory();
+      // Update history texture
+      vframe.updateHistory();
 
       // TAA pass
       parallel_for(state->threadPool,
@@ -442,6 +442,8 @@ bool Frame::checkTAAReset()
       vframe.taa.prevBuffer = taa.prevBuffer.data();
       vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
       vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
+
+      vframe.initHistory();
     }
     return true;
   } else if (taaJustDisabled) {

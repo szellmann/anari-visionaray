@@ -465,14 +465,16 @@ struct Frame
 
   inline void initHistory()
   {
-    if (size.x != taa.history.width() || size.y != taa.history.height()) {
-      taa.history = texture<float4, 2>(size.x, size.y);
-      taa.history.set_filter_mode(CardinalSpline);
-      //taa.history.set_filter_mode(Nearest);
-      //taa.history.set_filter_mode(Linear);
-      taa.history.set_address_mode(Clamp);
-      taa.history.set_normalized_coords(true);
-    }
+    taa.history = texture<float4, 2>(size.x, size.y);
+    taa.history.set_filter_mode(CardinalSpline);
+    //taa.history.set_filter_mode(Nearest);
+    //taa.history.set_filter_mode(Linear);
+    taa.history.set_address_mode(Clamp);
+    taa.history.set_normalized_coords(true);
+  }
+
+  inline void updateHistory()
+  {
     taa.history.reset(taa.prevBuffer);
     taa.historyRef = texture_ref<float4, 2>(taa.history);
   }
