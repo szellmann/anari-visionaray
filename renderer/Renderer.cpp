@@ -49,7 +49,7 @@ void Renderer::commit()
       state.renderMode = RenderMode::GeometryColor;
     state.heatMapEnabled = getParam<bool>("heatMapEnabled", false);
     state.heatMapScale = getParam<float>("heatMapScale", 0.1f);
-    state.taaEnabled = getParam<bool>("taa", true);
+    state.taaEnabled = getParam<bool>("taa", false);
     state.taaAlpha = getParam<float>("taaAlpha", 0.3f);
   };
 

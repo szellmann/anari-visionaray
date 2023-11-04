@@ -284,7 +284,7 @@ static const void * ANARI_RENDERER_default_taa_info(ANARIDataType paramType, int
          }
       case 1: // default
          if(paramType == ANARI_BOOL && infoType == ANARI_BOOL) {
-            static const int32_t default_value[1] = {INT32_C(1)};
+            static const int32_t default_value[1] = {INT32_C(0)};
             return default_value;
          } else {
             return nullptr;

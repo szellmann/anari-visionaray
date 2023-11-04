@@ -97,7 +97,7 @@
             "ANARI_BOOL"
           ],
           "tags": [],
-          "default": true,
+          "default": false,
           "description": "Toggle TAA and accumulation"
         },
         {
