@@ -416,25 +416,40 @@ void Frame::checkAccumulationReset()
 
 bool Frame::checkTAAReset()
 {
-  bool reset = vframe.taa.enabled != m_renderer->visionarayRenderer().taa();
-  vframe.taa.enabled = m_renderer->visionarayRenderer().taa();
-  vframe.taa.alpha = m_renderer->visionarayRenderer().rendererState().taaAlpha;
-
   const auto numPixels = vframe.size.x * vframe.size.y;
+  const float alpha = m_renderer->visionarayRenderer().rendererState().taaAlpha;
 
-  if (m_renderer->visionarayRenderer().taa()) {
-    taa.currBuffer.resize(numPixels, vec4{0.f});
-    taa.prevBuffer.resize(numPixels, vec4{0.f});
-    taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
-    taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
+  const bool taaEnabled = m_renderer->visionarayRenderer().taa();
 
-    vframe.taa.currBuffer = taa.currBuffer.data();
-    vframe.taa.prevBuffer = taa.prevBuffer.data();
-    vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
-    vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
+  const bool taaJustEnabled
+      = m_renderer->visionarayRenderer().taa() && !vframe.taa.enabled;
+
+  const bool taaJustDisabled
+      = !m_renderer->visionarayRenderer().taa() && vframe.taa.enabled;
+
+  if (taaJustEnabled || taaEnabled && numPixels != taa.currBuffer.size() ||
+      taaEnabled && alpha != vframe.taa.alpha) {
+    vframe.taa.enabled = true;
+    vframe.taa.alpha = alpha;
+
+    if (numPixels != taa.currBuffer.size()) {
+      taa.currBuffer.resize(numPixels, vec4{0.f});
+      taa.prevBuffer.resize(numPixels, vec4{0.f});
+      taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
+      taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
+
+      vframe.taa.currBuffer = taa.currBuffer.data();
+      vframe.taa.prevBuffer = taa.prevBuffer.data();
+      vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
+      vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
+    }
+    return true;
+  } else if (taaJustDisabled) {
+    vframe.taa.enabled = false;
+    return  true;
+  } else {
+    return false;
   }
-
-  return reset;
 }
 
 void Frame::dispatch()
