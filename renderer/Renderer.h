@@ -19,7 +19,7 @@ struct VisionarayRenderer
   VSNRAY_FUNC
   PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         VisionarayGlobalState::DeviceObjectRegistry onDevice,
-        VisionarayGlobalState::ObjectCounts objCounts) {
+        VisionarayGlobalState::ObjectCounts objCounts) const {
     if (type == Raycast) {
       return asRaycast.renderer.renderSample(ss, ray, worldID, onDevice, objCounts);
     } else if (type == DirectLight) {
