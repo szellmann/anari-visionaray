@@ -14,6 +14,7 @@ anari_generate_queries(
   PREFIX VisionarayDevice
   CPP_NAMESPACE visionaray
   JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_device.json
+  JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 add_library(${PROJECT_NAME} SHARED)
