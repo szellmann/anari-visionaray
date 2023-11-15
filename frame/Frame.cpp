@@ -117,7 +117,7 @@ void Frame::commit()
     m_objIdBuffer.resize(numPixels);
   if (vframe.instIdType == ANARI_UINT32)
     m_instIdBuffer.resize(numPixels);
-  
+
   vframe.pixelBuffer = m_pixelBuffer.data();
   vframe.depthBuffer = m_depthBuffer.data();
   vframe.normalBuffer = m_normalBuffer.data();
@@ -155,7 +155,7 @@ void Frame::renderFrame()
 
   auto start = std::chrono::steady_clock::now();
 
-  state->commitBuffer.flush();
+  state->commitBufferFlush();
 
   if (!isValid()) {
     reportMessage(
@@ -165,7 +165,7 @@ void Frame::renderFrame()
     return;
   }
 
-  if (state->commitBuffer.lastFlush() <= m_frameLastRendered) {
+  if (state->commitBufferLastFlush() <= m_frameLastRendered) {
     if (!m_renderer->stochasticRendering()) {
       this->refDec(helium::RefType::INTERNAL);
       return;
@@ -404,8 +404,8 @@ void Frame::checkAccumulationReset()
     return;
 
   auto &state = *deviceState();
-  if (m_lastCommitOccured < state.commitBuffer.lastFlush()) {
-    m_lastCommitOccured = state.commitBuffer.lastFlush();
+  if (m_lastCommitOccured < state.commitBufferLastFlush()) {
+    m_lastCommitOccured = state.commitBufferLastFlush();
     m_nextFrameReset = true;
   }
   // if (m_lastUploadOccured < state.uploadBuffer.lastFlush()) {

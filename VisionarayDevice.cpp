@@ -213,36 +213,6 @@ const void *VisionarayDevice::getParameterInfo(ANARIDataType objectType,
       infoType);
 }
 
-// Object + Parameter Lifetime Management /////////////////////////////////////
-
-int VisionarayDevice::getProperty(ANARIObject object,
-    const char *name,
-    ANARIDataType type,
-    void *mem,
-    uint64_t size,
-    uint32_t mask)
-{
-  if (handleIsDevice(object)) {
-    std::string_view prop = name;
-    if (prop == "extension" && type == ANARI_STRING_LIST) {
-      helium::writeToVoidP(mem, query_extensions());
-      return 1;
-    } else if (prop == "visionaray" && type == ANARI_BOOL) {
-      helium::writeToVoidP(mem, true);
-      return 1;
-    }
-  } else {
-    if (mask == ANARI_WAIT) {
-      deviceState()->waitOnCurrentFrame();
-      flushCommitBuffer();
-    }
-    return helium::referenceFromHandle(object).getProperty(
-        name, type, mem, mask);
-  }
-
-  return 0;
-}
-
 // Frame Manipulation /////////////////////////////////////////////////////////
 
 ANARIFrame VisionarayDevice::newFrame()
@@ -278,11 +248,9 @@ VisionarayDevice::~VisionarayDevice()
 {
   auto &state = *deviceState();
 
-  state.commitBuffer.clear();
+  state.commitBufferClear();
 
   reportMessage(ANARI_SEVERITY_DEBUG, "destroying visionaray device (%p)", this);
-
-  // rtcReleaseDevice(state.embreeDevice);
 
   // NOTE: These object leak warnings are not required to be done by
   //       implementations as the debug layer in the SDK is far more
@@ -327,26 +295,7 @@ void VisionarayDevice::initDevice()
     return;
 
   reportMessage(ANARI_SEVERITY_DEBUG, "initializing visionaray device (%p)", this);
-
   auto &state = *deviceState();
-
-  // state.embreeDevice = rtcNewDevice(nullptr);
-
-  // if (!state.embreeDevice) {
-  //   reportMessage(ANARI_SEVERITY_ERROR,
-  //       "Embree error %d - cannot create device\n",
-  //       rtcGetDeviceError(nullptr));
-  // }
-
-  // rtcSetDeviceErrorFunction(
-  //     state.embreeDevice,
-  //     [](void *userPtr, RTCError error, const char *str) {
-  //       auto *d = (VisionarayDevice *)userPtr;
-  //       d->reportMessage(
-  //           ANARI_SEVERITY_ERROR, "Embree error %d - '%s'", error, str);
-  //     },
-  //     this);
-
   m_initialized = true;
 }
 
@@ -365,6 +314,20 @@ void VisionarayDevice::deviceCommitParameters()
   //   state.objectUpdates.lastBLSReconstructSceneRequest = helium::newTimeStamp();
 
   helium::BaseDevice::deviceCommitParameters();
+}
+
+int VisionarayDevice::deviceGetProperty(
+    const char *name, ANARIDataType type, void *mem, uint64_t size)
+{
+  std::string_view prop = name;
+  if (prop == "extension" && type == ANARI_STRING_LIST) {
+    helium::writeToVoidP(mem, query_extensions());
+    return 1;
+  } else if (prop == "visionaray" && type == ANARI_BOOL) {
+    helium::writeToVoidP(mem, true);
+    return 1;
+  }
+  return 0;
 }
 
 VisionarayGlobalState *VisionarayDevice::deviceState() const
