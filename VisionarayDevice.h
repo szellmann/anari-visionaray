@@ -82,15 +82,6 @@ struct VisionarayDevice : public helium::BaseDevice
       const char* infoName,
       ANARIDataType infoType) override;
 
-  // Object + Parameter Lifetime Management ///////////////////////////////////
-
-  int getProperty(ANARIObject object,
-      const char *name,
-      ANARIDataType type,
-      void *mem,
-      uint64_t size,
-      uint32_t mask) override;
-
   // FrameBuffer Manipulation /////////////////////////////////////////////////
 
   ANARIFrame newFrame() override;
@@ -110,6 +101,8 @@ struct VisionarayDevice : public helium::BaseDevice
   void initDevice();
 
   void deviceCommitParameters() override;
+  int deviceGetProperty(
+      const char *name, ANARIDataType type, void *mem, uint64_t size) override;
 
  private:
   VisionarayGlobalState *deviceState() const;

@@ -14,7 +14,7 @@ Object::Object(ANARIDataType type, VisionarayGlobalState *s)
     : helium::BaseObject(type, s)
 {
   helium::BaseObject::markUpdated();
-  s->commitBuffer.addObject(this);
+  s->commitBufferAddObject(this);
 }
 
 void Object::commit()
