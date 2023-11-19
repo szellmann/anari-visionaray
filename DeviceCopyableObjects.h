@@ -12,6 +12,7 @@
 #include "visionaray/thin_lens_camera.h"
 // ours
 #include "frame/common.h"
+#include "renderer/DDA.h"
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
 #include "common.h"
@@ -34,14 +35,162 @@ struct Ray : basic_ray<float>
     Quad = 0x2,
     Sphere = 0x4,
     Cylinder = 0x8,
-    Volume = 0x10,
+    ISOSurface = 0x10,
+    Volume = 0x20,
   };
   unsigned intersectionMask = All;
+
+#if 1
+  bool dbg{false};
+  VSNRAY_FUNC inline bool debug() const {
+    return dbg;
+  }
+#endif
 };
 
 } // namespace visionaray
 
 namespace visionaray::dco {
+
+// Unstructured element primitive //
+
+struct UElem
+{
+  uint64_t begin;
+  uint64_t end;
+  uint64_t elemID;
+  uint64_t *indexBuffer;
+  float4 *vertexBuffer;
+};
+
+VSNRAY_FUNC
+inline aabb get_bounds(const UElem &elem)
+{
+  aabb result;
+  result.invalidate();
+  for (uint64_t i=elem.begin;i<elem.end;++i) {
+    result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
+  }
+  return result;
+}
+
+inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const UElem &elem)
+{
+  assert(0);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const UElem &elem)
+{
+  uint64_t numVerts = elem.end-elem.begin;
+
+  float4 v[8];
+  for (int i=0; i<numVerts; ++i) {
+    uint64_t idx = elem.indexBuffer[elem.begin+i];
+    v[i] = elem.vertexBuffer[idx];
+  }
+
+  float3 pos = ray.ori;
+  float value;
+  bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
+        || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
+        || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
+        || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
+
+  hit_record<Ray, primitive<unsigned>> result;
+  result.hit = hit;
+  if (hit) {
+    result.t = 0.f;
+    result.prim_id = elem.elemID;
+    result.u = value; // misuse "u" to store value
+  }
+  return result;
+}
+
+// Grid accelerator to traverse spatial fields //
+
+struct GridAccel
+{
+  unsigned fieldID{UINT_MAX}; // the field this grid belongs to
+  int3 dims;
+  box3 worldBounds;
+  box1 *valueRanges; // min/max ranges
+  float *maxOpacities; // used as majorants
+};
+
+// Spatial Field //
+
+struct SpatialField
+{
+  enum Type { StructuredRegular, Unstructured, };
+  Type type;
+  unsigned fieldID{UINT_MAX};
+  float baseDT{0.5f};
+  GridAccel gridAccel;
+  struct {
+    texture_ref<float, 3> sampler;
+    float3 origin{0.f,0.f,0.f}, spacing{1.f,1.f,1.f};
+    uint3 dims{0,0,0};
+
+    VSNRAY_FUNC
+    inline float3 objectToLocal(const float3 &object) const
+    {
+      return 1.f / (spacing) * (object - origin);
+    }
+
+    VSNRAY_FUNC
+    inline float3 objectToTexCoord(const float3 &object) const
+    {
+      return objectToLocal(object + float3(0.5f) * spacing) / float3(dims);
+    }
+
+  } asStructuredRegular;
+  struct {
+    index_bvh<UElem>::bvh_ref samplingBVH;
+  } asUnstructured;
+};
+
+VSNRAY_FUNC
+inline bool sampleField(SpatialField sf, vec3 P, float &value) {
+  if (sf.type == SpatialField::StructuredRegular) {
+    value = tex3D(sf.asStructuredRegular.sampler,
+        sf.asStructuredRegular.objectToTexCoord(P));
+    return true;
+  } else if (sf.type == SpatialField::Unstructured) {
+    Ray ray;
+    ray.ori = P;
+    ray.dir = float3(1.f);
+    ray.tmin = ray.tmax = 0.f;
+    auto hr = intersect(ray, sf.asUnstructured.samplingBVH);
+
+    if (!hr.hit)
+      return false;
+
+    value = hr.u; // value is stored in "u"!
+    return true;
+  }
+
+  return false;
+}
+
+VSNRAY_FUNC
+inline bool sampleGradient(SpatialField sf, vec3 P, float3 &value) {
+  float x0=0, x1=0, y0=0, y1=0, z0=0, z1=0;
+  bool b0 = sampleField(sf, P+float3{sf.baseDT, 0.f, 0.f}, x1);
+  bool b1 = sampleField(sf, P-float3{sf.baseDT, 0.f, 0.f}, x0);
+  bool b2 = sampleField(sf, P+float3{0.f, sf.baseDT, 0.f}, y1);
+  bool b3 = sampleField(sf, P-float3{0.f, sf.baseDT, 0.f}, y0);
+  bool b4 = sampleField(sf, P+float3{0.f, 0.f, sf.baseDT}, z1);
+  bool b5 = sampleField(sf, P-float3{0.f, 0.f, sf.baseDT}, z0);
+  if (b0 && b1 && b2 && b3 && b4 && b5) {
+    value = float3{x1,y1,z1}-float3{x0,y0,z0};
+    return true; // TODO
+  } else {
+    value = float3{0.f};
+    return false;
+  }
+}
 
 // Volume //
 
@@ -85,16 +234,116 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   return result;
 }
 
+// ISO surface //
+
+struct ISOSurface
+{
+  unsigned isoID{UINT_MAX};
+
+  SpatialField field;
+  unsigned numValues{0};
+  float *values{nullptr};
+
+  aabb bounds;
+};
+
+VSNRAY_FUNC
+inline aabb get_bounds(const ISOSurface &iso)
+{
+  return iso.bounds;
+}
+
+inline void split_primitive(
+    aabb &L, aabb &R, float plane, int axis, const ISOSurface &vol)
+{
+  assert(0);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    Ray ray, const ISOSurface &iso)
+{
+  hit_record<Ray, primitive<unsigned>> result;
+
+  auto boxHit = intersect(ray, iso.bounds);
+  if (!boxHit.hit)
+    return result;
+
+  float dt = iso.field.baseDT;
+
+  auto isectFunc = [&](const int leafID, float t0, float t1) {
+    bool empty = (leafID != -1);
+
+    if (leafID >= 0 && iso.field.gridAccel.valueRanges) {
+      box1 valueRange = iso.field.gridAccel.valueRanges[leafID];
+      for (unsigned i=0;i<iso.numValues;i++) {
+        float isoValue = iso.values[i];
+        if (valueRange.min <= isoValue && isoValue < valueRange.max) {
+          empty = false;
+          break;
+        }
+      }
+    }
+
+    if (empty)
+      return true;
+
+    float t0_old = t0;
+    float t1_old = t1;
+    t0 = t1 = boxHit.tnear-dt/2.f;
+    while (t0 < t0_old) t0 += dt;
+    while (t1 < t1_old) t1 += dt;
+
+    for (float t=t0;t<t1;t+=dt) {
+      float3 P1 = ray.ori+ray.dir*t;
+      float3 P2 = ray.ori+ray.dir*(t+dt);
+      float v1 = 0.f, v2 = 0.f;
+      if (sampleField(iso.field,P1,v1)
+       && sampleField(iso.field,P2,v2)) {
+        unsigned numISOs = iso.numValues;
+        bool hit=false;
+        for (unsigned i=0;i<numISOs;i++) {
+          float isoValue = iso.values[i];
+          if ((v1 <= isoValue && v2 > isoValue) || (v2 <= isoValue && v1 > isoValue)) {
+            float tHit = t+dt/2.f;
+            if (tHit < result.t) {
+              result.hit = true;
+              result.prim_id = i;
+              result.geom_id = iso.isoID;
+              result.t = tHit;
+            }
+            hit = true;
+          }
+        }
+        if (hit) return false; // stop traversal
+      }
+    }
+
+    return true; // cont. traversal to the next spat. partition
+  };
+
+  ray.tmin = boxHit.tnear;
+  ray.tmax = boxHit.tfar;
+  if (iso.field.type == dco::SpatialField::Unstructured ||
+      iso.field.type == dco::SpatialField::StructuredRegular)
+    dda3(ray, iso.field.gridAccel.dims, iso.field.gridAccel.worldBounds, isectFunc);
+  else
+    isectFunc(-1, boxHit.tnear, boxHit.tfar);
+
+  return result;
+}
+
 // BLS primitive //
 
 struct BLS
 {
-  enum Type { Triangle, Quad, Sphere, Cylinder, Volume, Instance, };
+  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, };
   Type type;
   index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
   index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
   index_bvh<basic_sphere<float>>::bvh_ref asSphere;
   index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+  index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
   index_bvh<dco::Volume>::bvh_ref asVolume;
   index_bvh<BLS>::bvh_inst asInstance;
 };
@@ -110,6 +359,8 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asSphere.node(0).get_bounds();
   else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
     return bls.asCylinder.node(0).get_bounds();
+  else if (bls.type == BLS::ISOSurface && bls.asISOSurface.num_nodes())
+    return bls.asISOSurface.node(0).get_bounds();
   else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
     return bls.asVolume.node(0).get_bounds();
   else if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
@@ -137,12 +388,14 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 {
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
     return intersect(ray,bls.asTriangle);
-  if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
+  else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
     return intersect(ray,bls.asQuad);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
     return intersect(ray,bls.asSphere);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
     return intersect(ray,bls.asCylinder);
+  else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
+    return intersect(ray,bls.asISOSurface);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
     return intersect(ray,bls.asVolume);
   else if (bls.type == BLS::Instance)
@@ -159,7 +412,8 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     Ray ray, const TLS &tls)
 {
-  ray.intersectionMask = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cylinder;
+  ray.intersectionMask
+      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cylinder | Ray::ISOSurface;
   return intersect(ray, tls);
 }
 
@@ -198,9 +452,10 @@ struct Surface
 
 struct Geometry
 {
-  enum Type { Triangle, Quad, Sphere, Cylinder, Volume, Instance, };
+  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, };
   Type type;
   unsigned geomID{UINT_MAX};
+  bool updated{false};
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
@@ -222,6 +477,9 @@ struct Geometry
     size_t len{0};
   } asCylinder;
   struct {
+    dco::ISOSurface data;
+  } asISOSurface;
+  struct {
     dco::Volume data;
   } asVolume;
   struct {
@@ -232,6 +490,22 @@ struct Geometry
   } asInstance;
 
   Array primitiveAttributes[5];
+
+  VSNRAY_FUNC
+  inline bool isValid() const
+  {
+    if (type == ISOSurface) {
+      return asISOSurface.data.numValues > 0;
+    }
+    // TODO..
+    return true;
+  }
+
+  VSNRAY_FUNC
+  inline void setUpdated(const bool up)
+  {
+    updated = up;
+  }
 };
 
 // Instance //
@@ -299,103 +573,6 @@ struct Group
   unsigned groupID{UINT_MAX};
   Geometry *geoms{nullptr};
   Material *materials{nullptr};
-};
-
-// Unstructured element primitive //
-
-struct UElem
-{
-  uint64_t begin;
-  uint64_t end;
-  uint64_t elemID;
-  uint64_t *indexBuffer;
-  float4 *vertexBuffer;
-};
-
-VSNRAY_FUNC
-inline aabb get_bounds(const UElem &elem)
-{
-  aabb result;
-  result.invalidate();
-  for (uint64_t i=elem.begin;i<elem.end;++i) {
-    result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
-  }
-  return result;
-}
-
-inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const UElem &elem)
-{
-  assert(0);
-}
-
-VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const UElem &elem)
-{
-  uint64_t numVerts = elem.end-elem.begin;
-
-  float4 v[8];
-  for (int i=0; i<numVerts; ++i) {
-    uint64_t idx = elem.indexBuffer[elem.begin+i];
-    v[i] = elem.vertexBuffer[idx];
-  }
-
-  float3 pos = ray.ori;
-  float value;
-  bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
-        || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
-        || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
-        || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
-
-  hit_record<Ray, primitive<unsigned>> result;
-  result.hit = hit;
-  if (hit) {
-    result.t = 0.f;
-    result.prim_id = elem.elemID;
-    result.u = value; // misuse "u" to store value
-  }
-  return result;
-}
-// Spatial Field //
-
-struct SpatialField
-{
-  enum Type { StructuredRegular, Unstructured, };
-  Type type;
-  unsigned fieldID{UINT_MAX};
-  float baseDT{0.5f};
-  struct {
-    texture_ref<float, 3> sampler;
-    float3 origin{0.f,0.f,0.f}, spacing{1.f,1.f,1.f};
-    uint3 dims{0,0,0};
-
-    VSNRAY_FUNC
-    inline float3 objectToLocal(const float3 &object) const
-    {
-      return 1.f / (spacing) * (object - origin);
-    }
-
-    VSNRAY_FUNC
-    inline float3 objectToTexCoord(const float3 &object) const
-    {
-      return objectToLocal(object + float3(0.5f) * spacing) / float3(dims);
-    }
-
-  } asStructuredRegular;
-  struct {
-    index_bvh<UElem>::bvh_ref samplingBVH;
-  } asUnstructured;
-};
-
-// Grid accelerator to traverse spatial fields //
-
-struct GridAccel
-{
-  unsigned fieldID{UINT_MAX}; // the field this grid belongs to
-  int3 dims;
-  box3 worldBounds;
-  box1 *valueRanges; // min/max ranges
-  float *maxOpacities; // used as majorants
 };
 
 // Transfer functions //

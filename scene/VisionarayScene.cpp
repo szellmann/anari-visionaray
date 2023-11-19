@@ -31,10 +31,12 @@ void VisionaraySceneImpl::commit()
   unsigned quadCount = 0;
   unsigned sphereCount = 0;
   unsigned cylinderCount = 0;
+  unsigned isoCount = 0;
   unsigned volumeCount = 0;
   unsigned instanceCount = 0;
 
   for (const auto &geom : m_geometries) {
+    if (!geom.isValid()) continue;
     switch (geom.type) {
       case dco::Geometry::Triangle:
         triangleCount++;
@@ -48,6 +50,9 @@ void VisionaraySceneImpl::commit()
       case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
+      case dco::Geometry::ISOSurface:
+        isoCount++;
+        break;
       case dco::Geometry::Volume:
         volumeCount++;
         break;
@@ -57,15 +62,19 @@ void VisionaraySceneImpl::commit()
     }
   }
 
+  m_BLSs.clear();
+
   m_accelStorage.triangleBLSs.resize(triangleCount);
   m_accelStorage.quadBLSs.resize(quadCount);
   m_accelStorage.sphereBLSs.resize(sphereCount);
   m_accelStorage.cylinderBLSs.resize(cylinderCount);
+  m_accelStorage.isoSurfaceBLSs.resize(isoCount);
   m_accelStorage.volumeBLSs.resize(volumeCount);
   // No instance storage: instance BLSs are the TLSs of child scenes
 
-  triangleCount = quadCount = sphereCount = cylinderCount = volumeCount = 0;
+  triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
   for (const auto &geom : m_geometries) {
+    if (!geom.isValid()) continue;
     if (geom.type == dco::Geometry::Triangle) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(true);
@@ -114,6 +123,18 @@ void VisionaraySceneImpl::commit()
       bls.type = dco::BLS::Cylinder;
       bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
       m_BLSs.push_back(bls);
+    } else if (geom.type == dco::Geometry::ISOSurface) {
+      binned_sah_builder builder;
+      builder.enable_spatial_splits(false); // no spatial splits for ISOs
+
+      unsigned index = isoCount++;
+      m_accelStorage.isoSurfaceBLSs[index] = builder.build(
+        ISOSurfaceBVH{}, &geom.asISOSurface.data, 1);
+
+      dco::BLS bls;
+      bls.type = dco::BLS::ISOSurface;
+      bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
+      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Volume) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
@@ -154,6 +175,7 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num sphere BLSs  : " << sphereCount << '\n';
   std::cout << "  num cylinder BLSs: " << cylinderCount << '\n';
   std::cout << "  num volume BLSs  : " << volumeCount << '\n';
+  std::cout << "  num iso BLSs     : " << isoCount << '\n';
   std::cout << "  num instance BLSs: " << instanceCount << '\n';
 #endif
 
@@ -169,6 +191,8 @@ void VisionaraySceneImpl::release()
   m_accelStorage.triangleBLSs.clear();
   m_accelStorage.sphereBLSs.clear();
   m_accelStorage.cylinderBLSs.clear();
+  m_accelStorage.isoSurfaceBLSs.clear();
+  m_accelStorage.volumeBLSs.clear();
   m_materials.clear();
 }
 
@@ -196,6 +220,8 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
     for (size_t i=0;i<geom.asCylinder.len;++i) {
       geom.asCylinder.data[i].geom_id = geomID;
     }
+  } else if (geom.type == dco::Geometry::ISOSurface) {
+    geom.asISOSurface.data.isoID = geomID;
   } else if (geom.type == dco::Geometry::Volume) {
     /* volumes do this themselves, on commit! */
   }
@@ -212,6 +238,15 @@ void VisionaraySceneImpl::attachGeometry(
     m_materials.resize(geomID+1);
 
   m_materials[geomID] = mat;
+}
+
+void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
+{
+  unsigned geomID = geom.geomID;
+
+  assert(geomID < m_geometries.size());
+
+  m_geometries[geomID] = geom;
 }
 
 void VisionaraySceneImpl::dispatch()

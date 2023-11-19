@@ -17,6 +17,7 @@ typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
 typedef index_bvh<basic_triangle<3,float>> QuadBVH;
 typedef index_bvh<basic_sphere<float>>     SphereBVH;
 typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
+typedef index_bvh<dco::ISOSurface>         ISOSurfaceBVH;
 typedef index_bvh<dco::Volume>             VolumeBVH;
 
 typedef index_bvh<dco::BLS> TLS;
@@ -36,11 +37,12 @@ struct VisionaraySceneImpl
 
   // Accel storage //
   struct {
-    aligned_vector<TriangleBVH> triangleBLSs;
-    aligned_vector<QuadBVH>     quadBLSs;
-    aligned_vector<SphereBVH>   sphereBLSs;
-    aligned_vector<CylinderBVH> cylinderBLSs;
-    aligned_vector<VolumeBVH>   volumeBLSs;
+    aligned_vector<TriangleBVH>   triangleBLSs;
+    aligned_vector<QuadBVH>       quadBLSs;
+    aligned_vector<SphereBVH>     sphereBLSs;
+    aligned_vector<CylinderBVH>   cylinderBLSs;
+    aligned_vector<ISOSurfaceBVH> isoSurfaceBLSs;
+    aligned_vector<VolumeBVH>     volumeBLSs;
   } m_accelStorage;
 
   // Internal state //
@@ -55,6 +57,7 @@ struct VisionaraySceneImpl
   void release();
   void attachGeometry(dco::Geometry geom, unsigned geomID);
   void attachGeometry(dco::Geometry geom, dco::Material mat, unsigned geomID);
+  void updateGeometry(dco::Geometry geom);
 
  private:
   void dispatch();

@@ -2,25 +2,9 @@
 
 #include "DeviceCopyableObjects.h"
 #include "VisionarayGlobalState.h"
+#include "GridAccel-common.h"
 
 namespace visionaray {
-
-VSNRAY_FUNC inline
-size_t linearIndex(const vec3i index, const vec3i dims)
-{
-  return index.z * size_t(dims.x) * dims.y
-       + index.y * dims.x
-       + index.x;
-}
-
-VSNRAY_FUNC inline
-vec3i projectOnGrid(const vec3f V,
-                    const vec3i dims,
-                    const box3f worldBounds)
-{
-  const vec3f V01 = (V-worldBounds.min)/(worldBounds.max-worldBounds.min);
-  return clamp(vec3i(V01*vec3f(dims)),vec3i(0),dims-vec3i(1));
-}
 
 VSNRAY_FUNC
 inline void updateMC(const vec3i  mcID,

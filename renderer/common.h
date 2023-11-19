@@ -200,6 +200,11 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
       vec3f pt = cyl.v1 + t * axis;
       gn = normalize(hitPos-pt);
     }
+  } else if (geom.type == dco::Geometry::ISOSurface) {
+    if (!sampleGradient(geom.asISOSurface.data.field,hitPos,gn)) {
+      return vec3f(0.f);
+    }
+    gn = normalize(gn);
   }
   return gn;
 }
@@ -289,9 +294,11 @@ inline vec4 getAttribute(
     }
   }
   else if (primitiveColors.len > 0) {
-    if (primitiveColors.type == ANARI_FLOAT32_VEC4) {
-      color = ((vec4f *)primitiveColors.data)[primID];
-    }
+    // TODO: do this for vertex attributes, too....
+    const auto *source
+        = (const uint8_t *)primitiveColors.data
+            + primID * anari::sizeOf(primitiveColors.type);
+    memcpy(&color, source, anari::sizeOf(primitiveColors.type));
   }
 
   return color;

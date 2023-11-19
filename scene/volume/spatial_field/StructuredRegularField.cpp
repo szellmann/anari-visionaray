@@ -60,6 +60,8 @@ void StructuredRegularField::commit()
 
   buildGrid();
 
+  vfield.gridAccel = m_gridAccel.visionarayAccel();
+
   dispatch();
 }
 

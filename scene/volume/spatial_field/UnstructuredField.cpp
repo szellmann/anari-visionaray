@@ -85,6 +85,8 @@ void UnstructuredField::commit()
 
   buildGrid();
 
+  vfield.gridAccel = m_gridAccel.visionarayAccel();
+
   dispatch();
 }
 

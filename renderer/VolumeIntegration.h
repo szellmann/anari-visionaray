@@ -7,47 +7,6 @@
 namespace visionaray {
 
 VSNRAY_FUNC
-inline bool sampleField(dco::SpatialField sf, vec3 P, float &value) {
-  if (sf.type == dco::SpatialField::StructuredRegular) {
-    value = tex3D(sf.asStructuredRegular.sampler,
-        sf.asStructuredRegular.objectToTexCoord(P));
-    return true;
-  } else if (sf.type == dco::SpatialField::Unstructured) {
-    Ray ray;
-    ray.ori = P;
-    ray.dir = float3(1.f);
-    ray.tmin = ray.tmax = 0.f;
-    auto hr = intersect(ray, sf.asUnstructured.samplingBVH);
-
-    if (!hr.hit)
-      return false;
-
-    value = hr.u; // value is stored in "u"!
-    return true;
-  }
-
-  return false;
-}
-
-VSNRAY_FUNC
-inline bool sampleGradient(dco::SpatialField sf, vec3 P, float3 &value) {
-  float x0=0, x1=0, y0=0, y1=0, z0=0, z1=0;
-  bool b0 = sampleField(sf, P+float3{sf.baseDT, 0.f, 0.f}, x1);
-  bool b1 = sampleField(sf, P-float3{sf.baseDT, 0.f, 0.f}, x0);
-  bool b2 = sampleField(sf, P+float3{0.f, sf.baseDT, 0.f}, y1);
-  bool b3 = sampleField(sf, P-float3{0.f, sf.baseDT, 0.f}, y0);
-  bool b4 = sampleField(sf, P+float3{0.f, 0.f, sf.baseDT}, z1);
-  bool b5 = sampleField(sf, P-float3{0.f, 0.f, sf.baseDT}, z0);
-  if (b0 && b1 && b2 && b3 && b4 && b5) {
-    value = float3{x1,y1,z1}-float3{x0,y0,z0};
-    return true; // TODO
-  } else {
-    value = float3{0.f};
-    return false;
-  }
-}
-
-VSNRAY_FUNC
 inline float4 postClassify(ScreenSample &ss, dco::TransferFunction tf, float v) {
   if (tf.type == dco::TransferFunction::_1D) {
     box1 valueRange = tf.as1D.valueRange;
@@ -111,7 +70,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
 
   const float dt = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].baseDT;
 
-  dco::GridAccel grid = onDevice.gridAccels[vol.asTransferFunction1D.fieldID];
+  dco::GridAccel grid
+      = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].gridAccel;
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
     const bool hasMajorant =
@@ -160,7 +120,7 @@ inline HitRecordVolume sampleFreeFlightDistance(
   ray.tmax = min(ray.tmax, boxHit.tfar);
   if (onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::Unstructured ||
       onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::StructuredRegular)
-    dda3(ss, ray, grid.dims, grid.worldBounds, woodcockFunc);
+    dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
 

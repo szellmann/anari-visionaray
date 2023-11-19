@@ -181,6 +181,20 @@ void Group::visionaraySceneCommit()
   reportMessage(
       ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
 
+  if (m_surfaceData) {
+    std::for_each(m_surfaceData->handlesBegin(),
+        m_surfaceData->handlesEnd(),
+        [&](Object *o) {
+          auto *s = (Surface *)o;
+          if (s && s->isValid()) {
+            if (s->geometry()->visionarayGeometry().updated) {
+              //std::cout << s->geometry()->visionarayGeometry().asISOSurface.data.numValues << '\n';
+              vscene->updateGeometry(s->geometry()->visionarayGeometry());
+              s->geometry()->visionarayGeometry().setUpdated(false);
+            }
+          }
+        });
+  }
   vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
 }

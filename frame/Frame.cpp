@@ -245,6 +245,9 @@ void Frame::renderFrame()
                 else if (cam.type == dco::Camera::Matrix)
                   ray = cam.asMatrixCam.primary_ray(
                       Ray{}, xf, yf, float(size.x), float(size.y));
+#if 1
+                ray.dbg = ss.debug();
+#endif
 
                 PixelSample ps = rend.renderSample(ss,
                         ray,

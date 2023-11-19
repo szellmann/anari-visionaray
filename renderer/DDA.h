@@ -1,7 +1,6 @@
 #pragma once
 
-#include "scene/volume/spatial_field/GridAccel.h"
-#include "DeviceCopyableObjects.h"
+#include "scene/volume/spatial_field/GridAccel-common.h"
 
 namespace visionaray {
 
@@ -9,11 +8,10 @@ namespace visionaray {
   
   template <typename Func>
   VSNRAY_FUNC
-  inline void dda3(ScreenSample &ss,
-                   Ray           ray,
-                   const vec3i  &gridDims,
-                   const box3f  &modelBounds,
-                   const Func   &func)
+  inline void dda3(basic_ray<float> ray,
+                   const vec3i     &gridDims,
+                   const box3f     &modelBounds,
+                   const Func      &func)
   {
     // move ray so tmin becomes 0
     const float ray_tmin = ray.tmin;

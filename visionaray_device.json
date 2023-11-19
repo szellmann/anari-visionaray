@@ -18,6 +18,7 @@
       "khr_geometry_quad",
       "khr_geometry_sphere",
       "khr_geometry_triangle",
+      "khr_geometry_isosurface",
       "khr_material_matte",
       "khr_material_transparent_matte",
       "khr_light_point",
