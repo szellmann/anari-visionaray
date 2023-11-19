@@ -1,0 +1,33 @@
+{
+    "info" : {
+        "name" : "VSNRAY_CAMERA_MATRIX",
+        "type" : "extension",
+        "dependencies" : []
+    },
+
+    "objects" : [
+        {
+            "type" : "ANARI_CAMERA",
+            "name" : "matrix",
+            "description" : "perspective camera object",
+            "parameters" : [
+                {
+                    "name" : "name",
+                    "types" : ["ANARI_STRING"],
+                    "tags" : [],
+                    "description" : "optional object name"
+                }, {
+                    "name" : "proj",
+                    "types" : ["ANARI_FLOAT32_MAT4"],
+                    "tags" : [],
+                    "description" : "projection matrix"
+                }, {
+                    "name" : "view",
+                    "types" : ["ANARI_FLOAT32_MAT4"],
+                    "tags" : [],
+                    "description" : "model/view matrix"
+                }
+            ]
+        }
+    ]
+}
