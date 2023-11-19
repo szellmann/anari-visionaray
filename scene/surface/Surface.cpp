@@ -60,6 +60,15 @@ void Surface::dispatch()
 
 void Surface::detach()
 {
+  if (deviceState()->dcos.surfaces.size() > vsurf.surfID) {
+    if (deviceState()->dcos.surfaces[vsurf.surfID].surfID == vsurf.surfID) {
+      deviceState()->dcos.surfaces.erase(
+          deviceState()->dcos.surfaces.begin() + vsurf.surfID);
+    }
+  }
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.data();
 }
 
 // float4 Surface::getSurfaceColor(const Ray &ray) const
