@@ -26,7 +26,7 @@ void Directional::commit()
   vlight.asDirectional.set_direction(-m_direction);
   vlight.asDirectional.set_cl(m_color);
   vlight.asDirectional.set_kl(m_irradiance); // TODO!
-  vlight.asDirectional.set_angular_diameter(15.f); // TODO!
+  vlight.asDirectional.set_angular_diameter(3.f); // TODO!
 
   dispatch();
 }
