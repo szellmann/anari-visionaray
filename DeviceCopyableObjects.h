@@ -698,7 +698,7 @@ struct Frame
 
     if (taa.enabled) {
       int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
-      prevID = clamp(prevID, int2(0), int2(size));
+      prevID = clamp(prevID, int2(0), int2(size)-int2(1));
       const auto prevIdx = prevID.y * size.x + prevID.x;
       float alpha = taa.alpha;
       if (!(fabsf(taa.prevAlbedoBuffer[prevIdx].x-taa.currAlbedoBuffer[idx].x) < 1e-2f
