@@ -60,7 +60,7 @@ void Renderer::commit()
     auto &renderState = vrend.asDirectLight.renderer.rendererState;
     commitCommonState(renderState);
     renderState.ambientColor = getParam<vec3>("ambientColor", vec3(1.f));
-    renderState.ambientRadiance = getParam<float>("ambientRadiance", 0.f);
+    renderState.ambientRadiance = getParam<float>("ambientRadiance", 0.2f);
     renderState.occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
     renderState.ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
     renderState.pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);
