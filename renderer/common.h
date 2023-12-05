@@ -91,14 +91,14 @@ struct RendererState
   int accumID{0};
   int envID{-1};
   // TAA
-  bool taaEnabled{true};
+  bool taaEnabled{false};
   float taaAlpha{0.3f};
   mat4 prevMV{mat4::identity()};
   mat4 prevPR{mat4::identity()};
   mat4 currMV{mat4::identity()};
   mat4 currPR{mat4::identity()};
   // Volume
-  bool gradientShading{true};
+  bool gradientShading{false};
   // AO
   float3 ambientColor{1.f, 1.f, 1.f};
   float ambientRadiance{0.2f};
