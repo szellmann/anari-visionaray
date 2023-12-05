@@ -42,7 +42,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     }
   }
 
-  return aoCount/weights;
+  return weights==0.f ? 1.f : aoCount/weights;
 }
 
 } // namespace visionaray
