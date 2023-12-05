@@ -15,6 +15,7 @@
 #include "renderer/DDA.h"
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
+#include "scene/volume/spatial_field/UElemGrid.h"
 #include "common.h"
 #include "sampleCDF.h"
 
@@ -61,15 +62,24 @@ struct UElem
   uint64_t elemID;
   uint64_t *indexBuffer;
   float4 *vertexBuffer;
+  // "stitcher" extension
+  int3 *gridDimsBuffer;
+  aabb *gridDomainsBuffer;
+  uint64_t *gridScalarsOffsetBuffer;
+  float *gridScalarsBuffer;
 };
 
 VSNRAY_FUNC
 inline aabb get_bounds(const UElem &elem)
 {
   aabb result;
-  result.invalidate();
-  for (uint64_t i=elem.begin;i<elem.end;++i) {
-    result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
+  if (elem.end-elem.begin > 0) {
+    result.invalidate();
+    for (uint64_t i=elem.begin;i<elem.end;++i) {
+      result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
+    }
+  } else { // no vertices -> voxel grid
+    result = elem.gridDomainsBuffer[elem.elemID];
   }
   return result;
 }
@@ -83,28 +93,42 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(
     const Ray &ray, const UElem &elem)
 {
+  hit_record<Ray, primitive<unsigned>> result;
+  float3 pos = ray.ori;
+  float value = 0.f;
+
   uint64_t numVerts = elem.end-elem.begin;
 
-  float4 v[8];
-  for (int i=0; i<numVerts; ++i) {
-    uint64_t idx = elem.indexBuffer[elem.begin+i];
-    v[i] = elem.vertexBuffer[idx];
+  if (numVerts > 0) { // regular uelem
+    float4 v[8];
+    for (int i=0; i<numVerts; ++i) {
+      uint64_t idx = elem.indexBuffer[elem.begin+i];
+      v[i] = elem.vertexBuffer[idx];
+    }
+
+    bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
+          || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
+          || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
+          || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
+
+    result.hit = hit;
+  } else {
+    // element is a voxel grid (for "stitcher" AMR data)
+    int3 dims = elem.gridDimsBuffer[elem.elemID];
+    aabb domain = elem.gridDomainsBuffer[elem.elemID];
+    uint64_t scalarsOffset = elem.gridScalarsOffsetBuffer[elem.elemID];
+
+    bool hit = intersectGrid(dims, domain, scalarsOffset, elem.gridScalarsBuffer,
+                             pos, value);
+    result.hit = hit;
   }
 
-  float3 pos = ray.ori;
-  float value;
-  bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
-        || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
-        || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
-        || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
-
-  hit_record<Ray, primitive<unsigned>> result;
-  result.hit = hit;
-  if (hit) {
+  if (result.hit) {
     result.t = 0.f;
     result.prim_id = elem.elemID;
     result.u = value; // misuse "u" to store value
   }
+
   return result;
 }
 

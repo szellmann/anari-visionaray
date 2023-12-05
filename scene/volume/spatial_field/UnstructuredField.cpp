@@ -1,4 +1,5 @@
 
+#include "array/Array3D.h"
 #include "UnstructuredField.h"
 
 namespace visionaray {
@@ -73,6 +74,57 @@ void UnstructuredField::commit()
     m_elements[cellID].indexBuffer = index;
   }
 
+  // voxel grid extensions for AMR "stitching"
+  m_params.gridData = getParamObject<ObjectArray>("grid.data");
+  m_params.gridDomains = getParamObject<Array1D>("grid.domains");
+
+  if (m_params.gridData && m_params.gridDomains) {
+    m_gridDims.clear();
+    m_gridDomains.clear();
+    m_gridScalarsOffsets.clear();
+    m_gridScalars.clear();
+
+    size_t numGrids = m_params.gridData->totalSize();
+    auto *gridData = (Array3D **)m_params.gridData->handlesBegin();
+    auto *gridDomains = m_params.gridDomains->beginAs<aabb>();
+
+    for (size_t i=0; i<numGrids; ++i) {
+      const Array3D *gd = *(gridData+i);
+
+      // from anari's array3d we get the number of vertices, not cells!
+      m_gridDims.push_back(int3(gd->size().x-1,gd->size().y-1,gd->size().z-1));
+      m_gridDomains.push_back(*(gridDomains+i));
+      m_gridScalarsOffsets.push_back(m_gridScalars.size());
+
+      for (unsigned z=0;z<gd->size().z;++z) {
+        for (unsigned y=0;y<gd->size().y;++y) {
+          for (unsigned x=0;x<gd->size().x;++x) {
+            // TODO: can we actually iterate linearly here?!
+            size_t index = z*size_t(gd->size().x)*gd->size().y 
+                         + y*gd->size().x
+                         + x;
+            float f = gd->dataAs<float>()[index];
+            m_gridScalars.push_back(f);
+          }
+        }
+      }
+    }
+
+    uint64_t firstGridID = m_elements.size();
+    for (size_t i=0; i<numGrids; ++i) {
+      dco::UElem elem;
+      elem.begin = elem.end = 0; // denotes that this is a grid!
+      elem.elemID = firstGridID + i;
+      elem.gridDimsBuffer = m_gridDims.data();
+      elem.gridDomainsBuffer = m_gridDomains.data();
+      elem.gridScalarsOffsetBuffer = m_gridScalarsOffsets.data();
+      elem.gridScalarsBuffer = m_gridScalars.data();
+      m_elements.push_back(elem);
+    }
+  }
+
+  // sampling BVH
+
   binned_sah_builder builder;
   builder.enable_spatial_splits(false);
 
@@ -113,10 +165,28 @@ void UnstructuredField::buildGrid()
     box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
     box1f valueRange{FLT_MAX, -FLT_MAX};
 
-    for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
-      const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
-      cellBounds.extend(V.xyz());
-      valueRange.extend(V.w);
+    uint64_t numVertices = m_elements[cellID].end-m_elements[cellID].begin;
+    if (numVertices > 0) {
+      for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
+        const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
+        cellBounds.extend(V.xyz());
+        valueRange.extend(V.w);
+      }
+    } else { // grid!
+      cellBounds = box3f(vec3f(m_gridDomains[cellID].min.x,
+                               m_gridDomains[cellID].min.y,
+                               m_gridDomains[cellID].min.z),
+                         vec3f(m_gridDomains[cellID].max.x,
+                               m_gridDomains[cellID].max.y,
+                               m_gridDomains[cellID].max.z));
+  
+      int3 dims = m_gridDims[cellID];
+
+      uint64_t numScalars = (dims.x+1)*size_t(dims.y+1)*(dims.z+1);
+      for (uint64_t i=0; i<numScalars; ++i) {
+        float f = m_gridScalars[m_gridScalarsOffsets[cellID] + i];
+        valueRange.extend(f);
+      }
     }
 
     const vec3i loMC = projectOnGrid(cellBounds.min,dims,worldBounds);
