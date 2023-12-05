@@ -114,7 +114,7 @@ void UnstructuredField::commit()
     for (size_t i=0; i<numGrids; ++i) {
       dco::UElem elem;
       elem.begin = elem.end = 0; // denotes that this is a grid!
-      elem.elemID = firstGridID + i;
+      elem.elemID = /*firstGridID +*/ i;
       elem.gridDimsBuffer = m_gridDims.data();
       elem.gridDomainsBuffer = m_gridDomains.data();
       elem.gridScalarsOffsetBuffer = m_gridScalarsOffsets.data();
@@ -173,18 +173,19 @@ void UnstructuredField::buildGrid()
         valueRange.extend(V.w);
       }
     } else { // grid!
-      cellBounds = box3f(vec3f(m_gridDomains[cellID].min.x,
-                               m_gridDomains[cellID].min.y,
-                               m_gridDomains[cellID].min.z),
-                         vec3f(m_gridDomains[cellID].max.x,
-                               m_gridDomains[cellID].max.y,
-                               m_gridDomains[cellID].max.z));
+      uint64_t elemID = m_elements[cellID].elemID; // not unique! (grids are 0-based)
+      cellBounds = box3f(vec3f(m_gridDomains[elemID].min.x,
+                               m_gridDomains[elemID].min.y,
+                               m_gridDomains[elemID].min.z),
+                         vec3f(m_gridDomains[elemID].max.x,
+                               m_gridDomains[elemID].max.y,
+                               m_gridDomains[elemID].max.z));
   
-      int3 dims = m_gridDims[cellID];
+      int3 dims = m_gridDims[elemID];
 
       uint64_t numScalars = (dims.x+1)*size_t(dims.y+1)*(dims.z+1);
       for (uint64_t i=0; i<numScalars; ++i) {
-        float f = m_gridScalars[m_gridScalarsOffsets[cellID] + i];
+        float f = m_gridScalars[m_gridScalarsOffsets[elemID] + i];
         valueRange.extend(f);
       }
     }
