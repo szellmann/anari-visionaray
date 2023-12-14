@@ -60,7 +60,7 @@ struct UElem
   uint64_t begin;
   uint64_t end;
   uint64_t elemID;
-  uint64_t *indexBuffer;
+  const uint64_t *indexBuffer;
   float4 *vertexBuffer;
   // "stitcher" extension
   int3 *gridDimsBuffer;
@@ -266,7 +266,7 @@ struct ISOSurface
 
   SpatialField field;
   unsigned numValues{0};
-  float *values{nullptr};
+  const float *values{nullptr};
 
   aabb bounds;
 };
@@ -453,7 +453,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
 
 struct Array
 {
-  void *data{nullptr};
+  const void *data{nullptr};
   size_t len{0};
   ANARIDataType type{ANARI_UNKNOWN};
 };
@@ -461,6 +461,17 @@ struct Array
 enum class Attribute
 {
   _0, _1, _2, _3, Color, None,
+};
+
+// Instance //
+
+struct Instance
+{
+  unsigned instID{UINT_MAX};
+  unsigned groupID{UINT_MAX};
+  VisionarayScene scene{nullptr};
+  mat4 xfm;
+  mat4 invXfm;
 };
 
 // Surface //
@@ -507,10 +518,7 @@ struct Geometry
     dco::Volume data;
   } asVolume;
   struct {
-    unsigned instID{UINT_MAX};
-    unsigned groupID{UINT_MAX};
-    VisionarayScene scene{nullptr};
-    mat4 xfm;
+    dco::Instance data;
   } asInstance;
 
   Array primitiveAttributes[5];
@@ -530,16 +538,6 @@ struct Geometry
   {
     updated = up;
   }
-};
-
-// Instance //
-
-struct Instance
-{
-  unsigned instID{UINT_MAX};
-  unsigned groupID{UINT_MAX};
-  mat4 xfm;
-  mat4 invXfm;
 };
 
 // Sampler //

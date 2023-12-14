@@ -23,8 +23,6 @@ bool Group::getProperty(
 {
   if (name == "bounds" && type == ANARI_FLOAT32_BOX3) {
     if (flags & ANARI_WAIT) {
-      deviceState()->waitOnCurrentFrame();
-      deviceState()->commitBufferFlush();
       visionaraySceneConstruct();
       visionaraySceneCommit();
     }
@@ -54,7 +52,7 @@ void Group::commit()
     std::transform(m_volumeData->handlesBegin(),
         m_volumeData->handlesEnd(),
         std::back_inserter(m_volumes),
-        [](Object *o) { return (Volume *)o; });
+        [](auto *o) { return (Volume *)o; });
   }
 }
 
@@ -125,7 +123,7 @@ void Group::visionaraySceneConstruct()
   if (m_surfaceData) {
     std::for_each(m_surfaceData->handlesBegin(),
         m_surfaceData->handlesEnd(),
-        [&](Object *o) {
+        [&](auto *o) {
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
@@ -153,7 +151,7 @@ void Group::visionaraySceneConstruct()
   if (m_volumeData) {
     std::for_each(m_volumeData->handlesBegin(),
         m_volumeData->handlesEnd(),
-        [&](Object *o) {
+        [&](auto *o) {
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
@@ -184,7 +182,7 @@ void Group::visionaraySceneCommit()
   if (m_surfaceData) {
     std::for_each(m_surfaceData->handlesBegin(),
         m_surfaceData->handlesEnd(),
-        [&](Object *o) {
+        [&](auto *o) {
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             if (s->geometry()->visionarayGeometry().updated) {

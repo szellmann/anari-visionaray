@@ -40,14 +40,4 @@ struct UnknownObject : public Object
 
 } // namespace visionaray
 
-#define VISIONARAY_ANARI_TYPEFOR_SPECIALIZATION(type, anari_type)                  \
-  namespace anari {                                                            \
-  ANARI_TYPEFOR_SPECIALIZATION(type, anari_type);                              \
-  }
-
-#define VISIONARAY_ANARI_TYPEFOR_DEFINITION(type)                                  \
-  namespace anari {                                                            \
-  ANARI_TYPEFOR_DEFINITION(type);                                              \
-  }
-
 VISIONARAY_ANARI_TYPEFOR_SPECIALIZATION(visionaray::Object *, ANARI_OBJECT);

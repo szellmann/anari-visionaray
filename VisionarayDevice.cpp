@@ -45,6 +45,20 @@ const char **query_extensions();
 
 // Data Arrays ////////////////////////////////////////////////////////////////
 
+void *VisionarayDevice::mapArray(ANARIArray a)
+{
+  deviceState()->renderingSemaphore.arrayMapAcquire();
+  return helium::BaseDevice::mapArray(a);
+}
+
+void VisionarayDevice::unmapArray(ANARIArray a)
+{
+  helium::BaseDevice::unmapArray(a);
+  deviceState()->renderingSemaphore.arrayMapRelease();
+}
+
+// API Objects ////////////////////////////////////////////////////////////////
+
 ANARIArray1D VisionarayDevice::newArray1D(const void *appMemory,
     ANARIMemoryDeleter deleter,
     const void *userData,
@@ -211,6 +225,23 @@ const void *VisionarayDevice::getParameterInfo(ANARIDataType objectType,
       parameterType,
       infoName,
       infoType);
+}
+
+// Object + Parameter Lifetime Management /////////////////////////////////////
+
+int VisionarayDevice::getProperty(ANARIObject object,
+    const char *name,
+    ANARIDataType type,
+    void *mem,
+    uint64_t size,
+    uint32_t mask)
+{
+  if (mask == ANARI_WAIT) {
+    auto lock = scopeLockObject();
+    deviceState()->waitOnCurrentFrame();
+  }
+
+  return helium::BaseDevice::getProperty(object, name, type, mem, size, mask);
 }
 
 // Frame Manipulation /////////////////////////////////////////////////////////

@@ -34,7 +34,8 @@ static bool is_ready(const std::future<R> &f)
 
 Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
 {
-  vframe.frameID = s->objectCounts.frames++;
+  vframe.frameID = deviceState()->dcos.frames.alloc(vframe);
+  s->objectCounts.frames++;
 }
 
 Frame::~Frame()
@@ -137,8 +138,6 @@ bool Frame::getProperty(
     const std::string_view &name, ANARIDataType type, void *ptr, uint32_t flags)
 {
   if (type == ANARI_FLOAT32 && name == "duration") {
-    if (flags & ANARI_WAIT)
-      wait();
     helium::writeToVoidP(ptr, m_duration);
     return true;
   }
@@ -152,36 +151,36 @@ void Frame::renderFrame()
 
   auto *state = deviceState();
   state->waitOnCurrentFrame();
-
-  auto start = std::chrono::steady_clock::now();
-
-  state->commitBufferFlush();
-
-  if (!isValid()) {
-    reportMessage(
-        ANARI_SEVERITY_ERROR, "skipping render of incomplete frame object");
-    std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
-    this->refDec(helium::RefType::INTERNAL);
-    return;
-  }
-
-  if (state->commitBufferLastFlush() <= m_frameLastRendered) {
-    if (!m_renderer->stochasticRendering()) {
-      this->refDec(helium::RefType::INTERNAL);
-      return;
-    }
-  }
-
-  checkAccumulationReset();
-  // TAA is a parameter on the renderer; we check it here to
-  // avoid having to use commit observers on the renderer
-  if (checkTAAReset())
-    dispatch();
-
-  m_frameLastRendered = helium::newTimeStamp();
   state->currentFrame = this;
 
-  m_future = async<void>([&, state, start]() {
+  m_future = async<void>([&, state]() {
+    auto start = std::chrono::steady_clock::now();
+    state->renderingSemaphore.frameStart();
+    state->commitBufferFlush();
+
+    if (!isValid()) {
+      reportMessage(
+          ANARI_SEVERITY_ERROR, "skipping render of incomplete frame object");
+      std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
+      state->renderingSemaphore.frameEnd();
+      return;
+    }
+
+    if (state->commitBufferLastFlush() <= m_frameLastRendered) {
+      if (!m_renderer->stochasticRendering()) {
+        state->renderingSemaphore.frameEnd();
+        return;
+      }
+    }
+
+    m_frameLastRendered = helium::newTimeStamp();
+
+    checkAccumulationReset();
+    // TAA is a parameter on the renderer; we check it here to
+    // avoid having to use commit observers on the renderer
+    if (checkTAAReset())
+      dispatch();
+
     m_world->visionaraySceneUpdate();
 
     const auto &size = vframe.size;
@@ -311,6 +310,8 @@ void Frame::renderFrame()
       memcpy(taa.prevAlbedoBuffer.data(), taa.currAlbedoBuffer.data(),
           sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size());
     }
+
+    state->renderingSemaphore.frameEnd();
 
     auto end = std::chrono::steady_clock::now();
     m_duration = std::chrono::duration<float>(end - start).count();
@@ -459,10 +460,7 @@ bool Frame::checkTAAReset()
 
 void Frame::dispatch()
 {
-  if (deviceState()->dcos.frames.size() <= vframe.frameID) {
-    deviceState()->dcos.frames.resize(vframe.frameID+1);
-  }
-  deviceState()->dcos.frames[vframe.frameID] = vframe;
+  deviceState()->dcos.frames.update(vframe.frameID, vframe);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.frames = deviceState()->dcos.frames.data();
@@ -470,12 +468,7 @@ void Frame::dispatch()
 
 void Frame::detach()
 {
-  if (deviceState()->dcos.frames.size() > vframe.frameID) {
-    if (deviceState()->dcos.frames[vframe.frameID].frameID == vframe.frameID) {
-      deviceState()->dcos.frames.erase(
-          deviceState()->dcos.frames.begin() + vframe.frameID);
-    }
-  }
+  deviceState()->dcos.frames.free(vframe.frameID);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.frames = deviceState()->dcos.frames.data();

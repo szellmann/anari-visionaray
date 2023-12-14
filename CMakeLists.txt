@@ -19,7 +19,6 @@ anari_generate_queries(
 
 add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME} PRIVATE
-    array/Array.cpp
     array/Array1D.cpp
     array/Array2D.cpp
     array/Array3D.cpp

@@ -19,6 +19,11 @@ struct VisionarayDevice : public helium::BaseDevice
 
   // Data Arrays //////////////////////////////////////////////////////////////
 
+  void *mapArray(ANARIArray) override;
+  void unmapArray(ANARIArray) override;
+
+  // API Objects //////////////////////////////////////////////////////////////
+
   ANARIArray1D newArray1D(const void *appMemory,
       ANARIMemoryDeleter deleter,
       const void *userdata,
@@ -81,6 +86,15 @@ struct VisionarayDevice : public helium::BaseDevice
       ANARIDataType parameterType,
       const char* infoName,
       ANARIDataType infoType) override;
+
+  // Object + Parameter Lifetime Management ///////////////////////////////////
+
+  int getProperty(ANARIObject object,
+      const char *name,
+      ANARIDataType type,
+      void *mem,
+      uint64_t size,
+      uint32_t mask) override;
 
   // FrameBuffer Manipulation /////////////////////////////////////////////////
 

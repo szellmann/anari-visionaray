@@ -6,33 +6,14 @@
 namespace visionaray {
 
 Array3D::Array3D(VisionarayGlobalState *state, const Array3DMemoryDescriptor &d)
-    : Array(ANARI_ARRAY3D, state, d)
+    : helium::Array3D(state, d)
 {
-  m_size[0] = d.numItems1;
-  m_size[1] = d.numItems2;
-  m_size[2] = d.numItems3;
-
-  initManagedMemory();
+  state->objectCounts.arrays++;
 }
 
-size_t Array3D::totalSize() const
+Array3D::~Array3D()
 {
-  return size(0) * size(1) * size(2);
-}
-
-size_t Array3D::size(int dim) const
-{
-  return m_size[dim];
-}
-
-uint3 Array3D::size() const
-{
-  return uint3(uint32_t(size(0)), uint32_t(size(1)), uint32_t(size(2)));
-}
-
-void Array3D::privatize()
-{
-  makePrivatizedCopy(size(0) * size(1) * size(2));
+  asVisionarayState(deviceState())->objectCounts.arrays--;
 }
 
 } // namespace visionaray

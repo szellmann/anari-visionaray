@@ -25,7 +25,8 @@ void StructuredRegularField::commit()
 
 //m_data = m_dataArray->data();
   m_type = m_dataArray->elementType();
-  m_dims = m_dataArray->size();
+  m_dims = uint3(
+      m_dataArray->size().x, m_dataArray->size().y, m_dataArray->size().z);
 
   m_origin = getParam<float3>("origin", float3(0.f));
   m_spacing = getParam<float3>("spacing", float3(1.f));

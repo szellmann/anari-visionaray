@@ -151,13 +151,13 @@ void VisionaraySceneImpl::commit()
       instanceCount++;
       dco::BLS bls;
       bls.type = dco::BLS::Instance;
-      mat3f rot = top_left(geom.asInstance.xfm);
-      vec3f trans(geom.asInstance.xfm(0,3),
-                  geom.asInstance.xfm(1,3),
-                  geom.asInstance.xfm(2,3));
+      mat3f rot = top_left(geom.asInstance.data.xfm);
+      vec3f trans(geom.asInstance.data.xfm(0,3),
+                  geom.asInstance.data.xfm(1,3),
+                  geom.asInstance.data.xfm(2,3));
       mat4x3 xfm{rot, trans};
-      bls.asInstance = geom.asInstance.scene->m_TLS.inst(xfm);
-      bls.asInstance.set_inst_id(geom.asInstance.instID);
+      bls.asInstance = geom.asInstance.data.scene->m_TLS.inst(xfm);
+      bls.asInstance.set_inst_id(geom.asInstance.data.instID);
       m_BLSs.push_back(bls);
     }
   }

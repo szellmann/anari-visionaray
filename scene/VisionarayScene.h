@@ -28,8 +28,8 @@ struct VisionaraySceneImpl
   Type type;
 
   // Surface data //
-  aligned_vector<dco::Geometry> m_geometries;
-  aligned_vector<dco::Material> m_materials;
+  DeviceObjectArray<dco::Geometry> m_geometries;
+  DeviceObjectArray<dco::Material> m_materials;
 
   // Accels //
   TLS m_TLS;

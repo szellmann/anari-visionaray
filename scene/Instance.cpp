@@ -8,7 +8,9 @@ namespace visionaray {
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
   vgeom.type = dco::Geometry::Instance;
-  vgeom.asInstance.instID = s->objectCounts.instances++;
+  vgeom.asInstance.data.instID
+      = deviceState()->dcos.instances.alloc(vgeom.asInstance.data);
+  s->objectCounts.instances++;
 }
 
 Instance::~Instance()
@@ -63,9 +65,9 @@ dco::Geometry Instance::visionarayGeometry() const
 void Instance::visionarayGeometryUpdate()
 {
   // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
-  vgeom.asInstance.scene = group()->visionarayScene();
-  vgeom.asInstance.groupID = group()->visionarayScene()->m_groupID;
-  vgeom.asInstance.xfm = m_xfm;
+  vgeom.asInstance.data.scene = group()->visionarayScene();
+  vgeom.asInstance.data.groupID = group()->visionarayScene()->m_groupID;
+  vgeom.asInstance.data.xfm = m_xfm;
   // rtcSetGeometryTransform(
   //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);
   // rtcCommitGeometry(m_embreeGeometry);
@@ -86,17 +88,9 @@ bool Instance::isValid() const
 
 void Instance::dispatch()
 {
-  if (deviceState()->dcos.instances.size() <= vgeom.asInstance.instID) {
-    deviceState()->dcos.instances.resize(vgeom.asInstance.instID+1);
-  }
-  deviceState()->dcos.instances[vgeom.asInstance.instID].instID
-      = vgeom.asInstance.instID;
-  deviceState()->dcos.instances[vgeom.asInstance.instID].groupID
-      = vgeom.asInstance.groupID;
-  deviceState()->dcos.instances[vgeom.asInstance.instID].xfm
-      = vgeom.asInstance.xfm;
-  deviceState()->dcos.instances[vgeom.asInstance.instID].invXfm
-      = inverse(vgeom.asInstance.xfm);
+  vgeom.asInstance.data.invXfm = inverse(vgeom.asInstance.data.xfm);
+  deviceState()->dcos.instances.update(
+      vgeom.asInstance.data.instID, vgeom.asInstance.data);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.instances = deviceState()->dcos.instances.data();
@@ -104,13 +98,7 @@ void Instance::dispatch()
 
 void Instance::detach()
 {
-  if (deviceState()->dcos.instances.size() > vgeom.asInstance.instID) {
-    if (deviceState()->dcos.instances[vgeom.asInstance.instID].instID
-        == vgeom.asInstance.instID) {
-      deviceState()->dcos.instances.erase(
-          deviceState()->dcos.instances.begin() + vgeom.asInstance.instID);
-    }
-  }
+  deviceState()->dcos.instances.free(vgeom.asInstance.data.instID);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.instances = deviceState()->dcos.instances.data();

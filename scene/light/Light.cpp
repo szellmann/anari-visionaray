@@ -12,11 +12,13 @@ namespace visionaray {
 Light::Light(VisionarayGlobalState *s) : Object(ANARI_LIGHT, s)
 {
   memset(&vlight,0,sizeof(vlight));
-  vlight.lightID = s->objectCounts.lights++;
+  vlight.lightID = deviceState()->dcos.lights.alloc(vlight);
+  s->objectCounts.lights++;
 }
 
 Light::~Light()
 {
+  detach();
   deviceState()->objectCounts.lights--;
 }
 
@@ -42,10 +44,7 @@ Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 
 void Light::dispatch()
 {
-  if (deviceState()->dcos.lights.size() <= vlight.lightID) {
-    deviceState()->dcos.lights.resize(vlight.lightID+1);
-  }
-  deviceState()->dcos.lights[vlight.lightID] = vlight;
+  deviceState()->dcos.lights.update(vlight.lightID, vlight);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
@@ -53,12 +52,7 @@ void Light::dispatch()
 
 void Light::detach()
 {
-  if (deviceState()->dcos.lights.size() > vlight.lightID) {
-    if (deviceState()->dcos.lights[vlight.lightID].lightID == vlight.lightID) {
-      deviceState()->dcos.lights.erase(
-          deviceState()->dcos.lights.begin() + vlight.lightID);
-    }
-  }
+  deviceState()->dcos.lights.free(vlight.lightID);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.lights = deviceState()->dcos.lights.data();

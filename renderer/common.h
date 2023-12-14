@@ -176,7 +176,6 @@ inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 }
 
 VSNRAY_FUNC
-VSNRAY_FUNC
 inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hitPos)
 {
   vec3f gn(1.f,0.f,0.f);

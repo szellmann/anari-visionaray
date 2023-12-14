@@ -8,6 +8,7 @@
 // ours
 #include "array/Array1D.h"
 #include "DeviceCopyableObjects.h"
+#include "Object.h"
 
 namespace visionaray {
 

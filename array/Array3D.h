@@ -3,32 +3,18 @@
 
 #pragma once
 
-#include "array/Array.h"
+#include "../VisionarayGlobalState.h"
+// helium
+#include "helium/array/Array3D.h"
 
 namespace visionaray {
 
-struct Array3DMemoryDescriptor : public ArrayMemoryDescriptor
-{
-  uint64_t numItems1{0};
-  uint64_t numItems2{0};
-  uint64_t numItems3{0};
-};
+using Array3DMemoryDescriptor = helium::Array3DMemoryDescriptor;
 
-bool isCompact(const Array3DMemoryDescriptor &d);
-
-struct Array3D : public Array
+struct Array3D : public helium::Array3D
 {
   Array3D(VisionarayGlobalState *state, const Array3DMemoryDescriptor &d);
-
-  size_t totalSize() const override;
-
-  size_t size(int dim) const;
-  uint3 size() const;
-
-  void privatize() override;
-
- private:
-  size_t m_size[3] = {0, 0, 0};
+  ~Array3D() override;
 };
 
 } // namespace visionaray

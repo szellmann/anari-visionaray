@@ -29,8 +29,6 @@ bool World::getProperty(
 {
   if (name == "bounds" && type == ANARI_FLOAT32_BOX3) {
     if (flags & ANARI_WAIT) {
-      deviceState()->waitOnCurrentFrame();
-      deviceState()->commitBufferFlush();
       visionaraySceneUpdate();
     }
     if (vscene && vscene->m_TLS.num_nodes()) {
@@ -84,7 +82,7 @@ void World::commit()
       m_instanceData->appendHandle(m_zeroInstance.ptr);
     std::for_each(m_instanceData->handlesBegin(),
         m_instanceData->handlesEnd(),
-        [&](Object *o) {
+        [&](auto *o) {
           if (o && o->isValid())
             m_instances.push_back((Instance *)o);
         });

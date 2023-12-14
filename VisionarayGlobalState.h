@@ -1,11 +1,13 @@
 #pragma once
 
+#include "RenderingSemaphore.h"
 // helium
 #include "helium/BaseGlobalDeviceState.h"
 // visionaray
 #include "visionaray/detail/thread_pool.h"
 // ours
 #include "DeviceCopyableObjects.h"
+#include "DeviceObjectArray.h"
 
 namespace visionaray {
 
@@ -44,16 +46,16 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   struct DeviceCopyableObjects
   {
     // One TLS per world
-    std::vector<dco::TLS> TLSs;
-    std::vector<dco::Group> groups;
-    std::vector<dco::Surface> surfaces;
-    std::vector<dco::Instance> instances;
-    std::vector<dco::Sampler> samplers;
-    std::vector<dco::SpatialField> spatialFields;
-    std::vector<dco::GridAccel> gridAccels;
-    std::vector<dco::TransferFunction> transferFunctions;
-    std::vector<dco::Light> lights;
-    std::vector<dco::Frame> frames;
+    DeviceObjectArray<dco::TLS> TLSs;
+    DeviceObjectArray<dco::Group> groups;
+    DeviceObjectArray<dco::Surface> surfaces;
+    DeviceObjectArray<dco::Instance> instances;
+    DeviceObjectArray<dco::Sampler> samplers;
+    DeviceObjectArray<dco::SpatialField> spatialFields;
+    DeviceObjectArray<dco::GridAccel> gridAccels;
+    DeviceObjectArray<dco::TransferFunction> transferFunctions;
+    DeviceObjectArray<dco::Light> lights;
+    DeviceObjectArray<dco::Frame> frames;
   } dcos;
 
   struct DeviceObjectRegistry
@@ -70,6 +72,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::Frame *frames{nullptr};
   } onDevice;
 
+  RenderingSemaphore renderingSemaphore;
   Frame *currentFrame{nullptr};
 
   // Helper methods //
@@ -77,5 +80,22 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   VisionarayGlobalState(ANARIDevice d);
   void waitOnCurrentFrame() const;
 };
+
+// Helper functions/macros ////////////////////////////////////////////////////
+
+inline VisionarayGlobalState *asVisionarayState(helium::BaseGlobalDeviceState *s)
+{
+  return (VisionarayGlobalState *)s;
+}
+
+#define VISIONARAY_ANARI_TYPEFOR_SPECIALIZATION(type, anari_type)              \
+  namespace anari {                                                            \
+  ANARI_TYPEFOR_SPECIALIZATION(type, anari_type);                              \
+  }
+
+#define VISIONARAY_ANARI_TYPEFOR_DEFINITION(type)                              \
+  namespace anari {                                                            \
+  ANARI_TYPEFOR_DEFINITION(type);                                              \
+  }
 
 } // visionaray
