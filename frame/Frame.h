@@ -48,7 +48,6 @@ struct Frame : public helium::BaseFrame
   bool checkTAAReset();
 
   void dispatch();
-  void detach();
 
   //// Data ////
 

@@ -4,25 +4,24 @@
 
 namespace visionaray {
 
-unsigned VisionaraySceneImpl::nextWorldID = 0;
-unsigned VisionaraySceneImpl::nextGroupID = 0;
-
 VisionaraySceneImpl::VisionaraySceneImpl(
     VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
   : m_state(state)
 {
   this->type = type;
 
-  if (type == World)
-    m_worldID = nextWorldID++;
-  m_groupID = nextGroupID++;
+  if (type == World) {
+    m_worldID = deviceState()->dcos.TLSs.alloc(m_TLS.ref());
+  }
+  m_groupID = deviceState()->dcos.groups.alloc(dco::Group{});
 }
 
 VisionaraySceneImpl::~VisionaraySceneImpl()
 {
-  if (type == World)
-    nextWorldID--;
-  nextGroupID--;
+  if (type == World) {
+    deviceState()->dcos.TLSs.free(m_worldID);
+  }
+  deviceState()->dcos.groups.free(m_groupID);
 }
 
 void VisionaraySceneImpl::commit()
@@ -151,12 +150,7 @@ void VisionaraySceneImpl::commit()
       instanceCount++;
       dco::BLS bls;
       bls.type = dco::BLS::Instance;
-      mat3f rot = top_left(geom.asInstance.data.xfm);
-      vec3f trans(geom.asInstance.data.xfm(0,3),
-                  geom.asInstance.data.xfm(1,3),
-                  geom.asInstance.data.xfm(2,3));
-      mat4x3 xfm{rot, trans};
-      bls.asInstance = geom.asInstance.data.scene->m_TLS.inst(xfm);
+      bls.asInstance = geom.asInstance.data.instBVH;
       bls.asInstance.set_inst_id(geom.asInstance.data.instID);
       m_BLSs.push_back(bls);
     }
@@ -184,8 +178,6 @@ void VisionaraySceneImpl::commit()
 
 void VisionaraySceneImpl::release()
 {
-//detach();
-
   m_geometries.clear();
   m_BLSs.clear();
   m_accelStorage.triangleBLSs.clear();
@@ -199,35 +191,36 @@ void VisionaraySceneImpl::release()
 
 void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 {
-  if (m_geometries.size() <= geomID)
-    m_geometries.resize(geomID+1);
+  bool success = m_geometries.allocAt(geomID, geom);
 
-  geom.geomID = geomID;
+  if (success) {
+    geom.geomID = geomID;
 
-  // Patch geomID into scene primitives
-  if (geom.type == dco::Geometry::Triangle) {
-    for (size_t i=0;i<geom.asTriangle.len;++i) {
-      geom.asTriangle.data[i].geom_id = geomID;
+    // Patch geomID into scene primitives
+    if (geom.type == dco::Geometry::Triangle) {
+      for (size_t i=0;i<geom.asTriangle.len;++i) {
+        geom.asTriangle.data[i].geom_id = geomID;
+      }
+    } else if (geom.type == dco::Geometry::Quad) {
+      for (size_t i=0;i<geom.asQuad.len;++i) {
+        geom.asQuad.data[i].geom_id = geomID;
+      }
+    } else if (geom.type == dco::Geometry::Sphere) {
+      for (size_t i=0;i<geom.asSphere.len;++i) {
+        geom.asSphere.data[i].geom_id = geomID;
+      }
+    } else if (geom.type == dco::Geometry::Cylinder) {
+      for (size_t i=0;i<geom.asCylinder.len;++i) {
+        geom.asCylinder.data[i].geom_id = geomID;
+      }
+    } else if (geom.type == dco::Geometry::ISOSurface) {
+      geom.asISOSurface.data.isoID = geomID;
+    } else if (geom.type == dco::Geometry::Volume) {
+      /* volumes do this themselves, on commit! */
     }
-  } else if (geom.type == dco::Geometry::Quad) {
-    for (size_t i=0;i<geom.asQuad.len;++i) {
-      geom.asQuad.data[i].geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::Sphere) {
-    for (size_t i=0;i<geom.asSphere.len;++i) {
-      geom.asSphere.data[i].geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::Cylinder) {
-    for (size_t i=0;i<geom.asCylinder.len;++i) {
-      geom.asCylinder.data[i].geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::ISOSurface) {
-    geom.asISOSurface.data.isoID = geomID;
-  } else if (geom.type == dco::Geometry::Volume) {
-    /* volumes do this themselves, on commit! */
+
+    m_geometries.update(geom.geomID, geom);
   }
-
-  m_geometries[geomID] = geom;
 }
 
 void VisionaraySceneImpl::attachGeometry(
@@ -235,10 +228,12 @@ void VisionaraySceneImpl::attachGeometry(
 {
   attachGeometry(geom, geomID);
 
-  if (m_materials.size() <= geomID)
-    m_materials.resize(geomID+1);
+  bool success = m_materials.allocAt(geomID, mat);
 
-  m_materials[geomID] = mat;
+  if (success) {
+    mat.matID = geomID;
+    m_materials.update(mat.matID, mat);
+  }
 }
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
@@ -263,45 +258,29 @@ void VisionaraySceneImpl::attachLight(dco::Light light, unsigned lightID)
 void VisionaraySceneImpl::dispatch()
 {
   // Dispatch world
-  if (m_worldID < UINT_MAX) {
-    if (m_state->dcos.TLSs.size() <= m_worldID) {
-      m_state->dcos.TLSs.resize(m_worldID+1);
-    }
-    m_state->dcos.TLSs[m_worldID] = m_TLS.ref();
+  if (type == World) {
+    m_state->dcos.TLSs.update(m_worldID, m_TLS.ref());
   }
 
   // Dispatch group
-  if (m_state->dcos.groups.size() <= m_groupID) {
-    m_state->dcos.groups.resize(m_groupID+1);
-  }
-  m_state->dcos.groups[m_groupID].groupID = m_groupID;
-  m_state->dcos.groups[m_groupID].numGeoms = m_geometries.size();
-  m_state->dcos.groups[m_groupID].geoms = m_geometries.data();
-  m_state->dcos.groups[m_groupID].numMaterials = m_materials.size();
-  m_state->dcos.groups[m_groupID].materials = m_materials.data();
-  m_state->dcos.groups[m_groupID].numLights = m_lights.size();
-  m_state->dcos.groups[m_groupID].lights = m_lights.devicePtr();
+  dco::Group group;
+  group.groupID = m_groupID;
+  group.numGeoms = m_geometries.size();
+  group.geoms = m_geometries.devicePtr();
+  group.numMaterials = m_materials.size();
+  group.materials = m_materials.devicePtr();
+  group.numLights = m_lights.size();
+  group.lights = m_lights.devicePtr();
+  m_state->dcos.groups.update(m_groupID, group);
 
   // Upload/set accessible pointers
-  m_state->onDevice.TLSs = m_state->dcos.TLSs.data();
-  m_state->onDevice.groups = m_state->dcos.groups.data();
+  m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();
+  m_state->onDevice.groups = m_state->dcos.groups.devicePtr();
 }
 
-void VisionaraySceneImpl::detach()
+VisionarayGlobalState *VisionaraySceneImpl::deviceState()
 {
-  // Detach world
-  if (m_state->dcos.TLSs.size() > m_worldID) {
-    if (m_state->dcos.TLSs[m_worldID] == m_TLS.ref()) {
-      m_state->dcos.TLSs.erase(m_state->dcos.TLSs.begin() + m_worldID);
-    }
-  }
-
-  // Detach group
-  if (m_state->dcos.groups.size() > m_groupID) {
-    if (m_state->dcos.groups[m_groupID].groupID == m_groupID) {
-      m_state->dcos.groups.erase(m_state->dcos.groups.begin() + m_groupID);
-    }
-  }
+  return m_state;
 }
 
 VisionarayScene newVisionarayScene(

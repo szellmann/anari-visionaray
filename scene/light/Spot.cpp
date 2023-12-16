@@ -9,7 +9,6 @@ Spot::Spot(VisionarayGlobalState *s) : Light(s)
 
 Spot::~Spot()
 {
-  detach();
 }
 
 void Spot::commit()

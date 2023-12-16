@@ -25,7 +25,6 @@ struct TransferFunction1D : public Volume
 
  private:
   void dispatch();
-  void detach();
 
   // Data //
 

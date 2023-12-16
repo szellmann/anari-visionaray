@@ -13,7 +13,6 @@ Surface::Surface(VisionarayGlobalState *s) : Object(ANARI_SURFACE, s)
 Surface::~Surface()
 {
   deviceState()->objectCounts.surfaces--;
-  detach();
 }
 
 void Surface::commit()
@@ -53,19 +52,6 @@ void Surface::dispatch()
     deviceState()->dcos.surfaces.resize(vsurf.surfID+1);
   }
   deviceState()->dcos.surfaces[vsurf.surfID] = vsurf;
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.data();
-}
-
-void Surface::detach()
-{
-  if (deviceState()->dcos.surfaces.size() > vsurf.surfID) {
-    if (deviceState()->dcos.surfaces[vsurf.surfID].surfID == vsurf.surfID) {
-      deviceState()->dcos.surfaces.erase(
-          deviceState()->dcos.surfaces.begin() + vsurf.surfID);
-    }
-  }
 
   // Upload/set accessible pointers
   deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.data();

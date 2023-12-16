@@ -18,7 +18,7 @@ Light::Light(VisionarayGlobalState *s) : Object(ANARI_LIGHT, s)
 
 Light::~Light()
 {
-  detach();
+  deviceState()->dcos.lights.free(vlight.lightID);
   deviceState()->objectCounts.lights--;
 }
 
@@ -45,14 +45,6 @@ Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 void Light::dispatch()
 {
   deviceState()->dcos.lights.update(vlight.lightID, vlight);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.lights = deviceState()->dcos.lights.devicePtr();
-}
-
-void Light::detach()
-{
-  deviceState()->dcos.lights.free(vlight.lightID);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.lights = deviceState()->dcos.lights.devicePtr();

@@ -30,7 +30,6 @@ struct Surface : public Object
 
  private:
   void dispatch();
-  void detach();
 
   helium::IntrusivePtr<Geometry> m_geometry;
   helium::IntrusivePtr<Material> m_material;

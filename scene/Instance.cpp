@@ -15,7 +15,7 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 
 Instance::~Instance()
 {
-  detach();
+  deviceState()->dcos.instances.free(vgeom.asInstance.data.instID);
 
   // rtcReleaseGeometry(m_embreeGeometry);
   deviceState()->objectCounts.instances--;
@@ -65,12 +65,17 @@ dco::Geometry Instance::visionarayGeometry() const
 void Instance::visionarayGeometryUpdate()
 {
   // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
-  vgeom.asInstance.data.scene = group()->visionarayScene();
   vgeom.asInstance.data.groupID = group()->visionarayScene()->m_groupID;
   vgeom.asInstance.data.xfm = m_xfm;
-  // rtcSetGeometryTransform(
-  //     m_embreeGeometry, 0, RTC_FORMAT_FLOAT4X4_COLUMN_MAJOR, &m_xfm);
-  // rtcCommitGeometry(m_embreeGeometry);
+
+  // set xfm
+  mat3f rot = top_left(vgeom.asInstance.data.xfm);
+  vec3f trans(vgeom.asInstance.data.xfm(0,3),
+              vgeom.asInstance.data.xfm(1,3),
+              vgeom.asInstance.data.xfm(2,3));
+  mat4x3 xfm{rot, trans};
+  vgeom.asInstance.data.instBVH = group()->visionarayScene()->m_TLS.inst(xfm);
+
   dispatch();
 }
 
@@ -91,14 +96,6 @@ void Instance::dispatch()
   vgeom.asInstance.data.invXfm = inverse(vgeom.asInstance.data.xfm);
   deviceState()->dcos.instances.update(
       vgeom.asInstance.data.instID, vgeom.asInstance.data);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
-}
-
-void Instance::detach()
-{
-  deviceState()->dcos.instances.free(vgeom.asInstance.data.instID);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();

@@ -21,11 +21,6 @@
 
 namespace visionaray {
 
-// Forward decls //
-
-struct VisionaraySceneImpl;
-typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
-
 // Ray //
 
 struct Ray : basic_ray<float>
@@ -469,7 +464,7 @@ struct Instance
 {
   unsigned instID{UINT_MAX};
   unsigned groupID{UINT_MAX};
-  VisionarayScene scene{nullptr};
+  index_bvh<BLS>::bvh_inst instBVH;
   mat4 xfm;
   mat4 invXfm;
 };

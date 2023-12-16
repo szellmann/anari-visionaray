@@ -35,7 +35,6 @@ struct Instance : public Object
   dco::Geometry vgeom;
 
   void dispatch();
-  void detach();
 };
 
 } // namespace visionaray

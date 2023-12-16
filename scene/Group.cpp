@@ -69,32 +69,10 @@ const std::vector<Volume *> &Group::volumes() const
   return m_volumes;
 }
 
-// void Group::intersectVolumes(VolumeRay &ray) const
-// {
-//   Volume *originalVolume = ray.volume;
-//   box1 t = ray.t;
-//
-//   for (auto *v : volumes()) {
-//     if (!v->isValid())
-//       continue;
-//     const box3 bounds = v->bounds();
-//     const float3 mins = (bounds.lower - ray.org) * (1.f / ray.dir);
-//     const float3 maxs = (bounds.upper - ray.org) * (1.f / ray.dir);
-//     const float3 nears = linalg::min(mins, maxs);
-//     const float3 fars = linalg::max(mins, maxs);
-//
-//     const box1 lt(linalg::maxelem(nears), linalg::minelem(fars));
-//
-//     if (lt.lower < lt.upper && (!ray.volume || lt.lower < t.lower)) {
-//       t.lower = clamp(lt.lower, t);
-//       t.upper = clamp(lt.upper, t);
-//       ray.volume = v;
-//     }
-//   }
-//
-//   if (ray.volume != originalVolume)
-//     ray.t = t;
-// }
+const std::vector<Light *> &Group::lights() const
+{
+  return m_lights;
+}
 
 void Group::markCommitted()
 {

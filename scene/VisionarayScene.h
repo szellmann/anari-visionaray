@@ -64,10 +64,8 @@ struct VisionaraySceneImpl
 
  private:
   void dispatch();
-  void detach();
 
-  static unsigned nextWorldID;
-  static unsigned nextGroupID;
+  VisionarayGlobalState *deviceState();
 };
 
 typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;

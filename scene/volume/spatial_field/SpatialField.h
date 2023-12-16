@@ -33,7 +33,6 @@ struct SpatialField : public Object
 
   void setStepSize(float size);
   void dispatch();
-  void detach();
 };
 
 } // namespace visionaray

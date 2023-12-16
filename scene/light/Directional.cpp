@@ -9,7 +9,6 @@ Directional::Directional(VisionarayGlobalState *d) : Light(d)
 
 Directional::~Directional()
 {
-  detach();
 }
 
 void Directional::commit()

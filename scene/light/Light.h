@@ -24,7 +24,6 @@ struct Light : public Object
   bool m_visible{true};
 
   void dispatch();
-  void detach();
 };
 
 } // namespace visionaray

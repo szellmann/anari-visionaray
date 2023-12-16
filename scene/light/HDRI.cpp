@@ -77,8 +77,6 @@ HDRI::~HDRI()
 {
   if (m_visible)
     backgroundID = -1; // reset!
-
-  detach();
 }
 
 void HDRI::commit()

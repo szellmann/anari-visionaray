@@ -9,7 +9,6 @@ Point::Point(VisionarayGlobalState *s) : Light(s)
 
 Point::~Point()
 {
-  detach();
 }
 
 void Point::commit()

@@ -41,7 +41,7 @@ Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
 Frame::~Frame()
 {
   wait();
-  detach();
+  deviceState()->dcos.frames.free(vframe.frameID);
   deviceState()->objectCounts.frames--;
 }
 
@@ -460,14 +460,6 @@ bool Frame::checkTAAReset()
 void Frame::dispatch()
 {
   deviceState()->dcos.frames.update(vframe.frameID, vframe);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.frames = deviceState()->dcos.frames.devicePtr();
-}
-
-void Frame::detach()
-{
-  deviceState()->dcos.frames.free(vframe.frameID);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.frames = deviceState()->dcos.frames.devicePtr();

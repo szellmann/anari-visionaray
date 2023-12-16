@@ -21,7 +21,6 @@ struct Sampler : public Object
 
  protected:
   void dispatch();
-  void detach();
 
   dco::Sampler vsampler;
 };

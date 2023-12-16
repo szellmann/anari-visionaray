@@ -56,6 +56,7 @@ struct DeviceObjectArray : public std::vector<T>
   void clear()
   {
     Base::clear();
+    freeHandles.clear();
     updated = true;
   }
 

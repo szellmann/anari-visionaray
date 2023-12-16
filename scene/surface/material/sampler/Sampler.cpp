@@ -14,12 +14,13 @@ namespace visionaray {
 Sampler::Sampler(VisionarayGlobalState *s) : Object(ANARI_SAMPLER, s)
 {
   memset(&vsampler,0,sizeof(vsampler));
-  vsampler.samplerID = s->objectCounts.samplers++;
+  vsampler.samplerID = deviceState()->dcos.samplers.alloc(vsampler);
+  s->objectCounts.samplers++;
 }
 
 Sampler::~Sampler()
 {
-  detach();
+  deviceState()->dcos.samplers.free(vsampler.samplerID);
   deviceState()->objectCounts.samplers--;
 }
 
@@ -46,27 +47,12 @@ dco::Sampler Sampler::visionaraySampler() const
 
 void Sampler::dispatch()
 {
-  if (deviceState()->dcos.samplers.size() <= vsampler.samplerID) {
-    deviceState()->dcos.samplers.resize(vsampler.samplerID+1);
-  }
-  deviceState()->dcos.samplers[vsampler.samplerID] = vsampler;
+  deviceState()->dcos.samplers.update(vsampler.samplerID, vsampler);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.samplers = deviceState()->dcos.samplers.data();
+  deviceState()->onDevice.samplers = deviceState()->dcos.samplers.devicePtr();
 }
 
-void Sampler::detach()
-{
-  if (deviceState()->dcos.samplers.size() > vsampler.samplerID) {
-    if (deviceState()->dcos.samplers[vsampler.samplerID].samplerID
-        == vsampler.samplerID) {
-      deviceState()->dcos.samplers.erase(
-          deviceState()->dcos.samplers.begin() + vsampler.samplerID);
-    }
-  }
-  // Upload/set accessible pointers
-  deviceState()->onDevice.samplers = deviceState()->dcos.samplers.data();
-}
 } // namespace visionaray
 
 VISIONARAY_ANARI_TYPEFOR_DEFINITION(visionaray::Sampler *);
