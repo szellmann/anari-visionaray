@@ -93,7 +93,7 @@ void Instance::dispatch()
       vgeom.asInstance.data.instID, vgeom.asInstance.data);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.data();
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
 void Instance::detach()
@@ -101,7 +101,7 @@ void Instance::detach()
   deviceState()->dcos.instances.free(vgeom.asInstance.data.instID);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.data();
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
 } // namespace visionaray

@@ -47,7 +47,7 @@ void Light::dispatch()
   deviceState()->dcos.lights.update(vlight.lightID, vlight);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
+  deviceState()->onDevice.lights = deviceState()->dcos.lights.devicePtr();
 }
 
 void Light::detach()
@@ -55,7 +55,7 @@ void Light::detach()
   deviceState()->dcos.lights.free(vlight.lightID);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.lights = deviceState()->dcos.lights.data();
+  deviceState()->onDevice.lights = deviceState()->dcos.lights.devicePtr();
 }
 
 } // namespace visionaray
