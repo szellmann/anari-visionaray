@@ -47,8 +47,9 @@ void World::commit()
 
   m_zeroSurfaceData = getParamObject<ObjectArray>("surface");
   m_zeroVolumeData = getParamObject<ObjectArray>("volume");
+  m_zeroLightData = getParamObject<ObjectArray>("light");
 
-  m_addZeroInstance = m_zeroSurfaceData || m_zeroVolumeData;
+  m_addZeroInstance = m_zeroSurfaceData || m_zeroVolumeData || m_zeroLightData;
   if (m_addZeroInstance)
     reportMessage(
         ANARI_SEVERITY_DEBUG, "visionaray::World will add zero instance");
@@ -68,6 +69,14 @@ void World::commit()
     m_zeroGroup->setParamDirect("volume", getParamDirect("volume"));
   } else
     m_zeroGroup->removeParam("volume");
+
+  if (m_zeroLightData) {
+    reportMessage(ANARI_SEVERITY_DEBUG,
+        "visionaray::World found %zu lights in zero instance",
+        m_zeroLightData->size());
+    m_zeroGroup->setParamDirect("light", getParamDirect("light"));
+  } else
+    m_zeroGroup->removeParam("light");
 
   m_zeroGroup->commit();
   m_zeroInstance->commit();
@@ -97,6 +106,8 @@ void World::commit()
     m_instanceData->addCommitObserver(this);
   if (m_zeroSurfaceData)
     m_zeroSurfaceData->addCommitObserver(this);
+  if (m_zeroLightData)
+    m_zeroLightData->addCommitObserver(this);
 }
 
 const std::vector<Instance *> &World::instances() const
@@ -210,6 +221,10 @@ void World::cleanup()
     m_instanceData->removeCommitObserver(this);
   if (m_zeroSurfaceData)
     m_zeroSurfaceData->removeCommitObserver(this);
+  if (m_zeroVolumeData)
+    m_zeroVolumeData->removeCommitObserver(this);
+  if (m_zeroLightData)
+    m_zeroLightData->removeCommitObserver(this);
 
   if (vscene)
     vscene->release();

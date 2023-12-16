@@ -588,13 +588,61 @@ inline Material makeDefaultMaterial()
   return mat;
 }
 
+// Light //
+
+struct Light
+{
+  enum Type { Directional, Point, Spot, HDRI, };
+  Type type;
+  unsigned lightID{UINT_MAX};
+  bool visible{true};
+  directional_light<float> asDirectional;
+  point_light<float> asPoint;
+  spot_light<float> asSpot;
+  struct {
+    texture_ref<float3, 2> radiance;
+    float scale{1.f};
+    struct CDF {
+      float *rows{nullptr};
+      float *lastCol{nullptr};
+      unsigned width{0};
+      unsigned height{0};
+    } cdf;
+
+    template <typename RNG>
+    VSNRAY_FUNC
+    inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+    {
+      CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol, cdf.width, cdf.height, rng(), rng());
+      float invjacobian = cdf.width*cdf.height/float(4*M_PI);
+      float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
+      light_sample<float> ls;
+      ls.dir = L;
+      ls.dist = FLT_MAX;
+      ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
+      return ls;
+    }
+
+    VSNRAY_FUNC
+    inline float3 intensity(const float3 dir)
+    {
+      return tex2D(radiance, toUV(dir))*scale;
+    }
+
+  } asHDRI;
+};
+
 // Group //
 
 struct Group
 {
   unsigned groupID{UINT_MAX};
+  unsigned numGeoms{0};
   Geometry *geoms{nullptr};
+  unsigned numMaterials{0};
   Material *materials{nullptr};
+  unsigned numLights{0};
+  Light *lights{nullptr};
 };
 
 // Transfer functions //
@@ -800,50 +848,6 @@ struct Frame
     fillGBuffer(x, y, s);
     toneMap(x, y, accumSample(x, y, accumID, s));
   }
-};
-
-// Light //
-
-struct Light
-{
-  enum Type { Directional, Point, Spot, HDRI, };
-  Type type;
-  unsigned lightID{UINT_MAX};
-  bool visible{true};
-  directional_light<float> asDirectional;
-  point_light<float> asPoint;
-  spot_light<float> asSpot;
-  struct {
-    texture_ref<float3, 2> radiance;
-    float scale{1.f};
-    struct CDF {
-      float *rows{nullptr};
-      float *lastCol{nullptr};
-      unsigned width{0};
-      unsigned height{0};
-    } cdf;
-
-    template <typename RNG>
-    VSNRAY_FUNC
-    inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
-    {
-      CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol, cdf.width, cdf.height, rng(), rng());
-      float invjacobian = cdf.width*cdf.height/float(4*M_PI);
-      float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
-      light_sample<float> ls;
-      ls.dir = L;
-      ls.dist = FLT_MAX;
-      ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
-      return ls;
-    }
-
-    VSNRAY_FUNC
-    inline float3 intensity(const float3 dir)
-    {
-      return tex2D(radiance, toUV(dir))*scale;
-    }
-
-  } asHDRI;
 };
 
 } // namespace visionaray::dco

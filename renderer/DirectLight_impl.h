@@ -76,7 +76,7 @@ struct VisionarayRendererDirectLight
           result.objId = hr.geom_id;
           result.instId = hr.inst_id;
 
-          auto inst = onDevice.instances[hr.inst_id];
+          const dco::Instance &inst = onDevice.instances[hr.inst_id];
           const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
           const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
 
@@ -106,23 +106,28 @@ struct VisionarayRendererDirectLight
 
         result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-        int lightID = uniformSampleOneLight(ss.random, onDevice.numLights);
-
+        const dco::Instance &inst = onDevice.instances[hr.inst_id];
+        const dco::Group &group = onDevice.groups[inst.groupID];
         light_sample<float> ls;
         vec3f intensity(0.f);
-        if (onDevice.lights[lightID].type == dco::Light::Point) {
-          ls = onDevice.lights[lightID].asPoint.sample(hitPos+1e-4f, ss.random);
-          intensity = onDevice.lights[lightID].asPoint.intensity(hitPos);
-        } else if (onDevice.lights[lightID].type == dco::Light::Directional) {
-          ls = onDevice.lights[lightID].asDirectional.sample(hitPos+1e-4f, ss.random);
-          intensity = onDevice.lights[lightID].asDirectional.intensity(hitPos);
-        } else if (onDevice.lights[lightID].type == dco::Light::HDRI) {
-          ls = onDevice.lights[lightID].asHDRI.sample(hitPos+1e-4f, ss.random);
-          intensity = onDevice.lights[lightID].asHDRI.intensity(ls.dir);
-        }
+        float dist = 1.f;
 
-        float dist
-            = onDevice.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
+        if (group.numLights > 0) {
+          int lightID = uniformSampleOneLight(ss.random, group.numLights);
+
+          if (group.lights[lightID].type == dco::Light::Point) {
+            ls = group.lights[lightID].asPoint.sample(hitPos+1e-4f, ss.random);
+            intensity = group.lights[lightID].asPoint.intensity(hitPos);
+          } else if (group.lights[lightID].type == dco::Light::Directional) {
+            ls = group.lights[lightID].asDirectional.sample(hitPos+1e-4f, ss.random);
+            intensity = group.lights[lightID].asDirectional.intensity(hitPos);
+          } else if (group.lights[lightID].type == dco::Light::HDRI) {
+            ls = group.lights[lightID].asHDRI.sample(hitPos+1e-4f, ss.random);
+            intensity = group.lights[lightID].asHDRI.intensity(ls.dir);
+          }
+
+          dist = group.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
+        }
 
         if (volumeHit) {
           shade_record<float> sr;

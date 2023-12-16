@@ -35,6 +35,7 @@ struct World : public Object
 
   helium::IntrusivePtr<ObjectArray> m_zeroSurfaceData;
   helium::IntrusivePtr<ObjectArray> m_zeroVolumeData;
+  helium::IntrusivePtr<ObjectArray> m_zeroLightData;
 
   helium::IntrusivePtr<ObjectArray> m_instanceData;
   std::vector<Instance *> m_instances;
@@ -44,6 +45,8 @@ struct World : public Object
   helium::IntrusivePtr<Instance> m_zeroInstance;
 
   size_t m_numSurfaceInstances{0};
+  size_t m_numVolumeInstances{0};
+  size_t m_numLightInstances{0};
 
   aabb m_surfaceBounds;
 

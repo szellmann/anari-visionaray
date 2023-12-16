@@ -194,6 +194,7 @@ void VisionaraySceneImpl::release()
   m_accelStorage.isoSurfaceBLSs.clear();
   m_accelStorage.volumeBLSs.clear();
   m_materials.clear();
+  m_lights.clear();
 }
 
 void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
@@ -249,6 +250,13 @@ void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
   m_geometries[geomID] = geom;
 }
 
+void VisionaraySceneImpl::addLight(dco::Light light)
+{
+  light.lightID = m_lights.alloc(light);
+
+  m_lights.update(light.lightID, light);
+}
+
 void VisionaraySceneImpl::dispatch()
 {
   // Dispatch world
@@ -264,8 +272,12 @@ void VisionaraySceneImpl::dispatch()
     m_state->dcos.groups.resize(m_groupID+1);
   }
   m_state->dcos.groups[m_groupID].groupID = m_groupID;
+  m_state->dcos.groups[m_groupID].numGeoms = m_geometries.size();
   m_state->dcos.groups[m_groupID].geoms = m_geometries.data();
+  m_state->dcos.groups[m_groupID].numMaterials = m_materials.size();
   m_state->dcos.groups[m_groupID].materials = m_materials.data();
+  m_state->dcos.groups[m_groupID].numLights = m_lights.size();
+  m_state->dcos.groups[m_groupID].lights = m_lights.devicePtr();
 
   // Upload/set accessible pointers
   m_state->onDevice.TLSs = m_state->dcos.TLSs.data();

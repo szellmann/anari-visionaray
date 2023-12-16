@@ -33,6 +33,12 @@ struct DeviceObjectArray : public std::vector<T>
     updated = true;
   }
 
+  void clear()
+  {
+    Base::clear();
+    updated = true;
+  }
+
   T *devicePtr()
   {
     if (updated) {

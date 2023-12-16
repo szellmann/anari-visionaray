@@ -25,6 +25,7 @@ struct Group : public Object
 
   const std::vector<Surface *> &surfaces() const;
   const std::vector<Volume *> &volumes() const;
+  const std::vector<Light *> &lights() const;
 
   // void intersectVolumes(VolumeRay &ray) const;
 
@@ -46,6 +47,11 @@ struct Group : public Object
 
   helium::IntrusivePtr<ObjectArray> m_volumeData;
   std::vector<Volume *> m_volumes;
+
+  // Light //
+
+  helium::IntrusivePtr<ObjectArray> m_lightData;
+  std::vector<Light *> m_lights;
 
   // BVH //
 

@@ -44,6 +44,7 @@ void Group::commit()
 
   m_surfaceData = getParamObject<ObjectArray>("surface");
   m_volumeData = getParamObject<ObjectArray>("volume");
+  m_lightData = getParamObject<ObjectArray>("light");
 
   if (m_surfaceData)
     m_surfaceData->addCommitObserver(this);
@@ -54,6 +55,8 @@ void Group::commit()
         std::back_inserter(m_volumes),
         [](auto *o) { return (Volume *)o; });
   }
+  if (m_lightData)
+    m_lightData->addCommitObserver(this);
 }
 
 const std::vector<Surface *> &Group::surfaces() const
@@ -164,6 +167,21 @@ void Group::visionaraySceneConstruct()
         });
   }
 
+  if (m_lightData) {
+    std::for_each(m_lightData->handlesBegin(),
+        m_lightData->handlesEnd(),
+        [&](auto *o) {
+          auto *l = (Light *)o;
+          if (l && l->isValid()) {
+            m_lights.push_back(l);
+            vscene->addLight(l->visionarayLight());
+          } else {
+            reportMessage(
+                ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");
+          }
+        });
+  }
+
   m_objectUpdates.lastSceneConstruction = helium::newTimeStamp();
   m_objectUpdates.lastSceneCommit = 0;
   visionaraySceneCommit();
@@ -203,9 +221,12 @@ void Group::cleanup()
     m_surfaceData->removeCommitObserver(this);
   if (m_volumeData)
     m_volumeData->removeCommitObserver(this);
+  if (m_lightData)
+    m_lightData->removeCommitObserver(this);
 
   m_surfaces.clear();
   m_volumes.clear();
+  m_lights.clear();
 
   m_objectUpdates.lastSceneConstruction = 0;
   m_objectUpdates.lastSceneCommit = 0;
