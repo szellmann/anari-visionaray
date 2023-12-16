@@ -11,8 +11,7 @@ struct VisionarayRendererDirectLight
 {
   VSNRAY_FUNC
   PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
-        VisionarayGlobalState::DeviceObjectRegistry onDevice,
-        VisionarayGlobalState::ObjectCounts objCounts) const {
+        VisionarayGlobalState::DeviceObjectRegistry onDevice) const {
 
     // if (ss.debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
 
@@ -107,7 +106,7 @@ struct VisionarayRendererDirectLight
 
         result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-        int lightID = uniformSampleOneLight(ss.random, objCounts.lights);
+        int lightID = uniformSampleOneLight(ss.random, onDevice.numLights);
 
         light_sample<float> ls;
         vec3f intensity(0.f);

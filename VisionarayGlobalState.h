@@ -70,6 +70,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::TransferFunction *transferFunctions{nullptr};
     dco::Light *lights{nullptr};
     dco::Frame *frames{nullptr};
+    unsigned numLights{0};
   } onDevice;
 
   RenderingSemaphore renderingSemaphore;

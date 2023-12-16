@@ -251,8 +251,7 @@ void Frame::renderFrame()
                 PixelSample ps = rend.renderSample(ss,
                         ray,
                         scene->m_worldID,
-                        deviceState()->onDevice,
-                        deviceState()->objectCounts);
+                        deviceState()->onDevice);
                 accumColor += ps.color;
                 if (sampleID == 0) {
                   firstSample = ps;
