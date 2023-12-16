@@ -290,11 +290,12 @@ VisionarayDevice::~VisionarayDevice()
   //       really add substantial code complexity, so they are provided out of
   //       convenience.
 
-  auto reportLeaks = [&](size_t &count, const char *handleType) {
-    if (count != 0) {
+  auto reportLeaks = [&](auto &count, const char *handleType) {
+    auto c = count.load();
+    if (c != 0) {
       reportMessage(ANARI_SEVERITY_WARNING,
           "detected %zu leaked %s objects",
-          count,
+          c,
           handleType);
     }
   };
@@ -316,7 +317,7 @@ VisionarayDevice::~VisionarayDevice()
   if (state.objectCounts.unknown != 0) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "detected %zu leaked ANARIObject objects created by unknown subtypes",
-        state.objectCounts.unknown);
+        state.objectCounts.unknown.load());
   }
 }
 
