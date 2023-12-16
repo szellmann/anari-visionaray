@@ -22,6 +22,26 @@ struct DeviceObjectArray : public std::vector<T>
     return (DeviceObjectHandle)(Base::size()-1);
   }
 
+  bool allocAt(DeviceObjectHandle handle, const T &obj)
+  {
+    if (handle >= Base::size()) {
+      Base::resize(handle+1);
+      (*this)[handle] = obj;
+      updated = true;
+      return true;
+    } else {
+      auto it = std::find(freeHandles.begin(), freeHandles.end(), handle);
+      if (it == freeHandles.end())
+        return false;
+      else {
+        (*this)[handle] = obj;
+        updated = true;
+        freeHandles.erase(it);
+        return true;
+      }
+    }
+  }
+
   void free(DeviceObjectHandle handle)
   {
     updated = true;

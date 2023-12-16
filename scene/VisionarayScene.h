@@ -60,7 +60,7 @@ struct VisionaraySceneImpl
   void attachGeometry(dco::Geometry geom, unsigned geomID);
   void attachGeometry(dco::Geometry geom, dco::Material mat, unsigned geomID);
   void updateGeometry(dco::Geometry geom);
-  void addLight(dco::Light light);
+  void attachLight(dco::Light light, unsigned lightID);
 
  private:
   void dispatch();

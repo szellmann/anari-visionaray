@@ -250,11 +250,14 @@ void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
   m_geometries[geomID] = geom;
 }
 
-void VisionaraySceneImpl::addLight(dco::Light light)
+void VisionaraySceneImpl::attachLight(dco::Light light, unsigned lightID)
 {
-  light.lightID = m_lights.alloc(light);
+  bool success = m_lights.allocAt(lightID, light);
 
-  m_lights.update(light.lightID, light);
+  if (success) {
+    light.lightID = lightID;
+    m_lights.update(light.lightID, light);
+  }
 }
 
 void VisionaraySceneImpl::dispatch()

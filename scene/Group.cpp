@@ -167,6 +167,7 @@ void Group::visionaraySceneConstruct()
         });
   }
 
+  uint32_t lightID = 0;
   if (m_lightData) {
     std::for_each(m_lightData->handlesBegin(),
         m_lightData->handlesEnd(),
@@ -174,7 +175,7 @@ void Group::visionaraySceneConstruct()
           auto *l = (Light *)o;
           if (l && l->isValid()) {
             m_lights.push_back(l);
-            vscene->addLight(l->visionarayLight());
+            vscene->attachLight(l->visionarayLight(), lightID++);
           } else {
             reportMessage(
                 ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");
