@@ -139,8 +139,9 @@ inline HitRecordVolume sampleFreeFlightDistanceAllVolumes(
     auto hrv = intersectVolumes(ray, onDevice.TLSs[worldID]);
     if (!hrv.hit)
       break;
-    auto inst = onDevice.instances[hrv.inst_id];
-    const auto &geom = onDevice.groups[inst.groupID].geoms[hrv.geom_id];
+    const auto &inst = onDevice.instances[hrv.inst_id];
+    const auto &group = onDevice.groups[inst.groupID];
+    const auto &geom = onDevice.geometries[group.geoms[hrv.geom_id]];
     const auto &vol = geom.asVolume.data;
     HitRecordVolume hr = sampleFreeFlightDistance(ss, ray, vol, onDevice);
     if (hr.t < result.t) {

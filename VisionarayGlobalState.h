@@ -52,6 +52,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     DeviceObjectArray<dco::Group> groups;
     DeviceObjectArray<dco::Surface> surfaces;
     DeviceObjectArray<dco::Instance> instances;
+    DeviceObjectArray<dco::Geometry> geometries;
     DeviceObjectArray<dco::Material> materials;
     DeviceObjectArray<dco::Sampler> samplers;
     DeviceObjectArray<dco::SpatialField> spatialFields;
@@ -67,6 +68,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::Group *groups{nullptr};
     dco::Surface *surfaces{nullptr};
     dco::Instance *instances{nullptr};
+    dco::Geometry *geometries{nullptr};
     dco::Material *materials{nullptr};
     dco::Sampler *samplers{nullptr};
     dco::SpatialField *spatialFields{nullptr};

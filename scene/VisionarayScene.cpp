@@ -34,8 +34,12 @@ void VisionaraySceneImpl::commit()
   unsigned volumeCount = 0;
   unsigned instanceCount = 0;
 
-  for (const auto &geom : m_geometries) {
+  for (const dco::Handle &geomID : m_geometries) {
+    if (!dco::validHandle(geomID)) continue;
+
+    const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
     if (!geom.isValid()) continue;
+
     switch (geom.type) {
       case dco::Geometry::Triangle:
         triangleCount++;
@@ -72,7 +76,10 @@ void VisionaraySceneImpl::commit()
   // No instance storage: instance BLSs are the TLSs of child scenes
 
   triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
-  for (const auto &geom : m_geometries) {
+  for (const dco::Handle &geomID : m_geometries) {
+    if (!dco::validHandle(geomID)) continue;
+
+    const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
     if (!geom.isValid()) continue;
 
     dco::BLS bls;
@@ -188,7 +195,7 @@ void VisionaraySceneImpl::release()
 
 void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 {
-  bool success = m_geometries.allocAt(geomID, geom);
+  bool success = m_geometries.allocAt(geomID, geom.geomID);
 
   if (success) {
     // Patch geomID into scene primitives
@@ -214,8 +221,11 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
       /* volumes do this themselves, on commit! */
     }
 
-    // TODO: should only store handles here!!
-    m_geometries.update(geomID, geom);
+    m_geometries.update(geomID, geom.geomID);
+    deviceState()->dcos.geometries.update(geom.geomID, geom);
+
+    // Upload/set accessible pointers
+    deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
   }
 }
 
@@ -233,11 +243,11 @@ void VisionaraySceneImpl::attachGeometry(
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
 {
-  unsigned geomID = geom.geomID;
+  m_geometries.update(geom.geomID, geom.geomID);
+  deviceState()->dcos.geometries.update(geom.geomID, geom);
 
-  assert(geomID < m_geometries.size());
-
-  m_geometries[geomID] = geom;
+  // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)

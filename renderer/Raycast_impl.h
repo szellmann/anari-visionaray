@@ -23,7 +23,7 @@ struct VisionarayRendererRaycast
     if (hr.hit) {
       const auto &inst = onDevice.instances[hr.inst_id];
       const auto &group = onDevice.groups[inst.groupID];
-      const auto &geom = group.geoms[hr.geom_id];
+      const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
@@ -83,10 +83,11 @@ struct VisionarayRendererRaycast
     hr = intersectVolumes(ray, onDevice.TLSs[worldID]);
 
     if (hr.hit) {
-      auto inst = onDevice.instances[hr.inst_id];
-      const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
-
+      const auto &inst = onDevice.instances[hr.inst_id];
+      const auto &group = onDevice.groups[inst.groupID];
+      const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const auto &vol = geom.asVolume.data;
+
       float3 color(0.f);
       float alpha = 0.f;
 

@@ -78,8 +78,8 @@ struct VisionarayRendererDirectLight
 
           const dco::Instance &inst = onDevice.instances[hr.inst_id];
           const dco::Group &group = onDevice.groups[inst.groupID];
-          const auto &geom = group.geoms[hr.geom_id];
-          const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
+          const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
+          const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
@@ -173,8 +173,9 @@ struct VisionarayRendererDirectLight
           sr.light_intensity = intensity;
 
           // That doesn't work for instances..
-          auto inst = onDevice.instances[hr.inst_id];
-          const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
+          const auto &inst = onDevice.instances[hr.inst_id];
+          const auto &group = onDevice.groups[inst.groupID];
+          const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
           const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
           if (rendererState.renderMode == RenderMode::Default)
             shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);

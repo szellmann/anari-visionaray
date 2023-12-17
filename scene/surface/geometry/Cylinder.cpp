@@ -76,6 +76,8 @@ void Cylinder::commit()
 
   vgeom.asCylinder.data = m_cylinders.data();
   vgeom.asCylinder.len = m_cylinders.size();
+
+  dispatch();
 }
 
 // float4 Cylinder::getAttributeValue(const Attribute &attr, const Ray &ray) const

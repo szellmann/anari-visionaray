@@ -40,6 +40,8 @@ void ISOSurface::commit()
   vgeom.asISOSurface.data.numValues = m_isoValue->size();
   vgeom.asISOSurface.data.values = m_isoValue->beginAs<float>();
   vgeom.updated = true;
+
+  dispatch();
 }
 
 bool ISOSurface::isValid() const

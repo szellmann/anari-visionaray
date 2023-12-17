@@ -33,6 +33,8 @@ struct Geometry : public Object
   dco::Geometry vgeom;
 
   std::array<helium::IntrusivePtr<Array1D>, 5> m_attributes;
+
+  void dispatch();
 };
 
 } // namespace visionaray

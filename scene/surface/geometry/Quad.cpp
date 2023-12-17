@@ -76,6 +76,8 @@ void Quad::commit()
 
   vgeom.asQuad.data = m_triangles.data();
   vgeom.asQuad.len = m_triangles.size();
+
+  dispatch();
 }
 
 // float4 Quad::getAttributeValue(const Attribute &attr, const Ray &ray) const

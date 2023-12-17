@@ -645,7 +645,7 @@ struct Group
   unsigned numBLSs{0};
   dco::BLS *BLSs{nullptr};
   unsigned numGeoms{0};
-  Geometry *geoms{nullptr};
+  Handle *geoms{nullptr};
   unsigned numMaterials{0};
   Handle *materials{nullptr};
   unsigned numLights{0};

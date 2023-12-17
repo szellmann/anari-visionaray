@@ -88,6 +88,8 @@ void Sphere::commit()
       vgeom.asSphere.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
     }
   }
+
+  dispatch();
 }
 
 // float4 Sphere::getAttributeValue(const Attribute &attr, const Ray &ray) const

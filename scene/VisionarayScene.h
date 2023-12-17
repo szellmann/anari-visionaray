@@ -28,7 +28,7 @@ struct VisionaraySceneImpl
   Type type;
 
   // Surface data //
-  DeviceObjectArray<dco::Geometry> m_geometries; // TODO: make handles
+  DeviceObjectArray<dco::Handle> m_geometries;
   DeviceObjectArray<dco::Handle> m_materials;
   DeviceObjectArray<dco::Handle> m_lights;
 

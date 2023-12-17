@@ -80,6 +80,8 @@ void Triangle::commit()
       vgeom.asTriangle.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
     }
   }
+
+  dispatch();
 }
 
 // float4 Triangle::getAttributeValue(const Attribute &attr, const Ray &ray) const

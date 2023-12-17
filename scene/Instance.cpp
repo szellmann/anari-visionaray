@@ -8,6 +8,7 @@ namespace visionaray {
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
   vgeom.type = dco::Geometry::Instance;
+  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
   vgeom.asInstance.data.instID
       = deviceState()->dcos.instances.alloc(vgeom.asInstance.data);
   s->objectCounts.instances++;
@@ -93,11 +94,13 @@ bool Instance::isValid() const
 
 void Instance::dispatch()
 {
+  deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
   vgeom.asInstance.data.invXfm = inverse(vgeom.asInstance.data.xfm);
   deviceState()->dcos.instances.update(
       vgeom.asInstance.data.instID, vgeom.asInstance.data);
 
   // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
   deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 

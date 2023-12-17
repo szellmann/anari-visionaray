@@ -19,11 +19,14 @@ namespace visionaray {
 Geometry::Geometry(VisionarayGlobalState *s) : Object(ANARI_GEOMETRY, s)
 {
   memset(&vgeom,0,sizeof(vgeom));
+  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
   s->objectCounts.geometries++;
 }
 
 Geometry::~Geometry()
 {
+  deviceState()->dcos.geometries.free(vgeom.geomID);
+
 //  rtcReleaseGeometry(m_embreeGeometry);
   deviceState()->objectCounts.geometries--;
 }
@@ -76,6 +79,14 @@ void Geometry::markCommitted()
   Object::markCommitted();
   deviceState()->objectUpdates.lastBLSCommitSceneRequest =
       helium::newTimeStamp();
+}
+
+void Geometry::dispatch()
+{
+  deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 // float4 Geometry::getAttributeValue(const Attribute &attr, const Ray &ray) const
