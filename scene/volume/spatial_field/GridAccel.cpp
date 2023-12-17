@@ -88,16 +88,4 @@ void GridAccel::dispatch(VisionarayGlobalState *s)
   s->onDevice.gridAccels = s->dcos.gridAccels.data();
 }
 
-void GridAccel::detach(VisionarayGlobalState *s)
-{
-  if (s->dcos.gridAccels.size() > vaccel.fieldID) {
-    if (s->dcos.gridAccels[vaccel.fieldID].fieldID == vaccel.fieldID) {
-      s->dcos.gridAccels.erase(s->dcos.gridAccels.begin() + vaccel.fieldID);
-    }
-  }
-
-  // Upload/set accessible pointers
-  s->onDevice.gridAccels = s->dcos.gridAccels.data();
-}
-
 } // namespace visionaray

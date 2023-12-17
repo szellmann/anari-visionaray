@@ -44,7 +44,6 @@ struct GridAccel
   void computeMaxOpacities(dco::TransferFunction tf);
 
   void dispatch(VisionarayGlobalState *s);
-  void detach(VisionarayGlobalState *s);
 
 private:
 

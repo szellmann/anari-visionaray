@@ -11,13 +11,16 @@ namespace visionaray {
 SpatialField::SpatialField(VisionarayGlobalState *s)
     : Object(ANARI_SPATIAL_FIELD, s)
 {
-  vfield.fieldID = s->objectCounts.spatialFields++;
+  s->objectCounts.spatialFields++;
+  vfield.fieldID = deviceState()->dcos.spatialFields.alloc(vfield);
   m_gridAccel.visionarayAccel().fieldID = vfield.fieldID;
 }
 
 SpatialField::~SpatialField()
 {
   m_gridAccel.cleanup();
+
+  deviceState()->dcos.spatialFields.free(vfield.fieldID);
 
   deviceState()->objectCounts.spatialFields--;
 }
@@ -62,11 +65,7 @@ void SpatialField::setStepSize(float size)
 void SpatialField::dispatch()
 {
   m_gridAccel.dispatch(deviceState());
-
-  if (deviceState()->dcos.spatialFields.size() <= vfield.fieldID) {
-    deviceState()->dcos.spatialFields.resize(vfield.fieldID+1);
-  }
-  deviceState()->dcos.spatialFields[vfield.fieldID] = vfield;
+  deviceState()->dcos.spatialFields.update(vfield.fieldID, vfield);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.spatialFields = deviceState()->dcos.spatialFields.devicePtr();
