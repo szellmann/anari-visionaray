@@ -74,6 +74,10 @@ void VisionaraySceneImpl::commit()
   triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
   for (const auto &geom : m_geometries) {
     if (!geom.isValid()) continue;
+
+    dco::BLS bls;
+    bls.blsID = m_BLSs.alloc(bls);
+
     if (geom.type == dco::Geometry::Triangle) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(true);
@@ -82,10 +86,8 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.triangleBLSs[index] = builder.build(
         TriangleBVH{}, geom.asTriangle.data, geom.asTriangle.len);
 
-      dco::BLS bls;
       bls.type = dco::BLS::Triangle;
       bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
-      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Quad) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(true);
@@ -94,10 +96,8 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.quadBLSs[index] = builder.build(
         TriangleBVH{}, geom.asQuad.data, geom.asQuad.len);
 
-      dco::BLS bls;
       bls.type = dco::BLS::Quad;
       bls.asQuad = m_accelStorage.quadBLSs[index].ref();
-      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Sphere) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(true);
@@ -106,10 +106,8 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.sphereBLSs[index] = builder.build(
         SphereBVH{}, geom.asSphere.data, geom.asSphere.len);
 
-      dco::BLS bls;
       bls.type = dco::BLS::Sphere;
       bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
-      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Cylinder) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
@@ -118,10 +116,8 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.cylinderBLSs[index] = builder.build(
         CylinderBVH{}, geom.asCylinder.data, geom.asCylinder.len);
 
-      dco::BLS bls;
       bls.type = dco::BLS::Cylinder;
       bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
-      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::ISOSurface) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(false); // no spatial splits for ISOs
@@ -130,10 +126,8 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.isoSurfaceBLSs[index] = builder.build(
         ISOSurfaceBVH{}, &geom.asISOSurface.data, 1);
 
-      dco::BLS bls;
       bls.type = dco::BLS::ISOSurface;
       bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
-      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Volume) {
       binned_sah_builder builder;
       builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
@@ -142,23 +136,26 @@ void VisionaraySceneImpl::commit()
       m_accelStorage.volumeBLSs[index] = builder.build(
         VolumeBVH{}, &geom.asVolume.data, 1);
 
-      dco::BLS bls;
       bls.type = dco::BLS::Volume;
       bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
-      m_BLSs.push_back(bls);
     } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
-      dco::BLS bls;
       bls.type = dco::BLS::Instance;
       bls.asInstance = geom.asInstance.data.instBVH;
       bls.asInstance.set_inst_id(geom.asInstance.data.instID);
-      m_BLSs.push_back(bls);
     }
+
+    m_BLSs.update(bls.blsID, bls);
   }
 
   // Build TLS
-  lbvh_builder tlsBuilder;
-  m_TLS = tlsBuilder.build(TLS{}, m_BLSs.data(), m_BLSs.size());
+  if (1) {
+    lbvh_builder tlsBuilder;
+    m_TLS = tlsBuilder.build(TLS{}, m_BLSs.hostPtr(), m_BLSs.size());
+  } else { // build on device
+    lbvh_builder tlsBuilder;
+    m_TLS = tlsBuilder.build(TLS{}, m_BLSs.devicePtr(), m_BLSs.size());
+  }
 
 #if 0
   std::cout << "TLS built\n";
@@ -265,6 +262,8 @@ void VisionaraySceneImpl::dispatch()
   // Dispatch group
   dco::Group group;
   group.groupID = m_groupID;
+  group.numBLSs = m_BLSs.size();
+  group.BLSs = m_BLSs.devicePtr();
   group.numGeoms = m_geometries.size();
   group.geoms = m_geometries.devicePtr();
   group.numMaterials = m_materials.size();

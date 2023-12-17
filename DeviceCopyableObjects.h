@@ -358,6 +358,7 @@ struct BLS
 {
   enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, };
   Type type;
+  unsigned blsID{UINT_MAX};
   index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
   index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
   index_bvh<basic_sphere<float>>::bvh_ref asSphere;
@@ -632,6 +633,9 @@ struct Light
 struct Group
 {
   unsigned groupID{UINT_MAX};
+
+  unsigned numBLSs{0};
+  dco::BLS *BLSs{nullptr};
   unsigned numGeoms{0};
   Geometry *geoms{nullptr};
   unsigned numMaterials{0};

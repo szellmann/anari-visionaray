@@ -60,6 +60,11 @@ struct DeviceObjectArray : public std::vector<T>
     updated = true;
   }
 
+  const T *hostPtr() const
+  {
+    return Base::data();
+  }
+
   T *devicePtr()
   {
     if (updated) {

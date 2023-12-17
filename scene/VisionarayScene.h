@@ -4,7 +4,6 @@
 // std
 #include <memory>
 // visionaray
-#include "visionaray/aligned_vector.h"
 #include "visionaray/bvh.h"
 // ours
 #include "surface/geometry/Geometry.h"
@@ -35,7 +34,7 @@ struct VisionaraySceneImpl
 
   // Accels //
   TLS m_TLS;
-  aligned_vector<dco::BLS> m_BLSs;
+  DeviceObjectArray<dco::BLS> m_BLSs;
 
   // Accel storage //
   struct {
