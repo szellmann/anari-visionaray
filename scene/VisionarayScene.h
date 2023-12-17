@@ -13,17 +13,17 @@
 
 namespace visionaray {
 
-typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
-typedef index_bvh<basic_triangle<3,float>> QuadBVH;
-typedef index_bvh<basic_sphere<float>>     SphereBVH;
-typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
-typedef index_bvh<dco::ISOSurface>         ISOSurfaceBVH;
-typedef index_bvh<dco::Volume>             VolumeBVH;
-
-typedef index_bvh<dco::BLS> TLS;
-
 struct VisionaraySceneImpl
 {
+  typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
+  typedef index_bvh<basic_triangle<3,float>> QuadBVH;
+  typedef index_bvh<basic_sphere<float>>     SphereBVH;
+  typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
+  typedef index_bvh<dco::ISOSurface>         ISOSurfaceBVH;
+  typedef index_bvh<dco::Volume>             VolumeBVH;
+
+  typedef index_bvh<dco::BLS> TLS;
+
   enum Type { World, Group, };
   Type type;
 
