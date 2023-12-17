@@ -21,6 +21,14 @@
 
 namespace visionaray {
 
+namespace dco {
+typedef uint32_t Handle;
+VSNRAY_FUNC
+inline bool validHandle(Handle hnd)
+{ return hnd < UINT_MAX; }
+} // namespace dco
+typedef dco::Handle DeviceObjectHandle;
+
 // Ray //
 
 struct Ray : basic_ray<float>
@@ -620,7 +628,7 @@ struct Light
     }
 
     VSNRAY_FUNC
-    inline float3 intensity(const float3 dir)
+    inline float3 intensity(const float3 dir) const
     {
       return tex2D(radiance, toUV(dir))*scale;
     }
@@ -639,9 +647,9 @@ struct Group
   unsigned numGeoms{0};
   Geometry *geoms{nullptr};
   unsigned numMaterials{0};
-  Material *materials{nullptr};
+  Handle *materials{nullptr};
   unsigned numLights{0};
-  Light *lights{nullptr};
+  Handle *lights{nullptr};
 };
 
 // Transfer functions //

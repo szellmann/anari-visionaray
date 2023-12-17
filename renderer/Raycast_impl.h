@@ -21,9 +21,10 @@ struct VisionarayRendererRaycast
     auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
 
     if (hr.hit) {
-      auto inst = onDevice.instances[hr.inst_id];
-      const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
-      const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
+      const auto &inst = onDevice.instances[hr.inst_id];
+      const auto &group = onDevice.groups[inst.groupID];
+      const auto &geom = group.geoms[hr.geom_id];
+      const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);

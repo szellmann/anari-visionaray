@@ -1,9 +1,12 @@
 
 #pragma once
 
-namespace visionaray {
+// std
+#include <vector>
+// ours
+#include "DeviceCopyableObjects.h"
 
-typedef uint32_t DeviceObjectHandle;
+namespace visionaray {
 
 template <typename T>
 struct DeviceObjectArray : public std::vector<T>

@@ -9,11 +9,13 @@ namespace visionaray {
 
 Material::Material(VisionarayGlobalState *s) : Object(ANARI_MATERIAL, s)
 {
-  vmat.matID = s->objectCounts.materials++;
+  vmat.matID = deviceState()->dcos.materials.alloc(vmat);
+  s->objectCounts.materials++;
 }
 
 Material::~Material()
 {
+  deviceState()->dcos.materials.free(vmat.matID);
   deviceState()->objectCounts.materials--;
 }
 
@@ -30,6 +32,14 @@ void Material::commit()
 {
   // m_alphaMode = alphaModeFromString(getParamString("alphaMode", "opaque"));
   // m_alphaCutoff = getParam<float>("alphaCutoff", 0.5f);
+}
+
+void Material::dispatch()
+{
+  deviceState()->dcos.materials.update(vmat.matID, vmat);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.materials = deviceState()->dcos.materials.devicePtr();
 }
 
 } // namespace visionaray

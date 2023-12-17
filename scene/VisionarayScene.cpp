@@ -191,8 +191,6 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
   bool success = m_geometries.allocAt(geomID, geom);
 
   if (success) {
-    geom.geomID = geomID;
-
     // Patch geomID into scene primitives
     if (geom.type == dco::Geometry::Triangle) {
       for (size_t i=0;i<geom.asTriangle.len;++i) {
@@ -216,7 +214,8 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
       /* volumes do this themselves, on commit! */
     }
 
-    m_geometries.update(geom.geomID, geom);
+    // TODO: should only store handles here!!
+    m_geometries.update(geomID, geom);
   }
 }
 
@@ -225,11 +224,10 @@ void VisionaraySceneImpl::attachGeometry(
 {
   attachGeometry(geom, geomID);
 
-  bool success = m_materials.allocAt(geomID, mat);
+  bool success = m_materials.allocAt(geomID, mat.matID);
 
   if (success) {
-    mat.matID = geomID;
-    m_materials.update(mat.matID, mat);
+    m_materials.update(geomID, mat.matID);
   }
 }
 
@@ -242,13 +240,13 @@ void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
   m_geometries[geomID] = geom;
 }
 
-void VisionaraySceneImpl::attachLight(dco::Light light, unsigned lightID)
+void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
 {
-  bool success = m_lights.allocAt(lightID, light);
+  bool success = m_lights.allocAt(id, light.lightID);
 
   if (success) {
-    light.lightID = lightID;
-    m_lights.update(light.lightID, light);
+    // leave light.lightID unchanged (points to global registry!)
+    m_lights.update(id, light.lightID);
   }
 }
 

@@ -26,6 +26,8 @@ void Matte::commit()
   if (m_colorSampler) {
     vmat.asMatte.samplerID = m_colorSampler->visionaraySampler().samplerID;
   }
+
+  dispatch();
 }
 
 } // namespace visionaray

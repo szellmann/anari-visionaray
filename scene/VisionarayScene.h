@@ -28,9 +28,9 @@ struct VisionaraySceneImpl
   Type type;
 
   // Surface data //
-  DeviceObjectArray<dco::Geometry> m_geometries;
-  DeviceObjectArray<dco::Material> m_materials;
-  DeviceObjectArray<dco::Light>    m_lights;
+  DeviceObjectArray<dco::Geometry> m_geometries; // TODO: make handles
+  DeviceObjectArray<dco::Handle> m_materials;
+  DeviceObjectArray<dco::Handle> m_lights;
 
   // Accels //
   TLS m_TLS;
@@ -59,7 +59,7 @@ struct VisionaraySceneImpl
   void attachGeometry(dco::Geometry geom, unsigned geomID);
   void attachGeometry(dco::Geometry geom, dco::Material mat, unsigned geomID);
   void updateGeometry(dco::Geometry geom);
-  void attachLight(dco::Light light, unsigned lightID);
+  void attachLight(dco::Light light, unsigned id);
 
  private:
   void dispatch();

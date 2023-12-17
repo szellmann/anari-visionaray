@@ -77,8 +77,9 @@ struct VisionarayRendererDirectLight
           result.instId = hr.inst_id;
 
           const dco::Instance &inst = onDevice.instances[hr.inst_id];
-          const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
-          const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
+          const dco::Group &group = onDevice.groups[inst.groupID];
+          const auto &geom = group.geoms[hr.geom_id];
+          const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
@@ -115,18 +116,20 @@ struct VisionarayRendererDirectLight
         if (group.numLights > 0) {
           int lightID = uniformSampleOneLight(ss.random, group.numLights);
 
-          if (group.lights[lightID].type == dco::Light::Point) {
-            ls = group.lights[lightID].asPoint.sample(hitPos+1e-4f, ss.random);
-            intensity = group.lights[lightID].asPoint.intensity(hitPos);
-          } else if (group.lights[lightID].type == dco::Light::Directional) {
-            ls = group.lights[lightID].asDirectional.sample(hitPos+1e-4f, ss.random);
-            intensity = group.lights[lightID].asDirectional.intensity(hitPos);
-          } else if (group.lights[lightID].type == dco::Light::HDRI) {
-            ls = group.lights[lightID].asHDRI.sample(hitPos+1e-4f, ss.random);
-            intensity = group.lights[lightID].asHDRI.intensity(ls.dir);
+          const dco::Light &light = onDevice.lights[group.lights[lightID]];
+
+          if (light.type == dco::Light::Point) {
+            ls = light.asPoint.sample(hitPos+1e-4f, ss.random);
+            intensity = light.asPoint.intensity(hitPos);
+          } else if (light.type == dco::Light::Directional) {
+            ls = light.asDirectional.sample(hitPos+1e-4f, ss.random);
+            intensity = light.asDirectional.intensity(hitPos);
+          } else if (light.type == dco::Light::HDRI) {
+            ls = light.asHDRI.sample(hitPos+1e-4f, ss.random);
+            intensity = light.asHDRI.intensity(ls.dir);
           }
 
-          dist = group.lights[lightID].type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
+          dist = light.type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
         }
 
         if (volumeHit) {
@@ -172,7 +175,7 @@ struct VisionarayRendererDirectLight
           // That doesn't work for instances..
           auto inst = onDevice.instances[hr.inst_id];
           const auto &geom = onDevice.groups[inst.groupID].geoms[hr.geom_id];
-          const auto &mat = onDevice.groups[inst.groupID].materials[hr.geom_id];
+          const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
           if (rendererState.renderMode == RenderMode::Default)
             shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
           else if (rendererState.renderMode == RenderMode::Ng)
