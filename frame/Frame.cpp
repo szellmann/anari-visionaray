@@ -209,13 +209,15 @@ void Frame::renderFrame()
       rend.rendererState().currPR = cam.asMatrixCam.get_proj_matrix();
     }
 
+    int frameID = (int)vframe.frameCounter++;
+
     parallel_for(state->threadPool,
         tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
         [&](range2d<int> r) {
           for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
             for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
 
-              ScreenSample ss{x, y, (int)vframe.frameCounter++, size, {/*RNG*/}};
+              ScreenSample ss{x, y, frameID, size, {/*RNG*/}};
               Ray ray;
 
               uint64_t clock_begin = clock64();
