@@ -9,6 +9,7 @@
 #include "frame/common.h"
 #include "scene/light/HDRI.h"
 #include "Frame.h"
+#include "for_each.h"
 
 namespace visionaray {
 
@@ -211,72 +212,67 @@ void Frame::renderFrame()
 
     int frameID = (int)vframe.frameCounter++;
 
-    parallel_for(state->threadPool,
-        tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
-        [&](range2d<int> r) {
-          for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
-            for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
+    parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
+        [=] VSNRAY_GPU_FUNC (int x, int y) {
 
-              ScreenSample ss{x, y, frameID, size, {/*RNG*/}};
-              Ray ray;
+          ScreenSample ss{x, y, frameID, size, {/*RNG*/}};
+          Ray ray;
 
-              uint64_t clock_begin = clock64();
+          uint64_t clock_begin = clock64();
 
-              if (rend.stochasticRendering()) {
-                // Need an RNG
-                int pixelID = ss.x + ss.frameSize.x * ss.y;
-                ss.random = Random(pixelID, vframe.frameCounter);
-              }
+          if (rend.stochasticRendering()) {
+            // Need an RNG
+            int pixelID = ss.x + ss.frameSize.x * ss.y;
+            ss.random = Random(pixelID, vframe.frameCounter);
+          }
 
-              float4 accumColor{0.f};
-              PixelSample firstSample;
-              for (int sampleID=0; sampleID<rend.spp(); ++sampleID) {
+          float4 accumColor{0.f};
+          PixelSample firstSample;
+          for (int sampleID=0; sampleID<rend.spp(); ++sampleID) {
 
-                float xf(x), yf(y);
-                if (rend.stochasticRendering()) {
-                  // jitter pixel sample
-                  vec2f jitter(ss.random() - .5f, ss.random() - .5f);
-                  xf += jitter.x;
-                  yf += jitter.y;
-                }
+            float xf(x), yf(y);
+            if (rend.stochasticRendering()) {
+              // jitter pixel sample
+              vec2f jitter(ss.random() - .5f, ss.random() - .5f);
+              xf += jitter.x;
+              yf += jitter.y;
+            }
 
-                if (cam.type == dco::Camera::Pinhole)
-                  ray = cam.asPinholeCam.primary_ray(
-                      Ray{}, ss.random, xf, yf, float(size.x), float(size.y));
-                else if (cam.type == dco::Camera::Matrix)
-                  ray = cam.asMatrixCam.primary_ray(
-                      Ray{}, xf, yf, float(size.x), float(size.y));
+            if (cam.type == dco::Camera::Pinhole)
+              ray = cam.asPinholeCam.primary_ray(
+                  Ray{}, ss.random, xf, yf, float(size.x), float(size.y));
+            else if (cam.type == dco::Camera::Matrix)
+              ray = cam.asMatrixCam.primary_ray(
+                  Ray{}, xf, yf, float(size.x), float(size.y));
 #if 1
-                ray.dbg = ss.debug();
+            ray.dbg = ss.debug();
 #endif
 
-                PixelSample ps = rend.renderSample(ss,
-                        ray,
-                        scene->m_worldID,
-                        deviceState()->onDevice);
-                accumColor += ps.color;
-                if (sampleID == 0) {
-                  firstSample = ps;
-                }
-              }
-
-              uint64_t clock_end = clock64();
-              if (rend.rendererState().heatMapEnabled > 0.f) {
-                  float t = (clock_end - clock_begin)
-                      * (rend.rendererState().heatMapScale / rend.spp());
-                  accumColor = over(vec4f(heatMap(t), .5f), accumColor);
-              }
-
-              // Color gets accumulated, depth, IDs, etc. are
-              // taken from first sample
-              PixelSample finalSample = firstSample;
-              finalSample.color = accumColor*(1.f/rend.spp());
-              if (rend.taa())
-                vframe.fillGBuffer(x, y, finalSample);
-              else
-                vframe.writeSample(x, y, rend.rendererState().accumID, finalSample);
+            PixelSample ps = rend.renderSample(ss,
+                    ray,
+                    scene->m_worldID,
+                    deviceState()->onDevice);
+            accumColor += ps.color;
+            if (sampleID == 0) {
+              firstSample = ps;
             }
           }
+
+          uint64_t clock_end;// = clock64();
+          if (rend.rendererState().heatMapEnabled > 0.f) {
+              float t = (clock_end - clock_begin)
+                  * (rend.rendererState().heatMapScale / rend.spp());
+              accumColor = over(vec4f(heatMap(t), .5f), accumColor);
+          }
+
+          // Color gets accumulated, depth, IDs, etc. are
+          // taken from first sample
+          PixelSample finalSample = firstSample;
+          finalSample.color = accumColor*(1.f/rend.spp());
+          if (rend.taa())
+            vframe.fillGBuffer(x, y, finalSample);
+          else
+            vframe.writeSample(x, y, rend.rendererState().accumID, finalSample);
         });
 
     if (cam.type == dco::Camera::Pinhole)
@@ -295,15 +291,10 @@ void Frame::renderFrame()
       vframe.taa.history = texture_ref<float4, 2>(taa.history);
 
       // TAA pass
-      parallel_for(state->threadPool,
-          tiled_range2d<int>(0, size.x, 64, 0, size.y, 64),
-          [&](range2d<int> r) {
-            for (int y = r.cols().begin(); y != r.cols().end(); ++y) {
-              for (int x = r.rows().begin(); x != r.rows().end(); ++x) {
-                vframe.toneMap(
-                    x, y, vframe.accumSample(x, y, ~0, vframe.pixelSample(x, y)));
-              }
-            }
+      parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
+          [=] VSNRAY_GPU_FUNC (int x, int y) {
+            vframe.toneMap(
+                x, y, vframe.accumSample(x, y, ~0, vframe.pixelSample(x, y)));
           });
 
       // Copy buffers for next pass

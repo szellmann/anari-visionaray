@@ -17,6 +17,12 @@ anari_generate_queries(
   JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+option(ANARI_VISIONARAY_ENABLE_CUDA "Compile with CUDA" OFF)
+set(cuda ${ANARI_VISIONARAY_ENABLE_CUDA})
+if (cuda)
+    enable_language(CUDA)
+endif()
+
 add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME} PRIVATE
     array/Array1D.cpp
@@ -26,7 +32,6 @@ target_sources(${PROJECT_NAME} PRIVATE
     camera/Camera.cpp
     camera/Matrix.cpp
     camera/Perspective.cpp
-    frame/Frame.cpp
     renderer/DirectLight.cpp
     renderer/Raycast.cpp
     renderer/Renderer.cpp
@@ -63,6 +68,19 @@ target_sources(${PROJECT_NAME} PRIVATE
     VisionarayGlobalState.cpp
     VisionarayLibrary.cpp
 )
+
+if (cuda)
+    target_sources(${PROJECT_NAME} PRIVATE frame/Frame.cu)
+    set_source_files_properties(frame/Frame.cu
+        PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
+    )
+    #set_source_files_properties(frame/Frame.cu
+    #    PROPERTIES COMPILE_FLAGS "--expt-relaxed-constexpr"
+    #)
+else()
+    target_sources(${PROJECT_NAME} PRIVATE frame/Frame.cpp)
+endif()
+
 target_link_libraries(${PROJECT_NAME}
     PUBLIC visionaray::visionaray anari::anari anari::helium)
 target_include_directories(${PROJECT_NAME} PUBLIC
