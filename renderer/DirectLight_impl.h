@@ -64,8 +64,10 @@ struct VisionarayRendererDirectLight
 
         if (volumeHit) {
           hitPos = ray.ori + hrv.t * ray.dir;
-          if (sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn))
+          if (rendererState.gradientShading &&
+              sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn)) {
             gn = normalize(gn);
+          }
 
           result.Ng = gn;
           result.Ns = gn;
@@ -220,6 +222,10 @@ struct VisionarayRendererDirectLight
       } else { // bounceID == 1
         int surfV = hr.hit ? 0 : 1;
         int volV = volumeHit ? 0 : 1;
+
+        if (!rendererState.gradientShading && rendererState.ambientSamples > 0)
+          gn = uniform_sample_sphere(ss.random(), ss.random());
+
         float aoV = rendererState.ambientSamples == 0 ? 1.f
             : 1.f-computeAO(ss, worldID, onDevice, gn, viewDir, hitPos,
                             rendererState.ambientSamples,
