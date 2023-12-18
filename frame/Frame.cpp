@@ -289,7 +289,8 @@ void Frame::renderFrame()
 
     if (m_renderer->visionarayRenderer().taa()) {
       // Update history texture
-      vframe.updateHistory();
+      taa.history.reset(taa.prevBuffer.data());
+      vframe.taa.history = texture_ref<float4, 2>(taa.history);
 
       // TAA pass
       parallel_for(state->threadPool,
@@ -441,12 +442,17 @@ bool Frame::checkTAAReset()
       taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
       taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
 
+      taa.history = texture<float4, 2>(vframe.size.x, vframe.size.y);
+      taa.history.set_filter_mode(CardinalSpline);
+      //taa.history.set_filter_mode(Nearest);
+      //taa.history.set_filter_mode(Linear);
+      taa.history.set_address_mode(Clamp);
+      taa.history.set_normalized_coords(true);
+
       vframe.taa.currBuffer = taa.currBuffer.data();
       vframe.taa.prevBuffer = taa.prevBuffer.data();
       vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
       vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
-
-      vframe.initHistory();
     }
     return true;
   } else if (taaJustDisabled) {

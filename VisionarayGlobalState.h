@@ -8,7 +8,7 @@
 #include "visionaray/detail/thread_pool.h"
 // ours
 #include "DeviceCopyableObjects.h"
-#include "DeviceObjectArray.h"
+#include "DeviceArray.h"
 #include "RenderingSemaphore.h"
 
 namespace visionaray {
@@ -56,7 +56,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     DeviceObjectArray<dco::Material> materials;
     DeviceObjectArray<dco::Sampler> samplers;
     DeviceObjectArray<dco::SpatialField> spatialFields;
-    DeviceObjectArray<dco::GridAccel> gridAccels;
+    std::vector<dco::GridAccel> gridAccels;
     DeviceObjectArray<dco::TransferFunction> transferFunctions;
     DeviceObjectArray<dco::Light> lights;
     DeviceObjectArray<dco::Frame> frames;

@@ -9,10 +9,16 @@ TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d) : Volume(d)
 {
   vgeom.type = dco::Geometry::Volume;
   vgeom.asVolume.data.type = dco::Volume::TransferFunction1D;
+  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
+
+  vtransfunc.type = dco::TransferFunction::_1D;
+  vtransfunc.tfID = deviceState()->dcos.transferFunctions.alloc(vtransfunc);
 }
 
 TransferFunction1D::~TransferFunction1D()
 {
+  deviceState()->dcos.transferFunctions.free(vtransfunc.volID);
+  deviceState()->dcos.geometries.free(vgeom.geomID);
 }
 
 void TransferFunction1D::commit()
@@ -77,6 +83,11 @@ void TransferFunction1D::commit()
   vgeom.asVolume.data.asTransferFunction1D.fieldID
       = m_field->visionaraySpatialField().fieldID;
 
+  vtransfunc.volID = vgeom.asVolume.data.volID;
+  vtransfunc.as1D.numValues = transFuncTexture.size()[0];
+  vtransfunc.as1D.valueRange = m_valueRange;
+  vtransfunc.as1D.sampler = texture_ref<float4, 1>(transFuncTexture);
+
   dispatch();
 
   m_field->gridAccel().computeMaxOpacities(
@@ -95,21 +106,13 @@ aabb TransferFunction1D::bounds() const
 
 void TransferFunction1D::dispatch()
 {
-  if (deviceState()->dcos.transferFunctions.size() <= vgeom.asVolume.data.volID) {
-    deviceState()->dcos.transferFunctions.resize(vgeom.asVolume.data.volID+1);
-  }
-  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].volID
-      = vgeom.asVolume.data.volID;
-  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.numValues
-      = transFuncTexture.size()[0];
-  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.valueRange
-      = m_valueRange;
-  deviceState()->dcos.transferFunctions[vgeom.asVolume.data.volID].as1D.sampler
-      = texture_ref<float4, 1>(transFuncTexture);
+  deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
+  deviceState()->dcos.transferFunctions.update(vtransfunc.tfID, vtransfunc);
 
   // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
   deviceState()->onDevice.transferFunctions
-      = deviceState()->dcos.transferFunctions.data();
+      = deviceState()->dcos.transferFunctions.devicePtr();
 }
 
 } // namespace visionaray

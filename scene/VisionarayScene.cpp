@@ -195,38 +195,36 @@ void VisionaraySceneImpl::release()
 
 void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 {
-  bool success = m_geometries.allocAt(geomID, geom.geomID);
+  m_geometries.set(geomID, geom.geomID);
 
-  if (success) {
-    // Patch geomID into scene primitives
-    if (geom.type == dco::Geometry::Triangle) {
-      for (size_t i=0;i<geom.asTriangle.len;++i) {
-        geom.asTriangle.data[i].geom_id = geomID;
-      }
-    } else if (geom.type == dco::Geometry::Quad) {
-      for (size_t i=0;i<geom.asQuad.len;++i) {
-        geom.asQuad.data[i].geom_id = geomID;
-      }
-    } else if (geom.type == dco::Geometry::Sphere) {
-      for (size_t i=0;i<geom.asSphere.len;++i) {
-        geom.asSphere.data[i].geom_id = geomID;
-      }
-    } else if (geom.type == dco::Geometry::Cylinder) {
-      for (size_t i=0;i<geom.asCylinder.len;++i) {
-        geom.asCylinder.data[i].geom_id = geomID;
-      }
-    } else if (geom.type == dco::Geometry::ISOSurface) {
-      geom.asISOSurface.data.isoID = geomID;
-    } else if (geom.type == dco::Geometry::Volume) {
-      /* volumes do this themselves, on commit! */
+  // Patch geomID into scene primitives
+  if (geom.type == dco::Geometry::Triangle) {
+    for (size_t i=0;i<geom.asTriangle.len;++i) {
+      geom.asTriangle.data[i].geom_id = geomID;
     }
-
-    m_geometries.update(geomID, geom.geomID);
-    deviceState()->dcos.geometries.update(geom.geomID, geom);
-
-    // Upload/set accessible pointers
-    deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
+  } else if (geom.type == dco::Geometry::Quad) {
+    for (size_t i=0;i<geom.asQuad.len;++i) {
+      geom.asQuad.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::Sphere) {
+    for (size_t i=0;i<geom.asSphere.len;++i) {
+      geom.asSphere.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::Cylinder) {
+    for (size_t i=0;i<geom.asCylinder.len;++i) {
+      geom.asCylinder.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::ISOSurface) {
+    geom.asISOSurface.data.isoID = geomID;
+  } else if (geom.type == dco::Geometry::Volume) {
+    /* volumes do this themselves, on commit! */
   }
+
+  m_geometries.set(geomID, geom.geomID);
+  deviceState()->dcos.geometries.update(geom.geomID, geom);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 void VisionaraySceneImpl::attachGeometry(
@@ -234,16 +232,12 @@ void VisionaraySceneImpl::attachGeometry(
 {
   attachGeometry(geom, geomID);
 
-  bool success = m_materials.allocAt(geomID, mat.matID);
-
-  if (success) {
-    m_materials.update(geomID, mat.matID);
-  }
+  m_materials.set(geomID, mat.matID);
 }
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
 {
-  m_geometries.update(geom.geomID, geom.geomID);
+  m_geometries.set(geom.geomID, geom.geomID);
   deviceState()->dcos.geometries.update(geom.geomID, geom);
 
   // Upload/set accessible pointers
@@ -252,12 +246,7 @@ void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
 
 void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
 {
-  bool success = m_lights.allocAt(id, light.lightID);
-
-  if (success) {
-    // leave light.lightID unchanged (points to global registry!)
-    m_lights.update(id, light.lightID);
-  }
+  m_lights.set(id, light.lightID);
 }
 
 void VisionaraySceneImpl::dispatch()

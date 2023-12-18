@@ -658,6 +658,8 @@ struct TransferFunction
 {
   enum Type { _1D, };
   Type type;
+
+  unsigned tfID{UINT_MAX};
   unsigned volID{UINT_MAX};
   struct {
     unsigned numValues;
@@ -713,25 +715,8 @@ struct Frame
     float4 *prevBuffer{nullptr};
     float3 *currAlbedoBuffer{nullptr};
     float3 *prevAlbedoBuffer{nullptr};
-    texture<float4, 2> history;
-    texture_ref<float4, 2> historyRef;
+    texture_ref<float4, 2> history;
   } taa;
-
-  inline void initHistory()
-  {
-    taa.history = texture<float4, 2>(size.x, size.y);
-    taa.history.set_filter_mode(CardinalSpline);
-    //taa.history.set_filter_mode(Nearest);
-    //taa.history.set_filter_mode(Linear);
-    taa.history.set_address_mode(Clamp);
-    taa.history.set_normalized_coords(true);
-  }
-
-  inline void updateHistory()
-  {
-    taa.history.reset(taa.prevBuffer);
-    taa.historyRef = texture_ref<float4, 2>(taa.history);
-  }
 
   VSNRAY_FUNC
   inline PixelSample pixelSample(int x, int y)
@@ -786,7 +771,7 @@ struct Frame
       float prevX = x + motionVecBuffer[idx].x;
       float prevY = y + motionVecBuffer[idx].y;
       float2 texCoord((prevX+0.5f)/size.x, (prevY+0.5f)/size.y);
-      float4 history = tex2D(taa.historyRef, texCoord);
+      float4 history = tex2D(taa.history, texCoord);
       taa.currBuffer[idx] = (1-alpha)*history + alpha*s.color;
       s.color = taa.currBuffer[idx];
     } else if (stochasticRendering) {

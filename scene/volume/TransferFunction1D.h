@@ -39,6 +39,8 @@ struct TransferFunction1D : public Volume
   helium::IntrusivePtr<Array1D> m_opacityData;
 
   texture<float4, 1> transFuncTexture;
+
+  dco::TransferFunction vtransfunc;
 };
 
 } // namespace visionaray

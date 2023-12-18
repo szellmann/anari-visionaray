@@ -28,9 +28,9 @@ struct VisionaraySceneImpl
   Type type;
 
   // Surface data //
-  DeviceObjectArray<dco::Handle> m_geometries;
-  DeviceObjectArray<dco::Handle> m_materials;
-  DeviceObjectArray<dco::Handle> m_lights;
+  DeviceHandleArray m_geometries;
+  DeviceHandleArray m_materials;
+  DeviceHandleArray m_lights;
 
   // Accels //
   TLS m_TLS;

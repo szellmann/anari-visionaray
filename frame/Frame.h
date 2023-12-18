@@ -1,5 +1,7 @@
 #pragma once
 
+#include "visionaray/texture/texture.h"
+// ours
 #include "camera/Camera.h"
 #include "renderer/Renderer.h"
 #include "scene/World.h"
@@ -71,6 +73,7 @@ struct Frame : public helium::BaseFrame
     std::vector<float4> prevBuffer;
     std::vector<float3> currAlbedoBuffer;
     std::vector<float3> prevAlbedoBuffer;
+    texture<float4, 2> history;
   } taa;
 
   helium::IntrusivePtr<Renderer> m_renderer;

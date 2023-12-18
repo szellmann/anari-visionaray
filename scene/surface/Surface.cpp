@@ -7,11 +7,14 @@ namespace visionaray {
 
 Surface::Surface(VisionarayGlobalState *s) : Object(ANARI_SURFACE, s)
 {
-  vsurf.surfID = s->objectCounts.surfaces++;
+  vsurf.surfID = deviceState()->dcos.surfaces.alloc(vsurf);
+  s->objectCounts.surfaces++;
 }
 
 Surface::~Surface()
 {
+  deviceState()->dcos.surfaces.free(vsurf.surfID);
+
   deviceState()->objectCounts.surfaces--;
 }
 
@@ -48,13 +51,10 @@ const Material *Surface::material() const
 
 void Surface::dispatch()
 {
-  if (deviceState()->dcos.surfaces.size() <= vsurf.surfID) {
-    deviceState()->dcos.surfaces.resize(vsurf.surfID+1);
-  }
-  deviceState()->dcos.surfaces[vsurf.surfID] = vsurf;
+  deviceState()->dcos.surfaces.update(vsurf.surfID, vsurf);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.data();
+  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.devicePtr();
 }
 
 // float4 Surface::getSurfaceColor(const Ray &ray) const

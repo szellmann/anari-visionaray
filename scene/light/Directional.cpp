@@ -20,8 +20,6 @@ void Directional::commit()
       0.f,
       std::numeric_limits<float>::max());
 
-  vlight.lightID = vlight.lightID;
-  vlight.type = vlight.type;
   vlight.asDirectional.set_direction(-m_direction);
   vlight.asDirectional.set_cl(m_color);
   vlight.asDirectional.set_kl(m_irradiance); // TODO!
