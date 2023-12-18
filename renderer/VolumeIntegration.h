@@ -58,6 +58,7 @@ struct HitRecordVolume
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
+  int inst_id{-1};
 };
 
 VSNRAY_FUNC
@@ -146,6 +147,7 @@ inline HitRecordVolume sampleFreeFlightDistanceAllVolumes(
     HitRecordVolume hr = sampleFreeFlightDistance(ss, ray, vol, onDevice);
     if (hr.t < result.t) {
       result = hr;
+      result.inst_id = hrv.inst_id;
     }
     auto boxHit = intersect(ray, vol.bounds);
     ray.tmin = boxHit.tfar + 1e-3f;

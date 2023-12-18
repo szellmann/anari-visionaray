@@ -109,7 +109,8 @@ struct VisionarayRendererDirectLight
 
         result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-        const dco::Instance &inst = onDevice.instances[hr.inst_id];
+        int instID = volumeHit ? hrv.inst_id : hr.inst_id;
+        const dco::Instance &inst = onDevice.instances[instID];
         const dco::Group &group = onDevice.groups[inst.groupID];
         light_sample<float> ls;
         vec3f intensity(0.f);
