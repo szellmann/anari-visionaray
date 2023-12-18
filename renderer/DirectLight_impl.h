@@ -223,7 +223,7 @@ struct VisionarayRendererDirectLight
         int surfV = hr.hit ? 0 : 1;
         int volV = volumeHit ? 0 : 1;
 
-        if (!rendererState.gradientShading && rendererState.ambientSamples > 0)
+        if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
           gn = uniform_sample_sphere(ss.random(), ss.random());
 
         float aoV = rendererState.ambientSamples == 0 ? 1.f
