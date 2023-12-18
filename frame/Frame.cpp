@@ -120,15 +120,15 @@ void Frame::commit()
   if (vframe.instIdType == ANARI_UINT32)
     m_instIdBuffer.resize(numPixels);
 
-  vframe.pixelBuffer = m_pixelBuffer.data();
-  vframe.depthBuffer = m_depthBuffer.data();
-  vframe.normalBuffer = m_normalBuffer.data();
-  vframe.albedoBuffer = m_albedoBuffer.data();
-  vframe.primIdBuffer = m_primIdBuffer.data();
-  vframe.objIdBuffer = m_objIdBuffer.data();
-  vframe.instIdBuffer = m_instIdBuffer.data();
-  vframe.accumBuffer = m_accumBuffer.data();
-  vframe.motionVecBuffer = m_motionVecBuffer.data();
+  vframe.pixelBuffer = m_pixelBuffer.devicePtr();
+  vframe.depthBuffer = m_depthBuffer.devicePtr();
+  vframe.normalBuffer = m_normalBuffer.devicePtr();
+  vframe.albedoBuffer = m_albedoBuffer.devicePtr();
+  vframe.primIdBuffer = m_primIdBuffer.devicePtr();
+  vframe.objIdBuffer = m_objIdBuffer.devicePtr();
+  vframe.instIdBuffer = m_instIdBuffer.devicePtr();
+  vframe.accumBuffer = m_accumBuffer.devicePtr();
+  vframe.motionVecBuffer = m_motionVecBuffer.devicePtr();
 
   checkTAAReset();
 
@@ -288,7 +288,7 @@ void Frame::renderFrame()
 
     if (m_renderer->visionarayRenderer().taa()) {
       // Update history texture
-      taa.history.reset(taa.prevBuffer.data());
+      taa.history.reset(taa.prevBuffer.devicePtr());
       vframe.taa.history = texture_ref<float4, 2>(taa.history);
 
       // TAA pass
@@ -299,9 +299,9 @@ void Frame::renderFrame()
           });
 
       // Copy buffers for next pass
-      memcpy(taa.prevBuffer.data(), taa.currBuffer.data(),
+      memcpy(taa.prevBuffer.devicePtr(), taa.currBuffer.devicePtr(),
           sizeof(taa.currBuffer[0]) * taa.currBuffer.size());
-      memcpy(taa.prevAlbedoBuffer.data(), taa.currAlbedoBuffer.data(),
+      memcpy(taa.prevAlbedoBuffer.devicePtr(), taa.currAlbedoBuffer.devicePtr(),
           sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size());
     }
 
@@ -330,19 +330,19 @@ void *Frame::map(std::string_view channel,
     return mapDepthBuffer();
   } else if (channel == "channel.normal" && !m_normalBuffer.empty()) {
     *pixelType = ANARI_FLOAT32_VEC3;
-    return m_normalBuffer.data();
+    return m_normalBuffer.devicePtr();
   } else if (channel == "channel.albedo" && !m_albedoBuffer.empty()) {
     *pixelType = ANARI_FLOAT32_VEC3;
-    return m_albedoBuffer.data();
+    return m_albedoBuffer.devicePtr();
   } else if (channel == "channel.primitiveId" && !m_primIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
-    return m_primIdBuffer.data();
+    return m_primIdBuffer.devicePtr();
   } else if (channel == "channel.objectId" && !m_objIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
-    return m_objIdBuffer.data();
+    return m_objIdBuffer.devicePtr();
   } else if (channel == "channel.instanceId" && !m_instIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
-    return m_instIdBuffer.data();
+    return m_instIdBuffer.devicePtr();
   }else {
     *width = 0;
     *height = 0;
@@ -373,12 +373,12 @@ void Frame::discard()
 
 void *Frame::mapColorBuffer()
 {
-  return m_pixelBuffer.data();
+  return m_pixelBuffer.devicePtr();
 }
 
 void *Frame::mapDepthBuffer()
 {
-  return m_depthBuffer.data();
+  return m_depthBuffer.devicePtr();
 }
 
 bool Frame::ready() const
@@ -443,10 +443,10 @@ bool Frame::checkTAAReset()
       taa.history.set_address_mode(Clamp);
       taa.history.set_normalized_coords(true);
 
-      vframe.taa.currBuffer = taa.currBuffer.data();
-      vframe.taa.prevBuffer = taa.prevBuffer.data();
-      vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.data();
-      vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.data();
+      vframe.taa.currBuffer = taa.currBuffer.devicePtr();
+      vframe.taa.prevBuffer = taa.prevBuffer.devicePtr();
+      vframe.taa.currAlbedoBuffer = taa.currAlbedoBuffer.devicePtr();
+      vframe.taa.prevAlbedoBuffer = taa.prevAlbedoBuffer.devicePtr();
     }
     return true;
   } else if (taaJustDisabled) {

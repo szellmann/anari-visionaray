@@ -5,6 +5,7 @@
 #include "camera/Camera.h"
 #include "renderer/Renderer.h"
 #include "scene/World.h"
+#include "DeviceArray.h"
 // helium
 #include "helium/BaseFrame.h"
 // std
@@ -57,22 +58,22 @@ struct Frame : public helium::BaseFrame
 
   dco::Frame vframe;
 
-  std::vector<uint8_t> m_pixelBuffer;
-  std::vector<float> m_depthBuffer;
-  std::vector<float3> m_normalBuffer;
-  std::vector<float3> m_albedoBuffer;
-  std::vector<float4> m_motionVecBuffer;
-  std::vector<uint32_t> m_primIdBuffer;
-  std::vector<uint32_t> m_objIdBuffer;
-  std::vector<uint32_t> m_instIdBuffer;
-  std::vector<float4> m_accumBuffer;
+  HostDeviceArray<uint8_t> m_pixelBuffer;
+  HostDeviceArray<float> m_depthBuffer;
+  HostDeviceArray<float3> m_normalBuffer;
+  HostDeviceArray<float3> m_albedoBuffer;
+  HostDeviceArray<float4> m_motionVecBuffer;
+  HostDeviceArray<uint32_t> m_primIdBuffer;
+  HostDeviceArray<uint32_t> m_objIdBuffer;
+  HostDeviceArray<uint32_t> m_instIdBuffer;
+  HostDeviceArray<float4> m_accumBuffer;
 
   struct {
     bool enabled{false};
-    std::vector<float4> currBuffer;
-    std::vector<float4> prevBuffer;
-    std::vector<float3> currAlbedoBuffer;
-    std::vector<float3> prevAlbedoBuffer;
+    HostDeviceArray<float4> currBuffer;
+    HostDeviceArray<float4> prevBuffer;
+    HostDeviceArray<float3> currAlbedoBuffer;
+    HostDeviceArray<float3> prevAlbedoBuffer;
     texture<float4, 2> history;
   } taa;
 

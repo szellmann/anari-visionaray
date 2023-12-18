@@ -9,14 +9,49 @@
 namespace visionaray {
 
 // ==================================================================
+// host-device array, uses std::vector as underlying on the host
+// ==================================================================
+
+template <typename T>
+struct HostDeviceArray : public std::vector<T>
+{
+ public:
+  typedef T value_type;
+  typedef std::vector<T> Base;
+
+  HostDeviceArray() = default;
+  ~HostDeviceArray() = default;
+
+  const T *hostPtr() const
+  {
+    return Base::data();
+  }
+
+  T *devicePtr()
+  {
+    if (updated) {
+      deviceData.resize(Base::size());
+      // TODO: assert trivially copyable
+      memcpy(deviceData.data(), Base::data(), Base::size() * sizeof(T));
+      updated = false;
+    }
+    return deviceData.data();
+  }
+
+ protected:
+  Base deviceData;
+  bool updated = true;
+};
+
+// ==================================================================
 // host/device array storing device object handles
 // ==================================================================
 
-struct DeviceHandleArray : public std::vector<DeviceObjectHandle>
+struct DeviceHandleArray : public HostDeviceArray<DeviceObjectHandle>
 {
  public:
   typedef DeviceObjectHandle value_type;
-  typedef std::vector<DeviceObjectHandle> Base;
+  typedef HostDeviceArray<DeviceObjectHandle> Base;
 
   DeviceHandleArray() = default;
   ~DeviceHandleArray() = default;
@@ -28,25 +63,6 @@ struct DeviceHandleArray : public std::vector<DeviceObjectHandle>
 
     Base::operator[](index) = handle;
   }
-
-  const DeviceObjectHandle *hostPtr() const
-  {
-    return Base::data();
-  }
-
-  DeviceObjectHandle *devicePtr()
-  {
-    if (updated) {
-      deviceData.resize(Base::size());
-      // TODO: assert trivially copyable
-      memcpy(deviceData.data(), Base::data(), Base::size() * sizeof(DeviceObjectHandle));
-      updated = false;
-    }
-    return deviceData.data();
-  }
-
-  Base deviceData;
-  bool updated = true;
 };
 
 // ==================================================================
