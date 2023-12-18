@@ -17,6 +17,7 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 Instance::~Instance()
 {
   deviceState()->dcos.instances.free(vgeom.asInstance.data.instID);
+  deviceState()->dcos.geometries.free(vgeom.geomID);
 
   // rtcReleaseGeometry(m_embreeGeometry);
   deviceState()->objectCounts.instances--;
