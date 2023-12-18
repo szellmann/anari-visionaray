@@ -211,6 +211,7 @@ void Frame::renderFrame()
     }
 
     int frameID = (int)vframe.frameCounter++;
+    auto worldID = scene->m_worldID;
 
     parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
         [=] VSNRAY_GPU_FUNC (int x, int y) {
@@ -250,7 +251,7 @@ void Frame::renderFrame()
 
             PixelSample ps = rend.renderSample(ss,
                     ray,
-                    scene->m_worldID,
+                    worldID,
                     deviceState()->onDevice);
             accumColor += ps.color;
             if (sampleID == 0) {
