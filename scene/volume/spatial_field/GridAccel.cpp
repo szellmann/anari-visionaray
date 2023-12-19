@@ -77,15 +77,4 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction tf)
   }
 }
 
-void GridAccel::dispatch(VisionarayGlobalState *s)
-{
-  if (s->dcos.gridAccels.size() <= vaccel.fieldID) {
-    s->dcos.gridAccels.resize(vaccel.fieldID+1);
-  }
-  s->dcos.gridAccels[vaccel.fieldID] = vaccel;
-
-  // Upload/set accessible pointers
-  s->onDevice.gridAccels = s->dcos.gridAccels.data();
-}
-
 } // namespace visionaray

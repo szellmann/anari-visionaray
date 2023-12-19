@@ -64,7 +64,6 @@ void SpatialField::setStepSize(float size)
 
 void SpatialField::dispatch()
 {
-  m_gridAccel.dispatch(deviceState());
   deviceState()->dcos.spatialFields.update(vfield.fieldID, vfield);
 
   // Upload/set accessible pointers

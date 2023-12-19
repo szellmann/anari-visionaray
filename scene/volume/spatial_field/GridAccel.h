@@ -43,8 +43,6 @@ struct GridAccel
 
   void computeMaxOpacities(dco::TransferFunction tf);
 
-  void dispatch(VisionarayGlobalState *s);
-
 private:
 
   dco::GridAccel vaccel;
