@@ -23,10 +23,19 @@ TransferFunction1D::~TransferFunction1D()
 
 void TransferFunction1D::commit()
 {
+  if (m_field)
+    m_field->removeCommitObserver(this);
+
   m_field = getParamObject<SpatialField>("field");
   if (!m_field) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "no spatial field provided to transferFunction1D volume");
+    return;
+  }
+
+  if (!m_field->isValid()) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "invalido spatial field provided to transferFunction1D volume");
     return;
   }
 
@@ -92,6 +101,8 @@ void TransferFunction1D::commit()
 
   m_field->gridAccel().computeMaxOpacities(
       deviceState()->onDevice.transferFunctions[vgeom.asVolume.data.volID]);
+
+  m_field->addCommitObserver(this);
 }
 
 bool TransferFunction1D::isValid() const
