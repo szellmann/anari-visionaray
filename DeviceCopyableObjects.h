@@ -150,8 +150,8 @@ struct GridAccel
 
 struct SpatialField
 {
-  enum Type { StructuredRegular, Unstructured, };
-  Type type;
+  enum Type { StructuredRegular, Unstructured, Unknown, };
+  Type type{Unknown};
   unsigned fieldID{UINT_MAX};
   float baseDT{0.5f};
   GridAccel gridAccel;
@@ -223,8 +223,8 @@ inline bool sampleGradient(SpatialField sf, vec3 P, float3 &value) {
 
 struct Volume
 {
-  enum Type { TransferFunction1D, };
-  Type type;
+  enum Type { TransferFunction1D, Unknown, };
+  Type type{Unknown};
 
   unsigned volID{UINT_MAX};
 
@@ -364,8 +364,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
 struct BLS
 {
-  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, };
-  Type type;
+  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, Unknown, };
+  Type type{Unknown};
   unsigned blsID{UINT_MAX};
   index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
   index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
@@ -491,8 +491,8 @@ struct Surface
 
 struct Geometry
 {
-  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, };
-  Type type;
+  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, Unknown, };
+  Type type{Unknown};
   unsigned geomID{UINT_MAX};
   bool updated{false};
   struct {
@@ -548,8 +548,8 @@ struct Geometry
 
 struct Sampler
 {
-  enum Type { Image1D, Image2D, };
-  Type type;
+  enum Type { Image1D, Image2D, Unknown, };
+  Type type{Unknown};
   unsigned samplerID{UINT_MAX};
   Attribute inAttribute{Attribute::_0};
   mat4 inTransform{mat4::identity()};
@@ -572,8 +572,8 @@ struct Sampler
 
 struct Material
 {
-  enum Type { Matte, };
-  Type type;
+  enum Type { Matte, Unknown, };
+  Type type{Unknown};
   unsigned matID{UINT_MAX};
   Attribute colorAttribute{Attribute::None};
   struct {
@@ -596,8 +596,8 @@ inline Material makeDefaultMaterial()
 
 struct Light
 {
-  enum Type { Directional, Point, Spot, HDRI, };
-  Type type;
+  enum Type { Directional, Point, Spot, HDRI, Unknown, };
+  Type type{Unknown};
   unsigned lightID{UINT_MAX};
   bool visible{true};
   directional_light<float> asDirectional;
@@ -656,8 +656,8 @@ struct Group
 
 struct TransferFunction
 {
-  enum Type { _1D, };
-  Type type;
+  enum Type { _1D, Unknown, };
+  Type type{Unknown};
 
   unsigned tfID{UINT_MAX};
   unsigned volID{UINT_MAX};
@@ -672,8 +672,8 @@ struct TransferFunction
 
 struct Camera
 {
-  enum Type { Matrix, Pinhole, };
-  Type type;
+  enum Type { Matrix, Pinhole, Unknown, };
+  Type type{Unknown};
   unsigned camID{UINT_MAX};
   matrix_camera asMatrixCam;
   thin_lens_camera asPinholeCam;
