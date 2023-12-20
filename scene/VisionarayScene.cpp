@@ -238,7 +238,6 @@ void VisionaraySceneImpl::attachGeometry(
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
 {
-  m_geometries.set(geom.geomID, geom.geomID);
   deviceState()->dcos.geometries.update(geom.geomID, geom);
 
   // Upload/set accessible pointers

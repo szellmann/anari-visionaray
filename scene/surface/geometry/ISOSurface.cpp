@@ -27,7 +27,7 @@ void ISOSurface::commit()
 
   m_isoValue = getParamObject<Array1D>("isovalue");
 
-  if (!m_isoValue) {
+  if (!m_isoValue || m_isoValue->size() == 0) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "no ISO values provided to implicitISOSurface volume");
     return;

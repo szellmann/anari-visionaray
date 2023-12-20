@@ -102,6 +102,11 @@ struct DeviceObjectArray : private std::vector<T>
     return Base::size();
   }
 
+  bool empty() const
+  {
+    return Base::empty();
+  }
+
   void clear()
   {
     Base::clear();
