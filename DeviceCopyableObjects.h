@@ -516,6 +516,8 @@ struct Geometry
   struct {
     basic_cylinder<float> *data{nullptr};
     size_t len{0};
+    Array vertexAttributes[5];
+    Array index;
   } asCylinder;
   struct {
     dco::ISOSurface data;

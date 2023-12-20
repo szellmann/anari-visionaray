@@ -218,6 +218,8 @@ inline dco::Array getVertexColors(const dco::Geometry &geom, dco::Attribute attr
       return geom.asTriangle.vertexAttributes[(int)attrib];
     else if (geom.type == dco::Geometry::Sphere)
       return geom.asSphere.vertexAttributes[(int)attrib];
+    else if (geom.type == dco::Geometry::Cylinder)
+      return geom.asCylinder.vertexAttributes[(int)attrib];
   }
 
   return arr;
@@ -290,6 +292,20 @@ inline vec4 getAttribute(
       } else {
         color = ((vec4f *)vertexColors.data)[primID];
       }
+    }
+  }
+  else if (geom.type == dco::Geometry::Cylinder && vertexColors.len > 0) {
+    if (vertexColors.type == ANARI_FLOAT32_VEC4) {
+      vec4f c1, c2;
+      if (geom.asCylinder.index.len > 0) {
+        uint2 index = ((uint2 *)geom.asCylinder.index.data)[primID];
+        c1 = ((vec4f *)vertexColors.data)[index.x];
+        c2 = ((vec4f *)vertexColors.data)[index.y];
+      } else {
+        c1 = ((vec4f *)vertexColors.data)[primID * 2];
+        c2 = ((vec4f *)vertexColors.data)[primID * 2 + 1];
+      }
+      color = lerp(c1, c2, uv.x);
     }
   }
   else if (primitiveColors.len > 0) {

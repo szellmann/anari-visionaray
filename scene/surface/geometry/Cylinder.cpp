@@ -21,11 +21,11 @@ void Cylinder::commit()
   m_index = getParamObject<Array1D>("primitive.index");
   m_radius = getParamObject<Array1D>("primitive.radius");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
-  //m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
-  //m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
-  //m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
-  //m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
-  //m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+  m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
+  m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
+  m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
+  m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
+  m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
 
   if (!m_vertexPosition) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -76,6 +76,20 @@ void Cylinder::commit()
 
   vgeom.asCylinder.data = m_cylinders.data();
   vgeom.asCylinder.len = m_cylinders.size();
+
+  if (m_index) {
+    vgeom.asCylinder.index.data = m_index->begin();
+    vgeom.asCylinder.index.len = m_index->size();
+    vgeom.asCylinder.index.type = m_index->elementType();
+  }
+
+  for (int i = 0; i < 5; ++i ) {
+    if (m_vertexAttributes[i]) {
+      vgeom.asCylinder.vertexAttributes[i].data = m_vertexAttributes[i]->begin();
+      vgeom.asCylinder.vertexAttributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.asCylinder.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
+    }
+  }
 
   dispatch();
 }
