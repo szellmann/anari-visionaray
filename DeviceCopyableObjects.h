@@ -227,6 +227,7 @@ struct Volume
   Type type{Unknown};
 
   unsigned volID{UINT_MAX};
+  unsigned geomID{UINT_MAX}; // ID in group (internally realized as geom)
 
   struct {
     unsigned fieldID{UINT_MAX}; // _should_ be same as volID
@@ -257,7 +258,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   hit_record<Ray, primitive<unsigned>> result;
   result.hit = hr.hit;
   result.t = max(ray.tmin,hr.tnear);
-  result.geom_id = vol.volID;
+  result.geom_id = vol.geomID;
   return result;
 }
 
@@ -266,6 +267,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 struct ISOSurface
 {
   unsigned isoID{UINT_MAX};
+  unsigned geomID{UINT_MAX};
 
   SpatialField field;
   unsigned numValues{0};
@@ -336,7 +338,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
             if (tHit < result.t) {
               result.hit = true;
               result.prim_id = i;
-              result.geom_id = iso.isoID;
+              result.geom_id = iso.geomID;
               result.t = tHit;
             }
             hit = true;

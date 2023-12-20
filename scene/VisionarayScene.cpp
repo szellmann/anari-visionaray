@@ -216,8 +216,9 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
     }
   } else if (geom.type == dco::Geometry::ISOSurface) {
     geom.asISOSurface.data.isoID = geomID;
+    geom.asISOSurface.data.geomID = geomID;
   } else if (geom.type == dco::Geometry::Volume) {
-    /* volumes do this themselves, on commit! */
+    geom.asVolume.data.geomID = geomID;
   }
 
   m_geometries.set(geomID, geom.geomID);
