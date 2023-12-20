@@ -176,6 +176,7 @@ void Group::visionaraySceneCommit()
   reportMessage(
       ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
 
+  // Give geometry types such as iso-surfaces the change to update themselves
   if (m_surfaceData) {
     std::for_each(m_surfaceData->handlesBegin(),
         m_surfaceData->handlesEnd(),
@@ -183,13 +184,16 @@ void Group::visionaraySceneCommit()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             if (s->geometry()->visionarayGeometry().updated) {
-              //std::cout << s->geometry()->visionarayGeometry().asISOSurface.data.numValues << '\n';
               vscene->updateGeometry(s->geometry()->visionarayGeometry());
               s->geometry()->visionarayGeometry().setUpdated(false);
             }
           }
         });
   }
+
+  // TODO: for volumes (?); yet we currently don't support volumes that change
+  // their shape
+
   vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
 }
