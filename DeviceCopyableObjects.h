@@ -552,7 +552,7 @@ struct Geometry
 
 struct Sampler
 {
-  enum Type { Image1D, Image2D, Unknown, };
+  enum Type { Image1D, Image2D, Image3D, Transform, Primitive, Unknown, };
   Type type{Unknown};
   unsigned samplerID{UINT_MAX};
   Attribute inAttribute{Attribute::_0};
@@ -562,13 +562,16 @@ struct Sampler
   float4 outOffset{0.f};
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
   texture_ref<vector<4, unorm<8>>, 2> asImage2D;
+  texture_ref<vector<4, unorm<8>>, 3> asImage3D;
 
   VSNRAY_FUNC
   bool isValid() const
   {
     return samplerID < UINT_MAX &&
+        inAttribute != Attribute::None &&
         (type == Image1D && asImage1D) ||
-        (type == Image2D && asImage2D);
+        (type == Image2D && asImage2D) ||
+        (type == Image3D && asImage3D);
   }
 };
 

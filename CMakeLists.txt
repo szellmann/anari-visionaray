@@ -48,7 +48,10 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/surface/geometry/Triangle.cpp
     scene/surface/material/sampler/Image1D.cpp
     scene/surface/material/sampler/Image2D.cpp
+    scene/surface/material/sampler/Image3D.cpp
+    scene/surface/material/sampler/PrimitiveSampler.cpp
     scene/surface/material/sampler/Sampler.cpp
+    scene/surface/material/sampler/TransformSampler.cpp
     scene/surface/material/Material.cpp
     scene/surface/material/Matte.cpp
     scene/surface/Surface.cpp
