@@ -259,7 +259,7 @@ void Frame::renderFrame()
             }
           }
 
-          uint64_t clock_end;// = clock64();
+          uint64_t clock_end = clock64();
           if (rend.rendererState().heatMapEnabled > 0.f) {
               float t = (clock_end - clock_begin)
                   * (rend.rendererState().heatMapScale / rend.spp());
