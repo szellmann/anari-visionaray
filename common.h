@@ -153,7 +153,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u8);
         (*dest).y = 0.f;
         (*dest).z = 0.f;
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED8_VEC2: {
@@ -162,7 +162,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u8.x);
         (*dest).y = float(u8.y);
         (*dest).z = 0.f;
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED8_VEC3: {
@@ -171,7 +171,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u8.x);
         (*dest).y = float(u8.y);
         (*dest).z = float(u8.z);
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED8_VEC4: {
@@ -189,7 +189,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u16);
         (*dest).y = 0.f;
         (*dest).z = 0.f;
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED16_VEC2: {
@@ -198,7 +198,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u16.x);
         (*dest).y = float(u16.y);
         (*dest).z = 0.f;
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED16_VEC3: {
@@ -207,7 +207,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u16.x);
         (*dest).y = float(u16.y);
         (*dest).z = float(u16.z);
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED16_VEC4: {
@@ -225,7 +225,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u32);
         (*dest).y = 0.f;
         (*dest).z = 0.f;
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED32_VEC2: {
@@ -234,7 +234,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u32.x);
         (*dest).y = float(u32.y);
         (*dest).z = 0.f;
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED32_VEC3: {
@@ -243,7 +243,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
         (*dest).x = float(u32.x);
         (*dest).y = float(u32.y);
         (*dest).z = float(u32.z);
-        (*dest).w = 0.f;
+        (*dest).w = 1.f;
         break;
       }
       case ANARI_UFIXED32_VEC4: {
@@ -257,7 +257,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
       }
     }
   } else {
-    *dest = vec4(0.f);
+    *dest = vec4(0.f, 0.f, 0.f, 1.f);
     memcpy(dest, source, ti.sizeInBytes);
   }
 

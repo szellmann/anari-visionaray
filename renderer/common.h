@@ -239,7 +239,7 @@ inline dco::Array getPrimitiveColors(const dco::Geometry &geom, dco::Attribute a
 VSNRAY_FUNC
 inline vec4 getAttribute(
     const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv,
-    const vec4 dflt = vec4(0.f))
+    const vec4 dflt = vec4(0.f, 0.f, 0.f, 1.f))
 {
   vec4f color = dflt;
   dco::Array vertexColors = getVertexColors(geom, attrib);
@@ -319,7 +319,7 @@ inline vec4 getSample(
 
   inAttr = samp.inTransform * inAttr + samp.inOffset;
 
-  vec4f s{0.f};
+  vec4f s{0.f, 0.f, 0.f, 1.f};
 
   if (samp.type == dco::Sampler::Image1D)
     s = tex1D(samp.asImage1D, inAttr.x);
