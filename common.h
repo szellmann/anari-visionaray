@@ -7,6 +7,273 @@
 // visionaray
 #include "visionaray/math/math.h"
 
+// ==================================================================
+// common traits
+// ==================================================================
+
+namespace visionaray {
+
+struct TypeInfo
+{
+  ANARIDataType dataType{ANARI_UNKNOWN};
+  unsigned sizeInBytes{0};
+  unsigned numComponents{0};
+  bool fixed{false};
+  bool sRGB{false};
+};
+
+VSNRAY_FUNC
+constexpr TypeInfo getInfo(ANARIDataType type)
+{
+  TypeInfo ti;
+
+  if (type == ANARI_UFIXED8) {
+    ti.dataType = type;
+    ti.sizeInBytes = 1;
+    ti.numComponents = 1;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED8_VEC2) {
+    ti.dataType = type;
+    ti.sizeInBytes = 2;
+    ti.numComponents = 2;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED8_VEC3) {
+    ti.dataType = type;
+    ti.sizeInBytes = 3;
+    ti.numComponents = 3;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED8_VEC4) {
+    ti.dataType = type;
+    ti.sizeInBytes = 4;
+    ti.numComponents = 4;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED16) {
+    ti.dataType = type;
+    ti.sizeInBytes = 2;
+    ti.numComponents = 1;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED16_VEC2) {
+    ti.dataType = type;
+    ti.sizeInBytes = 4;
+    ti.numComponents = 2;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED16_VEC3) {
+    ti.dataType = type;
+    ti.sizeInBytes = 6;
+    ti.numComponents = 3;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED16_VEC4) {
+    ti.dataType = type;
+    ti.sizeInBytes = 8;
+    ti.numComponents = 4;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED32) {
+    ti.dataType = type;
+    ti.sizeInBytes = 4;
+    ti.numComponents = 1;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED32_VEC2) {
+    ti.dataType = type;
+    ti.sizeInBytes = 8;
+    ti.numComponents = 2;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED32_VEC3) {
+    ti.dataType = type;
+    ti.sizeInBytes = 12;
+    ti.numComponents = 3;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_UFIXED32_VEC4) {
+    ti.dataType = type;
+    ti.sizeInBytes = 16;
+    ti.numComponents = 4;
+    ti.fixed = true;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_FLOAT32) {
+    ti.dataType = type;
+    ti.sizeInBytes = 4;
+    ti.numComponents = 1;
+    ti.fixed = false;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_FLOAT32_VEC2) {
+    ti.dataType = type;
+    ti.sizeInBytes = 8;
+    ti.numComponents = 2;
+    ti.fixed = false;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_FLOAT32_VEC3) {
+    ti.dataType = type;
+    ti.sizeInBytes = 12;
+    ti.numComponents = 3;
+    ti.fixed = false;
+    ti.sRGB = false;
+  }
+  else if (type == ANARI_FLOAT32_VEC4) {
+    ti.dataType = type;
+    ti.sizeInBytes = 16;
+    ti.numComponents = 4;
+    ti.fixed = false;
+    ti.sRGB = false;
+  }
+  return ti;
+}
+
+VSNRAY_FUNC
+inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
+{
+  if (ti.fixed) {
+    switch (ti.dataType) {
+      case ANARI_UFIXED8: {
+        unorm<8> u8;
+        memcpy(&u8, source, sizeof(u8));
+        (*dest).x = float(u8);
+        (*dest).y = 0.f;
+        (*dest).z = 0.f;
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED8_VEC2: {
+        vector<2, unorm<8>> u8;
+        memcpy(&u8, source, sizeof(u8));
+        (*dest).x = float(u8.x);
+        (*dest).y = float(u8.y);
+        (*dest).z = 0.f;
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED8_VEC3: {
+        vector<3, unorm<8>> u8;
+        memcpy(&u8, source, sizeof(u8));
+        (*dest).x = float(u8.x);
+        (*dest).y = float(u8.y);
+        (*dest).z = float(u8.z);
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED8_VEC4: {
+        vector<4, unorm<8>> u8;
+        memcpy(&u8, source, sizeof(u8));
+        (*dest).x = float(u8.x);
+        (*dest).y = float(u8.y);
+        (*dest).z = float(u8.z);
+        (*dest).w = float(u8.w);
+        break;
+      }
+      case ANARI_UFIXED16: {
+        unorm<16> u16;
+        memcpy(&u16, source, sizeof(u16));
+        (*dest).x = float(u16);
+        (*dest).y = 0.f;
+        (*dest).z = 0.f;
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED16_VEC2: {
+        vector<2, unorm<16>> u16;
+        memcpy(&u16, source, sizeof(u16));
+        (*dest).x = float(u16.x);
+        (*dest).y = float(u16.y);
+        (*dest).z = 0.f;
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED16_VEC3: {
+        vector<3, unorm<16>> u16;
+        memcpy(&u16, source, sizeof(u16));
+        (*dest).x = float(u16.x);
+        (*dest).y = float(u16.y);
+        (*dest).z = float(u16.z);
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED16_VEC4: {
+        vector<4, unorm<16>> u16;
+        memcpy(&u16, source, sizeof(u16));
+        (*dest).x = float(u16.x);
+        (*dest).y = float(u16.y);
+        (*dest).z = float(u16.z);
+        (*dest).w = float(u16.w);
+        break;
+      }
+      case ANARI_UFIXED32: {
+        unorm<32> u32;
+        memcpy(&u32, source, sizeof(u32));
+        (*dest).x = float(u32);
+        (*dest).y = 0.f;
+        (*dest).z = 0.f;
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED32_VEC2: {
+        vector<2, unorm<32>> u32;
+        memcpy(&u32, source, sizeof(u32));
+        (*dest).x = float(u32.x);
+        (*dest).y = float(u32.y);
+        (*dest).z = 0.f;
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED32_VEC3: {
+        vector<3, unorm<32>> u32;
+        memcpy(&u32, source, sizeof(u32));
+        (*dest).x = float(u32.x);
+        (*dest).y = float(u32.y);
+        (*dest).z = float(u32.z);
+        (*dest).w = 0.f;
+        break;
+      }
+      case ANARI_UFIXED32_VEC4: {
+        vector<4, unorm<32>> u32;
+        memcpy(&u32, source, sizeof(u32));
+        (*dest).x = float(u32.x);
+        (*dest).y = float(u32.y);
+        (*dest).z = float(u32.z);
+        (*dest).w = float(u32.w);
+        break;
+      }
+    }
+  } else {
+    memcpy(dest, source, ti.sizeInBytes);
+  }
+
+  if (ti.sRGB) {
+    for (unsigned c=0; c<ti.numComponents; ++c) {
+
+    }
+  }
+}
+
+} // namespace visionaray
+
+
+// ==================================================================
+// math types
+// ==================================================================
+
 namespace visionaray {
   using int2 = vec2i;
   using int3 = vec3i;
