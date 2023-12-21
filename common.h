@@ -257,6 +257,7 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
       }
     }
   } else {
+    *dest = vec4(0.f);
     memcpy(dest, source, ti.sizeInBytes);
   }
 
