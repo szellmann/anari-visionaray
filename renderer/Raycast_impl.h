@@ -29,29 +29,26 @@ struct VisionarayRendererRaycast
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
       vec2f uv{hr.u,hr.v};
-      vec4f color{1.f};
-      if (mat.type == dco::Material::Matte && mat.asMatte.samplerID < UINT_MAX) {
-        const auto &samp = onDevice.samplers[mat.asMatte.samplerID];
-        color = getSample(samp, geom, hr.prim_id, uv);
-      } else {
-        color = getColor(geom, mat, hr.prim_id, uv);
-      }
+      vec4f color = getColor(geom, mat, onDevice.samplers, hr.prim_id, uv);
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
-
-      shade_record<float> sr;
-      sr.normal = gn;
-      sr.geometric_normal = gn;
-      sr.view_dir = -xfmDir;
-      sr.tex_color = color.xyz();
-      sr.light_dir = -xfmDir;
-      sr.light_intensity = float3(1.f);
 
       // That doesn't work for instances..
       float3 shadedColor{0.f};
 
-      if (rendererState.renderMode == RenderMode::Default)
-        shadedColor = to_rgb(mat.asMatte.data.shade(sr));
+      if (rendererState.renderMode == RenderMode::Default) {
+        float3 viewDir = -xfmDir;
+        float3 lightDir = -xfmDir;
+        float3 intensity(1.f);
+        shadedColor = evalMaterial(geom,
+                                   mat,
+                                   onDevice.samplers,
+                                   hr.prim_id,
+                                   uv, gn, gn,
+                                   viewDir,
+                                   lightDir,
+                                   intensity);
+      }
       else if (rendererState.renderMode == RenderMode::Ng)
         shadedColor = (gn + float3(1.f)) * float3(0.5f);
       else if (rendererState.renderMode == RenderMode::Albedo)

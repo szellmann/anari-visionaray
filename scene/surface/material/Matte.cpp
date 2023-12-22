@@ -19,12 +19,10 @@ void Matte::commit()
   m_colorAttribute = toAttribute(getParamString("color", "none"));
 
   vmat.type = dco::Material::Matte;
-  vmat.colorAttribute = m_colorAttribute;
-  vmat.asMatte.data.cd() = from_rgb(m_color.xyz());
-  vmat.asMatte.data.kd() = m_color.w;
-
+  vmat.asMatte.color.rgb = m_color.xyz();
+  vmat.asMatte.color.colorAttribute = m_colorAttribute;
   if (m_colorSampler) {
-    vmat.asMatte.samplerID = m_colorSampler->visionaraySampler().samplerID;
+    vmat.asMatte.color.samplerID = m_colorSampler->visionaraySampler().samplerID;
   }
 
   dispatch();

@@ -85,12 +85,7 @@ struct VisionarayRendererDirectLight
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
-          if (mat.type == dco::Material::Matte && mat.asMatte.samplerID < UINT_MAX) {
-            const auto &samp = onDevice.samplers[mat.asMatte.samplerID];
-            color = getSample(samp, geom, hr.prim_id, uv);
-          } else {
-            color = getColor(geom, mat, hr.prim_id, uv);
-          }
+          color = getColor(geom, mat, onDevice.samplers, hr.prim_id, uv);
 
           result.Ng = gn;
           result.Ns = gn;
@@ -136,21 +131,22 @@ struct VisionarayRendererDirectLight
         }
 
         if (volumeHit) {
-          shade_record<float> sr;
-          sr.normal = gn;
-          sr.geometric_normal = gn;
-          sr.view_dir = viewDir;
-          sr.tex_color = float3(1.f);
-          sr.light_dir = normalize(ls.dir);
-          sr.light_intensity = intensity;
-
-          dco::Material mat;
-          mat.asMatte.data.cd() = from_rgb(hrv.albedo);
-          mat.asMatte.data.kd() = 1.f;
-
           if (rendererState.renderMode == RenderMode::Default) {
-            if (rendererState.gradientShading && length(gn) > 1e-10f)
-              shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+            if (rendererState.gradientShading && length(gn) > 1e-10f) {
+              dco::Material mat;
+              mat.type = dco::Material::Matte;
+              mat.asMatte.color.rgb = hrv.albedo;
+              dco::Geometry dummyGeom;
+
+              shadedColor = evalMaterial(dummyGeom,
+                                         mat,
+                                         onDevice.samplers, // not used..
+                                         UINT_MAX, vec2{}, // primID and uv, not used..
+                                         gn, gn,
+                                         viewDir, ls.dir,
+                                         intensity);
+              shadedColor = shadedColor / ls.pdf / (dist*dist);
+            }
             else
               shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
           } else if (rendererState.renderMode == RenderMode::Ng) {
@@ -167,21 +163,22 @@ struct VisionarayRendererDirectLight
 
           baseColor = hrv.albedo;
         } else {
-          shade_record<float> sr;
-          sr.normal = gn;
-          sr.geometric_normal = gn;
-          sr.view_dir = viewDir;
-          sr.tex_color = color.xyz();//float3(1.f);
-          sr.light_dir = normalize(ls.dir);
-          sr.light_intensity = intensity;
-
           // That doesn't work for instances..
           const auto &inst = onDevice.instances[hr.inst_id];
           const auto &group = onDevice.groups[inst.groupID];
           const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
           const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
-          if (rendererState.renderMode == RenderMode::Default)
-            shadedColor = to_rgb(mat.asMatte.data.shade(sr)) / ls.pdf / (dist*dist);
+          if (rendererState.renderMode == RenderMode::Default) {
+            shadedColor = evalMaterial(geom,
+                                       mat,
+                                       onDevice.samplers,
+                                       hr.prim_id,
+                                       uv, gn, gn,
+                                       viewDir,
+                                       ls.dir,
+                                       intensity);
+            shadedColor = shadedColor / ls.pdf / (dist*dist);
+          }
           else if (rendererState.renderMode == RenderMode::Ng)
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
           else if (rendererState.renderMode == RenderMode::Albedo)

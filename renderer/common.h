@@ -1,5 +1,8 @@
 #pragma once
 
+// visionaray
+#include "visionaray/material.h"
+// ours
 #include <common.h>
 #include <DeviceCopyableObjects.h>
 
@@ -339,13 +342,53 @@ inline vec4 getSample(
 }
 
 VSNRAY_FUNC
-inline vec4 getColor(
-    const dco::Geometry &geom, const dco::Material &mat, unsigned primID, const vec2 uv)
+inline vec4 getColor(const dco::Geometry &geom,
+                     const dco::Material &mat,
+                     const dco::Sampler *samplers,
+                     unsigned primID, const vec2 uv)
 {
-  vec4f defaultColor(0.f);
-  if (mat.type == dco::Material::Matte)
-    defaultColor = vec4f(to_rgb(mat.asMatte.data.cd()), 1.f);
-  return getAttribute(geom, mat.colorAttribute, primID, uv, defaultColor);
+  vec4f color{0.f, 0.f, 0.f, 1.f};
+  if (mat.type == dco::Material::Matte) {
+    if (mat.asMatte.color.samplerID < UINT_MAX) {
+      const auto &samp = samplers[mat.asMatte.color.samplerID];
+      color = getSample(samp, geom, primID, uv);
+    } else if (mat.asMatte.color.colorAttribute != dco::Attribute::None) {
+      color = getAttribute(geom, mat.asMatte.color.colorAttribute, primID, uv);
+    } else {
+      color = vec4f(mat.asMatte.color.rgb, 1.f);
+    }
+  }
+  return color;
+}
+
+VSNRAY_FUNC
+inline vec3 evalMaterial(const dco::Geometry &geom,
+                         const dco::Material &mat,
+                         const dco::Sampler *samplers,
+                         unsigned primID, const vec2 uv,
+                         const vec3 Ng, const vec3 Ns,
+                         const vec3 viewDir, const vec3 lightDir,
+                         const vec3 lightIntensity)
+{
+  vec3 shadedColor{0.f, 0.f, 0.f};
+  if (mat.type == dco::Material::Matte) {
+    vec4f color = getColor(geom, mat, samplers, primID, uv);
+
+    shade_record<float> sr;
+    sr.normal = Ns;
+    sr.geometric_normal = Ng;
+    sr.view_dir = viewDir;
+    sr.tex_color = float3(1.f);
+    sr.light_dir = normalize(lightDir);
+    sr.light_intensity = lightIntensity;
+
+    matte<float> vmat;
+    vmat.cd() = from_rgb(color.xyz());
+    vmat.kd() = 1.f;
+
+    shadedColor = to_rgb(vmat.shade(sr));
+  }
+  return shadedColor;
 }
 
 inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)

@@ -5,7 +5,6 @@
 #include "visionaray/texture/texture.h"
 #include "visionaray/bvh.h"
 #include "visionaray/directional_light.h"
-#include "visionaray/material.h"
 #include "visionaray/matrix_camera.h"
 #include "visionaray/point_light.h"
 #include "visionaray/spot_light.h"
@@ -582,6 +581,15 @@ struct Sampler
   }
 };
 
+// Color used by materials //
+
+struct Color
+{
+  float3 rgb;
+  unsigned samplerID;
+  Attribute colorAttribute;
+};
+
 // Material //
 
 struct Material
@@ -589,10 +597,8 @@ struct Material
   enum Type { Matte, Unknown, };
   Type type{Unknown};
   unsigned matID{UINT_MAX};
-  Attribute colorAttribute{Attribute::None};
   struct {
-    unsigned samplerID{UINT_MAX};
-    matte<float> data;
+    Color color{float3{0.8f, 0.8f, 0.8f}, UINT_MAX, Attribute::None};
   } asMatte;
 };
 
@@ -601,8 +607,7 @@ inline Material makeDefaultMaterial()
 {
   Material mat;
   mat.type = Material::Matte;
-  mat.asMatte.data.cd() = from_rgb(vec3(0,1,0));
-  mat.asMatte.data.kd() = 1.f;
+  mat.asMatte.color.rgb = vec3(0,1,0);
   return mat;
 }
 

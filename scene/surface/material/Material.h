@@ -24,9 +24,6 @@ struct Material : public Object
 
  protected:
   dco::Material vmat;
-  float4 m_color{1.f, 1.f, 1.f, 1.f};
-  helium::IntrusivePtr<Sampler> m_colorSampler;
-  dco::Attribute m_colorAttribute;
 
   void dispatch();
 };
