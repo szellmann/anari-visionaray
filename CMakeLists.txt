@@ -54,6 +54,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/surface/material/sampler/TransformSampler.cpp
     scene/surface/material/Material.cpp
     scene/surface/material/Matte.cpp
+    scene/surface/material/PBM.cpp
     scene/surface/Surface.cpp
     scene/volume/spatial_field/GridAccel.cpp
     scene/volume/spatial_field/SpatialField.cpp

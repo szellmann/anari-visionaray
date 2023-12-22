@@ -20,7 +20,7 @@ void Matte::commit()
 
   vmat.type = dco::Material::Matte;
   vmat.asMatte.color.rgb = m_color.xyz();
-  vmat.asMatte.color.colorAttribute = m_colorAttribute;
+  vmat.asMatte.color.attribute = m_colorAttribute;
   if (m_colorSampler) {
     vmat.asMatte.color.samplerID = m_colorSampler->visionaraySampler().samplerID;
   }

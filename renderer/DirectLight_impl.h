@@ -85,7 +85,7 @@ struct VisionarayRendererDirectLight
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
-          color = getColor(geom, mat, onDevice.samplers, hr.prim_id, uv);
+          color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
           result.Ng = gn;
           result.Ns = gn;
@@ -138,8 +138,8 @@ struct VisionarayRendererDirectLight
               mat.asMatte.color.rgb = hrv.albedo;
               dco::Geometry dummyGeom;
 
-              shadedColor = evalMaterial(dummyGeom,
-                                         mat,
+              shadedColor = evalMaterial(mat,
+                                         dummyGeom,
                                          onDevice.samplers, // not used..
                                          UINT_MAX, vec2{}, // primID and uv, not used..
                                          gn, gn,
@@ -169,8 +169,8 @@ struct VisionarayRendererDirectLight
           const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
           const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
           if (rendererState.renderMode == RenderMode::Default) {
-            shadedColor = evalMaterial(geom,
-                                       mat,
+            shadedColor = evalMaterial(mat,
+                                       geom,
                                        onDevice.samplers,
                                        hr.prim_id,
                                        uv, gn, gn,

@@ -29,7 +29,7 @@ struct VisionarayRendererRaycast
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
       vec2f uv{hr.u,hr.v};
-      vec4f color = getColor(geom, mat, onDevice.samplers, hr.prim_id, uv);
+      vec4f color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
 
@@ -40,8 +40,8 @@ struct VisionarayRendererRaycast
         float3 viewDir = -xfmDir;
         float3 lightDir = -xfmDir;
         float3 intensity(1.f);
-        shadedColor = evalMaterial(geom,
-                                   mat,
+        shadedColor = evalMaterial(mat,
+                                   geom,
                                    onDevice.samplers,
                                    hr.prim_id,
                                    uv, gn, gn,

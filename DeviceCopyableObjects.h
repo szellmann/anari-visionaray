@@ -581,25 +581,38 @@ struct Sampler
   }
 };
 
-// Color used by materials //
+// Params used by materials //
 
-struct Color
+struct MaterialParamRGB
 {
   float3 rgb;
   unsigned samplerID;
-  Attribute colorAttribute;
+  Attribute attribute;
+};
+
+struct MaterialParamF
+{
+  float f;
+  unsigned samplerID;
+  Attribute attribute;
 };
 
 // Material //
 
 struct Material
 {
-  enum Type { Matte, Unknown, };
+  enum Type { Matte, PhysicallyBased, Unknown, };
   Type type{Unknown};
   unsigned matID{UINT_MAX};
   struct {
-    Color color{float3{0.8f, 0.8f, 0.8f}, UINT_MAX, Attribute::None};
+    MaterialParamRGB color{float3{0.8f, 0.8f, 0.8f}, UINT_MAX, Attribute::None};
   } asMatte;
+  struct {
+    MaterialParamRGB baseColor{float3{1.f, 1.f, 1.f}, UINT_MAX, Attribute::None};
+    MaterialParamF metallic{1.f, UINT_MAX, Attribute::None};
+    MaterialParamF roughness{1.f, UINT_MAX, Attribute::None};
+    MaterialParamF ior{1.5f, UINT_MAX, Attribute::None};
+  } asPhysicallyBased;
 };
 
 VSNRAY_FUNC

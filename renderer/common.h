@@ -342,28 +342,113 @@ inline vec4 getSample(
 }
 
 VSNRAY_FUNC
-inline vec4 getColor(const dco::Geometry &geom,
-                     const dco::Material &mat,
+inline vec4 getRGBA(const dco::MaterialParamRGB &param,
+                    const dco::Geometry &geom,
+                    const dco::Sampler *samplers,
+                    unsigned primID, const vec2 uv)
+{
+  vec4f rgba{0.f, 0.f, 0.f, 1.f};
+  if (param.samplerID < UINT_MAX) {
+    const auto &samp = samplers[param.samplerID];
+    rgba = getSample(samp, geom, primID, uv);
+  } else if (param.attribute != dco::Attribute::None) {
+    rgba = getAttribute(geom, param.attribute, primID, uv);
+  } else {
+    rgba = vec4f(param.rgb, 1.f);
+  }
+  return rgba;
+}
+
+VSNRAY_FUNC
+inline float getF(const dco::MaterialParamF &param,
+                  const dco::Geometry &geom,
+                  const dco::Sampler *samplers,
+                  unsigned primID, const vec2 uv)
+{
+  float f = 1.f;
+  if (param.samplerID < UINT_MAX) {
+    const auto &samp = samplers[param.samplerID];
+    f = getSample(samp, geom, primID, uv).x;
+  } else if (param.attribute != dco::Attribute::None) {
+    f = getAttribute(geom, param.attribute, primID, uv).x;
+  } else {
+    f = param.f;
+  }
+  return f;
+}
+
+VSNRAY_FUNC
+inline vec4 getColor(const dco::Material &mat,
+                     const dco::Geometry &geom,
                      const dco::Sampler *samplers,
                      unsigned primID, const vec2 uv)
 {
   vec4f color{0.f, 0.f, 0.f, 1.f};
-  if (mat.type == dco::Material::Matte) {
-    if (mat.asMatte.color.samplerID < UINT_MAX) {
-      const auto &samp = samplers[mat.asMatte.color.samplerID];
-      color = getSample(samp, geom, primID, uv);
-    } else if (mat.asMatte.color.colorAttribute != dco::Attribute::None) {
-      color = getAttribute(geom, mat.asMatte.color.colorAttribute, primID, uv);
-    } else {
-      color = vec4f(mat.asMatte.color.rgb, 1.f);
-    }
-  }
+  if (mat.type == dco::Material::Matte)
+    color = getRGBA(mat.asMatte.color, geom, samplers, primID, uv);
+  else if (mat.type == dco::Material::PhysicallyBased)
+    color = getRGBA(mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv);
   return color;
 }
 
+inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
+                                        const dco::Geometry &geom,
+                                        const dco::Sampler *samplers,
+                                        unsigned primID, const vec2 uv,
+                                        const vec3 Ng, const vec3 Ns,
+                                        const vec3 viewDir, const vec3 lightDir,
+                                        const vec3 lightIntensity)
+{
+  const float metallic = getF(
+      mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
+  const float roughness = getF(
+      mat.asPhysicallyBased.roughness, geom, samplers, primID, uv);
+  const float ior = getF(
+      mat.asPhysicallyBased.ior, geom, samplers, primID, uv);
+
+  const float alpha = roughness*roughness;
+
+  const vec3 H = normalize(lightDir+viewDir);
+  const float NdotH = dot(Ng,H);
+  const float NdotL = dot(Ng,lightDir);
+  const float NdotV = dot(Ng,viewDir);
+  const float VdotH = dot(viewDir,H);
+  const float LdotH = dot(lightDir,H);
+
+  // Fresnel
+  auto pow2 = [](float f) { return f*f; };
+  auto pow5 = [](float f) { return f*f*f*f*f; };
+  float f0 = pow2((1.f-ior)/(1.f+ior));
+  float F = f0 + (1.f - f0) * pow5(1.f - fabsf(VdotH));
+
+  // Diffuse:
+  vec3 diffuseColor = getRGBA(
+      mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv).xyz();
+
+  // Metallic materials don't reflect diffusely:
+  diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
+
+  vec3 diffuseBRDF
+      = (1-F) * constants::inv_pi<float>() * diffuseColor * fmaxf(0.f,NdotL);
+
+  // GGX microfacet distribution
+  float D = (alpha*alpha*heaviside(NdotH))
+    / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
+
+  // Masking-shadowing term
+  float G = ((2.f * fabsf(NdotL) * heaviside(LdotH))
+        / (fabsf(NdotL) + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
+    *       ((2.f * fabsf(NdotV) * heaviside(VdotH))
+        / (fabsf(NdotV) + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
+
+  float specularBRDF = (F * D * G) / (4.f * fabsf(NdotV) * fabsf(NdotL));
+
+  return diffuseBRDF + specularBRDF;
+}
+
 VSNRAY_FUNC
-inline vec3 evalMaterial(const dco::Geometry &geom,
-                         const dco::Material &mat,
+inline vec3 evalMaterial(const dco::Material &mat,
+                         const dco::Geometry &geom,
                          const dco::Sampler *samplers,
                          unsigned primID, const vec2 uv,
                          const vec3 Ng, const vec3 Ns,
@@ -372,7 +457,7 @@ inline vec3 evalMaterial(const dco::Geometry &geom,
 {
   vec3 shadedColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
-    vec4f color = getColor(geom, mat, samplers, primID, uv);
+    vec4f color = getColor(mat, geom, samplers, primID, uv);
 
     shade_record<float> sr;
     sr.normal = Ns;
@@ -387,6 +472,14 @@ inline vec3 evalMaterial(const dco::Geometry &geom,
     vmat.kd() = 1.f;
 
     shadedColor = to_rgb(vmat.shade(sr));
+  } else if (mat.type == dco::Material::PhysicallyBased) {
+    shadedColor = evalPhysicallyBasedMaterial(mat,
+                                              geom,
+                                              samplers,
+                                              primID, uv,
+                                              Ng, Ns,
+                                              viewDir, lightDir,
+                                              lightIntensity);
   }
   return shadedColor;
 }

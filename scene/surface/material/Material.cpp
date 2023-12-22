@@ -4,6 +4,7 @@
 #include "Material.h"
 // subtypes
 #include "Matte.h"
+#include "PBM.h"
 
 namespace visionaray {
 
@@ -24,6 +25,8 @@ Material *Material::createInstance(
 {
   if (subtype == "matte")
     return new Matte(s);
+  else if (subtype == "physicallyBased")
+    return new PBM(s);
   else
     return (Material *)new UnknownObject(ANARI_MATERIAL, s);
 }
