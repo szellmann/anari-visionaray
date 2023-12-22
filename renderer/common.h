@@ -315,18 +315,25 @@ VSNRAY_FUNC
 inline vec4 getSample(
     const dco::Sampler &samp, const dco::Geometry geom, unsigned primID, const vec2 uv)
 {
-  vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
-
-  inAttr = samp.inTransform * inAttr + samp.inOffset;
-
   vec4f s{0.f, 0.f, 0.f, 1.f};
 
-  if (samp.type == dco::Sampler::Image1D)
-    s = tex1D(samp.asImage1D, inAttr.x);
-  else if (samp.type == dco::Sampler::Image2D)
-    s = tex2D(samp.asImage2D, inAttr.xy());
+  if (samp.type == dco::Sampler::Primitive) {
+    TypeInfo info = getInfo(samp.asPrimitive.dataType);
+    const auto *source = samp.asPrimitive.data
+        + (primID * info.sizeInBytes) + (samp.asPrimitive.offset * info.sizeInBytes);
+    convert(&s, source, info);
+  } else {
+    vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
 
-  s = samp.outTransform * s + samp.outOffset;
+    inAttr = samp.inTransform * inAttr + samp.inOffset;
+
+    if (samp.type == dco::Sampler::Image1D)
+      s = tex1D(samp.asImage1D, inAttr.x);
+    else if (samp.type == dco::Sampler::Image2D)
+      s = tex2D(samp.asImage2D, inAttr.xy());
+
+    s = samp.outTransform * s + samp.outOffset;
+  }
 
   return s;
 }

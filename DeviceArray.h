@@ -22,6 +22,11 @@ struct HostDeviceArray : public std::vector<T>
   HostDeviceArray() = default;
   ~HostDeviceArray() = default;
 
+  void reset(const void *data)
+  {
+    memcpy(Base::data(), data, Base::size() * sizeof(T));
+  }
+
   const T *hostPtr() const
   {
     return Base::data();

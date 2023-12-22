@@ -563,6 +563,12 @@ struct Sampler
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
   texture_ref<vector<4, unorm<8>>, 2> asImage2D;
   texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+  struct {
+    ANARIDataType dataType{ANARI_UNKNOWN};
+    size_t len{0}; // in elements
+    const uint8_t *data{nullptr};
+    uint32_t offset{0};
+  } asPrimitive;
 
   VSNRAY_FUNC
   bool isValid() const
@@ -571,7 +577,8 @@ struct Sampler
         inAttribute != Attribute::None &&
         (type == Image1D && asImage1D) ||
         (type == Image2D && asImage2D) ||
-        (type == Image3D && asImage3D);
+        (type == Image3D && asImage3D) ||
+        (type == Primitive && asPrimitive.data);
   }
 };
 
