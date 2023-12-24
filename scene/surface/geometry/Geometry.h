@@ -34,6 +34,8 @@ struct Geometry : public Object
 
   std::array<helium::IntrusivePtr<Array1D>, 5> m_attributes;
 
+  HostDeviceArray<uint8_t> vattributes[5];
+
   void dispatch();
 };
 

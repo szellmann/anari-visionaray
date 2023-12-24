@@ -20,7 +20,8 @@ anari_generate_queries(
 option(ANARI_VISIONARAY_ENABLE_CUDA "Compile with CUDA" OFF)
 set(cuda ${ANARI_VISIONARAY_ENABLE_CUDA})
 if (cuda)
-    enable_language(CUDA)
+  enable_language(CUDA)
+  find_package(CUDAToolkit)
 endif()
 
 add_library(${PROJECT_NAME} SHARED)
@@ -75,19 +76,23 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 if (cuda)
-    target_sources(${PROJECT_NAME} PRIVATE frame/Frame.cu)
-    set_source_files_properties(frame/Frame.cu
-        PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
-    )
-    #set_source_files_properties(frame/Frame.cu
-    #    PROPERTIES COMPILE_FLAGS "--expt-relaxed-constexpr"
-    #)
+  target_sources(${PROJECT_NAME} PRIVATE
+    frame/Frame.cu
+    scene/VisionaraySceneGPU.cu
+  )
+  set_source_files_properties(frame/Frame.cu scene/VisionaraySceneGPU.cu
+    PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
+  )
+  target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_CUDA=1)
 else()
-    target_sources(${PROJECT_NAME} PRIVATE frame/Frame.cpp)
+  target_sources(${PROJECT_NAME} PRIVATE frame/Frame.cpp)
 endif()
 
 target_link_libraries(${PROJECT_NAME}
-    PUBLIC visionaray::visionaray anari::anari anari::helium)
+    visionaray::visionaray anari::anari anari::helium)
+if (TARGET CUDA::toolkit)
+  target_link_libraries(${PROJECT_NAME} CUDA::toolkit)
+endif()
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
 )

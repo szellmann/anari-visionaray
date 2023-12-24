@@ -67,7 +67,13 @@ void Geometry::commit()
 
   for (int i = 0; i < 5; ++i) {
     if (m_attributes[i]) {
-      vgeom.primitiveAttributes[i].data = m_attributes[i]->begin();
+      size_t sizeInBytes
+          = m_attributes[i]->size() * anari::sizeOf(m_attributes[i]->elementType());
+
+      vattributes[i].resize(sizeInBytes);
+      vattributes[i].reset(m_attributes[i]->begin());
+
+      vgeom.primitiveAttributes[i].data = vattributes[i].devicePtr();
       vgeom.primitiveAttributes[i].len = m_attributes[i]->size();
       vgeom.primitiveAttributes[i].type = m_attributes[i]->elementType();
     }

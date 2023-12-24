@@ -1,6 +1,11 @@
 // Copyright 2022 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
+// visionaray
+#ifdef WITH_CUDA
+#include <visionaray/texture/cuda_texture.h>
+#endif
+// ours
 #include "TransferFunction1D.h"
 
 namespace visionaray {
@@ -95,7 +100,10 @@ void TransferFunction1D::commit()
   vtransfunc.volID = vgeom.asVolume.data.volID;
   vtransfunc.as1D.numValues = transFuncTexture.size()[0];
   vtransfunc.as1D.valueRange = m_valueRange;
+#ifdef WITH_CUDA
+#else
   vtransfunc.as1D.sampler = texture_ref<float4, 1>(transFuncTexture);
+#endif
 
   dispatch();
 

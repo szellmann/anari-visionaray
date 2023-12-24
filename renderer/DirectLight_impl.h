@@ -44,7 +44,10 @@ struct VisionarayRendererDirectLight
           if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
             auto hdri = onDevice.lights[rendererState.envID].asHDRI;
             float2 uv = toUV(ray.dir);
+#if !defined(WITH_CUDA)
+            // TODO: type not supported with cuda?!
             throughput = tex2D(hdri.radiance, uv);
+#endif
             hdriMiss = true;
           } else {
             throughput = float3{0.f};

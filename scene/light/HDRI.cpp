@@ -102,7 +102,11 @@ void HDRI::commit()
   m_radianceTexture.set_filter_mode(Linear);
   m_radianceTexture.set_address_mode(Clamp);
 
+#ifdef WITH_CUDA
+
+#else
   vlight.asHDRI.radiance = texture_ref<float3, 2>(m_radianceTexture);
+#endif
   vlight.asHDRI.scale = m_scale;
   vlight.asHDRI.cdf.lastCol = m_cdfRows.data();
   vlight.asHDRI.cdf.rows = m_cdfLastCol.data();

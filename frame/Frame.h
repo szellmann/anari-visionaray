@@ -49,6 +49,7 @@ struct Frame : public helium::BaseFrame
  private:
   void checkAccumulationReset();
   bool checkTAAReset();
+  void mapBuffersOnDevice();
 
   void dispatch();
 
@@ -57,6 +58,21 @@ struct Frame : public helium::BaseFrame
   bool m_valid{false};
 
   dco::Frame vframe;
+
+  template <typename Array>
+  void *mapHostDeviceArray(Array &arr)
+  {
+#ifdef WITH_CUDA
+    if (1) {
+      arr.unmapDevice();
+      return (void *)arr.hostPtr();
+    } else {
+      return arr.devicePtr();
+    }
+#else
+    return arr.devicePtr();
+#endif
+  }
 
   HostDeviceArray<uint8_t> m_pixelBuffer;
   HostDeviceArray<float> m_depthBuffer;

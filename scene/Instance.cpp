@@ -76,7 +76,7 @@ void Instance::visionarayGeometryUpdate()
               vgeom.asInstance.data.xfm(1,3),
               vgeom.asInstance.data.xfm(2,3));
   mat4x3 xfm{rot, trans};
-  vgeom.asInstance.data.instBVH = group()->visionarayScene()->m_TLS.inst(xfm);
+  vgeom.asInstance.data.instBVH = group()->visionarayScene()->instBVH(xfm);
 
   dispatch();
 }

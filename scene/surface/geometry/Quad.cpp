@@ -74,7 +74,7 @@ void Quad::commit()
     }
   }
 
-  vgeom.asQuad.data = m_triangles.data();
+  vgeom.asQuad.data = m_triangles.devicePtr();
   vgeom.asQuad.len = m_triangles.size();
 
   dispatch();

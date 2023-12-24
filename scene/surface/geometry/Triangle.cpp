@@ -64,18 +64,28 @@ void Triangle::commit()
     }
   }
 
-  vgeom.asTriangle.data = m_triangles.data();
+  vgeom.asTriangle.data = m_triangles.devicePtr();
   vgeom.asTriangle.len = m_triangles.size();
 
   if (m_index) {
-    vgeom.asTriangle.index.data = m_index->begin();
+    vindex.resize(m_index->size());
+    vindex.reset(m_index->beginAs<uint3>());
+
+    vgeom.asTriangle.index.data = vindex.devicePtr();
     vgeom.asTriangle.index.len = m_index->size();
     vgeom.asTriangle.index.type = m_index->elementType();
   }
 
   for (int i = 0; i < 5; ++i ) {
     if (m_vertexAttributes[i]) {
-      vgeom.asTriangle.vertexAttributes[i].data = m_vertexAttributes[i]->begin();
+      size_t sizeInBytes
+          = m_vertexAttributes[i]->size()
+          * anari::sizeOf(m_vertexAttributes[i]->elementType());
+
+      vattributes[i].resize(sizeInBytes);
+      vattributes[i].reset(m_vertexAttributes[i]->begin());
+
+      vgeom.asTriangle.vertexAttributes[i].data = vattributes[i].devicePtr();
       vgeom.asTriangle.vertexAttributes[i].len = m_vertexAttributes[i]->size();
       vgeom.asTriangle.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
     }
@@ -83,28 +93,6 @@ void Triangle::commit()
 
   dispatch();
 }
-
-// float4 Triangle::getAttributeValue(const Attribute &attr, const Ray &ray) const
-// {
-//   if (attr == Attribute::NONE)
-//     return DEFAULT_ATTRIBUTE_VALUE;
-// 
-//   auto attrIdx = static_cast<int>(attr);
-//   auto *attributeArray = m_vertexAttributes[attrIdx].ptr;
-//   if (!attributeArray)
-//     return Geometry::getAttributeValue(attr, ray);
-// 
-//   const float3 uvw(1.0f - ray.u - ray.v, ray.u, ray.v);
-// 
-//   auto idx = m_index ? *(m_index->dataAs<uint3>() + ray.primID)
-//                      : 3 * ray.primID + uint3(0, 1, 2);
-// 
-//   auto a = readAttributeValue(attributeArray, idx.x);
-//   auto b = readAttributeValue(attributeArray, idx.y);
-//   auto c = readAttributeValue(attributeArray, idx.z);
-// 
-//   return uvw.x * a + uvw.y * b + uvw.z * c;
-// }
 
 void Triangle::cleanup()
 {

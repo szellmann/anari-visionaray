@@ -7,11 +7,14 @@ namespace visionaray {
 VisionaraySceneImpl::VisionaraySceneImpl(
     VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
   : m_state(state)
+#ifdef WITH_CUDA
+  , m_gpuScene(new VisionaraySceneGPU(this))
+#endif
 {
   this->type = type;
 
   if (type == World) {
-    m_worldID = deviceState()->dcos.TLSs.alloc(m_TLS.ref());
+    m_worldID = deviceState()->dcos.TLSs.alloc({});
   }
   m_groupID = deviceState()->dcos.groups.alloc(dco::Group{});
 }
@@ -26,6 +29,9 @@ VisionaraySceneImpl::~VisionaraySceneImpl()
 
 void VisionaraySceneImpl::commit()
 {
+#ifdef WITH_CUDA
+  m_gpuScene->commit();
+#else
   unsigned triangleCount = 0;
   unsigned quadCount = 0;
   unsigned sphereCount = 0;
@@ -65,8 +71,6 @@ void VisionaraySceneImpl::commit()
     }
   }
 
-  m_BLSs.clear();
-
   m_accelStorage.triangleBLSs.resize(triangleCount);
   m_accelStorage.quadBLSs.resize(quadCount);
   m_accelStorage.sphereBLSs.resize(sphereCount);
@@ -75,6 +79,7 @@ void VisionaraySceneImpl::commit()
   m_accelStorage.volumeBLSs.resize(volumeCount);
   // No instance storage: instance BLSs are the TLSs of child scenes
 
+  // first, build BLSs
   triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_geometries) {
     if (!dco::validHandle(geomID)) continue;
@@ -82,87 +87,131 @@ void VisionaraySceneImpl::commit()
     const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
     if (!geom.isValid()) continue;
 
-    dco::BLS bls;
-    bls.blsID = m_BLSs.alloc(bls);
+    binned_sah_builder builder;
 
     if (geom.type == dco::Geometry::Triangle) {
-      binned_sah_builder builder;
-      builder.enable_spatial_splits(true);
-
       unsigned index = triangleCount++;
+      builder.enable_spatial_splits(true);
       m_accelStorage.triangleBLSs[index] = builder.build(
         TriangleBVH{}, geom.asTriangle.data, geom.asTriangle.len);
-
-      bls.type = dco::BLS::Triangle;
-      bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
     } else if (geom.type == dco::Geometry::Quad) {
-      binned_sah_builder builder;
-      builder.enable_spatial_splits(true);
-
       unsigned index = quadCount++;
+      builder.enable_spatial_splits(true);
       m_accelStorage.quadBLSs[index] = builder.build(
         TriangleBVH{}, geom.asQuad.data, geom.asQuad.len);
-
-      bls.type = dco::BLS::Quad;
-      bls.asQuad = m_accelStorage.quadBLSs[index].ref();
     } else if (geom.type == dco::Geometry::Sphere) {
-      binned_sah_builder builder;
-      builder.enable_spatial_splits(true);
-
       unsigned index = sphereCount++;
+      builder.enable_spatial_splits(true);
       m_accelStorage.sphereBLSs[index] = builder.build(
         SphereBVH{}, geom.asSphere.data, geom.asSphere.len);
-
-      bls.type = dco::BLS::Sphere;
-      bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
     } else if (geom.type == dco::Geometry::Cylinder) {
-      binned_sah_builder builder;
-      builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
-
       unsigned index = cylinderCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
       m_accelStorage.cylinderBLSs[index] = builder.build(
         CylinderBVH{}, geom.asCylinder.data, geom.asCylinder.len);
-
-      bls.type = dco::BLS::Cylinder;
-      bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
     } else if (geom.type == dco::Geometry::ISOSurface) {
-      binned_sah_builder builder;
-      builder.enable_spatial_splits(false); // no spatial splits for ISOs
-
       unsigned index = isoCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for ISOs
       m_accelStorage.isoSurfaceBLSs[index] = builder.build(
         ISOSurfaceBVH{}, &geom.asISOSurface.data, 1);
-
-      bls.type = dco::BLS::ISOSurface;
-      bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
     } else if (geom.type == dco::Geometry::Volume) {
-      binned_sah_builder builder;
-      builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-
       unsigned index = volumeCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
       m_accelStorage.volumeBLSs[index] = builder.build(
         VolumeBVH{}, &geom.asVolume.data, 1);
-
-      bls.type = dco::BLS::Volume;
-      bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
     } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
-      bls.type = dco::BLS::Instance;
-      bls.asInstance = geom.asInstance.data.instBVH;
-      bls.asInstance.set_inst_id(geom.asInstance.data.instID);
     }
+  }
 
-    m_BLSs.update(bls.blsID, bls);
+  m_BLSs.clear();
+  m_worldBLSs.clear();
+
+  // now initialize BVH refs for use in shader code:
+  triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
+  for (const dco::Handle &geomID : m_geometries) {
+    if (!dco::validHandle(geomID)) continue;
+
+    const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
+    if (!geom.isValid()) continue;
+
+    if (type == World) {
+      dco::WorldBLS bls;
+      bls.blsID = m_worldBLSs.alloc(bls);
+
+      if (geom.type == dco::Geometry::Triangle) {
+        unsigned index = triangleCount++;
+        bls.type = dco::BLS::Triangle;
+        bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Quad) {
+        unsigned index = quadCount++;
+        bls.type = dco::BLS::Quad;
+        bls.asQuad = m_accelStorage.quadBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Sphere) {
+        unsigned index = sphereCount++;
+        bls.type = dco::BLS::Sphere;
+        bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Cylinder) {
+        unsigned index = cylinderCount++;
+        bls.type = dco::BLS::Cylinder;
+        bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::ISOSurface) {
+        unsigned index = isoCount++;
+        bls.type = dco::BLS::ISOSurface;
+        bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Volume) {
+        unsigned index = volumeCount++;
+        bls.type = dco::BLS::Volume;
+        bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Instance) {
+        instanceCount++;
+        bls.type = dco::BLS::Instance;
+        bls.asInstance = geom.asInstance.data.instBVH;
+        bls.asInstance.set_inst_id(geom.asInstance.data.instID);
+      }
+      m_worldBLSs.update(bls.blsID, bls);
+    } else {
+      dco::BLS bls;
+      bls.blsID = m_BLSs.alloc(bls);
+
+      if (geom.type == dco::Geometry::Triangle) {
+        unsigned index = triangleCount++;
+        bls.type = dco::BLS::Triangle;
+        bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Quad) {
+        unsigned index = quadCount++;
+        bls.type = dco::BLS::Quad;
+        bls.asQuad = m_accelStorage.quadBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Sphere) {
+        unsigned index = sphereCount++;
+        bls.type = dco::BLS::Sphere;
+        bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Cylinder) {
+        unsigned index = cylinderCount++;
+        bls.type = dco::BLS::Cylinder;
+        bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::ISOSurface) {
+        unsigned index = isoCount++;
+        bls.type = dco::BLS::ISOSurface;
+        bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Volume) {
+        unsigned index = volumeCount++;
+        bls.type = dco::BLS::Volume;
+        bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
+      }
+      m_BLSs.update(bls.blsID, bls);
+    }
   }
 
   // Build TLS
-  if (1) {
-    lbvh_builder tlsBuilder;
+  lbvh_builder tlsBuilder;
+  if (type == World) {
+    m_worldTLS = tlsBuilder.build(
+        WorldTLS{}, m_worldBLSs.hostPtr(), m_worldBLSs.size());
+  } else {
     m_TLS = tlsBuilder.build(TLS{}, m_BLSs.hostPtr(), m_BLSs.size());
-  } else { // build on device
-    lbvh_builder tlsBuilder;
-    m_TLS = tlsBuilder.build(TLS{}, m_BLSs.devicePtr(), m_BLSs.size());
   }
+#endif
 
 #if 0
   std::cout << "TLS Build (groupID: "
@@ -179,15 +228,20 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num geoms in group    : " << m_geometries.size() << '\n';
   std::cout << "  num materials in group: " << m_materials.size() << '\n';
   std::cout << "  num lights in group   : " << m_lights.size() << '\n';
-#endif
+#endif // WITH_CUDA
 
+#ifdef WITH_CUDA
+  m_gpuScene->dispatch();
+#else
   dispatch();
+#endif
 }
 
 void VisionaraySceneImpl::release()
 {
   m_geometries.clear();
   m_BLSs.clear();
+  m_worldBLSs.clear();
   m_accelStorage.triangleBLSs.clear();
   m_accelStorage.sphereBLSs.clear();
   m_accelStorage.cylinderBLSs.clear();
@@ -197,8 +251,35 @@ void VisionaraySceneImpl::release()
   m_lights.clear();
 }
 
+bool VisionaraySceneImpl::isValid() const
+{
+#ifdef WITH_CUDA
+  return m_gpuScene->isValid();
+#else
+  if (type == World)
+    return m_worldTLS.num_nodes() > 0;
+  else
+    return m_TLS.num_nodes() > 0;
+#endif
+}
+
+aabb VisionaraySceneImpl::getBounds() const
+{
+#ifdef WITH_CUDA
+  return m_gpuScene->getBounds();
+#else
+  if (type == World)
+    return m_worldTLS.node(0).get_bounds();
+  else
+    return m_TLS.node(0).get_bounds();
+#endif
+}
+
 void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 {
+#ifdef WITH_CUDA
+  m_gpuScene->attachGeometry(geom, geomID);
+#else
   m_geometries.set(geomID, geom.geomID);
 
   // Patch geomID into scene primitives
@@ -230,6 +311,7 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 
   // Upload/set accessible pointers
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
+#endif
 }
 
 void VisionaraySceneImpl::attachGeometry(
@@ -253,25 +335,40 @@ void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
   m_lights.set(id, light.lightID);
 }
 
+#ifdef WITH_CUDA
+cuda_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
+{
+  return m_gpuScene->instBVH(xfm);
+}
+#else
+index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
+{
+  assert(type == Group);
+  return m_TLS.inst(xfm);
+}
+#endif
+
 void VisionaraySceneImpl::dispatch()
 {
   // Dispatch world
   if (type == World) {
-    m_state->dcos.TLSs.update(m_worldID, m_TLS.ref());
+    m_state->dcos.TLSs.update(m_worldID, m_worldTLS.ref());
   }
 
   // Dispatch group
-  dco::Group group;
-  group.groupID = m_groupID;
-  group.numBLSs = m_BLSs.size();
-  group.BLSs = m_BLSs.devicePtr();
-  group.numGeoms = m_geometries.size();
-  group.geoms = m_geometries.devicePtr();
-  group.numMaterials = m_materials.size();
-  group.materials = m_materials.devicePtr();
-  group.numLights = m_lights.size();
-  group.lights = m_lights.devicePtr();
-  m_state->dcos.groups.update(m_groupID, group);
+  if (type == Group) {
+    dco::Group group;
+    group.groupID = m_groupID;
+    group.numBLSs = m_BLSs.size();
+    group.BLSs = m_BLSs.devicePtr();
+    group.numGeoms = m_geometries.size();
+    group.geoms = m_geometries.devicePtr();
+    group.numMaterials = m_materials.size();
+    group.materials = m_materials.devicePtr();
+    group.numLights = m_lights.size();
+    group.lights = m_lights.devicePtr();
+    m_state->dcos.groups.update(m_groupID, group);
+  }
 
   // Upload/set accessible pointers
   m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();

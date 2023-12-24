@@ -154,15 +154,26 @@ void Frame::renderFrame()
   state->waitOnCurrentFrame();
   state->currentFrame = this;
 
-  m_future = async<void>([&, state]() {
+  m_future = async<void>([&, state, this]() {
+#ifdef WITH_CUDA
+    cudaEvent_t start, stop;
+    CUDA_SAFE_CALL(cudaEventCreate(&start));
+    CUDA_SAFE_CALL(cudaEventCreate(&stop));
+    CUDA_SAFE_CALL(cudaEventRecord(start));
+#else
     auto start = std::chrono::steady_clock::now();
+#endif
     state->renderingSemaphore.frameStart();
     state->commitBufferFlush();
 
     if (!isValid()) {
       reportMessage(
           ANARI_SEVERITY_ERROR, "skipping render of incomplete frame object");
+#ifdef WITH_CUDA
+      // TODO: outside this function!
+#else
       std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
+#endif
       state->renderingSemaphore.frameEnd();
       return;
     }
@@ -184,7 +195,10 @@ void Frame::renderFrame()
 
     m_world->visionaraySceneUpdate();
 
-    const auto &size = vframe.size;
+    mapBuffersOnDevice();
+
+    dco::Frame frame = this->vframe;
+    const auto &size = frame.size;
     dco::Camera cam = m_camera->visionarayCamera();
     VisionarayRenderer &rend = m_renderer->visionarayRenderer();
     VisionarayScene scene = m_world->visionarayScene();
@@ -195,7 +209,13 @@ void Frame::renderFrame()
       cam.asMatrixCam.begin_frame();
 
     if (m_nextFrameReset) {
+#ifdef WITH_CUDA
+      cuda::for_each(0, size.x, 0, size.y, [=] VSNRAY_GPU_FUNC (int x, int y) {
+        frame.accumBuffer[x+size.x*y] = vec4{0.f};
+      });
+#else
       std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
+#endif
       rend.rendererState().accumID = 0;
       m_nextFrameReset = false;
     }
@@ -210,10 +230,14 @@ void Frame::renderFrame()
       rend.rendererState().currPR = cam.asMatrixCam.get_proj_matrix();
     }
 
-    int frameID = (int)vframe.frameCounter++;
+    int frameID = (int)vframe.frameCounter++; // modify the member here!
     auto worldID = scene->m_worldID;
-
+    auto onDevice = state->onDevice;
+#ifdef WITH_CUDA
+    cuda::for_each(0, size.x, 0, size.y,
+#else
     parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
+#endif
         [=] VSNRAY_GPU_FUNC (int x, int y) {
 
           ScreenSample ss{x, y, frameID, size, {/*RNG*/}};
@@ -224,7 +248,7 @@ void Frame::renderFrame()
           if (rend.stochasticRendering()) {
             // Need an RNG
             int pixelID = ss.x + ss.frameSize.x * ss.y;
-            ss.random = Random(pixelID, vframe.frameCounter);
+            ss.random = Random(pixelID, frame.frameCounter);
           }
 
           float4 accumColor{0.f};
@@ -252,7 +276,7 @@ void Frame::renderFrame()
             PixelSample ps = rend.renderSample(ss,
                     ray,
                     worldID,
-                    deviceState()->onDevice);
+                    onDevice);
             accumColor += ps.color;
             if (sampleID == 0) {
               firstSample = ps;
@@ -271,9 +295,9 @@ void Frame::renderFrame()
           PixelSample finalSample = firstSample;
           finalSample.color = accumColor*(1.f/rend.spp());
           if (rend.taa())
-            vframe.fillGBuffer(x, y, finalSample);
+            frame.fillGBuffer(x, y, finalSample);
           else
-            vframe.writeSample(x, y, rend.rendererState().accumID, finalSample);
+            frame.writeSample(x, y, rend.rendererState().accumID, finalSample);
         });
 
     if (cam.type == dco::Camera::Pinhole)
@@ -289,13 +313,16 @@ void Frame::renderFrame()
     if (m_renderer->visionarayRenderer().taa()) {
       // Update history texture
       taa.history.reset(taa.prevBuffer.devicePtr());
-      vframe.taa.history = texture_ref<float4, 2>(taa.history);
+#ifdef WITH_CUDA
+#else
+      frame.taa.history = texture_ref<float4, 2>(taa.history);
+#endif
 
       // TAA pass
       parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
           [=] VSNRAY_GPU_FUNC (int x, int y) {
-            vframe.toneMap(
-                x, y, vframe.accumSample(x, y, ~0, vframe.pixelSample(x, y)));
+            frame.toneMap(
+                x, y, frame.accumSample(x, y, ~0, frame.pixelSample(x, y)));
           });
 
       // Copy buffers for next pass
@@ -307,8 +334,16 @@ void Frame::renderFrame()
 
     state->renderingSemaphore.frameEnd();
 
+#ifdef WITH_CUDA
+    CUDA_SAFE_CALL(cudaEventRecord(stop));
+    CUDA_SAFE_CALL(cudaEventSynchronize(stop));
+    float ms = 0.0f;
+    CUDA_SAFE_CALL(cudaEventElapsedTime(&ms, start, stop));
+    m_duration = ms/1000.f;
+#else
     auto end = std::chrono::steady_clock::now();
     m_duration = std::chrono::duration<float>(end - start).count();
+#endif
   });
 }
 
@@ -330,19 +365,19 @@ void *Frame::map(std::string_view channel,
     return mapDepthBuffer();
   } else if (channel == "channel.normal" && !m_normalBuffer.empty()) {
     *pixelType = ANARI_FLOAT32_VEC3;
-    return m_normalBuffer.devicePtr();
+    return mapHostDeviceArray(m_normalBuffer);
   } else if (channel == "channel.albedo" && !m_albedoBuffer.empty()) {
     *pixelType = ANARI_FLOAT32_VEC3;
-    return m_albedoBuffer.devicePtr();
+    return mapHostDeviceArray(m_albedoBuffer);
   } else if (channel == "channel.primitiveId" && !m_primIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
-    return m_primIdBuffer.devicePtr();
+    return mapHostDeviceArray(m_primIdBuffer);
   } else if (channel == "channel.objectId" && !m_objIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
-    return m_objIdBuffer.devicePtr();
+    return mapHostDeviceArray(m_objIdBuffer);
   } else if (channel == "channel.instanceId" && !m_instIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
-    return m_instIdBuffer.devicePtr();
+    return mapHostDeviceArray(m_instIdBuffer);
   }else {
     *width = 0;
     *height = 0;
@@ -373,12 +408,12 @@ void Frame::discard()
 
 void *Frame::mapColorBuffer()
 {
-  return m_pixelBuffer.devicePtr();
+  return mapHostDeviceArray(m_pixelBuffer);
 }
 
 void *Frame::mapDepthBuffer()
 {
-  return m_depthBuffer.devicePtr();
+  return mapHostDeviceArray(m_depthBuffer);
 }
 
 bool Frame::ready() const
@@ -455,6 +490,17 @@ bool Frame::checkTAAReset()
   } else {
     return false;
   }
+}
+
+void Frame::mapBuffersOnDevice()
+{
+  vframe.pixelBuffer  = (uint8_t *)m_pixelBuffer.mapDevice();
+  vframe.depthBuffer  = (float *)m_depthBuffer.mapDevice();
+  vframe.normalBuffer = (float3 *)m_normalBuffer.mapDevice();
+  vframe.albedoBuffer = (float3 *)m_albedoBuffer.mapDevice();
+  vframe.primIdBuffer = (uint32_t *)m_primIdBuffer.mapDevice();
+  vframe.objIdBuffer  = (uint32_t *)m_objIdBuffer.mapDevice();
+  vframe.instIdBuffer = (uint32_t *)m_instIdBuffer.mapDevice();
 }
 
 void Frame::dispatch()

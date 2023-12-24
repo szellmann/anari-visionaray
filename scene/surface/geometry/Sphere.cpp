@@ -72,18 +72,28 @@ void Sphere::commit()
     }
   }
 
-  vgeom.asSphere.data = m_spheres.data();
+  vgeom.asSphere.data = m_spheres.devicePtr();
   vgeom.asSphere.len = m_spheres.size();
 
   if (m_index) {
-    vgeom.asSphere.index.data = m_index->begin();
+    vindex.resize(m_index->size());
+    vindex.reset(m_index->beginAs<uint32_t>());
+
+    vgeom.asSphere.index.data = vindex.devicePtr();
     vgeom.asSphere.index.len = m_index->size();
     vgeom.asSphere.index.type = m_index->elementType();
   }
 
   for (int i = 0; i < 5; ++i ) {
     if (m_vertexAttributes[i]) {
-      vgeom.asSphere.vertexAttributes[i].data = m_vertexAttributes[i]->begin();
+      size_t sizeInBytes
+          = m_vertexAttributes[i]->size()
+          * anari::sizeOf(m_vertexAttributes[i]->elementType());
+
+      vattributes[i].resize(sizeInBytes);
+      vattributes[i].reset(m_vertexAttributes[i]->begin());
+
+      vgeom.asSphere.vertexAttributes[i].data = vattributes[i].devicePtr();
       vgeom.asSphere.vertexAttributes[i].len = m_vertexAttributes[i]->size();
       vgeom.asSphere.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
     }
@@ -91,22 +101,6 @@ void Sphere::commit()
 
   dispatch();
 }
-
-// float4 Sphere::getAttributeValue(const Attribute &attr, const Ray &ray) const
-// {
-//   if (attr == Attribute::NONE)
-//     return Geometry::getAttributeValue(attr, ray);
-// 
-//   auto attrIdx = static_cast<int>(attr);
-//   auto *attributeArray = m_vertexAttributes[attrIdx].ptr;
-//   if (!attributeArray)
-//     return Geometry::getAttributeValue(attr, ray);
-// 
-//   const auto primID =
-//       m_attributeIndex.empty() ? ray.primID : m_attributeIndex[ray.primID];
-// 
-//   return readAttributeValue(attributeArray, primID);
-// }
 
 void Sphere::cleanup()
 {

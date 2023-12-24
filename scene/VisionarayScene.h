@@ -10,11 +10,18 @@
 #include "surface/material/Material.h"
 #include "light/Light.h"
 #include "DeviceCopyableObjects.h"
+#ifdef WITH_CUDA
+#include "VisionaraySceneGPU.h"
+#endif
 
 namespace visionaray {
 
 struct VisionaraySceneImpl
 {
+#ifdef WITH_CUDA
+  friend struct VisionaraySceneGPU;
+#endif
+
   typedef index_bvh<basic_triangle<3,float>> TriangleBVH;
   typedef index_bvh<basic_triangle<3,float>> QuadBVH;
   typedef index_bvh<basic_sphere<float>>     SphereBVH;
@@ -23,6 +30,7 @@ struct VisionaraySceneImpl
   typedef index_bvh<dco::Volume>             VolumeBVH;
 
   typedef index_bvh<dco::BLS> TLS;
+  typedef index_bvh<dco::WorldBLS> WorldTLS;
 
   enum Type { World, Group, };
   Type type;
@@ -34,7 +42,9 @@ struct VisionaraySceneImpl
 
   // Accels //
   TLS m_TLS;
+  WorldTLS m_worldTLS;
   DeviceObjectArray<dco::BLS> m_BLSs;
+  DeviceObjectArray<dco::WorldBLS> m_worldBLSs;
 
   // Accel storage //
   struct {
@@ -56,15 +66,25 @@ struct VisionaraySceneImpl
   ~VisionaraySceneImpl();
   void commit();
   void release();
+  bool isValid() const;
   void attachGeometry(dco::Geometry geom, unsigned geomID);
   void attachGeometry(dco::Geometry geom, dco::Material mat, unsigned geomID);
   void updateGeometry(dco::Geometry geom);
   void attachLight(dco::Light light, unsigned id);
+  aabb getBounds() const;
+#ifdef WITH_CUDA
+  cuda_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
+#else
+  index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
+#endif
 
  private:
   void dispatch();
 
   VisionarayGlobalState *deviceState();
+#ifdef WITH_CUDA
+  std::unique_ptr<VisionaraySceneGPU> m_gpuScene{nullptr};
+#endif
 };
 
 typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;

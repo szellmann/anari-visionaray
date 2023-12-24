@@ -31,8 +31,8 @@ bool World::getProperty(
     if (flags & ANARI_WAIT) {
       visionaraySceneUpdate();
     }
-    if (vscene && vscene->m_TLS.num_nodes()) {
-      auto bounds = vscene->m_TLS.node(0).get_bounds();
+    if (vscene && vscene->isValid()) {
+      auto bounds = vscene->getBounds();
       std::memcpy(ptr, &bounds, sizeof(bounds));
       return true;
     }

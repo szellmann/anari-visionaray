@@ -2,13 +2,17 @@
 #pragma once
 
 // visionaray
-#include "visionaray/texture/texture.h"
 #include "visionaray/bvh.h"
 #include "visionaray/directional_light.h"
 #include "visionaray/matrix_camera.h"
 #include "visionaray/point_light.h"
 #include "visionaray/spot_light.h"
 #include "visionaray/thin_lens_camera.h"
+#if defined(WITH_CUDA)
+#include "visionaray/texture/cuda_texture.h"
+#else
+#include "visionaray/texture/texture.h"
+#endif
 // ours
 #include "frame/common.h"
 #include "renderer/DDA.h"
@@ -17,6 +21,17 @@
 #include "scene/volume/spatial_field/UElemGrid.h"
 #include "common.h"
 #include "sampleCDF.h"
+
+#if defined(WITH_CUDA) && !defined(__CUDACC__)
+#include <thrust/device_vector.h>
+namespace visionaray {
+// visionaray only defines these when compiling with nvcc:
+template <typename P>
+using cuda_bvh          = bvh_t<thrust::device_vector<P>, thrust::device_vector<bvh_node>>;
+template <typename P>
+using cuda_index_bvh    = index_bvh_t<thrust::device_vector<P>, thrust::device_vector<bvh_node>, thrust::device_vector<unsigned>>;
+} // namespace visionaray
+#endif
 
 namespace visionaray {
 
@@ -322,7 +337,11 @@ struct SpatialField
   float baseDT{0.5f};
   GridAccel gridAccel;
   struct {
+#ifdef WITH_CUDA
+    cuda_texture_ref<float, 3> sampler;
+#else
     texture_ref<float, 3> sampler;
+#endif
     float3 origin{0.f,0.f,0.f}, spacing{1.f,1.f,1.f};
     uint3 dims{0,0,0};
 
@@ -548,20 +567,38 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   return result;
 }
 
-// BLS primitive //
+// BLS primitives //
 
 struct BLS
 {
   enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, Unknown, };
   Type type{Unknown};
   unsigned blsID{UINT_MAX};
+#ifdef WITH_CUDA
+  cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+  cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+  cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+  cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+  cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+  cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
+#else
   index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
   index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
   index_bvh<basic_sphere<float>>::bvh_ref asSphere;
   index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
   index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
   index_bvh<dco::Volume>::bvh_ref asVolume;
+#endif
+};
+
+// only world BLS's have instances
+struct WorldBLS : BLS
+{
+#ifdef WITH_CUDA
+  cuda_index_bvh<BLS>::bvh_inst asInstance;
+#else
   index_bvh<BLS>::bvh_inst asInstance;
+#endif
 };
 
 VSNRAY_FUNC
@@ -579,7 +616,17 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asISOSurface.node(0).get_bounds();
   else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
     return bls.asVolume.node(0).get_bounds();
-  else if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
+
+  aabb inval;
+  inval.invalidate();
+  return inval;
+}
+
+VSNRAY_FUNC
+inline aabb get_bounds(const WorldBLS &bls)
+{
+  if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
+
     aabb bound = bls.asInstance.node(0).get_bounds();
     mat3f rot = inverse(bls.asInstance.affine_inv());
     vec3f trans = -bls.asInstance.trans_inv();
@@ -591,16 +638,13 @@ inline aabb get_bounds(const BLS &bls)
       result.insert(v);
     }
     return result;
+  } else {
+    return get_bounds((const BLS &)bls);
   }
-
-  aabb inval;
-  inval.invalidate();
-  return inval;
 }
 
 VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const BLS &bls)
+inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS &bls)
 {
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
     return intersect(ray,bls.asTriangle);
@@ -614,15 +658,27 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
     return intersect(ray,bls.asISOSurface);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
     return intersect(ray,bls.asVolume);
-  else if (bls.type == BLS::Instance)
-    return intersect(ray,bls.asInstance);
 
   return {};
 }
 
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const WorldBLS &bls)
+{
+  if (bls.type == BLS::Instance)
+    return intersect(ray,bls.asInstance);
+  else
+    return intersect(ray, (const BLS &)bls);
+}
+
 // TLS //
 
-typedef index_bvh<BLS>::bvh_ref TLS;
+#ifdef WITH_CUDA
+typedef cuda_index_bvh<WorldBLS>::bvh_ref TLS;
+#else
+typedef index_bvh<WorldBLS>::bvh_ref TLS;
+#endif
 
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
@@ -661,7 +717,11 @@ struct Instance
 {
   unsigned instID{UINT_MAX};
   unsigned groupID{UINT_MAX};
+#ifdef WITH_CUDA
+  cuda_index_bvh<BLS>::bvh_inst instBVH;
+#else
   index_bvh<BLS>::bvh_inst instBVH;
+#endif
   mat4 xfm;
   mat4 invXfm;
 };
@@ -746,9 +806,15 @@ struct Sampler
   float4 inOffset{0.f};
   mat4 outTransform{mat4::identity()};
   float4 outOffset{0.f};
+#ifdef WITH_CUDA
+  cuda_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
+  cuda_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
+  cuda_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+#else
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
   texture_ref<vector<4, unorm<8>>, 2> asImage2D;
   texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+#endif
   struct {
     ANARIDataType dataType{ANARI_UNKNOWN};
     size_t len{0}; // in elements
@@ -824,7 +890,11 @@ struct Light
   point_light<float> asPoint;
   spot_light<float> asSpot;
   struct {
+#ifdef WITH_CUDA
+    cuda_texture_ref<float3, 2> radiance;
+#else
     texture_ref<float3, 2> radiance;
+#endif
     float scale{1.f};
     struct CDF {
       float *rows{nullptr};
@@ -850,7 +920,12 @@ struct Light
     VSNRAY_FUNC
     inline float3 intensity(const float3 dir) const
     {
+#ifdef WITH_CUDA
+        // TODO: type not supported with cuda?!
+      return {};
+#else
       return tex2D(radiance, toUV(dir))*scale;
+#endif
     }
 
   } asHDRI;
@@ -884,7 +959,11 @@ struct TransferFunction
   struct {
     unsigned numValues;
     box1 valueRange{0.f, 1.f};
+#ifdef WITH_CUDA
+    cuda_texture_ref<float4, 1> sampler;
+#else
     texture_ref<float4, 1> sampler;
+#endif
   } as1D;
 };
 
@@ -935,11 +1014,15 @@ struct Frame
     float4 *prevBuffer{nullptr};
     float3 *currAlbedoBuffer{nullptr};
     float3 *prevAlbedoBuffer{nullptr};
+#ifdef WITH_CUDA
+    cuda_texture_ref<float4, 2> history;
+#else
     texture_ref<float4, 2> history;
+#endif
   } taa;
 
   VSNRAY_FUNC
-  inline PixelSample pixelSample(int x, int y)
+  inline PixelSample pixelSample(int x, int y) const
   {
     const auto idx = y * size.x + x;
 
@@ -974,7 +1057,7 @@ struct Frame
   }
 
   VSNRAY_FUNC
-  inline PixelSample accumSample(int x, int y, int accumID, PixelSample s)
+  inline PixelSample accumSample(int x, int y, int accumID, PixelSample s) const
   {
     const auto idx = y * size.x + x;
 
@@ -1004,7 +1087,7 @@ struct Frame
   }
 
   VSNRAY_FUNC
-  inline void toneMap(int x, int y, PixelSample s)
+  inline void toneMap(int x, int y, PixelSample s) const
   {
     const auto idx = y * size.x + x;
     auto *color = pixelBuffer + (idx * perPixelBytes);
@@ -1030,7 +1113,7 @@ struct Frame
   }
 
   VSNRAY_FUNC
-  inline void fillGBuffer(int x, int y, PixelSample s)
+  inline void fillGBuffer(int x, int y, PixelSample s) const
   {
     const auto idx = y * size.x + x;
 
@@ -1055,7 +1138,7 @@ struct Frame
   }
 
   VSNRAY_FUNC
-  inline void writeSample(int x, int y, int accumID, PixelSample s)
+  inline void writeSample(int x, int y, int accumID, PixelSample s) const
   {
     fillGBuffer(x, y, s);
     toneMap(x, y, accumSample(x, y, accumID, s));

@@ -74,10 +74,13 @@ void Cylinder::commit()
     }
   }
 
-  vgeom.asCylinder.data = m_cylinders.data();
+  vgeom.asCylinder.data = m_cylinders.devicePtr();
   vgeom.asCylinder.len = m_cylinders.size();
 
   if (m_index) {
+    vindex.resize(m_index->size());
+    vindex.reset(m_index->beginAs<uint2>());
+
     vgeom.asCylinder.index.data = m_index->begin();
     vgeom.asCylinder.index.len = m_index->size();
     vgeom.asCylinder.index.type = m_index->elementType();
@@ -85,7 +88,14 @@ void Cylinder::commit()
 
   for (int i = 0; i < 5; ++i ) {
     if (m_vertexAttributes[i]) {
-      vgeom.asCylinder.vertexAttributes[i].data = m_vertexAttributes[i]->begin();
+      size_t sizeInBytes
+          = m_vertexAttributes[i]->size()
+          * anari::sizeOf(m_vertexAttributes[i]->elementType());
+
+      vattributes[i].resize(sizeInBytes);
+      vattributes[i].reset(m_vertexAttributes[i]->begin());
+
+      vgeom.asCylinder.vertexAttributes[i].data = vattributes[i].devicePtr();
       vgeom.asCylinder.vertexAttributes[i].len = m_vertexAttributes[i]->size();
       vgeom.asCylinder.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
     }

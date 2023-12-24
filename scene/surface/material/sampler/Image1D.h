@@ -27,7 +27,11 @@ struct Image1D : public Sampler
   mat4 m_outTransform{mat4::identity()};
   float4 m_outOffset{0.f, 0.f, 0.f, 0.f};
 
+#ifdef WITH_CUDA
+  cuda_texture<vector<4, unorm<8>>, 1> vimage;
+#else
   texture<vector<4, unorm<8>>, 1> vimage;
+#endif
 };
 
 } // namespace visionaray

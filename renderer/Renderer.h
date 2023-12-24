@@ -4,7 +4,6 @@
 #include "array/Array1D.h"
 #include "scene/volume/spatial_field/SpatialField.h"
 #include "scene/volume/Volume.h"
-#include "scene/VisionarayScene.h"
 // impls
 #include "Raycast_impl.h"
 #include "DirectLight_impl.h"

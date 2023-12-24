@@ -57,7 +57,11 @@ void StructuredRegularField::commit()
   vfield.asStructuredRegular.origin = m_origin;
   vfield.asStructuredRegular.spacing = m_spacing;
   vfield.asStructuredRegular.dims = m_dims;
+#ifdef WITH_CUDA
+
+#else
   vfield.asStructuredRegular.sampler = texture_ref<float, 3>(m_dataTexture);
+#endif
 
   buildGrid();
 

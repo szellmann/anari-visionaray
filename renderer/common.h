@@ -400,6 +400,7 @@ inline vec4 getColor(const dco::Material &mat,
   return color;
 }
 
+VSNRAY_FUNC
 inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         const dco::Geometry &geom,
                                         const dco::Sampler *samplers,
