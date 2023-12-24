@@ -444,7 +444,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float denom = 4.f * fabsf(NdotV) * fabsf(NdotL);
   float specularBRDF = denom != 0.f ? (F * D * G) / denom : 0.f;
 
-  return diffuseBRDF + specularBRDF;
+  return (diffuseBRDF + specularBRDF) * lightIntensity;
 }
 
 VSNRAY_FUNC
