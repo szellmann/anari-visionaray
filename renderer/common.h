@@ -441,7 +441,8 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
     *       ((2.f * fabsf(NdotV) * heaviside(VdotH))
         / (fabsf(NdotV) + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
 
-  float specularBRDF = (F * D * G) / (4.f * fabsf(NdotV) * fabsf(NdotL));
+  float denom = 4.f * fabsf(NdotV) * fabsf(NdotL);
+  float specularBRDF = denom != 0.f ? (F * D * G) / denom : 0.f;
 
   return diffuseBRDF + specularBRDF;
 }
