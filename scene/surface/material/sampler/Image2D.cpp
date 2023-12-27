@@ -58,6 +58,12 @@ void Image2D::updateImageData()
                  PF_RGB16UI, PF_RGBA8, AlphaIsOne);
   else if (m_image->elementType() == ANARI_UFIXED16_VEC4)
     vimage.reset((const vector<4, unorm<16>> *)m_image->data(), PF_RGBA16UI, PF_RGBA8);
+  else {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "unsupported element type Image2D sampler: %s",
+        anari::toString(m_image->elementType()));
+    return;
+  }
 
   vimage.set_filter_mode(m_linearFilter?Linear:Nearest);
   vimage.set_address_mode(0, m_wrapMode1);
