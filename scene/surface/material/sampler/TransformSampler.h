@@ -14,7 +14,8 @@ struct TransformSampler : public Sampler
 
  private:
   dco::Attribute m_inAttribute{dco::Attribute::None};
-  mat4 m_transform{mat4::identity()};
+  mat4 m_outTransform{mat4::identity()};
+  float4 m_outOffset{0.f, 0.f, 0.f, 0.f};
 };
 
 } // namespace visionaray

@@ -19,10 +19,13 @@ void TransformSampler::commit()
   Sampler::commit();
   m_inAttribute =
       toAttribute(getParamString("inAttribute", "attribute0"));
-  m_transform = getParam<mat4>("transform", mat4::identity());
+  m_outTransform = getParam<mat4>("transform", mat4::identity());
+  getParam("outTransform", ANARI_FLOAT32_MAT4, &m_outTransform); // new variant!
+  m_outOffset = getParam<float4>("outOffset", float4(0.f, 0.f, 0.f, 0.f));
 
   vsampler.inAttribute = m_inAttribute;
-  vsampler.asTransform = m_transform;
+  vsampler.outTransform = m_outTransform;
+  vsampler.outOffset = m_outOffset;
 
   Sampler::dispatch();
 }

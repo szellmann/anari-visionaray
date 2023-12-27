@@ -562,7 +562,6 @@ struct Sampler
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
   texture_ref<vector<4, unorm<8>>, 2> asImage2D;
   texture_ref<vector<4, unorm<8>>, 3> asImage3D;
-  mat4 asTransform{mat4::identity()};
   struct {
     ANARIDataType dataType{ANARI_UNKNOWN};
     size_t len{0}; // in elements

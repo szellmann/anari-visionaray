@@ -327,7 +327,7 @@ inline vec4 getSample(
     convert(&s, source, info);
   } else if (samp.type == dco::Sampler::Transform) {
     vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
-    s = samp.asTransform * inAttr;
+    s = samp.outTransform * inAttr + samp.outOffset;
   } else {
     vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
 
