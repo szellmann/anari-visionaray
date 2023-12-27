@@ -24,10 +24,6 @@ struct VisionarayRendererDirectLight
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
 
-    // Need at least one light..
-    //if (!onDevice.lights || objCounts.lights == 0)
-    //  return result;
-
     float3 throughput{1.f};
     float3 baseColor{0.f};
     float3 shadedColor{0.f};
@@ -110,6 +106,7 @@ struct VisionarayRendererDirectLight
         light_sample<float> ls;
         vec3f intensity(0.f);
         float dist = 1.f;
+        ls.pdf = 0.f;
 
         if (group.numLights > 0) {
           int lightID = uniformSampleOneLight(ss.random, group.numLights);
@@ -138,14 +135,16 @@ struct VisionarayRendererDirectLight
               mat.asMatte.color.rgb = hrv.albedo;
               dco::Geometry dummyGeom;
 
-              shadedColor = evalMaterial(mat,
-                                         dummyGeom,
-                                         onDevice.samplers, // not used..
-                                         UINT_MAX, vec2{}, // primID and uv, not used..
-                                         gn, gn,
-                                         viewDir, ls.dir,
-                                         intensity);
-              shadedColor = shadedColor / ls.pdf / (dist*dist);
+              if (ls.pdf > 0.f) {
+                shadedColor = evalMaterial(mat,
+                                           dummyGeom,
+                                           onDevice.samplers, // not used..
+                                           UINT_MAX, vec2{}, // primID and uv, not used..
+                                           gn, gn,
+                                           viewDir, ls.dir,
+                                           intensity);
+                shadedColor = shadedColor / ls.pdf / (dist*dist);
+              }
             }
             else
               shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
@@ -169,15 +168,17 @@ struct VisionarayRendererDirectLight
           const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
           const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
           if (rendererState.renderMode == RenderMode::Default) {
-            shadedColor = evalMaterial(mat,
-                                       geom,
-                                       onDevice.samplers,
-                                       hr.prim_id,
-                                       uv, gn, gn,
-                                       viewDir,
-                                       ls.dir,
-                                       intensity);
-            shadedColor = shadedColor / ls.pdf / (dist*dist);
+            if (ls.pdf > 0.f) {
+              shadedColor = evalMaterial(mat,
+                                         geom,
+                                         onDevice.samplers,
+                                         hr.prim_id,
+                                         uv, gn, gn,
+                                         viewDir,
+                                         ls.dir,
+                                         intensity);
+              shadedColor = shadedColor / ls.pdf / (dist*dist);
+            }
           }
           else if (rendererState.renderMode == RenderMode::Ng)
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
