@@ -48,8 +48,16 @@ void Image2D::updateImageData()
     vimage.reset(m_image->dataAs<vec3>(), PF_RGB32F, PF_RGBA8, AlphaIsOne);
   else if (m_image->elementType() == ANARI_FLOAT32_VEC4)
     vimage.reset(m_image->dataAs<vec4>(), PF_RGBA32F, PF_RGBA8);
+  else if (m_image->elementType() == ANARI_UFIXED8_VEC3)
+    vimage.reset((const vector<3, unorm<8>> *)m_image->data(),
+                 PF_RGB8, PF_RGBA8, AlphaIsOne);
   else if (m_image->elementType() == ANARI_UFIXED8_VEC4)
     vimage.reset((const vector<4, unorm<8>> *)m_image->data());
+  else if (m_image->elementType() == ANARI_UFIXED16_VEC3)
+    vimage.reset((const vector<3, unorm<16>> *)m_image->data(),
+                 PF_RGB16UI, PF_RGBA8, AlphaIsOne);
+  else if (m_image->elementType() == ANARI_UFIXED16_VEC4)
+    vimage.reset((const vector<4, unorm<16>> *)m_image->data(), PF_RGBA16UI, PF_RGBA8);
 
   vimage.set_filter_mode(m_linearFilter?Linear:Nearest);
   vimage.set_address_mode(0, m_wrapMode1);
