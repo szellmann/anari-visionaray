@@ -31,7 +31,6 @@ void Image2D::commit()
 
   updateImageData();
   vsampler.inAttribute = m_inAttribute;
-  vsampler.inAttribute = m_inAttribute;
   vsampler.inTransform = m_inTransform;
   vsampler.inOffset = m_inOffset;
   vsampler.outTransform = m_outTransform;

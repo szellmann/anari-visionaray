@@ -13,7 +13,8 @@ struct TransformSampler : public Sampler
   void commit() override;
 
  private:
-
+  dco::Attribute m_inAttribute{dco::Attribute::None};
+  mat4 m_transform{mat4::identity()};
 };
 
 } // namespace visionaray
