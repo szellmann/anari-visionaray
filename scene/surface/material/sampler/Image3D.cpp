@@ -50,6 +50,8 @@ void Image3D::updateImageData()
     vimage.reset(m_image->dataAs<vec3>(), PF_RGB32F, PF_RGBA8, AlphaIsOne);
   else if (m_image->elementType() == ANARI_FLOAT32_VEC4)
     vimage.reset(m_image->dataAs<vec4>(), PF_RGBA32F, PF_RGBA8);
+  else if (m_image->elementType() == ANARI_UFIXED8)
+    vimage.reset((const unorm<8> *)m_image->data(), PF_R8, PF_RGBA8, AlphaIsOne);
   else if (m_image->elementType() == ANARI_UFIXED8_VEC3)
     vimage.reset((const vector<3, unorm<8>> *)m_image->data(),
                  PF_RGB8, PF_RGBA8, AlphaIsOne);
