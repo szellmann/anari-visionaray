@@ -165,16 +165,20 @@ void VisionaraySceneImpl::commit()
   }
 
 #if 0
-  std::cout << "TLS built\n";
-  std::cout << "  num nodes: " << m_TLS.num_nodes() << '\n';
-  std::cout << "  root bounds: " << m_TLS.node(0).get_bounds().min << ' '
-                                 << m_TLS.node(0).get_bounds().max << '\n';
-  std::cout << "  num triangle BLSs: " << triangleCount << '\n';
-  std::cout << "  num sphere BLSs  : " << sphereCount << '\n';
-  std::cout << "  num cylinder BLSs: " << cylinderCount << '\n';
-  std::cout << "  num volume BLSs  : " << volumeCount << '\n';
-  std::cout << "  num iso BLSs     : " << isoCount << '\n';
-  std::cout << "  num instance BLSs: " << instanceCount << '\n';
+  std::cout << "TLS Build (groupID: "
+            << m_groupID << ", worldID: " << m_worldID << ")\n";
+  std::cout << "  num nodes             : " << m_TLS.num_nodes() << '\n';
+  std::cout << "  root bounds           : " << m_TLS.node(0).get_bounds().min << ' '
+                                            << m_TLS.node(0).get_bounds().max << '\n';
+  std::cout << "  num triangle BLSs     : " << triangleCount << '\n';
+  std::cout << "  num sphere BLSs       : " << sphereCount << '\n';
+  std::cout << "  num cylinder BLSs     : " << cylinderCount << '\n';
+  std::cout << "  num volume BLSs       : " << volumeCount << '\n';
+  std::cout << "  num iso BLSs          : " << isoCount << '\n';
+  std::cout << "  num instance BLSs     : " << instanceCount << '\n';
+  std::cout << "  num geoms in group    : " << m_geometries.size() << '\n';
+  std::cout << "  num materials in group: " << m_materials.size() << '\n';
+  std::cout << "  num lights in group   : " << m_lights.size() << '\n';
 #endif
 
   dispatch();
