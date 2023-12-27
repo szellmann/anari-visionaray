@@ -389,8 +389,12 @@ inline vec4 getColor(const dco::Material &mat,
   vec4f color{0.f, 0.f, 0.f, 1.f};
   if (mat.type == dco::Material::Matte)
     color = getRGBA(mat.asMatte.color, geom, samplers, primID, uv);
-  else if (mat.type == dco::Material::PhysicallyBased)
+  else if (mat.type == dco::Material::PhysicallyBased) {
+    const float metallic = getF(
+        mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
     color = getRGBA(mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv);
+    color = lerp(color, vec4f(0.f, 0.f, 0.f, 1.f), metallic);
+  }
   return color;
 }
 
