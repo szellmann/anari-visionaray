@@ -241,9 +241,9 @@ inline dco::Array getPrimitiveColors(const dco::Geometry &geom, dco::Attribute a
 
 VSNRAY_FUNC
 inline vec4 getAttribute(
-    const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv,
-    const vec4 dflt = vec4(0.f, 0.f, 0.f, 1.f))
+    const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv)
 {
+  const vec4 dflt{0.f, 0.f, 0.f, 1.f};
   vec4f color = dflt;
   dco::Array vertexColors = getVertexColors(geom, attrib);
   dco::Array primitiveColors = getPrimitiveColors(geom, attrib);
