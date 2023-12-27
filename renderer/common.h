@@ -337,6 +337,8 @@ inline vec4 getSample(
       s = tex1D(samp.asImage1D, inAttr.x);
     else if (samp.type == dco::Sampler::Image2D)
       s = tex2D(samp.asImage2D, inAttr.xy());
+    else if (samp.type == dco::Sampler::Image3D)
+      s = tex3D(samp.asImage3D, inAttr.xyz());
 
     s = samp.outTransform * s + samp.outOffset;
   }
