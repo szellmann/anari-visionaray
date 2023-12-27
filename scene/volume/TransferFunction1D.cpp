@@ -35,7 +35,7 @@ void TransferFunction1D::commit()
 
   if (!m_field->isValid()) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "invalido spatial field provided to transferFunction1D volume");
+        "invalid spatial field provided to transferFunction1D volume");
     return;
   }
 
