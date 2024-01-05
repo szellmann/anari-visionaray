@@ -42,6 +42,7 @@ struct Ray : basic_ray<float>
     Volume = 0x20,
   };
   unsigned intersectionMask = All;
+  void *prd{nullptr};
 
 #if 1
   bool dbg{false};
@@ -134,6 +135,172 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   return result;
 }
 
+// Block primitive //
+
+struct Block
+{
+  uint32_t ID{UINT_MAX};
+  aabbi bounds;
+  int level;
+  uint32_t scalarOffset;
+  box1 valueRange;
+  float *scalarsBuffer{nullptr};
+
+  VSNRAY_FUNC
+  float getScalar(int ix, int iy, int iz) const
+  {
+    const int3 blockSize = numCells();
+    const uint32_t idx
+      = scalarOffset
+      + ix
+      + iy * blockSize.x
+      + iz * blockSize.x*blockSize.y;
+    return scalarsBuffer[idx];
+  }
+
+  VSNRAY_FUNC
+  int cellSize() const
+  { return 1<<level; }
+
+  VSNRAY_FUNC
+  int3 numCells() const
+  { return bounds.max-bounds.min+int3(1); }
+
+  VSNRAY_FUNC
+  aabb worldBounds() const
+  {
+    return aabb(
+      float3(bounds.min)*float(cellSize()),
+      float3(bounds.max+int3(1))*float(cellSize())
+    );
+  }
+
+  VSNRAY_FUNC
+  aabb filterDomain() const
+  {
+    const float3 cellSize2(cellSize()*0.5f);
+    const aabb wb = worldBounds();
+    return aabb(wb.min-cellSize2, wb.max+cellSize2);
+  }
+
+  VSNRAY_FUNC
+  aabb cellBounds(const vec3i cellID) const
+  {
+    aabb cb;
+    cb.min = float3(bounds.min+cellID)*float(cellSize());
+    cb.max = float3(bounds.max+cellID+int3(1))*float(cellSize());
+    return cb;
+  }
+};
+
+VSNRAY_FUNC
+inline aabb get_bounds(const Block &block)
+{
+  return block.filterDomain();
+}
+
+inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const Block &block)
+{
+  assert(0);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const Block &block)
+{
+  hit_record<Ray, primitive<unsigned>> result;
+  float3 pos = ray.ori;
+
+  if (!block.filterDomain().contains(pos)) {
+    result.hit = false;
+    return result;
+  }
+
+  result.t = 0.f;
+  result.hit = true;
+
+  float *prd = (float *)ray.prd;
+  float &sumWeightedValues = prd[0];
+  float &sumWeights = prd[1];
+
+  const float3 P = ray.ori;
+  const aabb brickBounds = block.worldBounds();
+  const int3 blockSize = block.numCells();
+
+  const float3 localPos = (P-brickBounds.min) / float3(block.cellSize()) - 0.5f;
+  int3 idx_lo   = int3(floorf(localPos.x),floorf(localPos.y),floorf(localPos.z));
+  idx_lo = max(int3(-1), idx_lo);
+  const int3 idx_hi   = idx_lo + int3(1);
+  const float3 frac     = localPos - float3(idx_lo);
+  const float3 neg_frac = float3(1.f) - frac;
+
+  // #define INV_CELL_WIDTH invCellWidth
+  #define INV_CELL_WIDTH 1.f
+  if (idx_lo.z >= 0 && idx_lo.z < blockSize.z) {
+    if (idx_lo.y >= 0 && idx_lo.y < blockSize.y) {
+      if (idx_lo.x >= 0 && idx_lo.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_lo.x,idx_lo.y,idx_lo.z);
+        const float weight = (neg_frac.z)*(neg_frac.y)*(neg_frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+      if (idx_hi.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_hi.x,idx_lo.y,idx_lo.z);
+        const float weight = (neg_frac.z)*(neg_frac.y)*(frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+    }
+    if (idx_hi.y < blockSize.y) {
+      if (idx_lo.x >= 0 && idx_lo.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_lo.x,idx_hi.y,idx_lo.z);
+        const float weight = (neg_frac.z)*(frac.y)*(neg_frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+      if (idx_hi.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_hi.x,idx_hi.y,idx_lo.z);
+        const float weight = (neg_frac.z)*(frac.y)*(frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+    }
+  }
+    
+  if (idx_hi.z < blockSize.z) {
+    if (idx_lo.y >= 0 && idx_lo.y < blockSize.y) {
+      if (idx_lo.x >= 0 && idx_lo.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_lo.x,idx_lo.y,idx_hi.z);
+        const float weight = (frac.z)*(neg_frac.y)*(neg_frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+      if (idx_hi.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_hi.x,idx_lo.y,idx_hi.z);
+        const float weight = (frac.z)*(neg_frac.y)*(frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+    }
+    if (idx_hi.y < blockSize.y) {
+      if (idx_lo.x >= 0 && idx_lo.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_lo.x,idx_hi.y,idx_hi.z);
+        const float weight = (frac.z)*(frac.y)*(neg_frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+      if (idx_hi.x < blockSize.x) {
+        const float scalar = block.getScalar(idx_hi.x,idx_hi.y,idx_hi.z);
+        const float weight = (frac.z)*(frac.y)*(frac.x);
+        sumWeights += weight;
+        sumWeightedValues += weight*scalar;
+      }
+    }
+  }
+
+  return result;
+}
+
 // Grid accelerator to traverse spatial fields //
 
 struct GridAccel
@@ -149,7 +316,7 @@ struct GridAccel
 
 struct SpatialField
 {
-  enum Type { StructuredRegular, Unstructured, Unknown, };
+  enum Type { StructuredRegular, Unstructured, BlockStructured, Unknown, };
   Type type{Unknown};
   unsigned fieldID{UINT_MAX};
   float baseDT{0.5f};
@@ -175,6 +342,9 @@ struct SpatialField
   struct {
     index_bvh<UElem>::bvh_ref samplingBVH;
   } asUnstructured;
+  struct {
+    index_bvh<Block>::bvh_ref samplingBVH;
+  } asBlockStructured;
 };
 
 VSNRAY_FUNC
@@ -194,6 +364,23 @@ inline bool sampleField(SpatialField sf, vec3 P, float &value) {
       return false;
 
     value = hr.u; // value is stored in "u"!
+    return true;
+  } else if (sf.type == SpatialField::BlockStructured) {
+    Ray ray;
+    ray.ori = P;
+    ray.dir = float3(1.f);
+    ray.tmin = ray.tmax = 0.f;
+
+    // sumValues+sumWeightedValues
+    float basisPRD[2] = {0.f,0.f};
+    ray.prd = &basisPRD;
+
+    auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
+
+    if (!hr.hit || basisPRD[1] == 0.f)
+      return false;
+
+    value = basisPRD[0]/basisPRD[1];
     return true;
   }
 

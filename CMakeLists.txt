@@ -56,6 +56,7 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/surface/material/Matte.cpp
     scene/surface/material/PBM.cpp
     scene/surface/Surface.cpp
+    scene/volume/spatial_field/BlockStructuredField.cpp
     scene/volume/spatial_field/GridAccel.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/spatial_field/StructuredRegularField.cpp

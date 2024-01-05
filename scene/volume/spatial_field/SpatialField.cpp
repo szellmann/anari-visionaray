@@ -3,6 +3,7 @@
 
 #include "SpatialField.h"
 // subtypes
+#include "BlockStructuredField.h"
 #include "StructuredRegularField.h"
 #include "UnstructuredField.h"
 
@@ -28,10 +29,12 @@ SpatialField::~SpatialField()
 SpatialField *SpatialField::createInstance(
     std::string_view subtype, VisionarayGlobalState *s)
 {
-   if (subtype == "structuredRegular")
+  if (subtype == "structuredRegular")
      return new StructuredRegularField(s);
   else if (subtype == "unstructured")
     return new UnstructuredField(s);
+  else if (subtype == "amr" || subtype == "blockStructured")
+     return new BlockStructuredField(s);
   else
     return (SpatialField *)new UnknownObject(ANARI_SPATIAL_FIELD, s);
 }
