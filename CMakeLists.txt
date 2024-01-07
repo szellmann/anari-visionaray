@@ -76,6 +76,9 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 if (cuda)
+  set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -O2 -g")
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -O3")
+
   target_sources(${PROJECT_NAME} PRIVATE
     frame/Frame.cu
     scene/VisionaraySceneGPU.cu
