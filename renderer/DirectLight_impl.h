@@ -11,7 +11,7 @@ struct VisionarayRendererDirectLight
 {
   VSNRAY_FUNC
   PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
-        VisionarayGlobalState::DeviceObjectRegistry onDevice) const {
+        const VisionarayGlobalState::DeviceObjectRegistry &onDevice) const {
 
     // if (ss.debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
 

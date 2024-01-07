@@ -9,7 +9,7 @@ struct VisionarayRendererRaycast
 {
   VSNRAY_FUNC
   PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
-        VisionarayGlobalState::DeviceObjectRegistry onDevice) const {
+        const VisionarayGlobalState::DeviceObjectRegistry &onDevice) const {
 
     PixelSample result;
     result.color = rendererState.bgColor;
