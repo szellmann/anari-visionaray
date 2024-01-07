@@ -75,7 +75,7 @@ void Geometry::commit()
 
       vgeom.primitiveAttributes[i].data = vattributes[i].devicePtr();
       vgeom.primitiveAttributes[i].len = m_attributes[i]->size();
-      vgeom.primitiveAttributes[i].type = m_attributes[i]->elementType();
+      vgeom.primitiveAttributes[i].typeInfo = getInfo(m_attributes[i]->elementType());
     }
   }
 }

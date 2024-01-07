@@ -81,7 +81,7 @@ void Sphere::commit()
 
     vgeom.asSphere.index.data = vindex.devicePtr();
     vgeom.asSphere.index.len = m_index->size();
-    vgeom.asSphere.index.type = m_index->elementType();
+    vgeom.asSphere.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {
@@ -95,7 +95,8 @@ void Sphere::commit()
 
       vgeom.asSphere.vertexAttributes[i].data = vattributes[i].devicePtr();
       vgeom.asSphere.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.asSphere.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
+      vgeom.asSphere.vertexAttributes[i].typeInfo
+          = getInfo(m_vertexAttributes[i]->elementType());
     }
   }
 

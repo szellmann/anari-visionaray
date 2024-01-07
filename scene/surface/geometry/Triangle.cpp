@@ -73,7 +73,7 @@ void Triangle::commit()
 
     vgeom.asTriangle.index.data = vindex.devicePtr();
     vgeom.asTriangle.index.len = m_index->size();
-    vgeom.asTriangle.index.type = m_index->elementType();
+    vgeom.asTriangle.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {
@@ -87,7 +87,8 @@ void Triangle::commit()
 
       vgeom.asTriangle.vertexAttributes[i].data = vattributes[i].devicePtr();
       vgeom.asTriangle.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.asTriangle.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
+      vgeom.asTriangle.vertexAttributes[i].typeInfo
+          = getInfo(m_vertexAttributes[i]->elementType());
     }
   }
 

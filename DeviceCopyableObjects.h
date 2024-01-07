@@ -703,7 +703,7 @@ struct Array
 {
   const void *data{nullptr};
   size_t len{0};
-  ANARIDataType type{ANARI_UNKNOWN};
+  TypeInfo typeInfo;
 };
 
 enum class Attribute
@@ -816,7 +816,7 @@ struct Sampler
   texture_ref<vector<4, unorm<8>>, 3> asImage3D;
 #endif
   struct {
-    ANARIDataType dataType{ANARI_UNKNOWN};
+    TypeInfo typeInfo;
     size_t len{0}; // in elements
     const uint8_t *data{nullptr};
     uint32_t offset{0};

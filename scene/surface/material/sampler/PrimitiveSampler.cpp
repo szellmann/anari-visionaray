@@ -23,7 +23,7 @@ void PrimitiveSampler::commit()
   varray.resize(anari::sizeOf(m_array->elementType()) * m_array->size());
   varray.reset(m_array->data());
 
-  vsampler.asPrimitive.dataType = m_array->elementType();
+  vsampler.asPrimitive.typeInfo = getInfo(m_array->elementType());
   vsampler.asPrimitive.len = m_array->size(); // num elements!
   vsampler.asPrimitive.data = varray.devicePtr();
   vsampler.asPrimitive.offset = m_offset;

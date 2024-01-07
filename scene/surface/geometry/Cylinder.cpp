@@ -83,7 +83,7 @@ void Cylinder::commit()
 
     vgeom.asCylinder.index.data = m_index->begin();
     vgeom.asCylinder.index.len = m_index->size();
-    vgeom.asCylinder.index.type = m_index->elementType();
+    vgeom.asCylinder.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {
@@ -97,7 +97,8 @@ void Cylinder::commit()
 
       vgeom.asCylinder.vertexAttributes[i].data = vattributes[i].devicePtr();
       vgeom.asCylinder.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.asCylinder.vertexAttributes[i].type = m_vertexAttributes[i]->elementType();
+      vgeom.asCylinder.vertexAttributes[i].typeInfo
+          = getInfo(m_vertexAttributes[i]->elementType());
     }
   }
 

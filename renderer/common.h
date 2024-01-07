@@ -248,8 +248,8 @@ inline vec4 getAttribute(
   dco::Array vertexColors = getVertexColors(geom, attrib);
   dco::Array primitiveColors = getPrimitiveColors(geom, attrib);
 
-  TypeInfo vertexColorInfo = getInfo(vertexColors.type);
-  TypeInfo primitiveColorInfo = getInfo(primitiveColors.type);
+  const TypeInfo &vertexColorInfo = vertexColors.typeInfo;
+  const TypeInfo &primitiveColorInfo = primitiveColors.typeInfo;
 
   // vertex colors take precedence over primitive colors
   if (geom.type == dco::Geometry::Triangle && vertexColors.len > 0) {
@@ -321,7 +321,7 @@ inline vec4 getSample(
   vec4f s{0.f, 0.f, 0.f, 1.f};
 
   if (samp.type == dco::Sampler::Primitive) {
-    TypeInfo info = getInfo(samp.asPrimitive.dataType);
+    const TypeInfo &info = samp.asPrimitive.typeInfo;
     const auto *source = samp.asPrimitive.data
         + (primID * info.sizeInBytes) + (samp.asPrimitive.offset * info.sizeInBytes);
     convert(&s, source, info);
