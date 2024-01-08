@@ -575,19 +575,23 @@ struct BLS
   Type type{Unknown};
   unsigned blsID{UINT_MAX};
 #ifdef WITH_CUDA
-  cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-  cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-  cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-  cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-  cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-  cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
+  union {
+    cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
+  };
 #else
-  index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-  index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-  index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-  index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-  index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-  index_bvh<dco::Volume>::bvh_ref asVolume;
+  union {
+    index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    index_bvh<dco::Volume>::bvh_ref asVolume;
+  };
 #endif
 };
 
@@ -807,9 +811,11 @@ struct Sampler
   mat4 outTransform{mat4::identity()};
   float4 outOffset{0.f};
 #ifdef WITH_CUDA
-  cuda_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
-  cuda_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
-  cuda_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+  union {
+    cuda_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
+    cuda_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
+    cuda_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+  };
 #else
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
   texture_ref<vector<4, unorm<8>>, 2> asImage2D;
@@ -886,9 +892,11 @@ struct Light
   Type type{Unknown};
   unsigned lightID{UINT_MAX};
   bool visible{true};
-  directional_light<float> asDirectional;
-  point_light<float> asPoint;
-  spot_light<float> asSpot;
+  union {
+    directional_light<float> asDirectional;
+    point_light<float> asPoint;
+    spot_light<float> asSpot;
+  };
   struct {
 #ifdef WITH_CUDA
     cuda_texture_ref<float3, 2> radiance;
