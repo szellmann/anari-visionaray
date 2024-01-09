@@ -24,6 +24,8 @@ dco::Attribute toAttribute(std::string str)
     res = Attribute::_3;
   else if (str == "color")
     res = Attribute::Color;
+  else if (str == "none")
+    res = Attribute::None;
 
   return res;
 }
