@@ -461,7 +461,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   // is later expected to intersect the volume bounds
   // themselves to compute [t0,t1]
   hit_record<Ray, primitive<unsigned>> result;
-  result.hit = hr.hit;
+  result.hit = hr.hit && (hr.tfar >= ray.tmin);
   result.t = max(ray.tmin,hr.tnear);
   result.geom_id = vol.geomID;
   return result;
