@@ -191,20 +191,14 @@ void VisionaraySceneGPU::commit()
       unsigned index = isoCount++;
       builder.enable_spatial_splits(false); // no spatial splits for ISOs
       // Until we have a high-quality GPU builder, do that on the CPU!
-      dco::ISOSurface hostData;
-      CUDA_SAFE_CALL(cudaMemcpy(&hostData, &geom.asISOSurface.data,
-          sizeof(hostData), cudaMemcpyDeviceToHost));
-      auto accelStorage = builder.build(CPU::ISOSurfaceBVH{}, &hostData, 1);
+      auto accelStorage = builder.build(
+        CPU::ISOSurfaceBVH{}, &geom.asISOSurface.data, 1);
       m_impl->m_accelStorage.isoSurfaceBLSs[index]
         = GPU::ISOSurfaceBVH(accelStorage);
     } else if (geom.type == dco::Geometry::Volume) {
       unsigned index = volumeCount++;
       builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      dco::Volume hostData;
-      CUDA_SAFE_CALL(cudaMemcpy(&hostData, &geom.asVolume.data,
-          sizeof(hostData), cudaMemcpyDeviceToHost));
-      auto accelStorage = builder.build(CPU::VolumeBVH{}, &hostData, 1);
+      auto accelStorage = builder.build(CPU::VolumeBVH{}, &geom.asVolume.data, 1);
       m_impl->m_accelStorage.volumeBLSs[index]
         = GPU::VolumeBVH(accelStorage);
     } else if (geom.type == dco::Geometry::Instance) {
@@ -382,17 +376,10 @@ void VisionaraySceneGPU::attachGeometry(dco::Geometry geom, unsigned geomID)
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     }
   } else if (geom.type == dco::Geometry::ISOSurface) {
-    dco::ISOSurface hostData;
-    CUDA_SAFE_CALL(cudaMemcpy(&hostData, &geom.asISOSurface.data,
-        sizeof(hostData), cudaMemcpyDeviceToHost));
-    hostData.isoID = geomID;
-    hostData.geomID = geomID;
-    CUDA_SAFE_CALL(cudaMemcpy(&geom.asISOSurface.data, &hostData,
-        sizeof(hostData), cudaMemcpyHostToDevice));
+    geom.asISOSurface.data.isoID = geomID;
+    geom.asISOSurface.data.geomID = geomID;
   } else if (geom.type == dco::Geometry::Volume) {
-    std::cerr << "CUDA backend: geometry type "
-        << geom.type << " not supported yet.. exiting!\n";
-    exit(0);
+    geom.asVolume.data.geomID = geomID;
   }
 
 

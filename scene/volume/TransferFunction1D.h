@@ -38,7 +38,11 @@ struct TransferFunction1D : public Volume
   helium::IntrusivePtr<Array1D> m_colorData;
   helium::IntrusivePtr<Array1D> m_opacityData;
 
+#ifdef WITH_CUDA
+  cuda_texture<float4, 1> transFuncTexture;
+#else
   texture<float4, 1> transFuncTexture;
+#endif
 
   dco::TransferFunction vtransfunc;
 };

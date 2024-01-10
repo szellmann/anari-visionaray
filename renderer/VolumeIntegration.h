@@ -75,13 +75,16 @@ inline HitRecordVolume sampleFreeFlightDistance(
       = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].gridAccel;
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
+#ifdef WITH_CUDA
+    const bool hasMajorant = false;
+#else
     const bool hasMajorant =
         onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type
             == dco::SpatialField::Unstructured ||
         onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type
             == dco::SpatialField::StructuredRegular;
-    const float majorant = grid.maxOpacities[leafID]
-        = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
+#endif
+    const float majorant = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
 
     while (1) {
@@ -119,11 +122,15 @@ inline HitRecordVolume sampleFreeFlightDistance(
   auto boxHit = intersect(ray, vol.bounds);
   ray.tmin = max(ray.tmin, boxHit.tnear);
   ray.tmax = min(ray.tmax, boxHit.tfar);
+#ifndef WITH_CUDA
   if (onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::Unstructured ||
       onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::StructuredRegular)
     dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
+#else
+    woodcockFunc(-1, ray.tmin, ray.tmax);
+#endif
 
   return hr;
 }

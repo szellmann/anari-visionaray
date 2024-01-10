@@ -33,7 +33,11 @@ struct StructuredRegularField : public SpatialField
 
   helium::IntrusivePtr<Array3D> m_dataArray;
 
+#ifdef WITH_CUDA
+  cuda_texture<float, 3> m_dataTexture;
+#else
   texture<float, 3> m_dataTexture;
+#endif
   anari::DataType m_type{ANARI_UNKNOWN};
 };
 

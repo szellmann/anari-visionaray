@@ -33,32 +33,38 @@ void StructuredRegularField::commit()
 
   setStepSize(min_element(m_spacing / 2.f));
 
+#ifdef WITH_CUDA
+  texture<float, 3> tex(m_dims.x, m_dims.y, m_dims.z);
+#else
   m_dataTexture = texture<float, 3>(m_dims.x, m_dims.y, m_dims.z);
+  auto &tex = m_dataTexture;
+#endif
   if (m_type == ANARI_UFIXED8) {
     std::vector<float> data(m_dims.x * size_t(m_dims.y) * m_dims.z);
     auto data8 = (uint8_t *)m_dataArray->data();
     for (size_t i=0; i<data.size(); ++i) {
       data[i] = data8[i] / 255.f;
     }
-    m_dataTexture.reset(data.data());
+    tex.reset(data.data());
   } else if (m_type == ANARI_UFIXED16) {
     std::vector<float> data(m_dims.x * size_t(m_dims.y) * m_dims.z);
     auto data16 = (uint16_t *)m_dataArray->data();
     for (size_t i=0; i<data.size(); ++i) {
       data[i] = data16[i] / 65535.f;
     }
-    m_dataTexture.reset(data.data());
+    tex.reset(data.data());
   } else if (m_type == ANARI_FLOAT32)
-    m_dataTexture.reset((float *)m_dataArray->data());
+    tex.reset((float *)m_dataArray->data());
 
-  m_dataTexture.set_filter_mode(Linear);
-  m_dataTexture.set_address_mode(Clamp);
+  tex.set_filter_mode(Linear);
+  tex.set_address_mode(Clamp);
 
   vfield.asStructuredRegular.origin = m_origin;
   vfield.asStructuredRegular.spacing = m_spacing;
   vfield.asStructuredRegular.dims = m_dims;
 #ifdef WITH_CUDA
-
+  m_dataTexture = cuda_texture<float, 3>(tex);
+  vfield.asStructuredRegular.sampler = cuda_texture_ref<float, 3>(m_dataTexture);
 #else
   vfield.asStructuredRegular.sampler = texture_ref<float, 3>(m_dataTexture);
 #endif
@@ -82,6 +88,9 @@ aabb StructuredRegularField::bounds() const
 
 void StructuredRegularField::buildGrid()
 {
+#ifdef WITH_CUDA
+  return;
+#endif
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(gridDims, worldBounds);

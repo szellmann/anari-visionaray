@@ -87,10 +87,15 @@ void TransferFunction1D::commit()
 
     tf[i] = vec4(color, alpha);
   }
+#ifdef WITH_CUDA
+  texture<float4, 1> tex(tf.size());
+#else
   transFuncTexture = texture<float4, 1>(tf.size());
-  transFuncTexture.reset(tf.data());
-  transFuncTexture.set_filter_mode(Linear);
-  transFuncTexture.set_address_mode(Clamp);
+  auto &tex = transFuncTexture;
+#endif
+  tex.reset(tf.data());
+  tex.set_filter_mode(Linear);
+  tex.set_address_mode(Clamp);
 
   vgeom.asVolume.data.bounds = m_bounds;
   vgeom.asVolume.data.volID = m_field->visionaraySpatialField().fieldID;
@@ -98,17 +103,21 @@ void TransferFunction1D::commit()
       = m_field->visionaraySpatialField().fieldID;
 
   vtransfunc.volID = vgeom.asVolume.data.volID;
-  vtransfunc.as1D.numValues = transFuncTexture.size()[0];
+  vtransfunc.as1D.numValues = tex.size()[0];
   vtransfunc.as1D.valueRange = m_valueRange;
 #ifdef WITH_CUDA
+  transFuncTexture = cuda_texture<float4, 1>(tex);
+  vtransfunc.as1D.sampler = cuda_texture_ref<float4, 1>(transFuncTexture);
 #else
   vtransfunc.as1D.sampler = texture_ref<float4, 1>(transFuncTexture);
 #endif
 
   dispatch();
 
+#ifndef WITH_CUDA
   m_field->gridAccel().computeMaxOpacities(
       deviceState()->onDevice.transferFunctions[vgeom.asVolume.data.volID]);
+#endif
 
   m_field->addCommitObserver(this);
 }

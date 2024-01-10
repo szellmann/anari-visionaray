@@ -16,11 +16,14 @@ Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s)
 {
   memset(&vgeom,0,sizeof(vgeom));
   vgeom.type = dco::Geometry::Volume;
+  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
   s->objectCounts.volumes++;
 }
 
 Volume::~Volume()
 {
+  deviceState()->dcos.geometries.free(vgeom.geomID);
+
   deviceState()->objectCounts.volumes--;
 }
 
