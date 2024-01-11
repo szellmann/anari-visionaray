@@ -67,7 +67,7 @@ void BlockStructuredField::commit()
 
   // do this now that m_scalars doesn't change anymore:
   for (size_t i=0; i<numBlocks; ++i) {
-    m_blocks[i].scalarsBuffer = m_scalars.data();
+    m_blocks[i].scalarsBuffer = m_scalars.devicePtr();
   }
 
   // sampling BVH
@@ -75,10 +75,19 @@ void BlockStructuredField::commit()
   binned_sah_builder builder;
   builder.enable_spatial_splits(false);
 
+#ifdef WITH_CUDA
+  auto hostBVH = builder.build(
+    index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
+
+  m_samplingBVH = cuda_index_bvh<dco::Block>(hostBVH);
+
+  vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
+#else
   m_samplingBVH = builder.build(
     index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
+#endif
 
   setStepSize(length(bounds().max-bounds().min)/50.f);
 
@@ -96,9 +105,19 @@ bool BlockStructuredField::isValid() const
 
 aabb BlockStructuredField::bounds() const
 {
+#ifdef WITH_CUDA
+  if (isValid()) {
+    bvh_node rootNode;
+    CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
+                              thrust::raw_pointer_cast(m_samplingBVH.nodes().data()),
+                              sizeof(rootNode),
+                              cudaMemcpyDeviceToHost));
+    return rootNode.get_bounds();
+  }
+#else
   if (isValid())
     return m_samplingBVH.node(0).get_bounds();
-
+#endif
   return {};
 }
 

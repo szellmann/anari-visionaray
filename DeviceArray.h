@@ -166,6 +166,18 @@ struct HostDeviceArray : public std::vector<T>
     updated = true;
   }
 
+  void push_back(const T &value)
+  {
+    Base::push_back(value);
+    updated = true;
+  }
+
+  void push_back(T &&value)
+  {
+    Base::push_back(value);
+    updated = true;
+  }
+
   void resize(size_t n, const T &value)
   {
     Base::resize(n, value);

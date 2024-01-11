@@ -57,11 +57,9 @@ target_sources(${PROJECT_NAME} PRIVATE
     scene/surface/material/Matte.cpp
     scene/surface/material/PBM.cpp
     scene/surface/Surface.cpp
-    scene/volume/spatial_field/BlockStructuredField.cpp
     scene/volume/spatial_field/GridAccel.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/spatial_field/StructuredRegularField.cpp
-    scene/volume/spatial_field/UnstructuredField.cpp
     scene/volume/TransferFunction1D.cpp
     scene/volume/Volume.cpp
     scene/Group.cpp
@@ -81,14 +79,24 @@ if (cuda)
 
   target_sources(${PROJECT_NAME} PRIVATE
     frame/Frame.cu
+    scene/volume/spatial_field/BlockStructuredField.cu
+    scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
   )
-  set_source_files_properties(frame/Frame.cu scene/VisionaraySceneGPU.cu
+  set_source_files_properties(
+    frame/Frame.cu
+    scene/volume/spatial_field/BlockStructuredField.cu
+    scene/volume/spatial_field/UnstructuredField.cu
+    scene/VisionaraySceneGPU.cu
     PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
   )
   target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_CUDA=1)
 else()
-  target_sources(${PROJECT_NAME} PRIVATE frame/Frame.cpp)
+  target_sources(${PROJECT_NAME} PRIVATE
+    frame/Frame.cpp
+    scene/volume/spatial_field/BlockStructuredField.cpp
+    scene/volume/spatial_field/UnstructuredField.cpp
+  )
 endif()
 
 target_link_libraries(${PROJECT_NAME}

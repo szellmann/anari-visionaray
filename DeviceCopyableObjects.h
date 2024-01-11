@@ -359,10 +359,18 @@ struct SpatialField
 
   } asStructuredRegular;
   struct {
+#ifdef WITH_CUDA
+    cuda_index_bvh<UElem>::bvh_ref samplingBVH;
+#else
     index_bvh<UElem>::bvh_ref samplingBVH;
+#endif
   } asUnstructured;
   struct {
+#ifdef WITH_CUDA
+    cuda_index_bvh<Block>::bvh_ref samplingBVH;
+#else
     index_bvh<Block>::bvh_ref samplingBVH;
+#endif
   } asBlockStructured;
 };
 

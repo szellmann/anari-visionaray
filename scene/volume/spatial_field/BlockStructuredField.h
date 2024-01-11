@@ -22,9 +22,13 @@ struct BlockStructuredField : public SpatialField
  private:
 
   aligned_vector<dco::Block> m_blocks;
-  aligned_vector<float> m_scalars;
+  HostDeviceArray<float> m_scalars;
   // sampling accel
+#ifdef WITH_CUDA
+  cuda_index_bvh<dco::Block> m_samplingBVH;
+#else
   index_bvh<dco::Block> m_samplingBVH;
+#endif
 
   struct Parameters
   {
