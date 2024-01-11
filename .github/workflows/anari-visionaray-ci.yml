@@ -1,0 +1,73 @@
+name: anari-visionaray CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        config: [Release, Debug]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Packages
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: sudo apt install -y libglew-dev libboost-all-dev # nvidia-cuda-toolkit
+
+    - name: Checkout ANARI-SDK
+      uses: actions/checkout@v3
+      with:
+        repository: KhronosGroup/ANARI-SDK
+        path: ANARI-SDK
+        ref: next_release
+
+    - name: Build ANARI-SDK
+      run: |
+        mkdir -p opt
+        cmake ANARI-SDK -B ANARI-SDK/build \
+         -DCMAKE_INSTALL_PREFIX=opt \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DBUILD_EXAMPLES:BOOL=OFF \
+         -DBUILD_VIEWER:BOOL=OFF \
+         -DBUILD_HELIDE_DEVICE:BOOL=OFF \
+         -DINSTALL_VIEWER_LIBRARY:BOOL=OFF \
+         -DBUILD_TESTING:BOOL=OFF
+        cmake --build ANARI-SDK/build --target install
+
+    - name: Checkout Visionaray
+      uses: actions/checkout@v3
+      with:
+        repository: szellmann/visionaray
+        path: visionaray
+        ref: master
+
+    - name: Build Visionaray
+      run: |
+        cmake visionaray -B visionaray/build \
+         -DCMAKE_INSTALL_PREFIX=opt \
+         -DCMAKE_BUILD_TYPE=Release \
+         -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF \
+         -DVSNRAY_ENABLE_VIEWER:BOOL=OFF \
+         -DVSNRAY_ENABLE_COMMON:BOOL=OFF \
+         -DVSNRAY_ENABLE_CUDA:BOOL=OFF
+        cmake --build visionaray/build --target install
+
+    - name: Configure CMake
+      env:
+        CMAKE_PREFIX_PATH: opt
+      run: >
+        cmake -LA -B ${{github.workspace}}/build
+        -DCMAKE_BUILD_TYPE=${{ matrix.config }}
+        -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/build/install
+        -DBUILD_SHARED_LIBS:BOOL=ON
+        -DANARI_VISIONARAY_ENABLE_CUDA:BOOL=OFF # cuda and gcc-11.4 don't work together
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{ matrix.config }} --target install
