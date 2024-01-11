@@ -28,6 +28,7 @@ struct VisionarayRendererDirectLight
     float3 baseColor{0.f};
     float3 shadedColor{0.f};
     float3 gn{0.f};
+    float3 sn{0.f};
     float3 viewDir{0.f};
     float3 hitPos{0.f};
     bool hit = false;
@@ -84,10 +85,11 @@ struct VisionarayRendererDirectLight
 
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
+          sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
           color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
           result.Ng = gn;
-          result.Ns = gn;
+          result.Ns = sn;
           result.albedo = color.xyz();
 
           xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
@@ -176,7 +178,7 @@ struct VisionarayRendererDirectLight
                                          geom,
                                          onDevice.samplers,
                                          hr.prim_id,
-                                         uv, gn, gn,
+                                         uv, gn, sn,
                                          viewDir,
                                          ls.dir,
                                          intensity);

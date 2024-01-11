@@ -27,8 +27,9 @@ struct VisionarayRendererRaycast
       const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
-      vec3f gn = getNormal(geom, hr.prim_id, hitPos);
       vec2f uv{hr.u,hr.v};
+      vec3f gn = getNormal(geom, hr.prim_id, hitPos);
+      vec3f sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
       vec4f color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
@@ -44,7 +45,7 @@ struct VisionarayRendererRaycast
                                    geom,
                                    onDevice.samplers,
                                    hr.prim_id,
-                                   uv, gn, gn,
+                                   uv, gn, sn,
                                    viewDir,
                                    lightDir,
                                    intensity);

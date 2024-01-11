@@ -212,6 +212,36 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
 }
 
 VSNRAY_FUNC
+inline vec3 getShadingNormal(
+    const dco::Geometry &geom, unsigned primID, const vec3 hitPos, const vec2 uv)
+{
+  vec3f sn(1.f,0.f,0.f);
+
+  if (geom.type == dco::Geometry::Triangle) {
+    if (geom.asTriangle.normal.len
+        && geom.asTriangle.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+      uint3 index;
+      if (geom.asTriangle.index.len > 0) {
+        index = ((uint3 *)geom.asTriangle.index.data)[primID];
+      } else {
+        index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
+      }
+      auto *normals = (const vec3 *)geom.asTriangle.normal.data;
+      vec3 n1 = normals[index.x];
+      vec3 n2 = normals[index.y];
+      vec3 n3 = normals[index.z];
+      sn = lerp(n1, n2, n3, uv.x, uv.y);
+    } else {
+      sn = getNormal(geom, primID, hitPos);
+    }
+  } else {
+    sn = getNormal(geom, primID, hitPos);
+  }
+
+  return sn;
+}
+
+VSNRAY_FUNC
 inline dco::Array getVertexColors(const dco::Geometry &geom, dco::Attribute attrib)
 {
   dco::Array arr;
@@ -419,9 +449,9 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float alpha = roughness*roughness;
 
   const vec3 H = normalize(lightDir+viewDir);
-  const float NdotH = dot(Ng,H);
-  const float NdotL = dot(Ng,lightDir);
-  const float NdotV = dot(Ng,viewDir);
+  const float NdotH = dot(Ns,H);
+  const float NdotL = dot(Ns,lightDir);
+  const float NdotV = dot(Ns,viewDir);
   const float VdotH = dot(viewDir,H);
   const float LdotH = dot(lightDir,H);
 

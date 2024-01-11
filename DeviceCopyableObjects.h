@@ -760,6 +760,7 @@ struct Geometry
     size_t len{0};
     Array vertexAttributes[5];
     Array index;
+    Array normal;
   } asTriangle;
   struct {
     basic_triangle<3,float> *data{nullptr};

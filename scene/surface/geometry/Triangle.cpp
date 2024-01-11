@@ -20,6 +20,7 @@ void Triangle::commit()
 
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
+  m_vertexNormal = getParamObject<Array1D>("vertex.normal");
   m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
   m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
@@ -74,6 +75,15 @@ void Triangle::commit()
     vgeom.asTriangle.index.data = vindex.devicePtr();
     vgeom.asTriangle.index.len = m_index->size();
     vgeom.asTriangle.index.typeInfo = getInfo(m_index->elementType());
+  }
+
+  if (m_vertexNormal) {
+    vnormals.resize(m_vertexNormal->size());
+    vnormals.reset(m_vertexNormal->beginAs<float3>());
+
+    vgeom.asTriangle.normal.data = vnormals.devicePtr();
+    vgeom.asTriangle.normal.len = m_vertexNormal->size();
+    vgeom.asTriangle.normal.typeInfo = getInfo(m_vertexNormal->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {
