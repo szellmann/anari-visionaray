@@ -25,7 +25,7 @@ void normalize(It first, It last)
 }
 
 void makeCDF(const void *imgData, unsigned numComponents, int width, int height,
-             aligned_vector<float> &cdfRows, aligned_vector<float> &cdfLastCol)
+             HostDeviceArray<float> &cdfRows, HostDeviceArray<float> &cdfLastCol)
 {
   // Build up luminance image
   std::vector<float> luminance(width * height);
@@ -61,7 +61,26 @@ void makeCDF(const void *imgData, unsigned numComponents, int width, int height,
 
   // Scan and normalize the last column
   scan(lastCol.begin(), lastCol.end(), cdfLastCol.begin());
-  normalize(cdfLastCol.begin(), cdfLastCol.end());
+  normalize(cdfLastCol.data(), cdfLastCol.data()+cdfLastCol.size());
+}
+
+void makeRGBA(const void *imgData, unsigned numComponents, int width, int height,
+              std::vector<float4> &rgba)
+{
+  rgba.resize(width * height);
+  if (numComponents == 3) {
+    auto *rgbData = (const float3 *)imgData;
+    for (int y=0; y<height; ++y) {
+      for (int x=0; x<width; ++x) {
+        float3 rgb = rgbData[x+width*y];
+        rgba[x+width*y] = float4(rgb,1.f);
+      }
+    }
+  } else if (numComponents == 4) {
+    memcpy(rgba.data(), imgData, width*height*sizeof(float4));
+  } else {
+    assert(0);
+  }
 }
 
 // HDRI definitions ///////////////////////////////////////////////////////////
@@ -97,19 +116,32 @@ void HDRI::commit()
   unsigned width = m_radiance->size().x, height = m_radiance->size().y;
   makeCDF(m_radiance->data(), 3, width, height, m_cdfRows, m_cdfLastCol);
 
-  m_radianceTexture = texture<float3, 2>(width, height);
-  m_radianceTexture.reset((const float3 *)m_radiance->data());
-  m_radianceTexture.set_filter_mode(Linear);
-  m_radianceTexture.set_address_mode(Clamp);
+  std::vector<float4> rgba; // convert to rgba for compability with CUDA
+                            // (no support for float3 textures!)
+  makeRGBA(m_radiance->data(), 3, width, height, rgba);
 
 #ifdef WITH_CUDA
-
+  texture<float4, 2> tex(width, height);
 #else
-  vlight.asHDRI.radiance = texture_ref<float3, 2>(m_radianceTexture);
+  m_radianceTexture = texture<float4, 2>(width, height);
+  auto &tex = m_radianceTexture;
+#endif
+  tex.reset((const float4 *)rgba.data());
+  tex.set_filter_mode(Linear);
+  tex.set_address_mode(Clamp);
+
+#ifdef WITH_CUDA
+  m_radianceTexture = cuda_texture<float4, 2>(tex);
+#endif
+
+#ifdef WITH_CUDA
+  vlight.asHDRI.radiance = cuda_texture_ref<float4, 2>(m_radianceTexture);
+#else
+  vlight.asHDRI.radiance = texture_ref<float4, 2>(m_radianceTexture);
 #endif
   vlight.asHDRI.scale = m_scale;
-  vlight.asHDRI.cdf.lastCol = m_cdfRows.data();
-  vlight.asHDRI.cdf.rows = m_cdfLastCol.data();
+  vlight.asHDRI.cdf.lastCol = m_cdfRows.devicePtr();
+  vlight.asHDRI.cdf.rows = m_cdfLastCol.devicePtr();
   vlight.asHDRI.cdf.width = width;
   vlight.asHDRI.cdf.height = height;
 

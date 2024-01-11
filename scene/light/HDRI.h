@@ -1,10 +1,10 @@
 #pragma once
 
 // visionaray
-#include <visionaray/aligned_vector.h>
 #include <visionaray/texture/texture.h>
 //ours
 #include "array/Array2D.h"
+#include "DeviceArray.h"
 #include "Light.h"
 
 namespace visionaray {
@@ -25,9 +25,13 @@ struct HDRI : public Light
   helium::IntrusivePtr<Array2D> m_radiance;
   float m_scale{1.f};
 
-  texture<float3, 2> m_radianceTexture;
-  aligned_vector<float> m_cdfRows;
-  aligned_vector<float> m_cdfLastCol;
+#ifdef WITH_CUDA
+  cuda_texture<float4, 2> m_radianceTexture;
+#else
+  texture<float4, 2> m_radianceTexture;
+#endif
+  HostDeviceArray<float> m_cdfRows;
+  HostDeviceArray<float> m_cdfLastCol;
 };
 
 } // namespace visionaray

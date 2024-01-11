@@ -908,9 +908,9 @@ struct Light
   };
   struct {
 #ifdef WITH_CUDA
-    cuda_texture_ref<float3, 2> radiance;
+    cuda_texture_ref<float4, 2> radiance;
 #else
-    texture_ref<float3, 2> radiance;
+    texture_ref<float4, 2> radiance;
 #endif
     float scale{1.f};
     struct CDF {
@@ -937,12 +937,7 @@ struct Light
     VSNRAY_FUNC
     inline float3 intensity(const float3 dir) const
     {
-#ifdef WITH_CUDA
-        // TODO: type not supported with cuda?!
-      return {};
-#else
-      return tex2D(radiance, toUV(dir))*scale;
-#endif
+      return tex2D(radiance, toUV(dir)).xyz()*scale;
     }
 
   } asHDRI;
