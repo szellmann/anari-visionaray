@@ -21,15 +21,19 @@ struct UnstructuredField : public SpatialField
 
  private:
 
-  aligned_vector<float4> m_vertices;
-  aligned_vector<dco::UElem> m_elements;
+  HostDeviceArray<float4> m_vertices;
+  HostDeviceArray<dco::UElem> m_elements;
   // for stitcher
-  aligned_vector<int3> m_gridDims;
-  aligned_vector<aabb> m_gridDomains;
-  aligned_vector<uint64_t> m_gridScalarsOffsets;
-  aligned_vector<float> m_gridScalars;
+  HostDeviceArray<int3> m_gridDims;
+  HostDeviceArray<aabb> m_gridDomains;
+  HostDeviceArray<uint64_t> m_gridScalarsOffsets;
+  HostDeviceArray<float> m_gridScalars;
   // sampling accel
+#ifdef WITH_CUDA
+  cuda_index_bvh<dco::UElem> m_samplingBVH;
+#else
   index_bvh<dco::UElem> m_samplingBVH;
+#endif
 
   struct Parameters
   {

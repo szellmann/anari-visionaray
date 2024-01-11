@@ -3,8 +3,12 @@
 
 #include "VisionarayDevice.h"
 #include "anari/backend/LibraryImpl.h"
-//#include "anari_library_visionaray_export.h"
-#define VISIONARAY_DEVICE_INTERFACE
+
+#ifdef WITH_CUDA
+#include "anari_library_visionaray_cuda_export.h"
+#else
+#include "anari_library_visionaray_export.h"
+#endif
 
 namespace visionaray {
 
@@ -40,11 +44,19 @@ const char **VisionarayLibrary::getDeviceExtensions(const char * /*deviceType*/)
 
 // Define library entrypoint //////////////////////////////////////////////////
 
+#ifdef WITH_CUDA
+extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
+    visionaray_cuda, handle, scb, scbPtr)
+{
+  return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
+}
+#else
 extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
     visionaray, handle, scb, scbPtr)
 {
   return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
 }
+#endif
 
 extern "C" VISIONARAY_DEVICE_INTERFACE ANARIDevice anariNewVisionarayDevice(
     ANARIStatusCallback defaultCallback, const void *userPtr)

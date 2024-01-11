@@ -1,0 +1,226 @@
+{
+  "info": {
+    "name": "VISIONARAY_CUDA_DEVICE",
+    "type": "device",
+    "dependencies": [
+      "anari_core_1_0",
+      "anari_core_objects_base_1_0",
+      "khr_camera_orthographic",
+      "khr_camera_perspective",
+      "khr_frame_channel_normal",
+      "khr_frame_channel_albedo",
+      "khr_frame_channel_primitive_id",
+      "khr_frame_channel_object_id",
+      "khr_frame_channel_instance_id",
+      "khr_geometry_cone",
+      "khr_geometry_curve",
+      "khr_geometry_cylinder",
+      "khr_geometry_quad",
+      "khr_geometry_sphere",
+      "khr_geometry_triangle",
+      "khr_geometry_isosurface",
+      "khr_material_matte",
+      "khr_material_transparent_matte",
+      "khr_light_point",
+      "khr_sampler_image1d",
+      "khr_spatial_field_structured_regular",
+      "khr_volume_scivis",
+      "vsnray_camera_matrix"
+    ]
+  },
+  "objects": [
+    {
+      "type": "ANARI_RENDERER",
+      "name": "default",
+      "parameters": [
+        {
+          "name": "name",
+          "types": [
+            "ANARI_STRING"
+          ],
+          "tags": [],
+          "description": "optional object name"
+        },
+        {
+          "name": "background",
+          "types": [
+            "ANARI_FLOAT32_VEC4"
+          ],
+          "tags": [],
+          "default": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "description": "background color and alpha (RGBA)"
+        },
+        {
+          "name": "mode",
+          "types": [
+            "ANARI_STRING"
+          ],
+          "tags": [],
+          "default": "default",
+          "values": [
+            "default",
+            "Ng",
+            "albedo",
+            "motionVec",
+            "geometry.attribute0",
+            "geometry.attribute1",
+            "geometry.attribute2",
+            "geometry.attribute3",
+            "geometry.color"
+          ],
+          "description": "visualization modes"
+        },
+        {
+          "name": "heatMapEnabled",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "heat map visualizating clock cycles per pixel"
+        },
+        {
+          "name": "heatMapScale",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.1,
+          "description": "heat map scaling factor"
+        },
+        {
+          "name": "taa",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "Toggle TAA and accumulation"
+        },
+        {
+          "name": "taaAlpha",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.3,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "TAA weighting factor"
+        },
+        {
+          "name": "pixelSamples",
+          "types": [
+            "ANARI_INT32"
+          ],
+          "tags": [],
+          "default": 1,
+          "minimum": 1,
+          "description": "samples per-pixel"
+        },
+        {
+          "name": "ambientSamples",
+          "types": [
+            "ANARI_INT32"
+          ],
+          "tags": [],
+          "default": 1,
+          "minimum": 0,
+          "description": "AO samples per-pixel, per-frame"
+        },
+        {
+          "name": "ambientColor",
+          "types": [
+            "ANARI_FLOAT32_VEC3"
+          ],
+          "tags": [],
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "description": "ambient light color (RGB)"
+        },
+        {
+          "name": "ambientRadiance",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.2,
+          "description": "ambient light intensity"
+        }
+      ]
+    },
+    {
+      "type": "ANARI_RENDERER",
+      "name": "raycast",
+      "parameters": [
+        {
+          "name": "name",
+          "types": [
+            "ANARI_STRING"
+          ],
+          "tags": [],
+          "description": "optional object name"
+        },
+        {
+          "name": "background",
+          "types": [
+            "ANARI_FLOAT32_VEC4"
+          ],
+          "tags": [],
+          "default": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "description": "background color and alpha (RGBA)"
+        },
+        {
+          "name": "mode",
+          "types": [
+            "ANARI_STRING"
+          ],
+          "tags": [],
+          "default": "default",
+          "values": [
+            "default",
+            "Ng",
+            "albedo",
+            "geometry.attribute0",
+            "geometry.attribute1",
+            "geometry.attribute2",
+            "geometry.attribute3",
+            "geometry.color"
+          ],
+          "description": "visualization modes"
+        },
+        {
+          "name": "heatMapEnabled",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "heat map visualizing clock cycles per pixel"
+        },
+        {
+          "name": "heatMapScale",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.1,
+          "description": "heat map scaling factor"
+        }
+      ]
+    }
+  ]
+}

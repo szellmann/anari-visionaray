@@ -70,7 +70,7 @@ void UnstructuredField::commit()
     m_elements[cellID].begin = firstIndex;
     m_elements[cellID].end = lastIndex;
     m_elements[cellID].elemID = cellID;
-    m_elements[cellID].vertexBuffer = m_vertices.data();
+    m_elements[cellID].vertexBuffer = m_vertices.devicePtr();
     m_elements[cellID].indexBuffer = index;
   }
 
@@ -115,16 +115,23 @@ void UnstructuredField::commit()
       dco::UElem elem;
       elem.begin = elem.end = 0; // denotes that this is a grid!
       elem.elemID = /*firstGridID +*/ i;
-      elem.gridDimsBuffer = m_gridDims.data();
-      elem.gridDomainsBuffer = m_gridDomains.data();
-      elem.gridScalarsOffsetBuffer = m_gridScalarsOffsets.data();
-      elem.gridScalarsBuffer = m_gridScalars.data();
+      elem.gridDimsBuffer = m_gridDims.devicePtr();
+      elem.gridDomainsBuffer = m_gridDomains.devicePtr();
+      elem.gridScalarsOffsetBuffer = m_gridScalarsOffsets.devicePtr();
+      elem.gridScalarsBuffer = m_gridScalars.devicePtr();
       m_elements.push_back(elem);
     }
   }
 
   // sampling BVH
 
+#ifdef WITH_CUDA
+  lbvh_builder builder; // the only GPU builder Visionaray has (for now..)
+  m_samplingBVH = builder.build(
+    cuda_index_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
+
+  vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
+#else
   binned_sah_builder builder;
   builder.enable_spatial_splits(false);
 
@@ -132,6 +139,7 @@ void UnstructuredField::commit()
     index_bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
 
   vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
+#endif
 
   setStepSize(length(bounds().max-bounds().min)/50.f);
 
@@ -149,14 +157,27 @@ bool UnstructuredField::isValid() const
 
 aabb UnstructuredField::bounds() const
 {
+#ifdef WITH_CUDA
+  if (isValid()) {
+    bvh_node rootNode;
+    CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
+                              thrust::raw_pointer_cast(m_samplingBVH.nodes().data()),
+                              sizeof(rootNode),
+                              cudaMemcpyDeviceToHost));
+    return rootNode.get_bounds();
+  }
+#else
   if (isValid())
     return m_samplingBVH.node(0).get_bounds();
-
+#endif
   return {};
 }
 
 void UnstructuredField::buildGrid()
 {
+#ifdef WITH_CUDA
+  return;
+#endif
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(dims, worldBounds);
