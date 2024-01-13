@@ -443,6 +443,7 @@ struct Volume
   unsigned geomID{UINT_MAX}; // ID in group (internally realized as geom)
 
   struct {
+    unsigned tfID{UINT_MAX};
     unsigned fieldID{UINT_MAX}; // _should_ be same as volID
   } asTransferFunction1D;
 

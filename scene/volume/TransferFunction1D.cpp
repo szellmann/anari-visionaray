@@ -99,6 +99,7 @@ void TransferFunction1D::commit()
 
   vgeom.asVolume.data.bounds = m_bounds;
   vgeom.asVolume.data.volID = m_field->visionaraySpatialField().fieldID;
+  vgeom.asVolume.data.asTransferFunction1D.tfID = vtransfunc.tfID;
   vgeom.asVolume.data.asTransferFunction1D.fieldID
       = m_field->visionaraySpatialField().fieldID;
 
@@ -116,7 +117,7 @@ void TransferFunction1D::commit()
 
 #ifndef WITH_CUDA
   m_field->gridAccel().computeMaxOpacities(
-      deviceState()->onDevice.transferFunctions[vgeom.asVolume.data.volID]);
+      deviceState()->onDevice.transferFunctions[vtransfunc.tfID]);
 #endif
 
   m_field->addCommitObserver(this);

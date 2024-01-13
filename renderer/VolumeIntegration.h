@@ -41,7 +41,7 @@ inline float rayMarchVolume(ScreenSample &ss,
     float v = 0.f;
     if (sampleField(onDevice.spatialFields[vol.asTransferFunction1D.fieldID],P,v)) {
       float4 sample
-          = postClassify(ss,onDevice.transferFunctions[vol.volID],v);
+          = postClassify(ss,onDevice.transferFunctions[vol.asTransferFunction1D.tfID],v);
       color += dt * (1.f-alpha) * sample.w * sample.xyz();
       alpha += dt * (1.f-alpha) * sample.w;
     }
@@ -100,7 +100,7 @@ inline HitRecordVolume sampleFreeFlightDistance(
       float v = 0.f;
       if (sampleField(onDevice.spatialFields[vol.asTransferFunction1D.fieldID],P,v)) {
         float4 sample
-            = postClassify(ss,onDevice.transferFunctions[vol.volID],v);
+            = postClassify(ss,onDevice.transferFunctions[vol.asTransferFunction1D.tfID],v);
         hr.albedo = sample.xyz();
         hr.extinction = sample.w;
         float u = ss.random();
