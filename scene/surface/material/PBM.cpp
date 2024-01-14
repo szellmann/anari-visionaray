@@ -16,6 +16,11 @@ void PBM::commit()
   m_baseColor.sampler = getParamObject<Sampler>("baseColor");
   m_baseColor.attribute = toAttribute(getParamString("baseColor", "none"));
 
+  m_opacity.value = 1.f;
+  getParam("opacity", ANARI_FLOAT32, &m_opacity.value);
+  m_opacity.sampler = getParamObject<Sampler>("opacity");
+  m_opacity.attribute = toAttribute(getParamString("opacity", "none"));
+
   m_metallic.value = 1.f;
   getParam("metallic", ANARI_FLOAT32, &m_metallic.value);
   m_metallic.sampler = getParamObject<Sampler>("metallic");
@@ -38,6 +43,13 @@ void PBM::commit()
   if (m_baseColor.sampler) {
     vmat.asPhysicallyBased.baseColor.samplerID
         = m_baseColor.sampler->visionaraySampler().samplerID;
+  }
+
+  vmat.asPhysicallyBased.opacity.f = m_opacity.value;
+  vmat.asPhysicallyBased.opacity.attribute = m_opacity.attribute;
+  if (m_opacity.sampler) {
+    vmat.asPhysicallyBased.opacity.samplerID
+        = m_opacity.sampler->visionaraySampler().samplerID;
   }
 
   vmat.asPhysicallyBased.metallic.f = m_metallic.value;

@@ -21,7 +21,7 @@ struct PBM : public Material
     float value{1.f};
     helium::IntrusivePtr<Sampler> sampler;
     dco::Attribute attribute;
-  } m_metallic, m_roughness, m_ior;
+  } m_opacity, m_metallic, m_roughness, m_ior;
 };
 
 } // namespace visionaray

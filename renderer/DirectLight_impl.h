@@ -35,9 +35,9 @@ struct VisionarayRendererDirectLight
     bool hdriMiss = false;
 
     for (unsigned bounceID=0;bounceID<2;++bounceID) {
-      auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+      auto hr = intersectSurfaces<1>(ss, ray, onDevice, worldID);
       auto hrv = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
-      const bool volumeHit = hrv.hit && (!hr.hit || hrv.t < hr.t);
+      bool volumeHit = hrv.hit && (!hr.hit || hrv.t < hr.t);
 
       if (bounceID == 0) {
 
@@ -57,6 +57,7 @@ struct VisionarayRendererDirectLight
         hit = true;
 
         float4 color{1.f};
+        float opacity = 1.f;
         float3 xfmDir = ray.dir;
         float2 uv{hr.u,hr.v};
 

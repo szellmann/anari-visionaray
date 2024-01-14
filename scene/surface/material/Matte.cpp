@@ -18,11 +18,23 @@ void Matte::commit()
   m_colorSampler = getParamObject<Sampler>("color");
   m_colorAttribute = toAttribute(getParamString("color", "none"));
 
+  m_opacity.value = 1.f;
+  getParam("opacity", ANARI_FLOAT32, &m_opacity.value);
+  m_opacity.sampler = getParamObject<Sampler>("opacity");
+  m_opacity.attribute = toAttribute(getParamString("opacity", "none"));
+
   vmat.type = dco::Material::Matte;
   vmat.asMatte.color.rgb = m_color.xyz();
   vmat.asMatte.color.attribute = m_colorAttribute;
   if (m_colorSampler) {
     vmat.asMatte.color.samplerID = m_colorSampler->visionaraySampler().samplerID;
+  }
+
+  vmat.asMatte.opacity.f = m_opacity.value;
+  vmat.asMatte.opacity.attribute = m_opacity.attribute;
+  if (m_opacity.sampler) {
+    vmat.asMatte.opacity.samplerID
+        = m_opacity.sampler->visionaraySampler().samplerID;
   }
 
   dispatch();

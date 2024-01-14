@@ -876,9 +876,11 @@ struct Material
   unsigned matID{UINT_MAX};
   struct {
     MaterialParamRGB color{float3{0.8f, 0.8f, 0.8f}, UINT_MAX, Attribute::None};
+    MaterialParamF opacity{1.f, UINT_MAX, Attribute::None};
   } asMatte;
   struct {
     MaterialParamRGB baseColor{float3{1.f, 1.f, 1.f}, UINT_MAX, Attribute::None};
+    MaterialParamF opacity{1.f, UINT_MAX, Attribute::None};
     MaterialParamF metallic{1.f, UINT_MAX, Attribute::None};
     MaterialParamF roughness{1.f, UINT_MAX, Attribute::None};
     MaterialParamF ior{1.5f, UINT_MAX, Attribute::None};

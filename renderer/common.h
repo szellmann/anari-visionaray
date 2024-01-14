@@ -3,8 +3,9 @@
 // visionaray
 #include "visionaray/material.h"
 // ours
-#include <common.h>
-#include <DeviceCopyableObjects.h>
+#include "common.h"
+#include "DeviceCopyableObjects.h"
+#include "VisionarayGlobalState.h"
 
 namespace visionaray {
 
@@ -431,6 +432,21 @@ inline vec4 getColor(const dco::Material &mat,
 }
 
 VSNRAY_FUNC
+inline float getOpacity(const dco::Material &mat,
+                        const dco::Geometry &geom,
+                        const dco::Sampler *samplers,
+                        unsigned primID, const vec2 uv)
+{
+  float opacity = 1.f;
+  if (mat.type == dco::Material::Matte)
+    opacity = getF(mat.asMatte.opacity, geom, samplers, primID, uv);
+  else if (mat.type == dco::Material::PhysicallyBased) {
+    opacity = getF(mat.asPhysicallyBased.opacity, geom, samplers, primID, uv);
+  }
+  return opacity;
+}
+
+VSNRAY_FUNC
 inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         const dco::Geometry &geom,
                                         const dco::Sampler *samplers,
@@ -523,6 +539,36 @@ inline vec3 evalMaterial(const dco::Material &mat,
                                               lightIntensity);
   }
   return shadedColor;
+}
+
+template <bool EvalOpacity>
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
+    ScreenSample &ss, Ray ray,
+    const VisionarayGlobalState::DeviceObjectRegistry &onDevice,
+    unsigned worldID)
+{
+  auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+  while (EvalOpacity) {
+    if (!hr.hit) break;
+
+    float2 uv = toUV(ray.dir);
+    const dco::Instance &inst = onDevice.instances[hr.inst_id];
+    const dco::Group &group = onDevice.groups[inst.groupID];
+    const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
+    const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
+    float opacity = getOpacity(mat, geom, onDevice.samplers, hr.prim_id, uv);
+
+    float r = ss.random();
+    if (r > opacity) {
+      ray.ori = ray.ori + hr.t * ray.dir;
+      ray.tmin = 1e-4f;
+      hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+    } else {
+      break;
+    }
+  }
+  return hr;
 }
 
 inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)
