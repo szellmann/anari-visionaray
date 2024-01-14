@@ -32,7 +32,7 @@ void Perspective::commit()
   vcam.asPinholeCam.look_at(m_pos, m_pos + m_dir, m_up);
   vcam.asPinholeCam.set_image_region(m_imageRegion);
   vcam.asPinholeCam.set_lens_radius(apertureRadius);
-  vcam.asPinholeCam.set_focal_distance(focusDistance);
+  vcam.asPinholeCam.set_focal_distance(1.f);//focusDistance);
 }
 
 } // namespace visionaray

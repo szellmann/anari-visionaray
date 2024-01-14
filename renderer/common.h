@@ -455,21 +455,21 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float VdotH = dot(viewDir,H);
   const float LdotH = dot(lightDir,H);
 
-  // Fresnel
-  auto pow2 = [](float f) { return f*f; };
-  auto pow5 = [](float f) { return f*f*f*f*f; };
-  float f0 = pow2((1.f-ior)/(1.f+ior));
-  float F = f0 + (1.f - f0) * pow5(1.f - fabsf(VdotH));
-
   // Diffuse:
   vec3 diffuseColor = getRGBA(
       mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv).xyz();
+
+  // Fresnel
+  auto pow2 = [](float f) { return f*f; };
+  auto pow5 = [](float f) { return f*f*f*f*f; };
+  vec3 f0 = lerp(vec3(pow2((1.f-ior)/(1.f+ior))), diffuseColor, metallic);
+  vec3 F = f0 + (vec3(1.f) - f0) * pow5(1.f - fabsf(VdotH));
 
   // Metallic materials don't reflect diffusely:
   diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
 
   vec3 diffuseBRDF
-      = (1-F) * constants::inv_pi<float>() * diffuseColor * fmaxf(0.f,NdotL);
+      = (vec3(1.f)-F) * constants::inv_pi<float>() * diffuseColor * fmaxf(0.f,NdotL);
 
   // GGX microfacet distribution
   float D = (alpha*alpha*heaviside(NdotH))
@@ -482,7 +482,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
         / (fabsf(NdotV) + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
 
   float denom = 4.f * fabsf(NdotV) * fabsf(NdotL);
-  float specularBRDF = denom != 0.f ? (F * D * G) / denom : 0.f;
+  vec3 specularBRDF = denom != 0.f ? (F * D * G) / denom : vec3(0.f);
 
   return (diffuseBRDF + specularBRDF) * lightIntensity;
 }
