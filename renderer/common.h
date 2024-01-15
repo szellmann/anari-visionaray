@@ -426,7 +426,7 @@ inline vec4 getColor(const dco::Material &mat,
     const float metallic = getF(
         mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
     color = getRGBA(mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv);
-    color = lerp(color, vec4f(0.f, 0.f, 0.f, 1.f), metallic);
+    color = lerp(color, vec4f(0.f, 0.f, 0.f, color.w), metallic);
   }
   return color;
 }
@@ -438,10 +438,12 @@ inline float getOpacity(const dco::Material &mat,
                         unsigned primID, const vec2 uv)
 {
   float opacity = 1.f;
-  if (mat.type == dco::Material::Matte)
-    opacity = getF(mat.asMatte.opacity, geom, samplers, primID, uv);
-  else if (mat.type == dco::Material::PhysicallyBased) {
-    opacity = getF(mat.asPhysicallyBased.opacity, geom, samplers, primID, uv);
+  if (mat.type == dco::Material::Matte) {
+    vec4f color = getColor(mat, geom, samplers, primID, uv);
+    opacity = color.w * getF(mat.asMatte.opacity, geom, samplers, primID, uv);
+  } else if (mat.type == dco::Material::PhysicallyBased) {
+    vec4f color = getColor(mat, geom, samplers, primID, uv);
+    opacity = color.w * getF(mat.asPhysicallyBased.opacity, geom, samplers, primID, uv);
   }
   return opacity;
 }
