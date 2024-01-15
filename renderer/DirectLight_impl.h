@@ -57,7 +57,6 @@ struct VisionarayRendererDirectLight
         hit = true;
 
         float4 color{1.f};
-        float opacity = 1.f;
         float3 xfmDir = ray.dir;
         float2 uv{hr.u,hr.v};
 
