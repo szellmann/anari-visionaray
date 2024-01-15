@@ -555,7 +555,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
   while (EvalOpacity) {
     if (!hr.hit) break;
 
-    float2 uv = toUV(ray.dir);
+    float2 uv{hr.u, hr.v};
     const dco::Instance &inst = onDevice.instances[hr.inst_id];
     const dco::Group &group = onDevice.groups[inst.groupID];
     const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
