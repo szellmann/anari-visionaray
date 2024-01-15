@@ -561,8 +561,8 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
 
     float r = ss.random();
     if (r > opacity) {
-      ray.ori = ray.ori + hr.t * ray.dir;
-      ray.tmin = 1e-4f;
+      ray.tmin = hr.t + 1e-4f;
+      ray.tmax;
       hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
     } else {
       break;
