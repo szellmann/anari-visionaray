@@ -21,6 +21,7 @@ void Triangle::commit()
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
   m_vertexNormal = getParamObject<Array1D>("vertex.normal");
+  m_vertexTangent = getParamObject<Array1D>("vertex.tangent");
   m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
   m_vertexAttributes[1] = getParamObject<Array1D>("vertex.attribute1");
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
@@ -84,6 +85,25 @@ void Triangle::commit()
     vgeom.asTriangle.normal.data = vnormals.devicePtr();
     vgeom.asTriangle.normal.len = m_vertexNormal->size();
     vgeom.asTriangle.normal.typeInfo = getInfo(m_vertexNormal->elementType());
+  }
+
+  if (m_vertexTangent) {
+    vtangents.resize(m_vertexTangent->size());
+    if (m_vertexTangent->elementType() == ANARI_FLOAT32_VEC4) {
+      vtangents.reset(m_vertexTangent->beginAs<float4>());
+    } else if (m_vertexTangent->elementType() == ANARI_FLOAT32_VEC3) {
+      for (size_t i = 0; i < m_vertexTangent->size(); ++i) {
+        float3 tng = m_vertexTangent->beginAs<float3>()[i];
+        vtangents[i] = float4(tng, 1.f);
+      }
+    } else {
+      reportMessage(ANARI_SEVERITY_WARNING,
+          "unsupported type for 'vertex.tangent' on triangle geometry");
+    }
+
+    vgeom.asTriangle.tangent.data = vtangents.devicePtr();
+    vgeom.asTriangle.tangent.len = m_vertexTangent->size();
+    vgeom.asTriangle.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {

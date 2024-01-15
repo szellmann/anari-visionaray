@@ -79,6 +79,8 @@ enum class RenderMode
   Default,
   Ng,
   Ns,
+  Tangent,
+  Bitangent,
   Albedo,
   MotionVec,
   GeometryAttribute0,
@@ -241,6 +243,39 @@ inline vec3 getShadingNormal(
   }
 
   return sn;
+}
+
+VSNRAY_FUNC
+inline vec4 getTangent(
+    const dco::Geometry &geom, unsigned primID, const vec3 hitPos, const vec2 uv)
+{
+  vec4f tng(0.f);
+
+  if (geom.type == dco::Geometry::Triangle) {
+    if (geom.asTriangle.tangent.len) {
+      uint3 index;
+      if (geom.asTriangle.index.len > 0) {
+        index = ((uint3 *)geom.asTriangle.index.data)[primID];
+      } else {
+        index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
+      }
+      if (geom.asTriangle.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+        auto *tangents = (const vec3 *)geom.asTriangle.tangent.data;
+        vec3 tng1 = tangents[index.x];
+        vec3 tng2 = tangents[index.y];
+        vec3 tng3 = tangents[index.z];
+        tng = vec4(lerp(tng1, tng2, tng3, uv.x, uv.y), 1.f);
+      } else if (geom.asTriangle.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC4) {
+        auto *tangents = (const vec4 *)geom.asTriangle.tangent.data;
+        vec4 tng1 = tangents[index.x];
+        vec4 tng2 = tangents[index.y];
+        vec4 tng3 = tangents[index.z];
+        tng = lerp(tng1, tng2, tng3, uv.x, uv.y);
+      }
+    }
+  }
+
+  return tng;
 }
 
 VSNRAY_FUNC
@@ -447,6 +482,30 @@ inline float getOpacity(const dco::Material &mat,
     opacity = color.w * getF(mat.asPhysicallyBased.opacity, geom, samplers, primID, uv);
   }
   return opacity;
+}
+
+VSNRAY_FUNC
+inline vec3 getPerturbedNormal(const dco::Material &mat,
+                               const dco::Geometry &geom,
+                               const dco::Sampler *samplers,
+                               unsigned primID, const vec2 uv,
+                               const vec3 T, const vec3 B, const vec3 N)
+{
+  vec3f pn = N;
+
+  mat3 TBN(T,B,N);
+  if (mat.type == dco::Material::PhysicallyBased) {
+    const auto &samp = samplers[mat.asPhysicallyBased.normal.samplerID];
+    vec4 s = getSample(samp, geom, primID, uv);
+    vec3 tbnN = s.xyz();
+    if (length(tbnN) > 0.f) {
+      vec3f objN = TBN * tbnN;
+      //pn = lerp(N, objN, 0.5f); // encode in outTransform!
+      pn = objN;
+    }
+  }
+
+  return pn;
 }
 
 VSNRAY_FUNC

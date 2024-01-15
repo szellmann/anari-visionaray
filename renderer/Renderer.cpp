@@ -35,6 +35,10 @@ void Renderer::commit()
       state.renderMode = RenderMode::Ng;
     else if (renderMode == "Ns")
       state.renderMode = RenderMode::Ns;
+    else if (renderMode == "tangent")
+      state.renderMode = RenderMode::Tangent;
+    else if (renderMode == "bitangent")
+      state.renderMode = RenderMode::Bitangent;
     else if (renderMode == "albedo")
       state.renderMode = RenderMode::Albedo;
     else if (renderMode == "motionVec")

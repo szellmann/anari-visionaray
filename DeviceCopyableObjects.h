@@ -762,6 +762,7 @@ struct Geometry
     Array vertexAttributes[5];
     Array index;
     Array normal;
+    Array tangent;
   } asTriangle;
   struct {
     basic_triangle<3,float> *data{nullptr};
@@ -884,6 +885,7 @@ struct Material
     MaterialParamF metallic{1.f, UINT_MAX, Attribute::None};
     MaterialParamF roughness{1.f, UINT_MAX, Attribute::None};
     MaterialParamF ior{1.5f, UINT_MAX, Attribute::None};
+    Sampler normal;
   } asPhysicallyBased;
 };
 

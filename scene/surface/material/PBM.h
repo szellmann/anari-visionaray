@@ -22,6 +22,11 @@ struct PBM : public Material
     helium::IntrusivePtr<Sampler> sampler;
     dco::Attribute attribute;
   } m_opacity, m_metallic, m_roughness, m_ior;
+
+  struct {
+    helium::IntrusivePtr<Sampler> sampler;
+    //float scale{1.f};
+  } m_normal;
 };
 
 } // namespace visionaray

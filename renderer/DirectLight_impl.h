@@ -29,6 +29,8 @@ struct VisionarayRendererDirectLight
     float3 shadedColor{0.f};
     float3 gn{0.f};
     float3 sn{0.f};
+    float3 tng{0.f};
+    float3 btng{0.f};
     float3 viewDir{0.f};
     float3 hitPos{0.f};
     bool hit = false;
@@ -84,6 +86,13 @@ struct VisionarayRendererDirectLight
           hitPos = ray.ori + hr.t * ray.dir;
           gn = getNormal(geom, hr.prim_id, hitPos);
           sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
+          float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
+          if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
+            tng = tng4.xyz();
+            btng = cross(sn, tng) * tng4.w;
+            sn = getPerturbedNormal(
+                mat, geom, onDevice.samplers, hr.prim_id, uv, tng, btng, sn);
+          }
           color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
           result.Ng = gn;
@@ -189,6 +198,10 @@ struct VisionarayRendererDirectLight
             shadedColor = (gn + float3(1.f)) * float3(0.5f);
           else if (rendererState.renderMode == RenderMode::Ns)
             shadedColor = (sn + float3(1.f)) * float3(0.5f);
+          else if (rendererState.renderMode == RenderMode::Tangent)
+            shadedColor = tng;
+          else if (rendererState.renderMode == RenderMode::Bitangent)
+            shadedColor = btng;
           else if (rendererState.renderMode == RenderMode::Albedo)
             shadedColor = color.xyz();
           else if (rendererState.renderMode == RenderMode::MotionVec) {

@@ -36,6 +36,8 @@ void PBM::commit()
   m_ior.sampler = getParamObject<Sampler>("ior");
   m_ior.attribute = toAttribute(getParamString("ior", "none"));
 
+  m_normal.sampler = getParamObject<Sampler>("normal");
+
   vmat.type = dco::Material::PhysicallyBased;
 
   vmat.asPhysicallyBased.baseColor.rgb = m_baseColor.value.xyz();
@@ -71,6 +73,11 @@ void PBM::commit()
   if (m_ior.sampler) {
     vmat.asPhysicallyBased.ior.samplerID
         = m_ior.sampler->visionaraySampler().samplerID;
+  }
+
+  if (m_normal.sampler) {
+    vmat.asPhysicallyBased.normal.samplerID
+        = m_normal.sampler->visionaraySampler().samplerID;
   }
 
   dispatch();
