@@ -65,6 +65,7 @@
           "values": [
             "default",
             "Ng",
+            "Ns",
             "albedo",
             "motionVec",
             "geometry.attribute0",
@@ -193,6 +194,7 @@
           "values": [
             "default",
             "Ng",
+            "Ns",
             "albedo",
             "geometry.attribute0",
             "geometry.attribute1",

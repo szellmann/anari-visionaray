@@ -52,6 +52,8 @@ struct VisionarayRendererRaycast
       }
       else if (rendererState.renderMode == RenderMode::Ng)
         shadedColor = (gn + float3(1.f)) * float3(0.5f);
+      else if (rendererState.renderMode == RenderMode::Ns)
+        shadedColor = (sn + float3(1.f)) * float3(0.5f);
       else if (rendererState.renderMode == RenderMode::Albedo)
         shadedColor = color.xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute0)

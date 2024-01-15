@@ -78,6 +78,7 @@ enum class RenderMode
 {
   Default,
   Ng,
+  Ns,
   Albedo,
   MotionVec,
   GeometryAttribute0,

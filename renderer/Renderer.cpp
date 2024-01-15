@@ -33,6 +33,8 @@ void Renderer::commit()
       state.renderMode = RenderMode::Default;
     else if (renderMode == "Ng")
       state.renderMode = RenderMode::Ng;
+    else if (renderMode == "Ns")
+      state.renderMode = RenderMode::Ns;
     else if (renderMode == "albedo")
       state.renderMode = RenderMode::Albedo;
     else if (renderMode == "motionVec")
