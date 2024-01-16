@@ -16,6 +16,7 @@ void BlockStructuredField::commit()
   m_params.blockBounds = getParamObject<helium::Array1D>("block.bounds");
   m_params.blockLevel = getParamObject<helium::Array1D>("block.level");
   m_params.blockData = getParamObject<helium::ObjectArray>("block.data");
+  m_params.gridOrigin = getParam<float3>("gridOrigin", float3(0.f));
 
   if (!m_params.blockBounds) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -35,12 +36,18 @@ void BlockStructuredField::commit()
     return;
   }
 
+  size_t numLevels = m_params.cellWidth->totalSize();
   size_t numBlocks = m_params.blockData->totalSize();
   auto *blockBounds = m_params.blockBounds->beginAs<aabbi>();
   auto *blockLevels = m_params.blockLevel->beginAs<int>();
   auto *blockData = (Array3D **)m_params.blockData->handlesBegin();
 
   m_blocks.resize(numBlocks);
+
+  std::vector<aabb> levelBounds(numLevels);
+  for (auto &lb : levelBounds) {
+    lb.invalidate();
+  }
 
   for (size_t i=0; i<numBlocks; ++i) {
     m_blocks[i].bounds = blockBounds[i];
@@ -63,6 +70,28 @@ void BlockStructuredField::commit()
         }
       }
     }
+
+    if (levelBounds.size() <= m_blocks[i].level) {
+      levelBounds.resize(m_blocks[i].level + 1);
+      levelBounds[m_blocks[i].level].invalidate();
+    }
+    levelBounds[m_blocks[i].level].insert(m_blocks[i].worldBounds());
+  }
+
+  aabb voxelBounds;
+  voxelBounds.invalidate();
+  m_bounds.invalidate();
+
+  for (size_t i = 0; i < levelBounds.size(); ++i) {
+    voxelBounds.insert(levelBounds[i]);
+
+    float cw = m_params.cellWidth->dataAs<float>()[i];
+    levelBounds[i].min *= cw;
+    levelBounds[i].min += m_params.gridOrigin;
+    levelBounds[i].max *= cw;
+    levelBounds[i].max += m_params.gridOrigin;
+
+    m_bounds.insert(levelBounds[i]);
   }
 
   // do this now that m_scalars doesn't change anymore:
@@ -89,7 +118,11 @@ void BlockStructuredField::commit()
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 #endif
 
-  setStepSize(length(bounds().max-bounds().min)/50.f);
+  mat3 S = mat3::scaling(voxelBounds.size()/m_bounds.size());
+  vec3 T = voxelBounds.min-m_bounds.min;
+  vfield.asBlockStructured.voxelSpaceTransform = mat4x3(S,T);
+
+  setStepSize(length(voxelBounds.max-voxelBounds.min)/50.f);
 
   buildGrid();
 
@@ -105,20 +138,7 @@ bool BlockStructuredField::isValid() const
 
 aabb BlockStructuredField::bounds() const
 {
-#ifdef WITH_CUDA
-  if (isValid()) {
-    bvh_node rootNode;
-    CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
-                              thrust::raw_pointer_cast(m_samplingBVH.nodes().data()),
-                              sizeof(rootNode),
-                              cudaMemcpyDeviceToHost));
-    return rootNode.get_bounds();
-  }
-#else
-  if (isValid())
-    return m_samplingBVH.node(0).get_bounds();
-#endif
-  return {};
+  return m_bounds;
 }
 
 void BlockStructuredField::buildGrid()

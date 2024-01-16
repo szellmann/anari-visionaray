@@ -49,6 +49,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   {
     // One TLS per world
     DeviceObjectArray<dco::TLS> TLSs;
+    DeviceObjectArray<float> worldEPS;
     DeviceObjectArray<dco::Group> groups;
     DeviceObjectArray<dco::Surface> surfaces;
     DeviceObjectArray<dco::Instance> instances;
@@ -64,6 +65,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   struct DeviceObjectRegistry
   {
     dco::TLS *TLSs{nullptr};
+    float *worldEPS{nullptr};
     dco::Group *groups{nullptr};
     dco::Surface *surfaces{nullptr};
     dco::Instance *instances{nullptr};

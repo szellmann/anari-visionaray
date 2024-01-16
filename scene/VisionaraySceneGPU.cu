@@ -303,6 +303,8 @@ void VisionaraySceneGPU::dispatch()
   if (m_impl->parent->type == VisionaraySceneImpl::World) {
     deviceState()->dcos.TLSs.update(
         m_impl->parent->m_worldID, m_impl->m_worldTLS.ref());
+    deviceState()->dcos.worldEPS.update(m_impl->parent->m_worldID,
+        m_impl->parent->getWorldEPS());
   }
 
   // Dispatch group
@@ -322,6 +324,7 @@ void VisionaraySceneGPU::dispatch()
 
   // Upload/set accessible pointers
   deviceState()->onDevice.TLSs = deviceState()->dcos.TLSs.devicePtr();
+  deviceState()->onDevice.worldEPS = deviceState()->dcos.worldEPS.devicePtr();
   deviceState()->onDevice.groups = deviceState()->dcos.groups.devicePtr();
 }
 

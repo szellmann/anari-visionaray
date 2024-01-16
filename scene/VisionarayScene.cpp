@@ -15,6 +15,7 @@ VisionaraySceneImpl::VisionaraySceneImpl(
 
   if (type == World) {
     m_worldID = deviceState()->dcos.TLSs.alloc({});
+    deviceState()->dcos.worldEPS.alloc(1e-3f);
   }
   m_groupID = deviceState()->dcos.groups.alloc(dco::Group{});
 }
@@ -275,6 +276,15 @@ aabb VisionaraySceneImpl::getBounds() const
 #endif
 }
 
+float VisionaraySceneImpl::getWorldEPS() const
+{
+  aabb bounds = getBounds();
+  if (bounds.empty())
+    return 1e-3f;
+  float3 diag = bounds.max-bounds.min;
+  return fmaxf(1e-3f, length(diag) * 1e-5f);
+}
+
 void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 {
 #ifdef WITH_CUDA
@@ -353,6 +363,7 @@ void VisionaraySceneImpl::dispatch()
   // Dispatch world
   if (type == World) {
     m_state->dcos.TLSs.update(m_worldID, m_worldTLS.ref());
+    m_state->dcos.worldEPS.update(m_worldID, getWorldEPS());
   }
 
   // Dispatch group
@@ -372,6 +383,7 @@ void VisionaraySceneImpl::dispatch()
 
   // Upload/set accessible pointers
   m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();
+  m_state->onDevice.worldEPS = m_state->dcos.worldEPS.devicePtr();
   m_state->onDevice.groups = m_state->dcos.groups.devicePtr();
 }
 

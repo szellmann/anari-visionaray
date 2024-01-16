@@ -30,12 +30,15 @@ struct BlockStructuredField : public SpatialField
   index_bvh<dco::Block> m_samplingBVH;
 #endif
 
+  aabb m_bounds;
+
   struct Parameters
   {
     helium::IntrusivePtr<helium::Array1D> cellWidth;
     helium::IntrusivePtr<helium::Array1D> blockBounds;
     helium::IntrusivePtr<helium::Array1D> blockLevel;
     helium::IntrusivePtr<helium::ObjectArray> blockData;
+    float3 gridOrigin{0.f, 0.f, 0.f};
   } m_params;
 };
 

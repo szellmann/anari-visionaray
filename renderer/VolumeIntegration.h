@@ -157,7 +157,7 @@ inline HitRecordVolume sampleFreeFlightDistanceAllVolumes(
       result.inst_id = hrv.inst_id;
     }
     auto boxHit = intersect(ray, vol.bounds);
-    ray.tmin = boxHit.tfar + 1e-3f;
+    ray.tmin = boxHit.tfar + onDevice.worldEPS[worldID];
   }
 
   return result;

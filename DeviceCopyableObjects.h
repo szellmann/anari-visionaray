@@ -359,6 +359,9 @@ struct SpatialField
 
   } asStructuredRegular;
   struct {
+    // Sampling BVH. This BVH is in _voxel_ space, so rays that take samples
+    // must first be transformed there from world space in case these spaces
+    // aren't the same!
 #ifdef WITH_CUDA
     cuda_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
@@ -371,6 +374,15 @@ struct SpatialField
 #else
     index_bvh<Block>::bvh_ref samplingBVH;
 #endif
+    mat4x3 voxelSpaceTransform;
+
+    // TODO: woudl be better to do this once per ray and not once per sample:
+    VSNRAY_FUNC
+    inline float3 objectToVoxelSpace(const float3 &object) const
+    {
+      return voxelSpaceTransform * float4(object,1.f);
+    }
+
   } asBlockStructured;
 };
 
@@ -394,7 +406,7 @@ inline bool sampleField(SpatialField sf, vec3 P, float &value) {
     return true;
   } else if (sf.type == SpatialField::BlockStructured) {
     Ray ray;
-    ray.ori = P;
+    ray.ori = sf.asBlockStructured.objectToVoxelSpace(P);
     ray.dir = float3(1.f);
     ray.tmin = ray.tmax = 0.f;
 

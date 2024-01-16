@@ -72,6 +72,7 @@ struct VisionaraySceneImpl
   void updateGeometry(dco::Geometry geom);
   void attachLight(dco::Light light, unsigned id);
   aabb getBounds() const;
+  float getWorldEPS() const;
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
 #else
