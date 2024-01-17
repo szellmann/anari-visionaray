@@ -380,7 +380,9 @@ struct SpatialField
     VSNRAY_FUNC
     inline float3 objectToVoxelSpace(const float3 &object) const
     {
-      return voxelSpaceTransform * float4(object,1.f);
+      mat3 rot = top_left(voxelSpaceTransform);
+      vec3 trans = voxelSpaceTransform(3);
+      return rot * (object + trans);
     }
 
   } asBlockStructured;

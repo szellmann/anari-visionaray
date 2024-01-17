@@ -17,6 +17,7 @@ void BlockStructuredField::commit()
   m_params.blockLevel = getParamObject<helium::Array1D>("block.level");
   m_params.blockData = getParamObject<helium::ObjectArray>("block.data");
   m_params.gridOrigin = getParam<float3>("gridOrigin", float3(0.f));
+  m_params.gridSpacing = getParam<float3>("gridSpacing", float3(1.f));
 
   if (!m_params.blockBounds) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -80,19 +81,11 @@ void BlockStructuredField::commit()
 
   aabb voxelBounds;
   voxelBounds.invalidate();
-  m_bounds.invalidate();
-
   for (size_t i = 0; i < levelBounds.size(); ++i) {
     voxelBounds.insert(levelBounds[i]);
-
-    float cw = m_params.cellWidth->dataAs<float>()[i];
-    levelBounds[i].min *= cw;
-    levelBounds[i].min += m_params.gridOrigin;
-    levelBounds[i].max *= cw;
-    levelBounds[i].max += m_params.gridOrigin;
-
-    m_bounds.insert(levelBounds[i]);
   }
+  m_bounds.min = m_params.gridOrigin;
+  m_bounds.max = m_params.gridOrigin + (voxelBounds.max-voxelBounds.min) * m_params.gridSpacing;
 
   // do this now that m_scalars doesn't change anymore:
   for (size_t i=0; i<numBlocks; ++i) {
