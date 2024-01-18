@@ -22,7 +22,10 @@ struct VisionarayRendererRaycast
 
     bool hit = false;
 
-    if (hr.hit) {
+    float3 surfaceColor{0.f};
+    float surfaceAlpha = 0.f;
+    while (true) { // all transparent surfaces
+      if (!hr.hit) break;
       const auto &inst = onDevice.instances[hr.inst_id];
       const auto &group = onDevice.groups[inst.groupID];
       const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
@@ -69,18 +72,37 @@ struct VisionarayRendererRaycast
       else if (rendererState.renderMode == RenderMode::GeometryColor)
         shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
 
-      result.color = float4(float3(.8f)*dot(-ray.dir,gn),1.f);
-      result.color = float4(shadedColor,1.f);
-      result.depth = hr.t;
-      result.Ng = gn;
-      result.Ns = gn;
-      result.albedo = color.xyz();
-      result.primId = hr.prim_id;
-      result.objId = hr.geom_id;
-      result.instId = hr.inst_id;
+      float a = getOpacity(mat, geom, onDevice.samplers, hr.prim_id, uv);
+      surfaceColor += (1.f-surfaceAlpha) * a * shadedColor;
+      surfaceAlpha += (1.f-surfaceAlpha) * a;
 
-      ray.tmax = hr.t;
+      if (!hit) {
+        result.depth = hr.t;
+        result.Ng = gn;
+        result.Ns = gn;
+        result.albedo = color.xyz();
+        result.primId = hr.prim_id;
+        result.objId = hr.geom_id;
+        result.instId = hr.inst_id;
+      }
+
       hit = true;
+
+      if (surfaceAlpha < 0.999f) {
+        ray.tmin = hr.t + 1e-4f;
+        hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+      } else {
+        ray.tmax = hr.t;
+        break;
+      }
+    }
+
+    if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
+      auto hdri = onDevice.lights[rendererState.envID].asHDRI;
+      float2 uv = toUV(ray.dir);
+      result.color = over(float4(surfaceColor, surfaceAlpha), tex2D(hdri.radiance, uv));
+    } else {
+      result.color = over(float4(surfaceColor, surfaceAlpha), rendererState.bgColor);
     }
 
     hr = intersectVolumes(ray, onDevice.TLSs[worldID]);
@@ -104,14 +126,6 @@ struct VisionarayRendererRaycast
       result.instId = hr.inst_id;
 
       hit = true;
-    }
-
-    if (!hit &&
-        rendererState.envID >= 0 &&
-        onDevice.lights[rendererState.envID].visible) {
-      auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-      float2 uv = toUV(ray.dir);
-      result.color = tex2D(hdri.radiance, uv);
     }
 
     // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
