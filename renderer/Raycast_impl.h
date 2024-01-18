@@ -35,6 +35,15 @@ struct VisionarayRendererRaycast
       vec2f uv{hr.u,hr.v};
       vec3f gn = getNormal(geom, hr.prim_id, hitPos);
       vec3f sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
+      vec3f tng{0.f};
+      vec3f btng{0.f};
+      float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
+      if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
+        tng = tng4.xyz();
+        btng = cross(sn, tng) * tng4.w;
+        sn = getPerturbedNormal(
+            mat, geom, onDevice.samplers, hr.prim_id, uv, tng, btng, sn);
+      }
       vec4f color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
       float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
@@ -61,6 +70,10 @@ struct VisionarayRendererRaycast
         shadedColor = (sn + float3(1.f)) * float3(0.5f);
       else if (rendererState.renderMode == RenderMode::Albedo)
         shadedColor = color.xyz();
+      else if (rendererState.renderMode == RenderMode::Tangent)
+        shadedColor = tng;
+      else if (rendererState.renderMode == RenderMode::Bitangent)
+        shadedColor = btng;
       else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
         shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
