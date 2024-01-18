@@ -499,7 +499,7 @@ inline vec3 getPerturbedNormal(const dco::Material &mat,
     vec4 s = getSample(samp, geom, primID, uv);
     vec3 tbnN = s.xyz();
     if (length(tbnN) > 0.f) {
-      vec3f objN = TBN * tbnN;
+      vec3f objN = normalize(TBN * tbnN);
       //pn = lerp(N, objN, 0.5f); // encode in outTransform!
       pn = objN;
     }
