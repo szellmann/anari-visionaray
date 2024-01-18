@@ -20,6 +20,8 @@ struct VisionarayRendererRaycast
 
     auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
 
+    bool hit = false;
+
     if (hr.hit) {
       const auto &inst = onDevice.instances[hr.inst_id];
       const auto &group = onDevice.groups[inst.groupID];
@@ -78,6 +80,7 @@ struct VisionarayRendererRaycast
       result.instId = hr.inst_id;
 
       ray.tmax = hr.t;
+      hit = true;
     }
 
     hr = intersectVolumes(ray, onDevice.TLSs[worldID]);
@@ -99,6 +102,16 @@ struct VisionarayRendererRaycast
       result.primId = hr.prim_id;
       result.objId = hr.geom_id;
       result.instId = hr.inst_id;
+
+      hit = true;
+    }
+
+    if (!hit &&
+        rendererState.envID >= 0 &&
+        onDevice.lights[rendererState.envID].visible) {
+      auto hdri = onDevice.lights[rendererState.envID].asHDRI;
+      float2 uv = toUV(ray.dir);
+      result.color = tex2D(hdri.radiance, uv);
     }
 
     // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
