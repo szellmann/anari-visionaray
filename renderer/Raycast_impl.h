@@ -79,7 +79,7 @@ struct VisionarayRendererRaycast
       if (!hit) {
         result.depth = hr.t;
         result.Ng = gn;
-        result.Ns = gn;
+        result.Ns = sn;
         result.albedo = color.xyz();
         result.primId = hr.prim_id;
         result.objId = hr.geom_id;
