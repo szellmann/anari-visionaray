@@ -152,6 +152,9 @@ struct VisionarayRendererRaycast
   }
 
   RendererState rendererState;
+
+  constexpr static bool stochasticRendering{false};
+  constexpr static bool supportsTaa{false};
 };
 
 } // namespace visionaray

@@ -28,7 +28,12 @@ struct VisionarayRenderer
   }
 
   VSNRAY_FUNC
-  bool stochasticRendering() const {
+  constexpr bool stochasticRendering() const {
+    if (type == Raycast) {
+      return asRaycast.renderer.stochasticRendering;
+    } else if (type == DirectLight) {
+      return asDirectLight.renderer.stochasticRendering;
+    }
     return type != Raycast;
   }
 

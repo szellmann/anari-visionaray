@@ -269,6 +269,9 @@ struct VisionarayRendererDirectLight
   }
 
   RendererState rendererState;
+
+  constexpr static bool stochasticRendering{true};
+  constexpr static bool supportsTaa{true};
 };
 
 } // namespace visionaray
