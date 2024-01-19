@@ -1,6 +1,6 @@
 
+cmake_minimum_required(VERSION 3.23)
 project(anari_library_visionaray LANGUAGES C CXX)
-cmake_minimum_required(VERSION 3.12)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -110,6 +110,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 if (cuda)
   set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -O2 -g")
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -O3")
+
+# set_target_properties(${PROJECT_NAME}_cuda PROPERTIES CUDA_ARCHITECTURES "all-major")
+  set_target_properties(${PROJECT_NAME}_cuda PROPERTIES CUDA_ARCHITECTURES "native")
 
   target_sources(${PROJECT_NAME}_cuda PRIVATE ${SOURCES})
   target_sources(${PROJECT_NAME}_cuda PRIVATE

@@ -12,16 +12,22 @@ inline void renderFrame(const dco::Frame &frame,
                         uint2 size,
                         Rend &rend,
                         VisionarayGlobalState *state,
-                        const VisionarayGlobalState::DeviceObjectRegistry &onDevice,
+                        const VisionarayGlobalState::DeviceObjectRegistry &DD,
                         unsigned worldID,
                         int frameID,
                         int spp) {
 #ifdef WITH_CUDA
+  VisionarayGlobalState::DeviceObjectRegistry *onDevicePtr;
+  CUDA_SAFE_CALL(cudaMalloc(&onDevicePtr, sizeof(DD)));
+  CUDA_SAFE_CALL(cudaMemcpy(onDevicePtr, &DD, sizeof(DD), cudaMemcpyHostToDevice));
   cuda::for_each(0, size.x, 0, size.y,
 #else
+  auto *onDevicePtr = &DD;
   parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif
       [=] VSNRAY_GPU_FUNC (int x, int y) {
+
+        const VisionarayGlobalState::DeviceObjectRegistry &onDevice = *onDevicePtr;
 
         ScreenSample ss{x, y, frameID, size, {/*RNG*/}};
         Ray ray;
@@ -85,6 +91,9 @@ inline void renderFrame(const dco::Frame &frame,
        else
          frame.writeSample(x, y, rend.rendererState.accumID, finalSample);
      });
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaFree(onDevicePtr));
+#endif
 }
 
 } // namespace visionaray
