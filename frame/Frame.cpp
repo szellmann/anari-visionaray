@@ -234,11 +234,11 @@ void Frame::renderFrame()
     auto onDevice = state->onDevice;
 
     if (rend.type == VisionarayRenderer::Raycast)
-      visionaray::renderFrame(
-        frame, cam, size, rend.asRaycast.renderer, state, onDevice, worldID, frameID, rend.spp());
+      renderFrame_Raycast(
+        frame, cam, rend, size, state, onDevice, worldID, frameID, rend.spp());
     else if (rend.type == VisionarayRenderer::DirectLight)
-      visionaray::renderFrame(
-        frame, cam, size, rend.asDirectLight.renderer, state, onDevice, worldID, frameID, rend.spp());
+      renderFrame_DirectLight(
+        frame, cam, rend, size, state, onDevice, worldID, frameID, rend.spp());
     else assert(0);
 
     if (cam.type == dco::Camera::Pinhole)

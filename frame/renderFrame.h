@@ -2,20 +2,35 @@
 
 #include "frame/common.h"
 #include "frame/for_each.h"
+#include "renderer/Renderer.h"
 #include "DeviceCopyableObjects.h"
 
 namespace visionaray {
 
+void renderFrame_Raycast(const dco::Frame &frame,
+                         const dco::Camera &cam,
+                         const VisionarayRenderer &rend,
+                         uint2 size,
+                         VisionarayGlobalState *state,
+                         const VisionarayGlobalState::DeviceObjectRegistry &DD,
+                         unsigned worldID, int frameID, int spp);
+
+void renderFrame_DirectLight(const dco::Frame &frame,
+                             const dco::Camera &cam,
+                             const VisionarayRenderer &rend,
+                             uint2 size,
+                             VisionarayGlobalState *state,
+                             const VisionarayGlobalState::DeviceObjectRegistry &DD,
+                             unsigned worldID, int frameID, int spp);
+
 template <typename Rend>
 inline void renderFrame(const dco::Frame &frame,
                         const dco::Camera &cam,
-                        uint2 size,
                         const Rend rend,
+                        uint2 size,
                         VisionarayGlobalState *state,
                         const VisionarayGlobalState::DeviceObjectRegistry &DD,
-                        unsigned worldID,
-                        int frameID,
-                        int spp) {
+                        unsigned worldID, int frameID, int spp) {
 #ifdef WITH_CUDA
   VisionarayGlobalState::DeviceObjectRegistry *onDevicePtr;
   CUDA_SAFE_CALL(cudaMalloc(&onDevicePtr, sizeof(DD)));
