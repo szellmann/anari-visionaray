@@ -90,6 +90,7 @@ set(SOURCES
 target_sources(${PROJECT_NAME} PRIVATE ${SOURCES})
 target_sources(${PROJECT_NAME} PRIVATE
   frame/Frame.cpp
+  frame/renderFrame.cpp
   scene/volume/spatial_field/BlockStructuredField.cpp
   scene/volume/spatial_field/UnstructuredField.cpp
 )
@@ -114,12 +115,14 @@ if (cuda)
   target_sources(${PROJECT_NAME}_cuda PRIVATE ${SOURCES})
   target_sources(${PROJECT_NAME}_cuda PRIVATE
     frame/Frame.cu
+    frame/renderFrame.cu
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
   )
   set_source_files_properties(
     frame/Frame.cu
+    frame/renderFrame.cu
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
