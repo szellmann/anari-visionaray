@@ -10,7 +10,7 @@ template <typename Rend>
 inline void renderFrame(const dco::Frame &frame,
                         const dco::Camera &cam,
                         uint2 size,
-                        Rend &rend,
+                        const Rend rend,
                         VisionarayGlobalState *state,
                         const VisionarayGlobalState::DeviceObjectRegistry &DD,
                         unsigned worldID,
