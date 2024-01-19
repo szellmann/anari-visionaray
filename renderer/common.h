@@ -183,6 +183,42 @@ inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 }
 
 VSNRAY_FUNC
+inline uint32_t getSphereIndex(const dco::Geometry &geom, unsigned primID)
+{
+  uint32_t index;
+  if (geom.asSphere.index.len > 0) {
+    index = ((uint32_t *)geom.asSphere.index.data)[primID];
+  } else {
+    index = primID;
+  }
+  return index;
+}
+
+VSNRAY_FUNC
+inline uint2 getCylinderIndex(const dco::Geometry &geom, unsigned primID)
+{
+  uint2 index;
+  if (geom.asCylinder.index.len > 0) {
+    index = ((uint2 *)geom.asCylinder.index.data)[primID];
+  } else {
+    index = uint2(primID * 2, primID * 2 + 1);
+  }
+  return index;
+}
+
+VSNRAY_FUNC
+inline uint3 getTriangleIndex(const dco::Geometry &geom, unsigned primID)
+{
+  uint3 index;
+  if (geom.asTriangle.index.len > 0) {
+    index = ((uint3 *)geom.asTriangle.index.data)[primID];
+  } else {
+    index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
+  }
+  return index;
+}
+
+VSNRAY_FUNC
 inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hitPos)
 {
   vec3f gn(1.f,0.f,0.f);
@@ -224,12 +260,7 @@ inline vec3 getShadingNormal(
   if (geom.type == dco::Geometry::Triangle) {
     if (geom.asTriangle.normal.len
         && geom.asTriangle.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
-      uint3 index;
-      if (geom.asTriangle.index.len > 0) {
-        index = ((uint3 *)geom.asTriangle.index.data)[primID];
-      } else {
-        index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
-      }
+      uint3 index = getTriangleIndex(geom, primID);
       auto *normals = (const vec3 *)geom.asTriangle.normal.data;
       vec3 n1 = normals[index.x];
       vec3 n2 = normals[index.y];
@@ -253,12 +284,7 @@ inline vec4 getTangent(
 
   if (geom.type == dco::Geometry::Triangle) {
     if (geom.asTriangle.tangent.len) {
-      uint3 index;
-      if (geom.asTriangle.index.len > 0) {
-        index = ((uint3 *)geom.asTriangle.index.data)[primID];
-      } else {
-        index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
-      }
+      uint3 index = getTriangleIndex(geom, primID);
       if (geom.asTriangle.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
         auto *tangents = (const vec3 *)geom.asTriangle.tangent.data;
         vec3 tng1 = tangents[index.x];
@@ -320,12 +346,7 @@ inline vec4 getAttribute(
 
   // vertex colors take precedence over primitive colors
   if (geom.type == dco::Geometry::Triangle && vertexColors.len > 0) {
-    uint3 index;
-    if (geom.asTriangle.index.len > 0) {
-      index = ((uint3 *)geom.asTriangle.index.data)[primID];
-    } else {
-      index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
-    }
+    uint3 index = getTriangleIndex(geom, primID);
     const auto *source1
         = (const uint8_t *)vertexColors.data
             + index.x * vertexColorInfo.sizeInBytes;
@@ -342,24 +363,14 @@ inline vec4 getAttribute(
     color = lerp(c1, c2, c3, uv.x, uv.y);
   }
   else if (geom.type == dco::Geometry::Sphere && vertexColors.len > 0) {
-    uint32_t index;
-    if (geom.asSphere.index.len > 0) {
-      index = ((uint32_t *)geom.asSphere.index.data)[primID];
-    } else {
-      index = primID;
-    }
+    uint32_t index = getSphereIndex(geom, primID);
     const auto *source
         = (const uint8_t *)vertexColors.data
             + index * vertexColorInfo.sizeInBytes;
     convert(&color, source, vertexColorInfo);
   }
   else if (geom.type == dco::Geometry::Cylinder && vertexColors.len > 0) {
-    uint2 index;
-    if (geom.asCylinder.index.len > 0) {
-      index = ((uint2 *)geom.asCylinder.index.data)[primID];
-    } else {
-      index = uint2(primID * 2, primID * 2 + 1);
-    }
+    uint2 index = getCylinderIndex(geom, primID);
     const auto *source1
         = (const uint8_t *)vertexColors.data
             + index.x * vertexColorInfo.sizeInBytes;
