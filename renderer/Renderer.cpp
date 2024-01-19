@@ -28,6 +28,8 @@ void Renderer::commit()
   // variables supported by ALL renderers
   auto commitCommonState = [this](auto &state) {
     state.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
+    state.ambientColor = getParam<vec3>("ambientColor", vec3(1.f));
+    state.ambientRadiance = getParam<float>("ambientRadiance", 0.2f);
     std::string renderMode = getParamString("mode", "default");
     if (renderMode == "default")
       state.renderMode = RenderMode::Default;
@@ -65,8 +67,6 @@ void Renderer::commit()
   } else if (vrend.type == VisionarayRenderer::DirectLight) {
     auto &renderState = vrend.asDirectLight.renderer.rendererState;
     commitCommonState(renderState);
-    renderState.ambientColor = getParam<vec3>("ambientColor", vec3(1.f));
-    renderState.ambientRadiance = getParam<float>("ambientRadiance", 0.2f);
     renderState.occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
     renderState.ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
     renderState.pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);

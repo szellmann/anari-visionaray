@@ -63,6 +63,8 @@ struct VisionarayRendererRaycast
                                    viewDir,
                                    lightDir,
                                    intensity);
+        shadedColor +=
+            color.xyz() * rendererState.ambientColor * rendererState.ambientRadiance;
       }
       else if (rendererState.renderMode == RenderMode::Ng)
         shadedColor = (gn + float3(1.f)) * float3(0.5f);
@@ -110,6 +112,7 @@ struct VisionarayRendererRaycast
       }
     }
 
+    // Background
     if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
       auto hdri = onDevice.lights[rendererState.envID].asHDRI;
       float2 uv = toUV(ray.dir);
