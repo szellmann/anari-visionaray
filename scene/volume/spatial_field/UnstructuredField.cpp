@@ -47,9 +47,11 @@ void UnstructuredField::commit()
   // Calculate bounds //
 
   size_t numVerts = m_params.vertexPosition->size();
+  size_t numIndices = m_params.index->size();
   size_t numCells = m_params.cellIndex->size();
 
   m_vertices.resize(numVerts);
+  m_indices.resize(numIndices);
   m_elements.resize(numCells);
 
   auto *vertexPosition = m_params.vertexPosition->beginAs<vec3>();
@@ -57,10 +59,12 @@ void UnstructuredField::commit()
   auto *index = m_params.index->beginAs<uint64_t>();
   auto *cellIndex = m_params.cellIndex->beginAs<uint64_t>();
 
-  size_t numIndices = m_params.index->endAs<uint64_t>()-index;
-
   for (size_t i=0; i<m_vertices.size(); ++i) {
     m_vertices[i] = float4(vertexPosition[i],vertexData[i]);
+  }
+
+  for (size_t i=0; i<m_indices.size(); ++i) {
+    m_indices[i] = index[i];
   }
 
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
@@ -71,7 +75,7 @@ void UnstructuredField::commit()
     m_elements[cellID].end = lastIndex;
     m_elements[cellID].elemID = cellID;
     m_elements[cellID].vertexBuffer = m_vertices.devicePtr();
-    m_elements[cellID].indexBuffer = index;
+    m_elements[cellID].indexBuffer = m_indices.devicePtr();
   }
 
   // voxel grid extensions for AMR "stitching"

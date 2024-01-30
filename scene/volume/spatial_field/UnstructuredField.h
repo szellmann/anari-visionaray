@@ -22,6 +22,7 @@ struct UnstructuredField : public SpatialField
  private:
 
   HostDeviceArray<float4> m_vertices;
+  HostDeviceArray<uint64_t> m_indices;
   HostDeviceArray<dco::UElem> m_elements;
   // for stitcher
   HostDeviceArray<int3> m_gridDims;
