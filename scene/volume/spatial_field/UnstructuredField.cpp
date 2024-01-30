@@ -104,10 +104,10 @@ void UnstructuredField::commit()
         for (unsigned y=0;y<gd->size().y;++y) {
           for (unsigned x=0;x<gd->size().x;++x) {
             // TODO: can we actually iterate linearly here?!
-            size_t index = z*size_t(gd->size().x)*gd->size().y 
+            size_t idx = z*size_t(gd->size().x)*gd->size().y
                          + y*gd->size().x
                          + x;
-            float f = gd->dataAs<float>()[index];
+            float f = gd->dataAs<float>()[idx];
             m_gridScalars.push_back(f);
           }
         }
