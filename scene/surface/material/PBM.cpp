@@ -45,6 +45,8 @@ void PBM::commit()
   if (m_baseColor.sampler) {
     vmat.asPhysicallyBased.baseColor.samplerID
         = m_baseColor.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.baseColor.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.opacity.f = m_opacity.value;
@@ -52,6 +54,8 @@ void PBM::commit()
   if (m_opacity.sampler) {
     vmat.asPhysicallyBased.opacity.samplerID
         = m_opacity.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.opacity.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.metallic.f = m_metallic.value;
@@ -59,6 +63,8 @@ void PBM::commit()
   if (m_metallic.sampler) {
     vmat.asPhysicallyBased.metallic.samplerID
         = m_metallic.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.metallic.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.roughness.f = m_roughness.value;
@@ -66,6 +72,8 @@ void PBM::commit()
   if (m_roughness.sampler) {
     vmat.asPhysicallyBased.roughness.samplerID
         = m_roughness.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.ior.f = m_ior.value;
@@ -73,11 +81,15 @@ void PBM::commit()
   if (m_ior.sampler) {
     vmat.asPhysicallyBased.ior.samplerID
         = m_ior.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.ior.samplerID = UINT_MAX;
   }
 
   if (m_normal.sampler) {
     vmat.asPhysicallyBased.normal.samplerID
         = m_normal.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.normal.samplerID = UINT_MAX;
   }
 
   dispatch();

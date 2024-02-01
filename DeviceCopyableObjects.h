@@ -889,18 +889,22 @@ struct Material
   enum Type { Matte, PhysicallyBased, Unknown, };
   Type type{Unknown};
   unsigned matID{UINT_MAX};
-  struct {
-    MaterialParamRGB color{float3{0.8f, 0.8f, 0.8f}, UINT_MAX, Attribute::None};
-    MaterialParamF opacity{1.f, UINT_MAX, Attribute::None};
-  } asMatte;
-  struct {
-    MaterialParamRGB baseColor{float3{1.f, 1.f, 1.f}, UINT_MAX, Attribute::None};
-    MaterialParamF opacity{1.f, UINT_MAX, Attribute::None};
-    MaterialParamF metallic{1.f, UINT_MAX, Attribute::None};
-    MaterialParamF roughness{1.f, UINT_MAX, Attribute::None};
-    MaterialParamF ior{1.5f, UINT_MAX, Attribute::None};
-    Sampler normal;
-  } asPhysicallyBased;
+  union {
+    struct {
+      MaterialParamRGB color;
+      MaterialParamF opacity;
+    } asMatte;
+    struct {
+      MaterialParamRGB baseColor;
+      MaterialParamF opacity;
+      MaterialParamF metallic;
+      MaterialParamF roughness;
+      MaterialParamF ior;
+      struct {
+        unsigned samplerID;
+      } normal;
+    } asPhysicallyBased;
+  };
 };
 
 VSNRAY_FUNC

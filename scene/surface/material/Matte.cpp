@@ -28,6 +28,8 @@ void Matte::commit()
   vmat.asMatte.color.attribute = m_colorAttribute;
   if (m_colorSampler) {
     vmat.asMatte.color.samplerID = m_colorSampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asMatte.color.samplerID = UINT_MAX;
   }
 
   vmat.asMatte.opacity.f = m_opacity.value;
@@ -35,6 +37,8 @@ void Matte::commit()
   if (m_opacity.sampler) {
     vmat.asMatte.opacity.samplerID
         = m_opacity.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asMatte.opacity.samplerID = UINT_MAX;
   }
 
   dispatch();
