@@ -54,8 +54,9 @@ void Quad::commit()
       m_triangles[i*2+1].e2 = v4-v1;
     }
   } else {
-    m_triangles.resize(m_vertexPosition->size() / 2);
-    for (size_t i=0; i<m_triangles.size(); ++i) {
+    size_t numQuads = m_vertexPosition->size() / 4;
+    m_triangles.resize(numQuads * 2);
+    for (size_t i=0; i<numQuads; ++i) {
       const uint4 idx(i*4, i*4+1, i*4+2, i*4+3);
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
