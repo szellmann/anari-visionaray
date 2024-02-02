@@ -899,7 +899,7 @@ struct Material
       MaterialParamF opacity;
       MaterialParamF metallic;
       MaterialParamF roughness;
-      MaterialParamF ior;
+      float ior;
       struct {
         unsigned samplerID;
       } normal;

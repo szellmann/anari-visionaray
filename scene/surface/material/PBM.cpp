@@ -31,10 +31,8 @@ void PBM::commit()
   m_roughness.sampler = getParamObject<Sampler>("roughness");
   m_roughness.attribute = toAttribute(getParamString("roughness", "none"));
 
-  m_ior.value = 1.5f;
-  getParam("ior", ANARI_FLOAT32, &m_ior.value);
-  m_ior.sampler = getParamObject<Sampler>("ior");
-  m_ior.attribute = toAttribute(getParamString("ior", "none"));
+  m_ior = 1.5f;
+  getParam("ior", ANARI_FLOAT32, &m_ior);
 
   m_normal.sampler = getParamObject<Sampler>("normal");
 
@@ -76,14 +74,7 @@ void PBM::commit()
     vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
   }
 
-  vmat.asPhysicallyBased.ior.f = m_ior.value;
-  vmat.asPhysicallyBased.ior.attribute = m_ior.attribute;
-  if (m_ior.sampler) {
-    vmat.asPhysicallyBased.ior.samplerID
-        = m_ior.sampler->visionaraySampler().samplerID;
-  } else {
-    vmat.asPhysicallyBased.ior.samplerID = UINT_MAX;
-  }
+  vmat.asPhysicallyBased.ior = m_ior;
 
   if (m_normal.sampler) {
     vmat.asPhysicallyBased.normal.samplerID

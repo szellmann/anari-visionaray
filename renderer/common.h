@@ -532,8 +532,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
       mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
   const float roughness = getF(
       mat.asPhysicallyBased.roughness, geom, samplers, primID, uv);
-  const float ior = getF(
-      mat.asPhysicallyBased.ior, geom, samplers, primID, uv);
+  const float ior = mat.asPhysicallyBased.ior;
 
   const float alpha = roughness*roughness;
 
