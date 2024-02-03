@@ -781,6 +781,10 @@ struct Geometry
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
+    Array vertexAttributes[5];
+    Array index;
+    Array normal;
+    Array tangent;
   } asQuad;
   struct {
     basic_sphere<float> *data{nullptr};

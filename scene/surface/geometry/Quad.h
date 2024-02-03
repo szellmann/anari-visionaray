@@ -20,10 +20,17 @@ struct Quad : public Geometry
  private:
   void cleanup();
 
-  HostDeviceArray<basic_triangle<3, float>> m_triangles;
   helium::IntrusivePtr<Array1D> m_index;
   helium::IntrusivePtr<Array1D> m_vertexPosition;
+  helium::IntrusivePtr<Array1D> m_vertexNormal;
+  helium::IntrusivePtr<Array1D> m_vertexTangent;
   std::array<helium::IntrusivePtr<Array1D>, 5> m_vertexAttributes;
+
+  HostDeviceArray<basic_triangle<3, float>> m_triangles;
+  HostDeviceArray<uint4> vindex;
+  HostDeviceArray<float3> vnormals;
+  HostDeviceArray<float4> vtangents;
+  HostDeviceArray<uint8_t> vattributes[5];
 };
 
 } // namespace visionaray

@@ -219,6 +219,19 @@ inline uint3 getTriangleIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
+inline uint4 getQuadIndex(const dco::Geometry &geom, unsigned primID)
+{
+  uint4 index;
+  if (geom.asQuad.index.len > 0) {
+    index = ((uint4 *)geom.asQuad.index.data)[primID/2]; // primID refers to triangles!
+  } else {
+    primID /= 2; // tri to quad
+    index = uint4(primID * 4, primID * 4 + 1, primID * 4 + 2, primID * 4 + 3);
+  }
+  return index;
+}
+
+VSNRAY_FUNC
 inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hitPos)
 {
   vec3f gn(1.f,0.f,0.f);
@@ -227,6 +240,9 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
   if (geom.type == dco::Geometry::Triangle) {
     auto tri = geom.asTriangle.data[primID];
     gn = normalize(cross(tri.e1,tri.e2));
+  } else if (geom.type == dco::Geometry::Quad) {
+    auto qtri = geom.asQuad.data[primID];
+    gn = normalize(cross(qtri.e1,qtri.e2));
   } else if (geom.type == dco::Geometry::Sphere) {
     auto sph = geom.asSphere.data[primID];
     gn = normalize((hitPos-sph.center) / sph.radius);
@@ -312,6 +328,8 @@ inline dco::Array getVertexColors(const dco::Geometry &geom, dco::Attribute attr
   if (attrib != dco::Attribute::None) {
     if (geom.type == dco::Geometry::Triangle)
       return geom.asTriangle.vertexAttributes[(int)attrib];
+    else if (geom.type == dco::Geometry::Quad)
+      return geom.asQuad.vertexAttributes[(int)attrib];
     else if (geom.type == dco::Geometry::Sphere)
       return geom.asSphere.vertexAttributes[(int)attrib];
     else if (geom.type == dco::Geometry::Cylinder)
@@ -361,6 +379,30 @@ inline vec4 getAttribute(
     convert(&c2, source2, vertexColorInfo);
     convert(&c3, source3, vertexColorInfo);
     color = lerp(c1, c2, c3, uv.x, uv.y);
+  }
+  else if (geom.type == dco::Geometry::Quad && vertexColors.len > 0) {
+    uint4 index = getQuadIndex(geom, primID);
+    const auto *source1
+        = (const uint8_t *)vertexColors.data
+            + index.x * vertexColorInfo.sizeInBytes;
+    const auto *source2
+        = (const uint8_t *)vertexColors.data
+            + index.y * vertexColorInfo.sizeInBytes;
+    const auto *source3
+        = (const uint8_t *)vertexColors.data
+            + index.z * vertexColorInfo.sizeInBytes;
+    const auto *source4
+        = (const uint8_t *)vertexColors.data
+            + index.w * vertexColorInfo.sizeInBytes;
+    vec4f c1{dflt}, c2{dflt}, c3{dflt}, c4{dflt};
+    convert(&c1, source1, vertexColorInfo);
+    convert(&c2, source2, vertexColorInfo);
+    convert(&c3, source3, vertexColorInfo);
+    convert(&c4, source4, vertexColorInfo);
+    if (primID%2==0)
+      color = lerp(c1, c2, c4, uv.x, uv.y);
+    else
+      color = lerp(c3, c4, c2, 1.f-uv.x, 1.f-uv.y);
   }
   else if (geom.type == dco::Geometry::Sphere && vertexColors.len > 0) {
     uint32_t index = getSphereIndex(geom, primID);
