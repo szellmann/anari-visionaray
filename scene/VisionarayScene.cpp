@@ -230,7 +230,7 @@ void VisionaraySceneImpl::commit()
       const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
       if (!geom.isValid()) continue;
 
-      if (!geom.type == dco::Geometry::Instance) continue;
+      if (geom.type != dco::Geometry::Instance) continue;
 
       dco::Instance inst = geom.asInstance.data;
       dco::Group group = m_state->dcos.groups[inst.groupID];
