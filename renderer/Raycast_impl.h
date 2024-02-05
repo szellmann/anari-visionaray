@@ -18,6 +18,8 @@ struct VisionarayRendererRaycast
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
 
+    dco::World world = onDevice.worlds[worldID];
+
     auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
 
     bool hit = false;
@@ -53,16 +55,36 @@ struct VisionarayRendererRaycast
 
       if (rendererState.renderMode == RenderMode::Default) {
         float3 viewDir = -xfmDir;
-        float3 lightDir = -xfmDir;
-        float3 intensity(1.f);
-        shadedColor = evalMaterial(mat,
-                                   geom,
-                                   onDevice.samplers,
-                                   hr.prim_id,
-                                   uv, gn, sn,
-                                   viewDir,
-                                   lightDir,
-                                   intensity);
+        for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
+          const dco::Light &light = onDevice.lights[world.allLights[lightID]];
+
+          light_sample<float> ls;
+          vec3f intensity(0.f);
+          float dist = 1.f;
+          ls.pdf = 0.f;
+
+          if (light.type == dco::Light::Point) {
+            ls = light.asPoint.sample(hitPos+1e-4f, ss.random);
+            intensity = light.asPoint.intensity(hitPos);
+          } else if (light.type == dco::Light::Directional) {
+            ls = light.asDirectional.sample(hitPos+1e-4f, ss.random);
+            intensity = light.asDirectional.intensity(hitPos);
+          } else if (light.type == dco::Light::HDRI) {
+            ls = light.asHDRI.sample(hitPos+1e-4f, ss.random);
+            intensity = light.asHDRI.intensity(ls.dir);
+          }
+
+          float3 brdf = evalMaterial(mat,
+                                     geom,
+                                     onDevice.samplers,
+                                     hr.prim_id,
+                                     uv, gn, sn,
+                                     viewDir,
+                                     ls.dir,
+                                     intensity);
+          shadedColor += brdf / ls.pdf / (dist*dist);
+        }
+
         shadedColor +=
             color.xyz() * rendererState.ambientColor * rendererState.ambientRadiance;
       }
