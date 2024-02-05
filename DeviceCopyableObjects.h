@@ -986,6 +986,17 @@ struct Group
   Handle *lights{nullptr};
 };
 
+// World //
+
+struct World
+{
+  unsigned worldID{UINT_MAX};
+
+  unsigned numLights{0};
+  // flat list of lights active in all groups:
+  Handle *allLights{nullptr};
+};
+
 // Transfer functions //
 
 struct TransferFunction

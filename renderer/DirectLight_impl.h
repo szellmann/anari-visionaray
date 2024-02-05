@@ -24,6 +24,8 @@ struct VisionarayRendererDirectLight
     if (onDevice.TLSs[worldID].num_primitives() == 0)
       return result; // happens eg with TLSs of unsupported objects
 
+    dco::World world = onDevice.worlds[worldID];
+
     float3 throughput{1.f};
     float3 baseColor{0.f};
     float3 shadedColor{0.f};
@@ -120,10 +122,10 @@ struct VisionarayRendererDirectLight
         float dist = 1.f;
         ls.pdf = 0.f;
 
-        if (group.numLights > 0) {
-          int lightID = uniformSampleOneLight(ss.random, group.numLights);
+        if (world.numLights > 0) {
+          int lightID = uniformSampleOneLight(ss.random, world.numLights);
 
-          const dco::Light &light = onDevice.lights[group.lights[lightID]];
+          const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
           if (light.type == dco::Light::Point) {
             ls = light.asPoint.sample(hitPos+1e-4f, ss.random);

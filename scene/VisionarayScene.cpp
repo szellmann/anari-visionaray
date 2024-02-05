@@ -16,6 +16,7 @@ VisionaraySceneImpl::VisionaraySceneImpl(
   if (type == World) {
     m_worldID = deviceState()->dcos.TLSs.alloc({});
     deviceState()->dcos.worldEPS.alloc(1e-3f);
+    deviceState()->dcos.worlds.alloc(dco::World{});
   }
   m_groupID = deviceState()->dcos.groups.alloc(dco::Group{});
 }
@@ -24,6 +25,7 @@ VisionaraySceneImpl::~VisionaraySceneImpl()
 {
   if (type == World) {
     deviceState()->dcos.TLSs.free(m_worldID);
+    deviceState()->dcos.worlds.free(m_worldID);
   }
   deviceState()->dcos.groups.free(m_groupID);
 }
@@ -212,6 +214,31 @@ void VisionaraySceneImpl::commit()
   } else {
     m_TLS = tlsBuilder.build(TLS{}, m_BLSs.hostPtr(), m_BLSs.size());
   }
+
+  // World: build flat list of lights
+  if (type == World) {
+    m_allLights.clear();
+
+    // world lights
+    for (unsigned i=0; i<m_lights.size(); ++i)
+      m_allLights.push_back(m_lights[i]);
+
+    // instanced lights
+    for (const dco::Handle &geomID : m_geometries) {
+      if (!dco::validHandle(geomID)) continue;
+
+      const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
+      if (!geom.isValid()) continue;
+
+      if (!geom.type == dco::Geometry::Instance) continue;
+
+      dco::Instance inst = geom.asInstance.data;
+      dco::Group group = m_state->dcos.groups[inst.groupID];
+
+      for (unsigned i=0; i<group.numLights; ++i)
+        m_allLights.push_back(group.lights[i]);
+    }
+  }
 #endif
 
 #if 0
@@ -364,6 +391,11 @@ void VisionaraySceneImpl::dispatch()
   if (type == World) {
     m_state->dcos.TLSs.update(m_worldID, m_worldTLS.ref());
     m_state->dcos.worldEPS.update(m_worldID, getWorldEPS());
+
+    dco::World world; // TODO: move TLS and EPS in here!
+    world.numLights = m_allLights.size();
+    world.allLights = m_allLights.devicePtr();
+    m_state->dcos.worlds.update(m_worldID, world);
   }
 
   // Dispatch group
@@ -385,6 +417,9 @@ void VisionaraySceneImpl::dispatch()
   m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();
   m_state->onDevice.worldEPS = m_state->dcos.worldEPS.devicePtr();
   m_state->onDevice.groups = m_state->dcos.groups.devicePtr();
+  if (type == World) {
+    m_state->onDevice.worlds = m_state->dcos.worlds.devicePtr();
+  }
 }
 
 VisionarayGlobalState *VisionaraySceneImpl::deviceState()

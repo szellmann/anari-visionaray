@@ -296,6 +296,35 @@ void VisionaraySceneGPU::commit()
         GPU::TLS{}, m_impl->parent->m_BLSs.devicePtr(),
         m_impl->parent->m_BLSs.size());
   }
+
+  // World: build flat list of lights
+  if (m_impl->parent->type == CPU::World) {
+    m_impl->parent->m_allLights.clear();
+
+    // world lights
+    for (unsigned i=0; i<m_impl->parent->m_lights.size(); ++i)
+      m_impl->parent->m_allLights.push_back(m_impl->parent->m_lights[i]);
+
+    // instanced lights
+    for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
+      if (!dco::validHandle(geomID)) continue;
+
+      const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
+      if (!geom.isValid()) continue;
+
+      if (!geom.type == dco::Geometry::Instance) continue;
+
+      dco::Instance inst = geom.asInstance.data;
+      dco::Group group = deviceState()->dcos.groups[inst.groupID];
+
+      std::vector<dco::Handle> groupLights(group.numLights);
+      CUDA_SAFE_CALL(cudaMemcpy(groupLights.data(), group.lights,
+                                group.numLights*sizeof(dco::Handle),
+                                cudaMemcpyDefault));
+      for (unsigned i=0; i<group.numLights; ++i)
+        m_impl->parent->m_allLights.push_back(groupLights[i]);
+    }
+  }
 }
 
 void VisionaraySceneGPU::dispatch()
@@ -305,6 +334,11 @@ void VisionaraySceneGPU::dispatch()
         m_impl->parent->m_worldID, m_impl->m_worldTLS.ref());
     deviceState()->dcos.worldEPS.update(m_impl->parent->m_worldID,
         m_impl->parent->getWorldEPS());
+
+    dco::World world; // TODO: move TLS and EPS in here!
+    world.numLights = m_impl->parent->m_allLights.size();
+    world.allLights = m_impl->parent->m_allLights.devicePtr();
+    deviceState()->dcos.worlds.update(m_impl->parent->m_worldID, world);
   }
 
   // Dispatch group
@@ -326,6 +360,9 @@ void VisionaraySceneGPU::dispatch()
   deviceState()->onDevice.TLSs = deviceState()->dcos.TLSs.devicePtr();
   deviceState()->onDevice.worldEPS = deviceState()->dcos.worldEPS.devicePtr();
   deviceState()->onDevice.groups = deviceState()->dcos.groups.devicePtr();
+  if (m_impl->parent->type == VisionaraySceneImpl::World) {
+    deviceState()->onDevice.worlds = deviceState()->dcos.worlds.devicePtr();
+  }
 }
 
 void VisionaraySceneGPU::attachGeometry(dco::Geometry geom, unsigned geomID)

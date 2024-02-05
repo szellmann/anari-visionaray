@@ -39,6 +39,8 @@ struct VisionaraySceneImpl
   DeviceHandleArray m_geometries;
   DeviceHandleArray m_materials;
   DeviceHandleArray m_lights;
+  // flat list of lights (only used if type is World!)
+  DeviceHandleArray m_allLights;
 
   // Accels //
   TLS m_TLS;
