@@ -257,10 +257,10 @@ void VisionaraySceneGPU::commit()
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
         bls.asCylinder = m_impl->m_accelStorage.cylinderBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::BezierCurveCount) {
+      } else if (geom.type == dco::Geometry::BezierCurve) {
         unsigned index = bezierCurveCount++;
-        bls.type = dco::BLS::BezierCurveCount;
-        bls.asBezierCurveCount = m_impl->m_accelStorage.bezierCurveBLSs[index].ref();
+        bls.type = dco::BLS::BezierCurve;
+        bls.asBezierCurve = m_impl->m_accelStorage.bezierCurveBLSs[index].ref();
       } else if (geom.type == dco::Geometry::ISOSurface) {
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
