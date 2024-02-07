@@ -35,7 +35,7 @@ struct VisionarayRendererRaycast
 
       vec3f hitPos = ray.ori + hr.t * ray.dir;
       vec2f uv{hr.u,hr.v};
-      vec3f gn = getNormal(geom, hr.prim_id, hitPos);
+      vec3f gn = getNormal(geom, hr.prim_id, hitPos, uv);
       vec3f sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
       vec3f tng{0.f};
       vec3f btng{0.f};

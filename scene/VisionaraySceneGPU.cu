@@ -10,6 +10,7 @@ struct VisionaraySceneGPU::Impl
   typedef cuda_index_bvh<basic_triangle<3,float>> QuadBVH;
   typedef cuda_index_bvh<basic_sphere<float>>     SphereBVH;
   typedef cuda_index_bvh<basic_cylinder<float>>   CylinderBVH;
+  typedef cuda_index_bvh<dco::BezierCurve>        BezierCurveBVH;
   typedef cuda_index_bvh<dco::ISOSurface>         ISOSurfaceBVH;
   typedef cuda_index_bvh<dco::Volume>             VolumeBVH;
 
@@ -18,12 +19,13 @@ struct VisionaraySceneGPU::Impl
 
   // Accel storage //
   struct {
-    aligned_vector<TriangleBVH>   triangleBLSs;
-    aligned_vector<QuadBVH>       quadBLSs;
-    aligned_vector<SphereBVH>     sphereBLSs;
-    aligned_vector<CylinderBVH>   cylinderBLSs;
-    aligned_vector<ISOSurfaceBVH> isoSurfaceBLSs;
-    aligned_vector<VolumeBVH>     volumeBLSs;
+    aligned_vector<TriangleBVH>    triangleBLSs;
+    aligned_vector<QuadBVH>        quadBLSs;
+    aligned_vector<SphereBVH>      sphereBLSs;
+    aligned_vector<CylinderBVH>    cylinderBLSs;
+    aligned_vector<BezierCurveBVH> bezierCurveBLSs;
+    aligned_vector<ISOSurfaceBVH>  isoSurfaceBLSs;
+    aligned_vector<VolumeBVH>      volumeBLSs;
   } m_accelStorage;
 
   TLS m_TLS;
@@ -90,6 +92,7 @@ void VisionaraySceneGPU::commit()
   unsigned quadCount = 0;
   unsigned sphereCount = 0;
   unsigned cylinderCount = 0;
+  unsigned bezierCurveCount = 0;
   unsigned isoCount = 0;
   unsigned volumeCount = 0;
   unsigned instanceCount = 0;
@@ -113,6 +116,9 @@ void VisionaraySceneGPU::commit()
       case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
+      case dco::Geometry::BezierCurve:
+        bezierCurveCount++;
+        break;
       case dco::Geometry::ISOSurface:
         isoCount++;
         break;
@@ -129,12 +135,14 @@ void VisionaraySceneGPU::commit()
   m_impl->m_accelStorage.quadBLSs.resize(quadCount);
   m_impl->m_accelStorage.sphereBLSs.resize(sphereCount);
   m_impl->m_accelStorage.cylinderBLSs.resize(cylinderCount);
+  m_impl->m_accelStorage.bezierCurveBLSs.resize(bezierCurveCount);
   m_impl->m_accelStorage.isoSurfaceBLSs.resize(isoCount);
   m_impl->m_accelStorage.volumeBLSs.resize(volumeCount);
   // No instance storage: instance BLSs are the TLSs of child scenes
 
   // first, build BLSs
-  triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
+  triangleCount = quadCount = sphereCount = cylinderCount
+                = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
     if (!dco::validHandle(geomID)) continue;
 
@@ -187,6 +195,17 @@ void VisionaraySceneGPU::commit()
         CPU::CylinderBVH{}, hostData.data(), hostData.size());
       m_impl->m_accelStorage.cylinderBLSs[index]
         = GPU::CylinderBVH(accelStorage);
+    } else if (geom.type == dco::Geometry::BezierCurve) {
+      unsigned index = bezierCurveCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
+      // Until we have a high-quality GPU builder, do that on the CPU!
+      std::vector<dco::BezierCurve> hostData(geom.asBezierCurve.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.asBezierCurve.data,
+          hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
+      auto accelStorage = builder.build(
+        CPU::BezierCurveBVH{}, hostData.data(), hostData.size());
+      m_impl->m_accelStorage.bezierCurveBLSs[index]
+        = GPU::BezierCurveBVH(accelStorage);
     } else if (geom.type == dco::Geometry::ISOSurface) {
       unsigned index = isoCount++;
       builder.enable_spatial_splits(false); // no spatial splits for ISOs
@@ -210,7 +229,8 @@ void VisionaraySceneGPU::commit()
   m_impl->parent->m_worldBLSs.clear();
 
   // now initialize BVH refs for use in shader code:
-  triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
+  triangleCount = quadCount = sphereCount = cylinderCount
+                = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
     if (!dco::validHandle(geomID)) continue;
 
@@ -237,6 +257,10 @@ void VisionaraySceneGPU::commit()
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
         bls.asCylinder = m_impl->m_accelStorage.cylinderBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::BezierCurveCount) {
+        unsigned index = bezierCurveCount++;
+        bls.type = dco::BLS::BezierCurveCount;
+        bls.asBezierCurveCount = m_impl->m_accelStorage.bezierCurveBLSs[index].ref();
       } else if (geom.type == dco::Geometry::ISOSurface) {
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
@@ -272,6 +296,10 @@ void VisionaraySceneGPU::commit()
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
         bls.asCylinder = m_impl->m_accelStorage.cylinderBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::BezierCurve) {
+        unsigned index = bezierCurveCount++;
+        bls.type = dco::BLS::BezierCurve;
+        bls.asBezierCurve = m_impl->m_accelStorage.bezierCurveBLSs[index].ref();
       } else if (geom.type == dco::Geometry::ISOSurface) {
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
@@ -413,6 +441,17 @@ void VisionaraySceneGPU::attachGeometry(dco::Geometry geom, unsigned geomID)
         hostData[i].geom_id = geomID;
       }
       CUDA_SAFE_CALL(cudaMemcpy(geom.asCylinder.data, hostData.data(),
+          hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
+    }
+  } else if (geom.type == dco::Geometry::BezierCurve) {
+    if (geom.asBezierCurve.len > 0) {
+      std::vector<dco::BezierCurve> hostData(geom.asBezierCurve.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.asBezierCurve.data,
+          hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
+      for (size_t i=0;i<geom.asBezierCurve.len;++i) {
+        hostData[i].geom_id = geomID;
+      }
+      CUDA_SAFE_CALL(cudaMemcpy(geom.asBezierCurve.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     }
   } else if (geom.type == dco::Geometry::ISOSurface) {

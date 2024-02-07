@@ -53,8 +53,10 @@ struct Ray : basic_ray<float>
     Quad = 0x2,
     Sphere = 0x4,
     Cylinder = 0x8,
-    ISOSurface = 0x10,
-    Volume = 0x20,
+    Curve = 0x10,
+    BezierCurve = 0x20,
+    ISOSurface = 0x40,
+    Volume = 0x80,
   };
   unsigned intersectionMask = All;
   void *prd{nullptr};
@@ -590,11 +592,345 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   return result;
 }
 
+// Bezier curve primitive //
+
+struct BezierCurve : public primitive<unsigned>
+{
+  float3 w0, w1, w2, w3;
+  float r;
+
+  VSNRAY_FUNC vec3 f(float t) const
+  {
+    float tinv = 1.0f - t;
+    return tinv * tinv * tinv * w0
+     + 3.0f * tinv * tinv * t * w1
+        + 3.0f * tinv * t * t * w2
+                  + t * t * t * w3;
+  }
+
+  VSNRAY_FUNC vec3 dfdt(float t) const
+  {
+    float tinv = 1.0f - t;
+    return                 -3.0f * tinv * tinv * w0
+     + 3.0f * (3.0f * t * t - 4.0f * t + 1.0f) * w1
+                + 3.0f * (2.0f - 3.0f * t) * t * w2
+                                + 3.0f * t * t * w3;
+  }
+};
+
+VSNRAY_FUNC
+inline BezierCurve make_bezierCurve(
+    const vec3 &w0, const vec3 &w1, const vec3 &w2, const vec3 &w3, float r)
+{
+  BezierCurve curve;
+  curve.w0 = w0;
+  curve.w1 = w1;
+  curve.w2 = w2;
+  curve.w3 = w3;
+  curve.r = r;
+  return curve;
+}
+
+//=========================================================
+// Phantom Ray-Hair Intersector (Reshetov and Luebke, 2018)
+//=========================================================
+
+namespace phantom {
+
+// Ray/cone intersection from appendix A
+
+struct RayConeIntersection
+{
+  VSNRAY_FUNC inline bool intersect(float r, float dr)
+  {
+    float r2  = r * r;
+    float drr = r * dr;
+
+    float ddd = cd.x * cd.x + cd.y * cd.y;
+    dp        = c0.x * c0.x + c0.y * c0.y;
+    float cdd = c0.x * cd.x + c0.y * cd.y;
+    float cxd = c0.x * cd.y - c0.y * cd.x;
+
+    float c = ddd;
+    float b = cd.z * (drr - cdd);
+    float cdz2 = cd.z * cd.z;
+    ddd += cdz2;
+    float a = 2.0f * drr * cdd + cxd * cxd - ddd * r2 + dp * cdz2;
+
+    float discr = b * b - a * c;
+    s   = (b - (discr > 0.0f ? sqrtf(discr) : 0.0f)) / c;
+    dt  = (s * cd.z - cdd) / ddd;
+    dc  = s * s + dp;
+    sp  = cdd / cd.z;
+    dp += sp * sp;
+
+    return discr > 0.0f;
+  }
+
+  vec3  c0;
+  vec3  cd;
+  float s;
+  float dt;
+  float dp;
+  float dc;
+  float sp;
+};
+
+// TODO: use visionaray's ray/cyl test?!
+VSNRAY_FUNC inline
+bool intersectCylinder(const Ray &ray, vec3 p0, vec3 p1, float ra)
+{
+  vec3  ba = p1 - p0;
+  vec3  oc = ray.ori - p0;
+
+  float baba = dot(ba, ba);
+  float bard = dot(ba, ray.dir);
+  float baoc = dot(ba, oc);
+
+  float k2 = baba - bard * bard;
+  float k1 = baba * dot(oc, ray.dir) - baoc * bard;
+  float k0 = baba * dot(oc, oc) - baoc * baoc - ra * ra * baba;
+
+  float h = k1 * k1 - k2 * k0;
+
+  if (h < 0.0f)
+    return false;
+
+  h = sqrtf(h);
+  float t = (-k1 - h) / k2;
+
+  // body
+  float y = baoc + t * bard;
+  if (y > 0.0f && y < baba)
+    return true;
+
+  // caps
+  t = ((y < 0.0f ? 0.0f : baba) - baoc) / bard;
+  if (fabsf(k1 + k2 * t) < h)
+    return true;
+
+  return false;
+}
+
+struct TransformToRCC
+{
+  VSNRAY_FUNC inline TransformToRCC(const Ray &r)
+  {
+    vec3 e1;
+    vec3 e2;
+    vec3 e3 = normalize(r.dir);
+    make_orthonormal_basis(e1, e2, e3);
+    xformInv = mat4(
+        vec4(e1,    0.0f),
+        vec4(e2,    0.0f),
+        vec4(e3,    0.0f),
+        vec4(r.ori, 1.0f)
+        );
+    xform = inverse(xformInv);
+  }
+
+  VSNRAY_FUNC inline vec3 xfmPoint(vec3 point)
+  { return (xform * vec4(point, 1.0f)).xyz(); }
+
+  VSNRAY_FUNC inline vec3 xfmVector(vec3 vector)
+  { return (xform * vec4(vector, 0.0f)).xyz(); }
+
+  VSNRAY_FUNC inline vec3 xfmPointInv(vec3 point)
+  { return (xformInv * vec4(point, 1.0f)).xyz(); }
+
+  VSNRAY_FUNC inline vec3 xfmVectorInv(vec3 vector)
+  { return (xformInv * vec4(vector, 0.0f)).xyz(); }
+
+  mat4 xform;
+  mat4 xformInv;
+};
+
+} // namespace phantom
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &r, const BezierCurve &curve)
+{
+  hit_record<Ray, primitive<unsigned>> result;
+  result.hit = false;
+
+  // Early exit check against enclosing cylinder
+  auto distToCylinder = [&curve](vec3 pt) {
+    return length(cross(pt - curve.w0, pt - curve.w3)) / length(curve.w3 - curve.w0);
+  };
+
+  // TODO: could compute tighter bounding cylinder than this one!
+  float rmax = distToCylinder(curve.f(0.33333f));
+  rmax = fmaxf(rmax, distToCylinder(curve.f(0.66667f)));
+  rmax += curve.r;
+
+  vec3 axis = normalize(curve.w3 - curve.w0);
+  vec3 p0   = curve.w0 - axis * curve.r;
+  vec3 p1   = curve.w3 + axis * curve.r;
+
+  if (!phantom::intersectCylinder(r, p0, p1, rmax))
+    return result;
+
+  // Transform curve to RCC
+  phantom::TransformToRCC rcc(r);
+  BezierCurve xcurve = make_bezierCurve(
+      rcc.xfmPoint(curve.w0),
+      rcc.xfmPoint(curve.w1),
+      rcc.xfmPoint(curve.w2),
+      rcc.xfmPoint(curve.w3),
+      curve.r
+      );
+
+  // "Test for convergence. If the intersection is found,
+  // report it, otherwise start at the other endpoint."
+
+  // Compute curve end to start at
+  float tstart = dot(xcurve.w3 - xcurve.w0, r.dir) > 0.0f ? 0.0f : 1.0f;
+
+  for (int ep = 0; ep < 2; ++ep)
+  {
+    float t   = tstart;
+
+    phantom::RayConeIntersection rci;
+
+    float told = 0.0f;
+    float dt1 = 0.0f;
+    float dt2 = 0.0f;
+
+    for (int i = 0; i < 40; ++i)
+    {
+      rci.c0 = xcurve.f(t);
+      rci.cd = xcurve.dfdt(t);
+
+      bool phantom = !rci.intersect(curve.r, 0.0f/*cylinder*/);
+
+      // "In all examples in this paper we stop iterations when dt < 5x10^−5"
+      if (!phantom && fabsf(rci.dt) < 5e-5f) {
+        //vec3 n = normalize(curve.dfdt(t));
+        rci.s += rci.c0.z;
+        result.t = rci.s;
+        result.u = t; // abuse param u to store curve's t
+        result.hit = true;
+        result.isect_pos = r.ori + result.t * r.dir;
+        break;
+      }
+
+      rci.dt = min(rci.dt, 0.5f);
+      rci.dt = max(rci.dt, -0.5f);
+
+      dt1 = dt2;
+      dt2 = rci.dt;
+
+      // Regula falsi
+      if (dt1 * dt2 < 0.0f) {
+        float tnext = 0.0f;
+        // "we use the simplest possible approach by switching
+        // to the bisection every 4th iteration:"
+        if ((i & 3) == 0)
+          tnext = 0.5f * (told + t);
+        else
+          tnext = (dt2 * told - dt1 * t) / (dt2 - dt1);
+        told = t;
+        t = tnext;
+      } else {
+        told = t;
+        t += rci.dt;
+      }
+
+      if (t < 0.0f || t > 1.0f)
+        break;
+    }
+
+    if (!result.hit)
+      tstart = 1.0f - tstart;
+    else
+      break;
+  }
+
+  return result;
+}
+
+// From here: https://www.shadertoy.com/view/MdKBWt
+VSNRAY_FUNC inline aabb get_bounds(const BezierCurve &curve)
+{
+  // TODO: Quilez' test doesnt work for, eg.:
+  //  vec3 p0 = vec3(0.0, 0.0, 0.0);
+  //  vec3 p1 = vec3(0.5, 1.0, 0.0);
+  //  vec3 p2 = vec3(1.0, 1.0, 0.0);
+  //  vec3 p3 = vec3(1.5, 0.0, 0.5);
+  // TODO!!
+  vec3 p0 = curve.w0;
+  vec3 p1 = curve.w1;
+  vec3 p2 = curve.w2;
+  vec3 p3 = curve.w3;
+
+  // extremes
+  vec3 mi = min(p0,p3);
+  vec3 ma = max(p0,p3);
+
+  // note pascal triangle coefficnets
+  vec3 c = -1.0f*p0 + 1.0f*p1;
+  vec3 b =  1.0f*p0 - 2.0f*p1 + 1.0f*p2;
+  vec3 a = -1.0f*p0 + 3.0f*p1 - 3.0f*p2 + 1.0f*p3;
+
+  vec3 h = b*b - a*c;
+
+  // real solutions
+  if (h.x > 0.0f || h.y > 0.0f || h.z > 0.0f)
+  {
+    vec3 g(sqrtf(fabsf(h.x)), sqrtf(fabsf(h.y)), sqrtf(fabsf(h.z)));
+    vec3 t1 = clamp((-b - g)/a,vec3(0.0f),vec3(1.0f)); vec3 s1 = 1.0f-t1;
+    vec3 t2 = clamp((-b + g)/a,vec3(0.0f),vec3(1.0f)); vec3 s2 = 1.0f-t2;
+    vec3 q1 = s1*s1*s1*p0 + 3.0f*s1*s1*t1*p1 + 3.0f*s1*t1*t1*p2 + t1*t1*t1*p3;
+    vec3 q2 = s2*s2*s2*p0 + 3.0f*s2*s2*t2*p1 + 3.0f*s2*t2*t2*p2 + t2*t2*t2*p3;
+
+    if (h.x > 0.0f) {
+      mi.x = min(mi.x,min(q1.x,q2.x));
+      ma.x = max(ma.x,max(q1.x,q2.x));
+    }
+
+    if (h.y > 0.0f) {
+      mi.y = min(mi.y,min(q1.y,q2.y));
+      ma.y = max(ma.y,max(q1.y,q2.y));
+    }
+
+    if (h.z > 0.0f) {
+      mi.z = min(mi.z,min(q1.z,q2.z));
+      ma.z = max(ma.z,max(q1.z,q2.z));
+    }
+  }
+
+  return aabb(mi - vec3(curve.r), ma + vec3(curve.r));
+}
+
+VSNRAY_FUNC inline void split_primitive(
+    aabb& L, aabb& R, float plane, int axis, const BezierCurve &curve)
+{
+  VSNRAY_UNUSED(L);
+  VSNRAY_UNUSED(R);
+  VSNRAY_UNUSED(plane);
+  VSNRAY_UNUSED(axis);
+  VSNRAY_UNUSED(curve);
+
+  // TODO: implement this to support SBVHs
+}
+
 // BLS primitives //
 
 struct BLS
 {
-  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, Unknown, };
+  enum Type {
+    Triangle,
+    Quad,
+    Sphere,
+    Cylinder,
+    Curve,
+    BezierCurve,
+    ISOSurface,
+    Volume,
+    Instance,
+    Unknown,
+  };
   Type type{Unknown};
   unsigned blsID{UINT_MAX};
 #ifdef WITH_CUDA
@@ -603,6 +939,7 @@ struct BLS
     cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
     cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
     cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    cuda_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
     cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
     cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
   };
@@ -612,6 +949,7 @@ struct BLS
     index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
     index_bvh<basic_sphere<float>>::bvh_ref asSphere;
     index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
     index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
     index_bvh<dco::Volume>::bvh_ref asVolume;
   };
@@ -639,6 +977,8 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asSphere.node(0).get_bounds();
   else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
     return bls.asCylinder.node(0).get_bounds();
+  else if (bls.type == BLS::BezierCurve && bls.asBezierCurve.num_nodes())
+    return bls.asBezierCurve.node(0).get_bounds();
   else if (bls.type == BLS::ISOSurface && bls.asISOSurface.num_nodes())
     return bls.asISOSurface.node(0).get_bounds();
   else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
@@ -681,6 +1021,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
     return intersect(ray,bls.asSphere);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
     return intersect(ray,bls.asCylinder);
+  else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
+    return intersect(ray,bls.asBezierCurve);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
     return intersect(ray,bls.asISOSurface);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
@@ -712,7 +1054,8 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     Ray ray, const TLS &tls)
 {
   ray.intersectionMask
-      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cylinder | Ray::ISOSurface;
+      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cylinder |
+        Ray::Curve | Ray::BezierCurve | Ray::ISOSurface;
   return intersect(ray, tls);
 }
 
@@ -766,7 +1109,18 @@ struct Surface
 
 struct Geometry
 {
-  enum Type { Triangle, Quad, Sphere, Cylinder, ISOSurface, Volume, Instance, Unknown, };
+  enum Type {
+    Triangle,
+    Quad,
+    Sphere,
+    Cylinder,
+    Curve,
+    BezierCurve,
+    ISOSurface,
+    Volume,
+    Instance,
+    Unknown,
+  };
   Type type{Unknown};
   unsigned geomID{UINT_MAX};
   bool updated{false};
@@ -798,6 +1152,12 @@ struct Geometry
     Array vertexAttributes[5];
     Array index;
   } asCylinder;
+  struct {
+    dco::BezierCurve *data{nullptr};
+    size_t len{0};
+    Array vertexAttributes[5];
+    Array index;
+  } asBezierCurve;
   struct {
     dco::ISOSurface data;
   } asISOSurface;

@@ -26,6 +26,7 @@ struct VisionaraySceneImpl
   typedef index_bvh<basic_triangle<3,float>> QuadBVH;
   typedef index_bvh<basic_sphere<float>>     SphereBVH;
   typedef index_bvh<basic_cylinder<float>>   CylinderBVH;
+  typedef index_bvh<dco::BezierCurve>        BezierCurveBVH;
   typedef index_bvh<dco::ISOSurface>         ISOSurfaceBVH;
   typedef index_bvh<dco::Volume>             VolumeBVH;
 
@@ -50,12 +51,13 @@ struct VisionaraySceneImpl
 
   // Accel storage //
   struct {
-    aligned_vector<TriangleBVH>   triangleBLSs;
-    aligned_vector<QuadBVH>       quadBLSs;
-    aligned_vector<SphereBVH>     sphereBLSs;
-    aligned_vector<CylinderBVH>   cylinderBLSs;
-    aligned_vector<ISOSurfaceBVH> isoSurfaceBLSs;
-    aligned_vector<VolumeBVH>     volumeBLSs;
+    aligned_vector<TriangleBVH>    triangleBLSs;
+    aligned_vector<QuadBVH>        quadBLSs;
+    aligned_vector<SphereBVH>      sphereBLSs;
+    aligned_vector<CylinderBVH>    cylinderBLSs;
+    aligned_vector<BezierCurveBVH> bezierCurveBLSs;
+    aligned_vector<ISOSurfaceBVH>  isoSurfaceBLSs;
+    aligned_vector<VolumeBVH>      volumeBLSs;
   } m_accelStorage;
 
   // Internal state //

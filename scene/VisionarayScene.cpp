@@ -39,6 +39,7 @@ void VisionaraySceneImpl::commit()
   unsigned quadCount = 0;
   unsigned sphereCount = 0;
   unsigned cylinderCount = 0;
+  unsigned bezierCurveCount = 0;
   unsigned isoCount = 0;
   unsigned volumeCount = 0;
   unsigned instanceCount = 0;
@@ -62,6 +63,9 @@ void VisionaraySceneImpl::commit()
       case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
+      case dco::Geometry::BezierCurve:
+        bezierCurveCount++;
+        break;
       case dco::Geometry::ISOSurface:
         isoCount++;
         break;
@@ -78,12 +82,14 @@ void VisionaraySceneImpl::commit()
   m_accelStorage.quadBLSs.resize(quadCount);
   m_accelStorage.sphereBLSs.resize(sphereCount);
   m_accelStorage.cylinderBLSs.resize(cylinderCount);
+  m_accelStorage.bezierCurveBLSs.resize(bezierCurveCount);
   m_accelStorage.isoSurfaceBLSs.resize(isoCount);
   m_accelStorage.volumeBLSs.resize(volumeCount);
   // No instance storage: instance BLSs are the TLSs of child scenes
 
   // first, build BLSs
-  triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
+  triangleCount = quadCount = sphereCount = cylinderCount
+                = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_geometries) {
     if (!dco::validHandle(geomID)) continue;
 
@@ -112,6 +118,11 @@ void VisionaraySceneImpl::commit()
       builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
       m_accelStorage.cylinderBLSs[index] = builder.build(
         CylinderBVH{}, geom.asCylinder.data, geom.asCylinder.len);
+    } else if (geom.type == dco::Geometry::BezierCurve) {
+      unsigned index = bezierCurveCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
+      m_accelStorage.bezierCurveBLSs[index] = builder.build(
+        BezierCurveBVH{}, geom.asBezierCurve.data, geom.asBezierCurve.len);
     } else if (geom.type == dco::Geometry::ISOSurface) {
       unsigned index = isoCount++;
       builder.enable_spatial_splits(false); // no spatial splits for ISOs
@@ -131,7 +142,8 @@ void VisionaraySceneImpl::commit()
   m_worldBLSs.clear();
 
   // now initialize BVH refs for use in shader code:
-  triangleCount = quadCount = sphereCount = cylinderCount = isoCount = volumeCount = 0;
+  triangleCount = quadCount = sphereCount = cylinderCount
+                = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_geometries) {
     if (!dco::validHandle(geomID)) continue;
 
@@ -158,6 +170,10 @@ void VisionaraySceneImpl::commit()
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
         bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::BezierCurve) {
+        unsigned index = bezierCurveCount++;
+        bls.type = dco::BLS::BezierCurve;
+        bls.asBezierCurve = m_accelStorage.bezierCurveBLSs[index].ref();
       } else if (geom.type == dco::Geometry::ISOSurface) {
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
@@ -193,6 +209,10 @@ void VisionaraySceneImpl::commit()
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
         bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::BezierCurve) {
+        unsigned index = bezierCurveCount++;
+        bls.type = dco::BLS::BezierCurve;
+        bls.asBezierCurve = m_accelStorage.bezierCurveBLSs[index].ref();
       } else if (geom.type == dco::Geometry::ISOSurface) {
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
@@ -250,6 +270,7 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num triangle BLSs     : " << triangleCount << '\n';
   std::cout << "  num sphere BLSs       : " << sphereCount << '\n';
   std::cout << "  num cylinder BLSs     : " << cylinderCount << '\n';
+  std::cout << "  num bezier curve BLSs : " << bezierCurveCount << '\n';
   std::cout << "  num volume BLSs       : " << volumeCount << '\n';
   std::cout << "  num iso BLSs          : " << isoCount << '\n';
   std::cout << "  num instance BLSs     : " << instanceCount << '\n';
@@ -273,6 +294,7 @@ void VisionaraySceneImpl::release()
   m_accelStorage.triangleBLSs.clear();
   m_accelStorage.sphereBLSs.clear();
   m_accelStorage.cylinderBLSs.clear();
+  m_accelStorage.bezierCurveBLSs.clear();
   m_accelStorage.isoSurfaceBLSs.clear();
   m_accelStorage.volumeBLSs.clear();
   m_materials.clear();
@@ -335,6 +357,10 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
   } else if (geom.type == dco::Geometry::Cylinder) {
     for (size_t i=0;i<geom.asCylinder.len;++i) {
       geom.asCylinder.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::BezierCurve) {
+    for (size_t i=0;i<geom.asBezierCurve.len;++i) {
+      geom.asBezierCurve.data[i].geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::ISOSurface) {
     geom.asISOSurface.data.isoID = geomID;

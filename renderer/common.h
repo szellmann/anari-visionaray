@@ -232,7 +232,8 @@ inline uint4 getQuadIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
-inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hitPos)
+inline vec3 getNormal(
+    const dco::Geometry &geom, unsigned primID, const vec3 hitPos, const vec2 uv)
 {
   vec3f gn(1.f,0.f,0.f);
 
@@ -258,6 +259,10 @@ inline vec3 getNormal(const dco::Geometry &geom, unsigned primID, const vec3 hit
       vec3f pt = cyl.v1 + t * axis;
       gn = normalize(hitPos-pt);
     }
+  } else if (geom.type == dco::Geometry::BezierCurve) {
+    float t = uv.x;
+    vec3f curvePos = geom.asBezierCurve.data[primID].f(t);
+    return normalize(hitPos-curvePos);
   } else if (geom.type == dco::Geometry::ISOSurface) {
     if (!sampleGradient(geom.asISOSurface.data.field,hitPos,gn)) {
       return vec3f(0.f);
@@ -283,10 +288,10 @@ inline vec3 getShadingNormal(
       vec3 n3 = normals[index.z];
       sn = lerp(n1, n2, n3, uv.x, uv.y);
     } else {
-      sn = getNormal(geom, primID, hitPos);
+      sn = getNormal(geom, primID, hitPos, uv);
     }
   } else {
-    sn = getNormal(geom, primID, hitPos);
+    sn = getNormal(geom, primID, hitPos, uv);
   }
 
   return sn;

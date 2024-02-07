@@ -86,7 +86,7 @@ struct VisionarayRendererDirectLight
           const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
 
           hitPos = ray.ori + hr.t * ray.dir;
-          gn = getNormal(geom, hr.prim_id, hitPos);
+          gn = getNormal(geom, hr.prim_id, hitPos, uv);
           sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
           float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
           if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {

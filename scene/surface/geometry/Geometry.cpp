@@ -3,6 +3,7 @@
 
 #include "Geometry.h"
 // subtypes
+#include "BezierCurve.h"
 //#include "Cone.h"
 //#include "Curve.h"
 #include "Cylinder.h"
@@ -34,11 +35,13 @@ Geometry::~Geometry()
 Geometry *Geometry::createInstance(
     std::string_view subtype, VisionarayGlobalState *s)
 {
+  if (subtype == "bezierCurve")
+    return new BezierCurve(s);
 //  if (subtype == "cone")
 //    return new Cone(s);
 //  else if (subtype == "curve")
 //    return new Curve(s);
-  /*else*/ if (subtype == "cylinder")
+  else if (subtype == "cylinder")
     return new Cylinder(s);
   else if (subtype == "isosurface")
     return new ISOSurface(s);
