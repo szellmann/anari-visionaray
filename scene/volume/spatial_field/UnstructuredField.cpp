@@ -165,7 +165,7 @@ aabb UnstructuredField::bounds() const
   if (isValid()) {
     bvh_node rootNode;
     CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
-                              thrust::raw_pointer_cast(m_samplingBVH.nodes().data()),
+                              m_samplingBVH.nodes().data(),
                               sizeof(rootNode),
                               cudaMemcpyDeviceToHost));
     return rootNode.get_bounds();

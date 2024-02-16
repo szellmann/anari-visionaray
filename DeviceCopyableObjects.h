@@ -23,13 +23,13 @@
 #include "sampleCDF.h"
 
 #if defined(WITH_CUDA) && !defined(__CUDACC__)
-#include <thrust/device_vector.h>
+#include <visionaray/cuda/device_vector.h>
 namespace visionaray {
 // visionaray only defines these when compiling with nvcc:
 template <typename P>
-using cuda_bvh          = bvh_t<thrust::device_vector<P>, thrust::device_vector<bvh_node>>;
+using cuda_bvh          = bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>>;
 template <typename P>
-using cuda_index_bvh    = index_bvh_t<thrust::device_vector<P>, thrust::device_vector<bvh_node>, thrust::device_vector<unsigned>>;
+using cuda_index_bvh    = index_bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>, cuda::device_vector<unsigned>>;
 } // namespace visionaray
 #endif
 

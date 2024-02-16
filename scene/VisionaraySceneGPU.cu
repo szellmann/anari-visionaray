@@ -67,14 +67,14 @@ aabb VisionaraySceneGPU::getBounds() const
   if (m_impl->isGroup() && m_impl->m_TLS.num_nodes() > 0) {
     bvh_node rootNode;
     CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
-                              thrust::raw_pointer_cast(m_impl->m_TLS.nodes().data()),
+                              m_impl->m_TLS.nodes().data(),
                               sizeof(rootNode),
                               cudaMemcpyDeviceToHost));
     bounds = rootNode.get_bounds();
   } else if (m_impl->isWorld() && m_impl->m_worldTLS.num_nodes() > 0) {
     bvh_node rootNode;
     CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
-                              thrust::raw_pointer_cast(m_impl->m_worldTLS.nodes().data()),
+                              m_impl->m_worldTLS.nodes().data(),
                               sizeof(rootNode),
                               cudaMemcpyDeviceToHost));
     bounds = rootNode.get_bounds();
