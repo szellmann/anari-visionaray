@@ -44,7 +44,7 @@ struct DeviceArray
 
   DeviceArray(const DeviceArray &rhs)
   {
-    if (rhs != *this) {
+    if (&rhs != this) {
       CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
@@ -55,7 +55,7 @@ struct DeviceArray
 
   DeviceArray(DeviceArray &&rhs)
   {
-    if (rhs != *this) {
+    if (&rhs != this) {
       CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
@@ -69,7 +69,7 @@ struct DeviceArray
 
   DeviceArray &operator=(const DeviceArray &rhs)
   {
-    if (rhs != *this) {
+    if (&rhs != this) {
       CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
@@ -81,7 +81,7 @@ struct DeviceArray
 
   DeviceArray &operator=(DeviceArray &&rhs)
   {
-    if (rhs != *this) {
+    if (&rhs != this) {
       CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
