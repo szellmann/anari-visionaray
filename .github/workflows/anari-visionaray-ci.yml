@@ -19,7 +19,9 @@ jobs:
 
     - name: Install Packages
       if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: sudo apt install -y libglew-dev libboost-all-dev # nvidia-cuda-toolkit
+      run: |
+        sudo apt update
+        sudo apt install -y libglew-dev libboost-all-dev # nvidia-cuda-toolkit
 
     - name: Checkout ANARI-SDK
       uses: actions/checkout@v3
