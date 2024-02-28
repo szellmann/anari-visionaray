@@ -853,12 +853,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 // From here: https://www.shadertoy.com/view/MdKBWt
 VSNRAY_FUNC inline aabb get_bounds(const BezierCurve &curve)
 {
-  // TODO: Quilez' test doesnt work for, eg.:
-  //  vec3 p0 = vec3(0.0, 0.0, 0.0);
-  //  vec3 p1 = vec3(0.5, 1.0, 0.0);
-  //  vec3 p2 = vec3(1.0, 1.0, 0.0);
-  //  vec3 p3 = vec3(1.5, 0.0, 0.5);
-  // TODO!!
   vec3 p0 = curve.w0;
   vec3 p1 = curve.w1;
   vec3 p2 = curve.w2;
@@ -872,6 +866,17 @@ VSNRAY_FUNC inline aabb get_bounds(const BezierCurve &curve)
   vec3 c = -1.0f*p0 + 1.0f*p1;
   vec3 b =  1.0f*p0 - 2.0f*p1 + 1.0f*p2;
   vec3 a = -1.0f*p0 + 3.0f*p1 - 3.0f*p2 + 1.0f*p3;
+
+  // check if curve is quadratic, then derivative is a line.
+  // in that case we'll just lazily insert the remaining control points..
+  for (int d=0; d<3; ++d) {
+    if (a[d] == 0.f) {
+      mi[d] = min(mi[d],p1[d]);
+      mi[d] = min(mi[d],p2[d]);
+      ma[d] = max(mi[d],p1[d]);
+      ma[d] = max(mi[d],p2[d]);
+    }
+  }
 
   vec3 h = b*b - a*c;
 
