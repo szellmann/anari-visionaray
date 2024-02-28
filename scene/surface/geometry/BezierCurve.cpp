@@ -39,9 +39,9 @@ void BezierCurve::commit()
     const auto *indices = m_index->beginAs<unsigned>();
     const auto *vertices = m_vertexPosition->beginAs<float3>();
 
-    for (size_t i=0; i<m_index->size()-1; ++i) {
+    for (size_t i=0; i<m_index->size(); ++i) {
       unsigned first = indices[i];
-      unsigned last  = indices[i+1];
+      unsigned last  = (i == m_index->size()-1) ? first+3 : indices[i+1];
 
       for (size_t j=first; j<last; j+=3) {
         const auto &w0 = vertices[j];
