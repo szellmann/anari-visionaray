@@ -46,6 +46,7 @@ set(SOURCES
     array/ObjectArray.cpp
     camera/Camera.cpp
     camera/Matrix.cpp
+    camera/Orthographic.cpp
     camera/Perspective.cpp
     renderer/DirectLight.cpp
     renderer/Raycast.cpp

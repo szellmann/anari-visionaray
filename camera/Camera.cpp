@@ -2,6 +2,7 @@
 #include "Camera.h"
 // specific types
 #include "Matrix.h"
+#include "Orthographic.h"
 #include "Perspective.h"
 
 namespace visionaray {
@@ -20,6 +21,8 @@ Camera *Camera::createInstance(std::string_view type, VisionarayGlobalState *s)
 {
   if (type == "matrix")
     return new Matrix(s);
+  else if (type == "orthographic")
+    return new Orthographic(s);
   else if (type == "perspective")
     return new Perspective(s);
   else

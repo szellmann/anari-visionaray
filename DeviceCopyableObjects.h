@@ -1386,11 +1386,45 @@ struct TransferFunction
 
 struct Camera
 {
-  enum Type { Matrix, Pinhole, Unknown, };
+  enum Type { Matrix, Pinhole, Ortho, Unknown, };
   Type type{Unknown};
   unsigned camID{UINT_MAX};
   matrix_camera asMatrixCam;
   thin_lens_camera asPinholeCam;
+  struct {
+    void init(float3 pos, float3 dir, float3 up, float aspect, float height,
+              box2f image_region)
+    {
+      this->pos = pos;
+      this->dir = dir;
+      this->up  = up;
+      this->image_region = image_region;
+
+      float2 imgPlaneSize(height * aspect, height);
+
+      U = normalize(cross(dir, up)) * imgPlaneSize.x;
+      V = normalize(cross(U, dir)) * imgPlaneSize.y;
+      W = pos - 0.5f * U - 0.5f * V;
+    }
+
+    VSNRAY_FUNC
+    inline Ray primary_ray(Ray/**/, float x, float y, float width, float height) const
+    {
+      float2 screen((x + 0.5f) / width, (y + 0.5f) / height);
+      screen = (float2(1.0) - screen) * float2(image_region.min)
+                             + screen * float2(image_region.max);
+
+      Ray ray;
+      ray.ori = U * screen.x + V * screen.y + W;
+      ray.dir = dir;
+      ray.tmin = 0.f;
+      ray.tmax = FLT_MAX;
+      return ray;
+    }
+    float3 dir,pos,up;
+    float3 U, V, W;
+    box2f image_region;
+  } asOrthoCam;
 };
 
 // Frame //
