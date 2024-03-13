@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(anari 0.7.0 REQUIRED)
-find_package(GLEW REQUIRED) # required by visionaray (TODO!)
 find_package(visionaray 0.3.4 REQUIRED)
 
 option(ANARI_VISIONARAY_ENABLE_CUDA "Compile the CUDA device" OFF)
