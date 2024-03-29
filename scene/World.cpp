@@ -189,12 +189,30 @@ void World::rebuildTLS()
   vscene = newVisionarayScene(VisionaraySceneImpl::World, deviceState());
 
   uint32_t id = 0;
+  uint32_t lightID = 0;
   std::for_each(m_instances.begin(), m_instances.end(), [&](auto *i) {
     if (i && i->isValid()
         && (!i->group()->surfaces().empty()
             || !i->group()->volumes().empty())) {
       i->visionarayGeometryUpdate();
       vscene->attachGeometry(i->visionarayGeometry(), dco::makeDefaultMaterial(), id);
+    } else if (i->group()->surfaces().empty() && i->group()->volumes().empty() && 
+       !i->group()->lights().empty()) {
+
+      // Only lights - these will not end up on a valid instance
+      // (as there's no BLS), therefore add them here
+      // TODO: we should transform those lights..
+      std::for_each(i->group()->lights().begin(),
+          i->group()->lights().end(),
+          [&](auto *o) {
+            auto *l = (Light *)o;
+            if (l && l->isValid()) {
+              vscene->attachLight(l->visionarayLight(), lightID++);
+            } else {
+              reportMessage(
+                  ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");
+            }
+          });
     } else {
       if (i->group()->surfaces().empty()) {
         reportMessage(ANARI_SEVERITY_DEBUG,
