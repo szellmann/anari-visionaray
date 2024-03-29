@@ -94,7 +94,7 @@ void Group::visionaraySceneConstruct()
     return;
 
   reportMessage(
-      ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding embree scene");
+      ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding visionaray scene");
 
   if (vscene)
     vscene->release();
@@ -174,7 +174,7 @@ void Group::visionaraySceneCommit()
     return;
 
   reportMessage(
-      ANARI_SEVERITY_DEBUG, "visionaray::Group committing embree scene");
+      ANARI_SEVERITY_DEBUG, "visionaray::Group committing visionaray scene");
 
   // Give geometry types such as iso-surfaces the change to update themselves
   if (m_surfaceData) {
