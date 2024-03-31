@@ -8,7 +8,6 @@
 #include "scene/light/HDRI.h"
 #include "Frame.h"
 #include "for_each.h"
-#include "renderFrame.h"
 
 namespace visionaray {
 
@@ -215,41 +214,35 @@ void Frame::renderFrame()
 #else
       std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
 #endif
-      rend.rendererState().accumID = 0;
+      rend.rendererState.accumID = 0;
       m_nextFrameReset = false;
     }
 
-    rend.rendererState().envID = HDRI::backgroundID;
+    rend.rendererState.envID = HDRI::backgroundID;
 
     if (cam.type == dco::Camera::Pinhole) {
-      rend.rendererState().currMV = cam.asPinholeCam.get_view_matrix();
-      rend.rendererState().currPR = cam.asPinholeCam.get_proj_matrix();
+      rend.rendererState.currMV = cam.asPinholeCam.get_view_matrix();
+      rend.rendererState.currPR = cam.asPinholeCam.get_proj_matrix();
     } else if (cam.type == dco::Camera::Matrix) {
-      rend.rendererState().currMV = cam.asMatrixCam.get_view_matrix();
-      rend.rendererState().currPR = cam.asMatrixCam.get_proj_matrix();
+      rend.rendererState.currMV = cam.asMatrixCam.get_view_matrix();
+      rend.rendererState.currPR = cam.asMatrixCam.get_proj_matrix();
     }
 
     int frameID = (int)vframe.frameCounter++; // modify the member here!
     auto worldID = scene->m_worldID;
     auto onDevice = state->onDevice;
 
-    if (rend.type == VisionarayRenderer::Raycast)
-      renderFrame_Raycast(
-        frame, cam, rend, size, state, onDevice, worldID, frameID, rend.spp());
-    else if (rend.type == VisionarayRenderer::DirectLight)
-      renderFrame_DirectLight(
-        frame, cam, rend, size, state, onDevice, worldID, frameID, rend.spp());
-    else assert(0);
+    rend.renderFrame(frame, cam, size, state, onDevice, worldID, frameID);
 
     if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.end_frame();
     else if (cam.type == dco::Camera::Matrix)
       cam.asMatrixCam.end_frame();
 
-    rend.rendererState().prevMV = rend.rendererState().currMV;
-    rend.rendererState().prevPR = rend.rendererState().currPR;
+    rend.rendererState.prevMV = rend.rendererState.currMV;
+    rend.rendererState.prevPR = rend.rendererState.currPR;
 
-    rend.rendererState().accumID++;
+    rend.rendererState.accumID++;
 
     if (m_renderer->visionarayRenderer().taa()) {
       // Update history texture
@@ -391,7 +384,7 @@ void Frame::checkAccumulationReset()
 bool Frame::checkTAAReset()
 {
   const auto numPixels = vframe.size.x * vframe.size.y;
-  const float alpha = m_renderer->visionarayRenderer().rendererState().taaAlpha;
+  const float alpha = m_renderer->visionarayRenderer().rendererState.taaAlpha;
 
   const bool taaEnabled = m_renderer->visionarayRenderer().taa();
 

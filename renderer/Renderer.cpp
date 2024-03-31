@@ -61,15 +61,11 @@ void Renderer::commit()
     state.taaAlpha = getParam<float>("taaAlpha", 0.3f);
   };
 
-  if (vrend.type == VisionarayRenderer::Raycast) {
-    auto &renderState = vrend.asRaycast.renderer.rendererState;
-    commitCommonState(renderState);
-  } else if (vrend.type == VisionarayRenderer::DirectLight) {
-    auto &renderState = vrend.asDirectLight.renderer.rendererState;
-    commitCommonState(renderState);
-    renderState.occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
-    renderState.ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
-    renderState.pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);
+  commitCommonState(vrend.rendererState);
+  if (vrend.type == VisionarayRenderer::DirectLight) {
+    vrend.rendererState.occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
+    vrend.rendererState.ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
+    vrend.rendererState.pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);
   }
 }
 

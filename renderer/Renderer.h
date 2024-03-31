@@ -15,16 +15,20 @@ struct VisionarayRenderer
   enum Type { Raycast, DirectLight, };
   Type type;
 
-  VSNRAY_FUNC
-  PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
-        const VisionarayGlobalState::DeviceObjectRegistry &onDevice) const {
+  void renderFrame(const dco::Frame &frame,
+                   const dco::Camera &cam,
+                   uint2 size,
+                   VisionarayGlobalState *state,
+                   const VisionarayGlobalState::DeviceObjectRegistry &DD,
+                   unsigned worldID, int frameID)
+  {
     if (type == Raycast) {
-      return asRaycast.renderer.renderSample(ss, ray, worldID, onDevice);
+      asRaycast.renderer.renderFrame(
+          frame, cam, size, state, DD, rendererState, worldID, frameID);
     } else if (type == DirectLight) {
-      return asDirectLight.renderer.renderSample(ss, ray, worldID, onDevice);
+      asDirectLight.renderer.renderFrame(
+          frame, cam, size, state, DD, rendererState, worldID, frameID);
     }
-
-    return {};
   }
 
   VSNRAY_FUNC
@@ -39,33 +43,7 @@ struct VisionarayRenderer
 
   VSNRAY_FUNC
   bool taa() const {
-    return type == DirectLight && rendererState().taaEnabled;
-  }
-
-  VSNRAY_FUNC
-  int spp() const {
-    if (type == DirectLight)
-      return asDirectLight.renderer.rendererState.pixelSamples;
-    else
-      return 1;
-  }
-
-  VSNRAY_FUNC
-  const RendererState &rendererState() const {
-    if (type == Raycast)
-      return asRaycast.renderer.rendererState;
-    else
-      return asDirectLight.renderer.rendererState;
-  }
-
-  VSNRAY_FUNC
-  const RendererState &constRendererState() const {
-    return rendererState();
-  }
-
-  VSNRAY_FUNC
-  RendererState &rendererState() {
-    return const_cast<RendererState &>(constRendererState());
+    return type == DirectLight && rendererState.taaEnabled;
   }
 
   struct {
@@ -75,6 +53,8 @@ struct VisionarayRenderer
   struct {
     VisionarayRendererDirectLight renderer;
   } asDirectLight;
+
+  RendererState rendererState;
 };
 
 struct Renderer : public Object
