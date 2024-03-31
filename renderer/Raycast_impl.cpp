@@ -213,15 +213,8 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
 
         for (int sampleID=0; sampleID<spp; ++sampleID) {
 
-          if (cam.type == dco::Camera::Pinhole)
-            ray = cam.asPinholeCam.primary_ray(
-                Ray{}, ss.random, float(x), float(y), float(size.x), float(size.y));
-          else if (cam.type == dco::Camera::Ortho)
-            ray = cam.asOrthoCam.primary_ray(
-                Ray{}, float(x), float(y), float(size.x), float(size.y));
-          else if (cam.type == dco::Camera::Matrix)
-            ray = cam.asMatrixCam.primary_ray(
-                Ray{}, float(x), float(y), float(size.x), float(size.y));
+          ray = cam.primary_ray(
+              ss.random, float(x), float(y), float(size.x), float(size.y));
 #if 1
           ray.dbg = ss.debug();
 #endif

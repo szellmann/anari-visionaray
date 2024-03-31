@@ -1425,6 +1425,21 @@ struct Camera
     float3 U, V, W;
     box2f image_region;
   } asOrthoCam;
+
+  template <typename RNG>
+  VSNRAY_FUNC
+  inline Ray primary_ray(RNG &rng, float x, float y, float width, float height) const
+  {
+    if (type == Pinhole)
+      return asPinholeCam.primary_ray(Ray{}, rng, x, y, width, height);
+    else if (type == Ortho)
+      return asOrthoCam.primary_ray(Ray{}, x, y, width, height);
+    else if (type == Matrix)
+      return asMatrixCam.primary_ray(Ray{}, x, y, width, height);
+
+    assert(0);
+    return {};
+  }
 };
 
 // Frame //

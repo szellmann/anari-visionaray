@@ -316,15 +316,8 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
           xf += jitter.x;
           yf += jitter.y;
 
-          if (cam.type == dco::Camera::Pinhole)
-            ray = cam.asPinholeCam.primary_ray(
-                Ray{}, ss.random, xf, yf, float(size.x), float(size.y));
-          else if (cam.type == dco::Camera::Ortho)
-            ray = cam.asOrthoCam.primary_ray(
-                Ray{}, xf, yf, float(size.x), float(size.y));
-          else if (cam.type == dco::Camera::Matrix)
-            ray = cam.asMatrixCam.primary_ray(
-                Ray{}, xf, yf, float(size.x), float(size.y));
+          ray = cam.primary_ray(ss.random, xf, yf, float(size.x), float(size.y));
+
 #if 1
           ray.dbg = ss.debug();
 #endif
