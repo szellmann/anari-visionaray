@@ -191,16 +191,22 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
                             sizeof(rendererState),
                             cudaMemcpyHostToDevice));
 
+  dco::Frame *framePtr;
+  CUDA_SAFE_CALL(cudaMalloc(&framePtr, sizeof(frame)));
+  CUDA_SAFE_CALL(cudaMemcpy(framePtr, &frame, sizeof(frame), cudaMemcpyHostToDevice));
+
   cuda::for_each(0, size.x, 0, size.y,
 #else
   auto *onDevicePtr = &DD;
   auto *rendererStatePtr = &rendererState;
+  auto *framePtr = &frame;
   parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif
       [=] VSNRAY_GPU_FUNC (int x, int y) {
 
         const VisionarayGlobalState::DeviceObjectRegistry &onDevice = *onDevicePtr;
         const auto &rendererState = *rendererStatePtr;
+        const auto &frame = *framePtr;
 
         ScreenSample ss{x, y, frameID, size, {/*no RNG*/}};
         Ray ray;
