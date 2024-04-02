@@ -225,30 +225,30 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
           ray.dbg = ss.debug();
 #endif
 
-         PixelSample ps = renderSample(ss,
-                 ray,
-                 worldID,
-                 onDevice,
-                 rendererState);
-         accumColor += ps.color;
-         if (sampleID == 0) {
-           firstSample = ps;
-         }
-       }
+          PixelSample ps = renderSample(ss,
+                  ray,
+                  worldID,
+                  onDevice,
+                  rendererState);
+          accumColor += ps.color;
+          if (sampleID == 0) {
+            firstSample = ps;
+          }
+        }
 
-       uint64_t clock_end = clock64();
-       if (rendererState.heatMapEnabled > 0.f) {
-           float t = (clock_end - clock_begin)
-               * (rendererState.heatMapScale / spp);
-           accumColor = over(vec4f(heatMap(t), .5f), accumColor);
-       }
+        uint64_t clock_end = clock64();
+        if (rendererState.heatMapEnabled > 0.f) {
+            float t = (clock_end - clock_begin)
+                * (rendererState.heatMapScale / spp);
+            accumColor = over(vec4f(heatMap(t), .5f), accumColor);
+        }
 
-       // Color gets accumulated, depth, IDs, etc. are
-       // taken from first sample
-       PixelSample finalSample = firstSample;
-       finalSample.color = accumColor*(1.f/spp);
-       frame.writeSample(x, y, rendererState.accumID, finalSample);
-     });
+        // Color gets accumulated, depth, IDs, etc. are
+        // taken from first sample
+        PixelSample finalSample = firstSample;
+        finalSample.color = accumColor*(1.f/spp);
+        frame.writeSample(x, y, rendererState.accumID, finalSample);
+      });
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaFree(onDevicePtr));
 #endif
