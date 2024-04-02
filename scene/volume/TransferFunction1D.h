@@ -28,15 +28,15 @@ struct TransferFunction1D : public Volume
 
   // Data //
 
-  helium::IntrusivePtr<SpatialField> m_field;
+  helium::CommitObserverPtr<SpatialField> m_field;
 
   aabb m_bounds;
 
   box1 m_valueRange{0.f, 1.f};
   float m_densityScale{1.f};
 
-  helium::IntrusivePtr<Array1D> m_colorData;
-  helium::IntrusivePtr<Array1D> m_opacityData;
+  helium::CommitObserverPtr<Array1D> m_colorData;
+  helium::CommitObserverPtr<Array1D> m_opacityData;
 
 #ifdef WITH_CUDA
   cuda_texture<float4, 1> transFuncTexture;

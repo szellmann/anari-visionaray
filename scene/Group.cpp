@@ -7,7 +7,11 @@
 
 namespace visionaray {
 
-Group::Group(VisionarayGlobalState *s) : Object(ANARI_GROUP, s)
+Group::Group(VisionarayGlobalState *s)
+  : Object(ANARI_GROUP, s)
+  , m_surfaceData(this)
+  , m_volumeData(this)
+  , m_lightData(this)
 {
   s->objectCounts.groups++;
 }
@@ -46,17 +50,12 @@ void Group::commit()
   m_volumeData = getParamObject<ObjectArray>("volume");
   m_lightData = getParamObject<ObjectArray>("light");
 
-  if (m_surfaceData)
-    m_surfaceData->addCommitObserver(this);
   if (m_volumeData) {
-    m_volumeData->addCommitObserver(this);
     std::transform(m_volumeData->handlesBegin(),
         m_volumeData->handlesEnd(),
         std::back_inserter(m_volumes),
         [](auto *o) { return (Volume *)o; });
   }
-  if (m_lightData)
-    m_lightData->addCommitObserver(this);
 }
 
 const std::vector<Surface *> &Group::surfaces() const
@@ -200,13 +199,6 @@ void Group::visionaraySceneCommit()
 
 void Group::cleanup()
 {
-  if (m_surfaceData)
-    m_surfaceData->removeCommitObserver(this);
-  if (m_volumeData)
-    m_volumeData->removeCommitObserver(this);
-  if (m_lightData)
-    m_lightData->removeCommitObserver(this);
-
   m_surfaces.clear();
   m_volumes.clear();
   m_lights.clear();

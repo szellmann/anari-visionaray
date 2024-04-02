@@ -10,7 +10,11 @@
 
 namespace visionaray {
 
-TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d) : Volume(d)
+TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d)
+  : Volume(d)
+  , m_field(this)
+  , m_colorData(this)
+  , m_opacityData(this)
 {
   vgeom.type = dco::Geometry::Volume;
   vgeom.asVolume.data.type = dco::Volume::TransferFunction1D;
@@ -28,9 +32,6 @@ TransferFunction1D::~TransferFunction1D()
 
 void TransferFunction1D::commit()
 {
-  if (m_field)
-    m_field->removeCommitObserver(this);
-
   m_field = getParamObject<SpatialField>("value");
 
   if (!m_field) {
@@ -125,8 +126,6 @@ void TransferFunction1D::commit()
   m_field->gridAccel().computeMaxOpacities(
       deviceState()->onDevice.transferFunctions[vtransfunc.tfID]);
 #endif
-
-  m_field->addCommitObserver(this);
 }
 
 bool TransferFunction1D::isValid() const

@@ -13,12 +13,11 @@ struct BezierCurve : public Geometry
   void commit() override;
 
  private:
-  void cleanup();
 
   HostDeviceArray<dco::BezierCurve> m_curves;
-  helium::IntrusivePtr<Array1D> m_index;
-  helium::IntrusivePtr<Array1D> m_radius;
-  helium::IntrusivePtr<Array1D> m_vertexPosition;
+  helium::CommitObserverPtr<Array1D> m_index;
+  helium::CommitObserverPtr<Array1D> m_radius;
+  helium::CommitObserverPtr<Array1D> m_vertexPosition;
   std::array<helium::IntrusivePtr<Array1D>, 5> m_vertexAttributes;
   float m_globalRadius{1.f};
 

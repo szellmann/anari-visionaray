@@ -18,12 +18,11 @@ struct ISOSurface : public Geometry
   bool isValid() const override;
 
  private:
-  void cleanup();
 
   // Data //
 
-  helium::IntrusivePtr<SpatialField> m_field;
-  helium::IntrusivePtr<Array1D> m_isoValue;
+  helium::CommitObserverPtr<SpatialField> m_field;
+  helium::CommitObserverPtr<Array1D> m_isoValue;
 };
 
 } // namespace visionaray

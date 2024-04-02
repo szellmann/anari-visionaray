@@ -40,17 +40,17 @@ struct Group : public Object
 
   // Geometry //
 
-  helium::IntrusivePtr<ObjectArray> m_surfaceData;
+  helium::CommitObserverPtr<ObjectArray> m_surfaceData;
   std::vector<Surface *> m_surfaces;
 
   // Volume //
 
-  helium::IntrusivePtr<ObjectArray> m_volumeData;
+  helium::CommitObserverPtr<ObjectArray> m_volumeData;
   std::vector<Volume *> m_volumes;
 
   // Light //
 
-  helium::IntrusivePtr<ObjectArray> m_lightData;
+  helium::CommitObserverPtr<ObjectArray> m_lightData;
   std::vector<Light *> m_lights;
 
   // BVH //

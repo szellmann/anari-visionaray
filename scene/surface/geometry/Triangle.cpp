@@ -7,7 +7,12 @@
 
 namespace visionaray {
 
-Triangle::Triangle(VisionarayGlobalState *s) : Geometry(s)
+Triangle::Triangle(VisionarayGlobalState *s)
+  : Geometry(s)
+  , m_index(this)
+  , m_vertexPosition(this)
+  , m_vertexNormal(this)
+  , m_vertexTangent(this)
 {
   vgeom.type = dco::Geometry::Triangle;
 }
@@ -15,8 +20,6 @@ Triangle::Triangle(VisionarayGlobalState *s) : Geometry(s)
 void Triangle::commit()
 {
   Geometry::commit();
-
-  cleanup();
 
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
@@ -33,10 +36,6 @@ void Triangle::commit()
         "missing required parameter 'vertex.position' on triangle geometry");
     return;
   }
-
-  m_vertexPosition->addCommitObserver(this);
-  if (m_index)
-    m_index->addCommitObserver(this);
 
   if (m_index) {
     m_triangles.resize(m_index->size());
@@ -123,15 +122,6 @@ void Triangle::commit()
   }
 
   dispatch();
-}
-
-void Triangle::cleanup()
-{
-  m_triangles.clear();
-  if (m_index)
-    m_index->removeCommitObserver(this);
-  if (m_vertexPosition)
-    m_vertexPosition->removeCommitObserver(this);
 }
 
 } // namespace visionaray

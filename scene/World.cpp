@@ -5,7 +5,12 @@
 
 namespace visionaray {
 
-World::World(VisionarayGlobalState *s) : Object(ANARI_WORLD, s)
+World::World(VisionarayGlobalState *s)
+  : Object(ANARI_WORLD, s)
+  , m_zeroSurfaceData(this)
+  , m_zeroVolumeData(this)
+  , m_zeroLightData(this)
+  , m_instanceData(this)
 {
   s->objectCounts.worlds++;
 
@@ -49,8 +54,8 @@ void World::commit()
   m_zeroVolumeData = getParamObject<ObjectArray>("volume");
   m_zeroLightData = getParamObject<ObjectArray>("light");
 
-  m_addZeroInstance = m_zeroSurfaceData || m_zeroVolumeData || m_zeroLightData;
-  if (m_addZeroInstance)
+  const bool addZeroInstance = m_zeroSurfaceData || m_zeroVolumeData || m_zeroLightData;
+  if (addZeroInstance)
     reportMessage(
         ANARI_SEVERITY_DEBUG, "visionaray::World will add zero instance");
 
@@ -87,7 +92,7 @@ void World::commit()
 
   if (m_instanceData) {
     m_instanceData->removeAppendedHandles();
-    if (m_addZeroInstance)
+    if (addZeroInstance)
       m_instanceData->appendHandle(m_zeroInstance.ptr);
     std::for_each(m_instanceData->handlesBegin(),
         m_instanceData->handlesEnd(),
@@ -95,19 +100,12 @@ void World::commit()
           if (o && o->isValid())
             m_instances.push_back((Instance *)o);
         });
-  } else if (m_addZeroInstance)
+  } else if (addZeroInstance)
     m_instances.push_back(m_zeroInstance.ptr);
 
   m_objectUpdates.lastTLSBuild = 0;
   m_objectUpdates.lastBLSReconstructCheck = 0;
   m_objectUpdates.lastBLSCommitCheck = 0;
-
-  if (m_instanceData)
-    m_instanceData->addCommitObserver(this);
-  if (m_zeroSurfaceData)
-    m_zeroSurfaceData->addCommitObserver(this);
-  if (m_zeroLightData)
-    m_zeroLightData->addCommitObserver(this);
 }
 
 const std::vector<Instance *> &World::instances() const
@@ -235,15 +233,6 @@ void World::rebuildTLS()
 
 void World::cleanup()
 {
-  if (m_instanceData)
-    m_instanceData->removeCommitObserver(this);
-  if (m_zeroSurfaceData)
-    m_zeroSurfaceData->removeCommitObserver(this);
-  if (m_zeroVolumeData)
-    m_zeroVolumeData->removeCommitObserver(this);
-  if (m_zeroLightData)
-    m_zeroLightData->removeCommitObserver(this);
-
   if (vscene)
     vscene->release();
   vscene = nullptr;
