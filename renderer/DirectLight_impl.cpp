@@ -446,6 +446,8 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
      });
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaFree(onDevicePtr));
+  CUDA_SAFE_CALL(cudaFree(rendererStatePtr));
+  CUDA_SAFE_CALL(cudaFree(framePtr));
 #endif
 }
 
