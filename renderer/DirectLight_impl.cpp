@@ -278,51 +278,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
   return true;
 }
 
-VSNRAY_FUNC
-PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
-    const VisionarayGlobalState::DeviceObjectRegistry &onDevice,
-    const RendererState &rendererState)
-{
-  // if (ss.debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
-
-  PixelSample result;
-  result.color = rendererState.bgColor;
-  result.depth = 1e31f;
-  result.albedo = float3(0.f);
-  result.motionVec = float4(0,0,0,1);
-
-  if (onDevice.TLSs[worldID].num_primitives() == 0)
-    return result; // happens eg with TLSs of unsupported objects
-
-  HitRec firstHit;
-  ShadeRec shadeRec;
-  for (unsigned bounceID=0;bounceID<2;++bounceID) {
-    HitRec hitRec = intersectAll(ss, ray, worldID, onDevice);
-    if (!shade(ss, ray, worldID, onDevice,
-          rendererState,
-          hitRec,
-          shadeRec,
-          result,
-          bounceID)) {
-      break;
-    }
-
-    if (bounceID == 0) {
-      firstHit = hitRec;
-    }
-  }
-
-  if (firstHit.hit || shadeRec.hdriMiss) {
-    result.color = float4(shadeRec.throughput,1.f);
-  }
-
-  // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
-  //   result.color = float4(1.f) - result.color;
-  // }
-
-  return result;
-}
-
 void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
                                                 const dco::Camera &cam,
                                                 uint2 size,
