@@ -195,6 +195,18 @@ inline uint32_t getSphereIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
+inline uint2 getConeIndex(const dco::Geometry &geom, unsigned primID)
+{
+  uint2 index;
+  if (geom.asCone.index.len > 0) {
+    index = ((uint2 *)geom.asCone.index.data)[primID];
+  } else {
+    index = uint2(primID * 2, primID * 2 + 1);
+  }
+  return index;
+}
+
+VSNRAY_FUNC
 inline uint2 getCylinderIndex(const dco::Geometry &geom, unsigned primID)
 {
   uint2 index;
@@ -247,6 +259,23 @@ inline vec3 getNormal(
   } else if (geom.type == dco::Geometry::Sphere) {
     auto sph = geom.asSphere.data[primID];
     gn = normalize((hitPos-sph.center) / sph.radius);
+  } else if (geom.type == dco::Geometry::Cone) {
+    // reconstruct normal (see https://iquilezles.org/articles/intersectors/)
+    auto cone = geom.asCone.data[primID];
+    const vec3f ba = cone.v2 - cone.v1;
+    const float m0 = dot(ba,ba);
+    if (uv.x <= 0.f) {
+      gn = -ba*rsqrt(m0);
+    } else if (uv.x >= 1) {
+      gn = ba*rsqrt(m0);
+    } else {
+      const float ra = cone.r1;
+      const float rr = cone.r1 - cone.r2;
+      const float hy = m0 + rr*rr;
+      const float y = uv.y; // uv.y stores the unnormalized cone parameter t!
+      const vec3f localPos = hitPos-cone.v1;
+      gn = normalize(m0*(m0*localPos+rr*ba*ra)-ba*hy*y);
+    }
   } else if (geom.type == dco::Geometry::Cylinder) {
     auto cyl = geom.asCylinder.data[primID];
     vec3f axis = normalize(cyl.v2-cyl.v1);
@@ -337,6 +366,8 @@ inline dco::Array getVertexColors(const dco::Geometry &geom, dco::Attribute attr
       return geom.asQuad.vertexAttributes[(int)attrib];
     else if (geom.type == dco::Geometry::Sphere)
       return geom.asSphere.vertexAttributes[(int)attrib];
+    else if (geom.type == dco::Geometry::Cone)
+      return geom.asCone.vertexAttributes[(int)attrib];
     else if (geom.type == dco::Geometry::Cylinder)
       return geom.asCylinder.vertexAttributes[(int)attrib];
   }
@@ -415,6 +446,19 @@ inline vec4 getAttribute(
         = (const uint8_t *)vertexColors.data
             + index * vertexColorInfo.sizeInBytes;
     convert(&color, source, vertexColorInfo);
+  }
+  else if (geom.type == dco::Geometry::Cone && vertexColors.len > 0) {
+    uint2 index = getConeIndex(geom, primID);
+    const auto *source1
+        = (const uint8_t *)vertexColors.data
+            + index.x * vertexColorInfo.sizeInBytes;
+    const auto *source2
+        = (const uint8_t *)vertexColors.data
+            + index.y * vertexColorInfo.sizeInBytes;
+    vec4f c1{dflt}, c2{dflt};
+    convert(&c1, source1, vertexColorInfo);
+    convert(&c2, source2, vertexColorInfo);
+    color = lerp(c1, c2, uv.x);
   }
   else if (geom.type == dco::Geometry::Cylinder && vertexColors.len > 0) {
     uint2 index = getCylinderIndex(geom, primID);

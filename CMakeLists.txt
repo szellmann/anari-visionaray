@@ -58,6 +58,7 @@ set(SOURCES
     scene/light/Point.cpp
     scene/light/Spot.cpp
     scene/surface/geometry/BezierCurve.cpp
+    scene/surface/geometry/Cone.cpp
     scene/surface/geometry/Cylinder.cpp
     scene/surface/geometry/Geometry.cpp
     scene/surface/geometry/ISOSurface.cpp

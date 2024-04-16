@@ -9,6 +9,7 @@ struct VisionaraySceneGPU::Impl
   typedef cuda_index_bvh<basic_triangle<3,float>> TriangleBVH;
   typedef cuda_index_bvh<basic_triangle<3,float>> QuadBVH;
   typedef cuda_index_bvh<basic_sphere<float>>     SphereBVH;
+  typedef cuda_index_bvh<dco::Cone>               ConeBVH;
   typedef cuda_index_bvh<basic_cylinder<float>>   CylinderBVH;
   typedef cuda_index_bvh<dco::BezierCurve>        BezierCurveBVH;
   typedef cuda_index_bvh<dco::ISOSurface>         ISOSurfaceBVH;
@@ -22,6 +23,7 @@ struct VisionaraySceneGPU::Impl
     aligned_vector<TriangleBVH>    triangleBLSs;
     aligned_vector<QuadBVH>        quadBLSs;
     aligned_vector<SphereBVH>      sphereBLSs;
+    aligned_vector<ConeBVH>        coneBLSs;
     aligned_vector<CylinderBVH>    cylinderBLSs;
     aligned_vector<BezierCurveBVH> bezierCurveBLSs;
     aligned_vector<ISOSurfaceBVH>  isoSurfaceBLSs;
@@ -91,6 +93,7 @@ void VisionaraySceneGPU::commit()
   unsigned triangleCount = 0;
   unsigned quadCount = 0;
   unsigned sphereCount = 0;
+  unsigned coneCount = 0;
   unsigned cylinderCount = 0;
   unsigned bezierCurveCount = 0;
   unsigned isoCount = 0;
@@ -113,6 +116,9 @@ void VisionaraySceneGPU::commit()
       case dco::Geometry::Sphere:
         sphereCount++;
         break;
+      case dco::Geometry::Cone:
+        coneCount++;
+        break;
       case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
@@ -134,6 +140,7 @@ void VisionaraySceneGPU::commit()
   m_impl->m_accelStorage.triangleBLSs.resize(triangleCount);
   m_impl->m_accelStorage.quadBLSs.resize(quadCount);
   m_impl->m_accelStorage.sphereBLSs.resize(sphereCount);
+  m_impl->m_accelStorage.coneBLSs.resize(coneCount);
   m_impl->m_accelStorage.cylinderBLSs.resize(cylinderCount);
   m_impl->m_accelStorage.bezierCurveBLSs.resize(bezierCurveCount);
   m_impl->m_accelStorage.isoSurfaceBLSs.resize(isoCount);
@@ -141,7 +148,7 @@ void VisionaraySceneGPU::commit()
   // No instance storage: instance BLSs are the TLSs of child scenes
 
   // first, build BLSs
-  triangleCount = quadCount = sphereCount = cylinderCount
+  triangleCount = quadCount = sphereCount = coneCount = cylinderCount
                 = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
     if (!dco::validHandle(geomID)) continue;
@@ -184,6 +191,17 @@ void VisionaraySceneGPU::commit()
         CPU::SphereBVH{}, hostData.data(), hostData.size());
       m_impl->m_accelStorage.sphereBLSs[index]
         = GPU::SphereBVH(accelStorage);
+    } else if (geom.type == dco::Geometry::Cone) {
+      unsigned index = coneCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for cones yet!
+      // Until we have a high-quality GPU builder, do that on the CPU!
+      std::vector<dco::Cone> hostData(geom.asCone.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.asCone.data,
+          hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
+      auto accelStorage = builder.build(
+        CPU::ConeBVH{}, hostData.data(), hostData.size());
+      m_impl->m_accelStorage.coneBLSs[index]
+        = GPU::ConeBVH(accelStorage);
     } else if (geom.type == dco::Geometry::Cylinder) {
       unsigned index = cylinderCount++;
       builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
@@ -229,7 +247,7 @@ void VisionaraySceneGPU::commit()
   m_impl->parent->m_worldBLSs.clear();
 
   // now initialize BVH refs for use in shader code:
-  triangleCount = quadCount = sphereCount = cylinderCount
+  triangleCount = quadCount = sphereCount = coneCount = cylinderCount
                 = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
     if (!dco::validHandle(geomID)) continue;
@@ -253,6 +271,10 @@ void VisionaraySceneGPU::commit()
         unsigned index = sphereCount++;
         bls.type = dco::BLS::Sphere;
         bls.asSphere = m_impl->m_accelStorage.sphereBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Cone) {
+        unsigned index = coneCount++;
+        bls.type = dco::BLS::Cone;
+        bls.asCone = m_impl->m_accelStorage.coneBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Cylinder) {
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
@@ -292,6 +314,10 @@ void VisionaraySceneGPU::commit()
         unsigned index = sphereCount++;
         bls.type = dco::BLS::Sphere;
         bls.asSphere = m_impl->m_accelStorage.sphereBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Cone) {
+        unsigned index = coneCount++;
+        bls.type = dco::BLS::Cone;
+        bls.asCone = m_impl->m_accelStorage.coneBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Cylinder) {
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
@@ -430,6 +456,17 @@ void VisionaraySceneGPU::attachGeometry(dco::Geometry geom, unsigned geomID)
         hostData[i].geom_id = geomID;
       }
       CUDA_SAFE_CALL(cudaMemcpy(geom.asSphere.data, hostData.data(),
+          hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
+    }
+  } else if (geom.type == dco::Geometry::Cone) {
+    if (geom.asCone.len > 0) {
+      std::vector<dco::Cone> hostData(geom.asCone.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.asCone.data,
+          hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
+      for (size_t i=0;i<geom.asCone.len;++i) {
+        hostData[i].geom_id = geomID;
+      }
+      CUDA_SAFE_CALL(cudaMemcpy(geom.asCone.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     }
   } else if (geom.type == dco::Geometry::Cylinder) {

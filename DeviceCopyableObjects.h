@@ -52,11 +52,12 @@ struct Ray : basic_ray<float>
     Triangle = 0x1,
     Quad = 0x2,
     Sphere = 0x4,
-    Cylinder = 0x8,
-    Curve = 0x10,
-    BezierCurve = 0x20,
-    ISOSurface = 0x40,
-    Volume = 0x80,
+    Cone = 0x8,
+    Cylinder = 0x10,
+    Curve = 0x20,
+    BezierCurve = 0x40,
+    ISOSurface = 0x80,
+    Volume = 0x100,
   };
   unsigned intersectionMask = All;
   void *prd{nullptr};
@@ -592,6 +593,114 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   return result;
 }
 
+// Cone primitive //
+
+struct Cone : public primitive<unsigned>
+{
+  float3 v1, v2;
+  float r1, r2;
+};
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &r, const Cone &cone)
+{
+  // From https://iquilezles.org/articles/intersectors/
+  hit_record<Ray, primitive<unsigned>> result;
+  result.hit = false;
+
+  const vec3f &ro = r.ori;
+  const vec3f &rd = r.dir;
+
+  const vec3f &pa = cone.v1;
+  const vec3f &pb = cone.v2;
+
+  const float ra = cone.r1;
+  const float rb = cone.r2;
+
+  const vec3f ba = pb - pa;
+  const vec3f oa = ro - pa;
+  const vec3f ob = ro - pb;
+  const float m0 = dot(ba,ba);
+  const float m1 = dot(oa,ba);
+  const float m2 = dot(rd,ba);
+  const float m3 = dot(rd,oa);
+  const float m5 = dot(oa,oa);
+  const float m9 = dot(ob,ba);
+
+  auto dot2 = [](const vec3f v) { return dot(v,v); };
+
+  // Caps:
+  if (m1 < 0.f) {
+    if (dot2(oa*m2-rd*m1) < ra*ra*m2*m2) {
+      result.t = -m1 / m2;
+      result.u = 0.f;
+      result.hit = true;
+      result.isect_pos = r.ori + result.t * r.dir;
+      result.prim_id = cone.prim_id;
+      result.geom_id = cone.geom_id;
+      return result;
+    }
+  } else if (m9 > 0.f) {
+    const float t = -m9/m2;
+    if (dot2(ob+rd*t) < rb*rb) {
+      result.t = t;
+      result.u = 1.f;
+      result.hit = true;
+      result.isect_pos = r.ori + result.t * r.dir;
+      result.prim_id = cone.prim_id;
+      result.geom_id = cone.geom_id;
+      return result;
+    }
+  }
+
+  // Body
+  const float rr = ra - rb;
+  const float hy = m0 + rr*rr;
+  const float k2 = m0*m0 - m2*m2*hy;
+  const float k1 = m0*m0*m3 - m1*m2*hy + m0*ra*(rr*m2*1.f);
+  const float k0 = m0*m0*m5 - m1*m1*hy + m0*ra*(rr*m1*2.f - m0*ra);
+  const float h = k1*k1 - k2*k0;
+  if (h < 0.f) return result;
+  const float t = (-k1-sqrtf(h))/k2;
+  const float y = m1 + t*m2;
+
+  if (y > 0.f && y<m0) {
+    result.t = t;
+    result.u = y/m0;
+    result.v = y;
+    result.hit = true;
+    result.isect_pos = r.ori + result.t * r.dir;
+    result.prim_id = cone.prim_id;
+    result.geom_id = cone.geom_id;
+  }
+
+  return result;
+}
+
+VSNRAY_FUNC inline aabb get_bounds(const Cone &cone)
+{
+  aabb result;
+  result.invalidate();
+  result.insert(cone.v1 - cone.r1);
+  result.insert(cone.v1 + cone.r1);
+  result.insert(cone.v2 - cone.r2);
+  result.insert(cone.v2 + cone.r2);
+  return result;
+}
+
+VSNRAY_FUNC inline void split_primitive(
+    aabb& L, aabb& R, float plane, int axis, const Cone &cone)
+{
+  VSNRAY_UNUSED(L);
+  VSNRAY_UNUSED(R);
+  VSNRAY_UNUSED(plane);
+  VSNRAY_UNUSED(axis);
+  VSNRAY_UNUSED(cone);
+
+  // TODO: implement this to support SBVHs
+}
+
 // Bezier curve primitive //
 
 struct BezierCurve : public primitive<unsigned>
@@ -928,6 +1037,7 @@ struct BLS
     Triangle,
     Quad,
     Sphere,
+    Cone,
     Cylinder,
     Curve,
     BezierCurve,
@@ -943,6 +1053,7 @@ struct BLS
     cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
     cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
     cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    cuda_index_bvh<dco::Cone>::bvh_ref asCone;
     cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
     cuda_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
     cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
@@ -953,6 +1064,7 @@ struct BLS
     index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
     index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
     index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    index_bvh<dco::Cone>::bvh_ref asCone;
     index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
     index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
     index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
@@ -980,6 +1092,8 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asQuad.node(0).get_bounds();
   else if (bls.type == BLS::Sphere && bls.asSphere.num_nodes())
     return bls.asSphere.node(0).get_bounds();
+  else if (bls.type == BLS::Cone && bls.asCone.num_nodes())
+    return bls.asCone.node(0).get_bounds();
   else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
     return bls.asCylinder.node(0).get_bounds();
   else if (bls.type == BLS::BezierCurve && bls.asBezierCurve.num_nodes())
@@ -1024,6 +1138,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
     return intersect(ray,bls.asQuad);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
     return intersect(ray,bls.asSphere);
+  else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
+    return intersect(ray,bls.asCone);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
     return intersect(ray,bls.asCylinder);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
@@ -1059,7 +1175,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     Ray ray, const TLS &tls)
 {
   ray.intersectionMask
-      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cylinder |
+      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cone | Ray::Cylinder |
         Ray::Curve | Ray::BezierCurve | Ray::ISOSurface;
   return intersect(ray, tls);
 }
@@ -1118,6 +1234,7 @@ struct Geometry
     Triangle,
     Quad,
     Sphere,
+    Cone,
     Cylinder,
     Curve,
     BezierCurve,
@@ -1151,6 +1268,12 @@ struct Geometry
     Array vertexAttributes[5];
     Array index;
   } asSphere;
+  struct {
+    dco::Cone *data{nullptr};
+    size_t len{0};
+    Array vertexAttributes[5];
+    Array index;
+  } asCone;
   struct {
     basic_cylinder<float> *data{nullptr};
     size_t len{0};

@@ -38,6 +38,7 @@ void VisionaraySceneImpl::commit()
   unsigned triangleCount = 0;
   unsigned quadCount = 0;
   unsigned sphereCount = 0;
+  unsigned coneCount = 0;
   unsigned cylinderCount = 0;
   unsigned bezierCurveCount = 0;
   unsigned isoCount = 0;
@@ -60,6 +61,9 @@ void VisionaraySceneImpl::commit()
       case dco::Geometry::Sphere:
         sphereCount++;
         break;
+      case dco::Geometry::Cone:
+        coneCount++;
+        break;
       case dco::Geometry::Cylinder:
         cylinderCount++;
         break;
@@ -81,6 +85,7 @@ void VisionaraySceneImpl::commit()
   m_accelStorage.triangleBLSs.resize(triangleCount);
   m_accelStorage.quadBLSs.resize(quadCount);
   m_accelStorage.sphereBLSs.resize(sphereCount);
+  m_accelStorage.coneBLSs.resize(coneCount);
   m_accelStorage.cylinderBLSs.resize(cylinderCount);
   m_accelStorage.bezierCurveBLSs.resize(bezierCurveCount);
   m_accelStorage.isoSurfaceBLSs.resize(isoCount);
@@ -88,7 +93,7 @@ void VisionaraySceneImpl::commit()
   // No instance storage: instance BLSs are the TLSs of child scenes
 
   // first, build BLSs
-  triangleCount = quadCount = sphereCount = cylinderCount
+  triangleCount = quadCount = sphereCount = coneCount = cylinderCount
                 = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_geometries) {
     if (!dco::validHandle(geomID)) continue;
@@ -113,6 +118,11 @@ void VisionaraySceneImpl::commit()
       builder.enable_spatial_splits(true);
       m_accelStorage.sphereBLSs[index] = builder.build(
         SphereBVH{}, geom.asSphere.data, geom.asSphere.len);
+    } else if (geom.type == dco::Geometry::Cone) {
+      unsigned index = coneCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for cones yet!
+      m_accelStorage.coneBLSs[index] = builder.build(
+        ConeBVH{}, geom.asCone.data, geom.asCone.len);
     } else if (geom.type == dco::Geometry::Cylinder) {
       unsigned index = cylinderCount++;
       builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
@@ -142,7 +152,7 @@ void VisionaraySceneImpl::commit()
   m_worldBLSs.clear();
 
   // now initialize BVH refs for use in shader code:
-  triangleCount = quadCount = sphereCount = cylinderCount
+  triangleCount = quadCount = sphereCount = coneCount = cylinderCount
                 = bezierCurveCount = isoCount = volumeCount = 0;
   for (const dco::Handle &geomID : m_geometries) {
     if (!dco::validHandle(geomID)) continue;
@@ -166,6 +176,10 @@ void VisionaraySceneImpl::commit()
         unsigned index = sphereCount++;
         bls.type = dco::BLS::Sphere;
         bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Cone) {
+        unsigned index = coneCount++;
+        bls.type = dco::BLS::Cone;
+        bls.asCone = m_accelStorage.coneBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Cylinder) {
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
@@ -205,6 +219,10 @@ void VisionaraySceneImpl::commit()
         unsigned index = sphereCount++;
         bls.type = dco::BLS::Sphere;
         bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
+      } else if (geom.type == dco::Geometry::Cone) {
+        unsigned index = coneCount++;
+        bls.type = dco::BLS::Cone;
+        bls.asCone = m_accelStorage.coneBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Cylinder) {
         unsigned index = cylinderCount++;
         bls.type = dco::BLS::Cylinder;
@@ -269,6 +287,7 @@ void VisionaraySceneImpl::commit()
                                             << m_TLS.node(0).get_bounds().max << '\n';
   std::cout << "  num triangle BLSs     : " << triangleCount << '\n';
   std::cout << "  num sphere BLSs       : " << sphereCount << '\n';
+  std::cout << "  num cone BLSs         : " << coneCount << '\n';
   std::cout << "  num cylinder BLSs     : " << cylinderCount << '\n';
   std::cout << "  num bezier curve BLSs : " << bezierCurveCount << '\n';
   std::cout << "  num volume BLSs       : " << volumeCount << '\n';
@@ -353,6 +372,10 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
   } else if (geom.type == dco::Geometry::Sphere) {
     for (size_t i=0;i<geom.asSphere.len;++i) {
       geom.asSphere.data[i].geom_id = geomID;
+    }
+  } else if (geom.type == dco::Geometry::Cone) {
+    for (size_t i=0;i<geom.asCone.len;++i) {
+      geom.asCone.data[i].geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Cylinder) {
     for (size_t i=0;i<geom.asCylinder.len;++i) {
