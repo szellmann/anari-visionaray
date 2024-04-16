@@ -26,7 +26,7 @@ struct Cylinder : public Geometry
   std::array<helium::IntrusivePtr<Array1D>, 5> m_vertexAttributes;
   float m_globalRadius{0.f};
 
-  HostDeviceArray<uint3> vindex;
+  HostDeviceArray<uint2> vindex;
   HostDeviceArray<uint8_t> vattributes[5];
 };
 
