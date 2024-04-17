@@ -576,14 +576,27 @@ inline float getOpacity(const dco::Material &mat,
                         unsigned primID, const vec2 uv)
 {
   float opacity = 1.f;
+  dco::AlphaMode mode{dco::AlphaMode::Opaque};
+  float cutoff = 0.5f;
+
   if (mat.type == dco::Material::Matte) {
     vec4f color = getColor(mat, geom, samplers, primID, uv);
     opacity = color.w * getF(mat.asMatte.opacity, geom, samplers, primID, uv);
+    mode = mat.asMatte.alphaMode;
+    cutoff = mat.asMatte.alphaCutoff;
   } else if (mat.type == dco::Material::PhysicallyBased) {
     vec4f color = getColor(mat, geom, samplers, primID, uv);
     opacity = color.w * getF(mat.asPhysicallyBased.opacity, geom, samplers, primID, uv);
+    mode = mat.asPhysicallyBased.alphaMode;
+    cutoff = mat.asPhysicallyBased.alphaCutoff;
   }
-  return opacity;
+
+  if (mode == dco::AlphaMode::Opaque)
+    return 1.f;
+  else if (mode == dco::AlphaMode::Blend)
+    return opacity;
+  else // mode==Mask
+    return opacity >= cutoff ? 1.f : 0.f;
 }
 
 VSNRAY_FUNC

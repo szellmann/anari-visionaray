@@ -22,6 +22,9 @@ struct Matte : public Material
     helium::IntrusivePtr<Sampler> sampler;
     dco::Attribute attribute;
   } m_opacity;
+
+  dco::AlphaMode m_alphaMode{dco::AlphaMode::Opaque};
+  float m_alphaCutoff{0.5f};
 };
 
 } // namespace visionaray

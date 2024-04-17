@@ -31,6 +31,22 @@ dco::Attribute toAttribute(std::string str)
 }
 
 inline
+dco::AlphaMode toAlphaMode(std::string str)
+{
+  using dco::AlphaMode;
+  AlphaMode res = AlphaMode::Opaque;
+
+  if (str == "opaque")
+    res = AlphaMode::Opaque;
+  else if (str == "blend")
+    res = AlphaMode::Blend;
+  else if (str == "mask")
+    res = AlphaMode::Mask;
+
+  return res;
+}
+
+inline
 tex_address_mode toAddressMode(std::string str)
 {
   tex_address_mode res;

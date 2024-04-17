@@ -23,6 +23,9 @@ void Matte::commit()
   m_opacity.sampler = getParamObject<Sampler>("opacity");
   m_opacity.attribute = toAttribute(getParamString("opacity", "none"));
 
+  m_alphaMode = toAlphaMode(getParamString("alphaMode", "opaque"));
+  m_alphaCutoff = getParam<float>("alphaCutoff", 0.5f);
+
   vmat.type = dco::Material::Matte;
   vmat.asMatte.color.rgb = m_color.xyz();
   vmat.asMatte.color.attribute = m_colorAttribute;
@@ -40,6 +43,9 @@ void Matte::commit()
   } else {
     vmat.asMatte.opacity.samplerID = UINT_MAX;
   }
+
+  vmat.asMatte.alphaMode = m_alphaMode;
+  vmat.asMatte.alphaCutoff = m_alphaCutoff;
 
   dispatch();
 }

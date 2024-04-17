@@ -29,6 +29,9 @@ struct PBM : public Material
     helium::IntrusivePtr<Sampler> sampler;
     //float scale{1.f};
   } m_normal;
+
+  dco::AlphaMode m_alphaMode{dco::AlphaMode::Opaque};
+  float m_alphaCutoff{0.5f};
 };
 
 } // namespace visionaray

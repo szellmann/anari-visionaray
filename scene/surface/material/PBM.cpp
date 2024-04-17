@@ -36,6 +36,9 @@ void PBM::commit()
 
   m_normal.sampler = getParamObject<Sampler>("normal");
 
+  m_alphaMode = toAlphaMode(getParamString("alphaMode", "opaque"));
+  m_alphaCutoff = getParam<float>("alphaCutoff", 0.5f);
+
   vmat.type = dco::Material::PhysicallyBased;
 
   vmat.asPhysicallyBased.baseColor.rgb = m_baseColor.value.xyz();
@@ -82,6 +85,9 @@ void PBM::commit()
   } else {
     vmat.asPhysicallyBased.normal.samplerID = UINT_MAX;
   }
+
+  vmat.asPhysicallyBased.alphaMode = m_alphaMode;
+  vmat.asPhysicallyBased.alphaCutoff = m_alphaCutoff;
 
   dispatch();
 }
