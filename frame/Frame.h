@@ -90,7 +90,11 @@ struct Frame : public helium::BaseFrame
     HostDeviceArray<float4> prevBuffer;
     HostDeviceArray<float3> currAlbedoBuffer;
     HostDeviceArray<float3> prevAlbedoBuffer;
+#ifdef WITH_CUDA
+    cuda_texture<float4, 2> history;
+#else
     texture<float4, 2> history;
+#endif
   } taa;
 
   helium::IntrusivePtr<Renderer> m_renderer;

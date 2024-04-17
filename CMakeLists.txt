@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # note: we're often tracking the most recent changes from ANARI-SDK
 # (on branch "next_release")
 find_package(anari 0.10.0 REQUIRED)
-find_package(visionaray 0.3.4 REQUIRED)
+find_package(visionaray 0.3.5 REQUIRED)
 
 option(ANARI_VISIONARAY_ENABLE_CUDA "Compile the CUDA device" OFF)
 set(cuda ${ANARI_VISIONARAY_ENABLE_CUDA})

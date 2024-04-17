@@ -248,22 +248,38 @@ void Frame::renderFrame()
       // Update history texture
       taa.history.reset(taa.prevBuffer.devicePtr());
 #ifdef WITH_CUDA
+      frame.taa.history = cuda_texture_ref<float4, 2>(taa.history);
+      cudaDeviceSynchronize();
 #else
       frame.taa.history = texture_ref<float4, 2>(taa.history);
 #endif
 
       // TAA pass
+#ifdef WITH_CUDA
+      cuda::for_each(0, size.x, 0, size.y,
+#else
       parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
+#endif
           [=] VSNRAY_GPU_FUNC (int x, int y) {
             frame.toneMap(
                 x, y, frame.accumSample(x, y, ~0, frame.pixelSample(x, y)));
           });
 
       // Copy buffers for next pass
+#ifdef WITH_CUDA
+      cudaMemcpy(taa.prevBuffer.devicePtr(), taa.currBuffer.devicePtr(),
+          sizeof(taa.currBuffer[0]) * taa.currBuffer.size(),
+          cudaMemcpyDefault);
+      cudaMemcpy(taa.prevAlbedoBuffer.devicePtr(), taa.currAlbedoBuffer.devicePtr(),
+          sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size(),
+          cudaMemcpyDefault);
+      cudaDeviceSynchronize();
+#else
       memcpy(taa.prevBuffer.devicePtr(), taa.currBuffer.devicePtr(),
           sizeof(taa.currBuffer[0]) * taa.currBuffer.size());
       memcpy(taa.prevAlbedoBuffer.devicePtr(), taa.currAlbedoBuffer.devicePtr(),
           sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size());
+#endif
     }
 
     state->renderingSemaphore.frameEnd();
@@ -405,12 +421,20 @@ bool Frame::checkTAAReset()
       taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
       taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
 
+#ifdef WITH_CUDA
+      texture<float4, 2> historyTex(vframe.size.x, vframe.size.y);
+#else
       taa.history = texture<float4, 2>(vframe.size.x, vframe.size.y);
-      taa.history.set_filter_mode(CardinalSpline);
-      //taa.history.set_filter_mode(Nearest);
-      //taa.history.set_filter_mode(Linear);
-      taa.history.set_address_mode(Clamp);
-      taa.history.set_normalized_coords(true);
+      auto &historyTex = taa.history;
+#endif
+      historyTex.set_filter_mode(CardinalSpline);
+      //historyTex.set_filter_mode(Nearest);
+      //historyTex.set_filter_mode(Linear);
+      historyTex.set_address_mode(Clamp);
+      historyTex.set_normalized_coords(true);
+#ifdef WITH_CUDA
+      taa.history = cuda_texture<float4, 2>(historyTex);
+#endif
 
       vframe.taa.currBuffer = taa.currBuffer.devicePtr();
       vframe.taa.prevBuffer = taa.prevBuffer.devicePtr();
