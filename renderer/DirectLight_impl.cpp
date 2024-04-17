@@ -316,7 +316,7 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
         const auto &frame = *framePtr;
 
         int pixelID = x + size.x * y;
-        Random rng(pixelID, frame.frameCounter);
+        Random rng(pixelID, rendererState.accumID);
         ScreenSample ss{x, y, frameID, size, rng};
         Ray ray;
 
