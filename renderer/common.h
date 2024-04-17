@@ -552,6 +552,27 @@ inline float getF(const dco::MaterialParamF &param,
 }
 
 VSNRAY_FUNC
+inline vec4 getColorMatte(const dco::Material &mat,
+                          const dco::Geometry &geom,
+                          const dco::Sampler *samplers,
+                          unsigned primID, const vec2 uv)
+{
+  return getRGBA(mat.asMatte.color, geom, samplers, primID, uv);
+}
+
+VSNRAY_FUNC
+inline vec4 getColorPBM(const dco::Material &mat,
+                        const dco::Geometry &geom,
+                        const dco::Sampler *samplers,
+                        unsigned primID, const vec2 uv)
+{
+  const float metallic = getF(
+      mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
+  vec4f color = getRGBA(mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv);
+  return lerp(color, vec4f(0.f, 0.f, 0.f, color.w), metallic);
+}
+
+VSNRAY_FUNC
 inline vec4 getColor(const dco::Material &mat,
                      const dco::Geometry &geom,
                      const dco::Sampler *samplers,
@@ -559,12 +580,9 @@ inline vec4 getColor(const dco::Material &mat,
 {
   vec4f color{0.f, 0.f, 0.f, 1.f};
   if (mat.type == dco::Material::Matte)
-    color = getRGBA(mat.asMatte.color, geom, samplers, primID, uv);
+    color = getColorMatte(mat, geom, samplers, primID, uv);
   else if (mat.type == dco::Material::PhysicallyBased) {
-    const float metallic = getF(
-        mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
-    color = getRGBA(mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv);
-    color = lerp(color, vec4f(0.f, 0.f, 0.f, color.w), metallic);
+    color = getColorPBM(mat, geom, samplers, primID, uv);
   }
   return color;
 }
@@ -580,12 +598,12 @@ inline float getOpacity(const dco::Material &mat,
   float cutoff = 0.5f;
 
   if (mat.type == dco::Material::Matte) {
-    vec4f color = getColor(mat, geom, samplers, primID, uv);
+    vec4f color = getColorMatte(mat, geom, samplers, primID, uv);
     opacity = color.w * getF(mat.asMatte.opacity, geom, samplers, primID, uv);
     mode = mat.asMatte.alphaMode;
     cutoff = mat.asMatte.alphaCutoff;
   } else if (mat.type == dco::Material::PhysicallyBased) {
-    vec4f color = getColor(mat, geom, samplers, primID, uv);
+    vec4f color = getColorPBM(mat, geom, samplers, primID, uv);
     opacity = color.w * getF(mat.asPhysicallyBased.opacity, geom, samplers, primID, uv);
     mode = mat.asPhysicallyBased.alphaMode;
     cutoff = mat.asPhysicallyBased.alphaCutoff;
