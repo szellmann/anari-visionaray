@@ -136,11 +136,47 @@ aabb BlockStructuredField::bounds() const
 
 void BlockStructuredField::buildGrid()
 {
+#ifdef WITH_CUDA
+  return;
+#endif
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(dims, worldBounds);
 
-  // TODO: not used, nor supported yet!
+  size_t numBlocks = m_blocks.size();
+  for (size_t blockID=0; blockID<numBlocks; ++blockID) {
+    const auto &block = m_blocks[blockID];
+    int cellSize = block.cellSize();
+    for (int z=0; z<block.numCells().z; ++z) {
+      for (int y=0; y<block.numCells().y; ++y) {
+        for (int x=0; x<block.numCells().x; ++x) {
+          vec3i cellID(x,y,z);
+          vec3i cell_lower = (block.bounds.min+cellID)*cellSize;
+          vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
+          aabb cellBounds(vec3f(cell_lower)-vec3f(cellSize*0.5f),
+                          vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
+          // transform to world space (..TODO: untested!)
+          cellBounds.min *= m_params.gridSpacing;
+          cellBounds.max *= m_params.gridSpacing;
+          cellBounds.min += m_params.gridOrigin;
+          cellBounds.max += m_params.gridOrigin;
+          float scalar = block.getScalar(x,y,z);
+
+          const vec3i loMC = projectOnGrid(cellBounds.min,dims,worldBounds);
+          const vec3i upMC = projectOnGrid(cellBounds.max,dims,worldBounds);
+
+          for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
+            for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
+              for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
+                const vec3i mcID(mcx,mcy,mcz);
+                updateMC(mcID,dims,scalar,m_gridAccel.valueRanges());
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 } // namespace visionaray

@@ -77,7 +77,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
     const bool hasMajorant = false;
 #else
     const bool hasMajorant = sf.type == dco::SpatialField::Unstructured ||
-                             sf.type == dco::SpatialField::StructuredRegular;
+                             sf.type == dco::SpatialField::StructuredRegular ||
+                             sf.type == dco::SpatialField::BlockStructured;
 #endif
     const float majorant = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
@@ -132,7 +133,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
   hr.t = ray.tmax;
 #ifndef WITH_CUDA
   if (sf.type == dco::SpatialField::Unstructured ||
-      sf.type == dco::SpatialField::StructuredRegular)
+      sf.type == dco::SpatialField::StructuredRegular ||
+      sf.type == dco::SpatialField::BlockStructured)
     dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
