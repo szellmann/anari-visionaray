@@ -339,27 +339,31 @@ struct SpatialField
   unsigned fieldID{UINT_MAX};
   float baseDT{0.5f};
   GridAccel gridAccel;
+  mat4x3 voxelSpaceTransform;
+
+  // Transform point in object space to voxel space
+  VSNRAY_FUNC
+  inline float3 pointToVoxelSpace(const float3 &object) const
+  {
+    mat3 rot = top_left(voxelSpaceTransform);
+    vec3 trans = voxelSpaceTransform(3);
+    return rot * (object + trans);
+  }
+
+  // Transform vector in object space to voxel space
+  VSNRAY_FUNC
+  inline float3 vectorToVoxelSpace(const float3 &object) const
+  {
+    mat3 rot = top_left(voxelSpaceTransform);
+    return rot * object;
+  }
+
   struct {
 #ifdef WITH_CUDA
     cuda_texture_ref<float, 3> sampler;
 #else
     texture_ref<float, 3> sampler;
 #endif
-    float3 origin{0.f,0.f,0.f}, spacing{1.f,1.f,1.f};
-    uint3 dims{0,0,0};
-
-    VSNRAY_FUNC
-    inline float3 objectToLocal(const float3 &object) const
-    {
-      return 1.f / (spacing) * (object - origin);
-    }
-
-    VSNRAY_FUNC
-    inline float3 objectToTexCoord(const float3 &object) const
-    {
-      return objectToLocal(object + float3(0.5f) * spacing) / float3(dims);
-    }
-
   } asStructuredRegular;
   struct {
     // Sampling BVH. This BVH is in _voxel_ space, so rays that take samples
@@ -377,25 +381,14 @@ struct SpatialField
 #else
     index_bvh<Block>::bvh_ref samplingBVH;
 #endif
-    mat4x3 voxelSpaceTransform;
-
-    // TODO: woudl be better to do this once per ray and not once per sample:
-    VSNRAY_FUNC
-    inline float3 objectToVoxelSpace(const float3 &object) const
-    {
-      mat3 rot = top_left(voxelSpaceTransform);
-      vec3 trans = voxelSpaceTransform(3);
-      return rot * (object + trans);
-    }
-
   } asBlockStructured;
 };
 
 VSNRAY_FUNC
 inline bool sampleField(SpatialField sf, vec3 P, float &value) {
+  // This assumes that P is in voxel space!
   if (sf.type == SpatialField::StructuredRegular) {
-    value = tex3D(sf.asStructuredRegular.sampler,
-        sf.asStructuredRegular.objectToTexCoord(P));
+    value = tex3D(sf.asStructuredRegular.sampler,P);
     return true;
   } else if (sf.type == SpatialField::Unstructured) {
     Ray ray;
@@ -411,7 +404,7 @@ inline bool sampleField(SpatialField sf, vec3 P, float &value) {
     return true;
   } else if (sf.type == SpatialField::BlockStructured) {
     Ray ray;
-    ray.ori = sf.asBlockStructured.objectToVoxelSpace(P);
+    ray.ori = P;
     ray.dir = float3(1.f);
     ray.tmin = ray.tmax = 0.f;
 
@@ -462,6 +455,7 @@ struct Volume
   struct {
     unsigned tfID{UINT_MAX};
     unsigned fieldID{UINT_MAX}; // _should_ be same as volID
+    float densityScale;
   } asTransferFunction1D;
 
   aabb bounds;

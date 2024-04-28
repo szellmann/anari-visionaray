@@ -145,6 +145,7 @@ void UnstructuredField::commit()
   vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
 #endif
 
+  vfield.voxelSpaceTransform = mat4x3(mat3::identity(),vec3f(0.f));
   setStepSize(length(bounds().max-bounds().min)/50.f);
 
   buildGrid();

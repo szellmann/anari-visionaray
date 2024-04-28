@@ -113,9 +113,9 @@ void BlockStructuredField::commit()
 
   mat3 S = mat3::scaling(voxelBounds.size()/m_bounds.size());
   vec3 T = voxelBounds.min-m_bounds.min;
-  vfield.asBlockStructured.voxelSpaceTransform = mat4x3(S,T);
+  vfield.voxelSpaceTransform = mat4x3(S,T);
 
-  setStepSize(length(voxelBounds.max-voxelBounds.min)/50.f);
+  setStepSize(length(bounds().max-bounds().min)/50.f);
 
   buildGrid();
 

@@ -109,6 +109,7 @@ void TransferFunction1D::commit()
   vgeom.asVolume.data.asTransferFunction1D.tfID = vtransfunc.tfID;
   vgeom.asVolume.data.asTransferFunction1D.fieldID
       = m_field->visionaraySpatialField().fieldID;
+  vgeom.asVolume.data.asTransferFunction1D.densityScale = m_densityScale;
 
   vtransfunc.volID = vgeom.asVolume.data.volID;
   vtransfunc.as1D.numValues = tex.size()[0];

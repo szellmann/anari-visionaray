@@ -31,6 +31,10 @@ void StructuredRegularField::commit()
   m_origin = getParam<float3>("origin", float3(0.f));
   m_spacing = getParam<float3>("spacing", float3(1.f));
 
+  mat3 S = mat3::scaling(1.f/bounds().size());
+  vec3 T = -bounds().min;
+  vfield.voxelSpaceTransform = mat4x3(S,T);
+
   setStepSize(min_element(m_spacing / 2.f));
 
 #ifdef WITH_CUDA
@@ -59,9 +63,6 @@ void StructuredRegularField::commit()
   tex.set_filter_mode(Linear);
   tex.set_address_mode(Clamp);
 
-  vfield.asStructuredRegular.origin = m_origin;
-  vfield.asStructuredRegular.spacing = m_spacing;
-  vfield.asStructuredRegular.dims = m_dims;
 #ifdef WITH_CUDA
   m_dataTexture = cuda_texture<float, 3>(tex);
   vfield.asStructuredRegular.sampler = cuda_texture_ref<float, 3>(m_dataTexture);
@@ -100,7 +101,7 @@ void StructuredRegularField::buildGrid()
       for (unsigned x=0; x<m_dims.x; ++x) {
         uint3 xyz{x,y,z};
         float3 P = m_origin + float3{xyz} * m_spacing;
-        float3 texCoord = vfield.asStructuredRegular.objectToTexCoord(P);
+        float3 texCoord = vfield.pointToVoxelSpace(P);
         float value = tex3D(vfield.asStructuredRegular.sampler, texCoord);
         box3f cellBounds{
           m_origin+float3{xyz}*m_spacing,

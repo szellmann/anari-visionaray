@@ -66,23 +66,18 @@ inline HitRecordVolume sampleFreeFlightDistance(
     ScreenSample &ss, Ray ray, const dco::Volume &vol,
     VisionarayGlobalState::DeviceObjectRegistry onDevice) {
 
+  const auto &sf = onDevice.spatialFields[vol.asTransferFunction1D.fieldID];
+
   HitRecordVolume hr;
-  hr.t = ray.tmax;
 
-  const float dt = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].baseDT;
-
-  dco::GridAccel grid
-      = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].gridAccel;
+  dco::GridAccel grid = sf.gridAccel;
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
 #ifdef WITH_CUDA
     const bool hasMajorant = false;
 #else
-    const bool hasMajorant =
-        onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type
-            == dco::SpatialField::Unstructured ||
-        onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type
-            == dco::SpatialField::StructuredRegular;
+    const bool hasMajorant = sf.type == dco::SpatialField::Unstructured ||
+                             sf.type == dco::SpatialField::StructuredRegular;
 #endif
     const float majorant = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
@@ -91,14 +86,14 @@ inline HitRecordVolume sampleFreeFlightDistance(
       if (majorant <= 0.f)
         break;
 
-      t -= logf(1.f - ss.random()) / majorant * dt;
+      t -= logf(1.f - ss.random()) / majorant;
 
       if (t >= t1)
         break;
 
       float3 P = ray.ori+ray.dir*t;
       float v = 0.f;
-      if (sampleField(onDevice.spatialFields[vol.asTransferFunction1D.fieldID],P,v)) {
+      if (sampleField(sf,P,v)) {
         float4 sample
             = postClassify(ss,onDevice.transferFunctions[vol.asTransferFunction1D.tfID],v);
         hr.albedo = sample.xyz();
@@ -119,18 +114,34 @@ inline HitRecordVolume sampleFreeFlightDistance(
 
   };
 
+  // clip ray against volume bounds
   auto boxHit = intersect(ray, vol.bounds);
   ray.tmin = max(ray.tmin, boxHit.tnear);
   ray.tmax = min(ray.tmax, boxHit.tfar);
+
+  // transform ray to voxel space
+  ray.ori = sf.pointToVoxelSpace(ray.ori);
+  ray.dir = sf.vectorToVoxelSpace(ray.dir);
+
+  const float dt_scale = length(ray.dir);
+  ray.dir = normalize(ray.dir);
+
+  ray.tmin = ray.tmin * dt_scale;
+  ray.tmax = ray.tmax * dt_scale;
+
+  hr.t = ray.tmax;
 #ifndef WITH_CUDA
-  if (onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::Unstructured ||
-      onDevice.spatialFields[vol.asTransferFunction1D.fieldID].type == dco::SpatialField::StructuredRegular)
+  if (sf.type == dco::SpatialField::Unstructured ||
+      sf.type == dco::SpatialField::StructuredRegular)
     dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
 #else
     woodcockFunc(-1, ray.tmin, ray.tmax);
 #endif
+
+  if (hr.hit)
+    hr.t /= dt_scale;
 
   return hr;
 }
