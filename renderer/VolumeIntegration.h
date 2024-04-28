@@ -73,14 +73,8 @@ inline HitRecordVolume sampleFreeFlightDistance(
   dco::GridAccel grid = sf.gridAccel;
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
-#ifdef WITH_CUDA
-    const bool hasMajorant = false;
-#else
-    const bool hasMajorant = sf.type == dco::SpatialField::Unstructured ||
-                             sf.type == dco::SpatialField::StructuredRegular ||
-                             sf.type == dco::SpatialField::BlockStructured;
-#endif
-    const float majorant = hasMajorant ? grid.maxOpacities[leafID] : 1.f;
+
+    const float majorant = grid.isValid() ? grid.maxOpacities[leafID] : 1.f;
     float t = t0;
 
     while (1) {
@@ -131,16 +125,10 @@ inline HitRecordVolume sampleFreeFlightDistance(
   ray.tmax = ray.tmax * dt_scale;
 
   hr.t = ray.tmax;
-#ifndef WITH_CUDA
-  if (sf.type == dco::SpatialField::Unstructured ||
-      sf.type == dco::SpatialField::StructuredRegular ||
-      sf.type == dco::SpatialField::BlockStructured)
+  if (sf.gridAccel.isValid())
     dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
-#else
-    woodcockFunc(-1, ray.tmin, ray.tmax);
-#endif
 
   if (hr.hit)
     hr.t /= dt_scale;

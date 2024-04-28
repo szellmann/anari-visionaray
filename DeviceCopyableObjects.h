@@ -328,6 +328,12 @@ struct GridAccel
   box3 worldBounds;
   box1 *valueRanges; // min/max ranges
   float *maxOpacities; // used as majorants
+
+  VSNRAY_FUNC
+  inline bool isValid() const
+  {
+    return dims != int3(0) && valueRanges && maxOpacities;
+  }
 };
 
 // Spatial Field //
