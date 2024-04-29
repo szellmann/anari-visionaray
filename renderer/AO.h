@@ -30,7 +30,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
 
     Ray aoRay;
-    aoRay.ori = isectPos + Ng * 1e-4f;
+    aoRay.ori = isectPos + dir * 1e-4f;
     aoRay.dir = dir;
     aoRay.tmin = 0.f;
     aoRay.tmax = AO_radius;
