@@ -139,7 +139,7 @@ void BlockStructuredField::buildGrid()
 #ifdef WITH_CUDA
   return;
 #endif
-  int3 dims{64, 64, 64};
+  int3 dims{128, 128, 128};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(dims, worldBounds);
 
