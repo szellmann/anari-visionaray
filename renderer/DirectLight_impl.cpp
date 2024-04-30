@@ -92,6 +92,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         gn = normalize(gn);
       }
 
+      if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
+        gn = uniform_sample_sphere(ss.random(), ss.random());
+
       result.Ng = gn;
       result.Ns = gn;
       result.albedo = hrv.albedo;
@@ -266,9 +269,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
   } else { // bounceID == 1
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
-
-    if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
-      gn = uniform_sample_sphere(ss.random(), ss.random());
 
     float aoV = rendererState.ambientSamples == 0 ? 1.f
         : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos, eps,
