@@ -86,6 +86,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
+      viewDir = -ray.dir;
       if (rendererState.gradientShading &&
           sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn)) {
         gn = normalize(gn);
@@ -110,11 +111,15 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       hitPos = ray.ori + hr.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
 
+      viewDir = -ray.dir;
+
       gn = getNormal(geom, hr.prim_id, hitPos, uv);
       sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
 
       gn = inst.normalXfm * gn;
       sn = inst.normalXfm * sn;
+
+      sn = faceforward(sn, viewDir, gn);
 
       float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
       if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
@@ -127,10 +132,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
       result.albedo = color.xyz();
     }
-
-    viewDir = -ray.dir;
-
-    sn = faceforward(sn, viewDir, gn);
 
     result.Ng = gn;
     result.Ns = sn;
