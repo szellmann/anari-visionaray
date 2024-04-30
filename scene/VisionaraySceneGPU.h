@@ -17,7 +17,7 @@ struct VisionaraySceneGPU
   aabb getBounds() const;
   void commit();
   void dispatch();
-  void attachGeometry(dco::Geometry geom, unsigned geomID);
+  void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
 
   cuda_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
  private:

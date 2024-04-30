@@ -353,12 +353,14 @@ float VisionaraySceneImpl::getWorldEPS() const
   return fmaxf(1e-3f, length(diag) * 1e-5f);
 }
 
-void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
+void VisionaraySceneImpl::attachGeometry(
+    dco::Geometry geom, unsigned geomID, unsigned userID)
 {
 #ifdef WITH_CUDA
-  m_gpuScene->attachGeometry(geom, geomID);
+  m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
   m_geometries.set(geomID, geom.geomID);
+  m_objIds.set(geomID, userID);
 
   // Patch geomID into scene primitives
   if (geom.type == dco::Geometry::Triangle) {
@@ -401,9 +403,9 @@ void VisionaraySceneImpl::attachGeometry(dco::Geometry geom, unsigned geomID)
 }
 
 void VisionaraySceneImpl::attachGeometry(
-    dco::Geometry geom, dco::Material mat, unsigned geomID)
+    dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID)
 {
-  attachGeometry(geom, geomID);
+  attachGeometry(geom, geomID, userID);
 
   m_materials.set(geomID, mat.matID);
 }
@@ -459,6 +461,8 @@ void VisionaraySceneImpl::dispatch()
     group.materials = m_materials.devicePtr();
     group.numLights = m_lights.size();
     group.lights = m_lights.devicePtr();
+    group.objIds = m_objIds.devicePtr();
+    group.numObjIds = m_objIds.size();
     m_state->dcos.groups.update(m_groupID, group);
   }
 

@@ -117,8 +117,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       result.Ns = sn;
       result.albedo = color.xyz();
       result.primId = hr.prim_id;
-      result.objId = hr.geom_id;
-      result.instId = hr.inst_id;
+      result.objId = group.objIds[hr.geom_id];
+      result.instId = inst.userID;
     }
 
     hit = true;
@@ -158,8 +158,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     result.Ns = float3{}; // TODO..
     result.albedo = float3{}; // TODO..
     result.primId = hr.prim_id;
-    result.objId = hr.geom_id;
-    result.instId = hr.inst_id;
+    result.objId = group.objIds[hr.geom_id];
+    result.instId = inst.userID;
 
     hit = true;
   }

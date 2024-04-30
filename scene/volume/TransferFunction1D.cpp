@@ -32,6 +32,8 @@ TransferFunction1D::~TransferFunction1D()
 
 void TransferFunction1D::commit()
 {
+  Volume::commit();
+
   m_field = getParamObject<SpatialField>("value");
 
   if (!m_field) {

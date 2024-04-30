@@ -160,6 +160,15 @@ struct HostDeviceArray : public std::vector<T>
     deviceMapped = false;
   }
 
+  void set(size_t index, const T &value)
+  {
+    if (index >= Base::size())
+      resize(index+1);
+
+    updated = true;
+    Base::operator[](index) = value;
+  }
+
   void resize(size_t n)
   {
     Base::resize(n);
@@ -253,23 +262,7 @@ struct HostDeviceArray : public std::vector<T>
 // host/device array storing device object handles
 // ==================================================================
 
-struct DeviceHandleArray : public HostDeviceArray<DeviceObjectHandle>
-{
- public:
-  typedef DeviceObjectHandle value_type;
-  typedef HostDeviceArray<DeviceObjectHandle> Base;
-
-  DeviceHandleArray() = default;
-  ~DeviceHandleArray() = default;
-
-  void set(size_t index, DeviceObjectHandle handle)
-  {
-    if (index >= Base::size())
-      Base::resize(index+1);
-
-    Base::operator[](index) = handle;
-  }
-};
+typedef HostDeviceArray<DeviceObjectHandle> DeviceHandleArray;
 
 // ==================================================================
 // Array type capable of managing device-copyable objects via handles

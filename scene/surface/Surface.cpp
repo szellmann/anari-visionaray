@@ -20,6 +20,7 @@ Surface::~Surface()
 
 void Surface::commit()
 {
+  m_id = getParam<uint32_t>("id", ~0u);
   m_geometry = getParamObject<Geometry>("geometry");
   m_material = getParamObject<Material>("material");
 
@@ -39,6 +40,10 @@ void Surface::commit()
   dispatch();
 }
 
+uint32_t Surface::id() const
+{
+  return m_id;
+}
 const Geometry *Surface::geometry() const
 {
   return m_geometry.ptr;
@@ -56,46 +61,6 @@ void Surface::dispatch()
   // Upload/set accessible pointers
   deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.devicePtr();
 }
-
-// float4 Surface::getSurfaceColor(const Ray &ray) const
-// {
-//   auto &state = *deviceState();
-//   auto &imc = state.invalidMaterialColor;
-// 
-//   auto *mat = material();
-// 
-//   if (!mat)
-//     return float4(imc.x, imc.y, imc.z, 1.f);
-// 
-//   const auto colorAttribute = mat->colorAttribute();
-//   const auto *colorSampler = mat->colorSampler();
-//   if (colorSampler && colorSampler->isValid())
-//     return colorSampler->getSample(*geometry(), ray);
-//   else if (colorAttribute == Attribute::NONE)
-//     return material()->color();
-//   else
-//     return geometry()->getAttributeValue(colorAttribute, ray);
-// }
-// 
-// float Surface::getSurfaceOpacity(const Ray &ray) const
-// {
-//   auto &state = *deviceState();
-//   auto &imc = state.invalidMaterialColor;
-// 
-//   auto *mat = material();
-// 
-//   if (!mat)
-//     return 0.f;
-// 
-//   const auto opacityAttribute = mat->opacityAttribute();
-//   const auto *opacitySampler = mat->opacitySampler();
-//   if (opacitySampler && opacitySampler->isValid())
-//     return opacitySampler->getSample(*geometry(), ray).x;
-//   else if (opacityAttribute == Attribute::NONE)
-//     return material()->opacity();
-//   else
-//     return geometry()->getAttributeValue(opacityAttribute, ray).x;
-// }
 
 void Surface::markCommitted()
 {

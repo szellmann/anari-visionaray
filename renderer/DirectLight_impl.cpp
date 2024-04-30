@@ -95,13 +95,14 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     } else {
       result.depth = hr.t;
       result.primId = hr.prim_id;
-      result.objId = hr.geom_id;
-      result.instId = hr.inst_id;
 
       const dco::Instance &inst = onDevice.instances[hr.inst_id];
       const dco::Group &group = onDevice.groups[inst.groupID];
       const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
+
+      result.objId = group.objIds[hr.geom_id];
+      result.instId = inst.userID;
 
       hitPos = ray.ori + hr.t * ray.dir;
       gn = getNormal(geom, hr.prim_id, hitPos, uv);

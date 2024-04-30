@@ -27,6 +27,16 @@ Volume::~Volume()
   deviceState()->objectCounts.volumes--;
 }
 
+void Volume::commit()
+{
+   m_id = getParam<uint32_t>("id", ~0u);
+}
+
+uint32_t Volume::id() const
+{
+  return m_id;
+}
+
 Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
   if (subtype == "transferFunction1D")

@@ -19,12 +19,12 @@ Instance::~Instance()
   deviceState()->dcos.instances.free(vgeom.asInstance.data.instID);
   deviceState()->dcos.geometries.free(vgeom.geomID);
 
-  // rtcReleaseGeometry(m_embreeGeometry);
   deviceState()->objectCounts.instances--;
 }
 
 void Instance::commit()
 {
+  m_id = getParam<uint32_t>("id", ~0u);
   m_xfm = getParam<mat4>("transform", mat4::identity());
   m_xfmInvRot = inverse(top_left(m_xfm));
   m_group = getParamObject<Group>("group");
@@ -32,6 +32,11 @@ void Instance::commit()
     reportMessage(ANARI_SEVERITY_WARNING, "missing 'group' on ANARIInstance");
 
   dispatch();
+}
+
+uint32_t Instance::id() const
+{
+  return m_id;
 }
 
 const mat4 &Instance::xfm() const
@@ -66,7 +71,7 @@ dco::Geometry Instance::visionarayGeometry() const
 
 void Instance::visionarayGeometryUpdate()
 {
-  // rtcSetGeometryInstancedScene(m_embreeGeometry, group()->embreeScene());
+  vgeom.asInstance.data.userID = m_id;
   vgeom.asInstance.data.groupID = group()->visionarayScene()->m_groupID;
   vgeom.asInstance.data.xfm = m_xfm;
 

@@ -419,9 +419,11 @@ void VisionaraySceneGPU::dispatch()
   }
 }
 
-void VisionaraySceneGPU::attachGeometry(dco::Geometry geom, unsigned geomID)
+void VisionaraySceneGPU::attachGeometry(
+    dco::Geometry geom, unsigned geomID, unsigned userID)
 {
   m_impl->parent->m_geometries.set(geomID, geom.geomID);
+  m_impl->parent->m_objIds.set(geomID, userID);
 
   // Patch geomID into scene primitives
   // (first copy to CPU, patch there, then copy back...)

@@ -1207,6 +1207,7 @@ enum class Attribute
 struct Instance
 {
   unsigned instID{UINT_MAX};
+  unsigned userID{UINT_MAX};
   unsigned groupID{UINT_MAX};
 #ifdef WITH_CUDA
   cuda_index_bvh<BLS>::bvh_inst instBVH;
@@ -1484,6 +1485,8 @@ struct Group
   Handle *materials{nullptr};
   unsigned numLights{0};
   Handle *lights{nullptr};
+  uint32_t *objIds{nullptr}; // surface IDs, volume IDs, etc.
+  unsigned numObjIds{0};
 };
 
 // World //

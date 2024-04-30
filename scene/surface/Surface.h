@@ -15,6 +15,7 @@ struct Surface : public Object
 
   void commit() override;
 
+  uint32_t id() const;
   const Geometry *geometry() const;
   const Material *material() const;
 
@@ -31,22 +32,12 @@ struct Surface : public Object
  private:
   void dispatch();
 
+  uint32_t m_id{~0u};
   helium::IntrusivePtr<Geometry> m_geometry;
   helium::IntrusivePtr<Material> m_material;
 
   dco::Surface vsurf;
 };
-
-// Inlined definitions ////////////////////////////////////////////////////////
-
-// inline float Surface::adjustedAlpha(float a) const
-// {
-//   if (!material())
-//     return 0.f;
-// 
-//   return adjustOpacityFromMode(
-//       a, material()->alphaCutoff(), material()->alphaMode());
-// }
 
 } // namespace visionaray
 
