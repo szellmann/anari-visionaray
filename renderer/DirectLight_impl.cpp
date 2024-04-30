@@ -154,13 +154,13 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
       if (light.type == dco::Light::Point) {
-        ls = light.asPoint.sample(hitPos+eps, ss.random);
+        ls = light.asPoint.sample(hitPos, ss.random);
         intensity = light.asPoint.intensity(hitPos);
       } else if (light.type == dco::Light::Directional) {
-        ls = light.asDirectional.sample(hitPos+eps, ss.random);
+        ls = light.asDirectional.sample(hitPos, ss.random);
         intensity = light.asDirectional.intensity(hitPos);
       } else if (light.type == dco::Light::HDRI) {
-        ls = light.asHDRI.sample(hitPos+eps, ss.random);
+        ls = light.asHDRI.sample(hitPos, ss.random);
         intensity = light.asHDRI.intensity(ls.dir);
       }
 
