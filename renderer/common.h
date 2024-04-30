@@ -323,6 +323,7 @@ inline vec3 getShadingNormal(
       vec3 n2 = normals[index.y];
       vec3 n3 = normals[index.z];
       sn = lerp(n1, n2, n3, uv.x, uv.y);
+      sn = normalize(sn);
     } else {
       sn = getNormal(geom, primID, hitPos, uv);
     }
