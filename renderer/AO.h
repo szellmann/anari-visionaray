@@ -21,8 +21,8 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
     float eps, int AO_samples, float AO_radius)
 {
-  Ng = faceforward(Ng, viewDir, Ng);
-  vec3 u, v, w = Ng;
+  Ns = faceforward(Ns, viewDir, Ng);
+  vec3 u, v, w = Ns;
   make_orthonormal_basis(u,v,w);
   float weights = 0.f;
   float aoCount = 0.f;
