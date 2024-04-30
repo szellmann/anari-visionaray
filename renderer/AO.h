@@ -19,7 +19,7 @@ VSNRAY_FUNC
 inline float computeAO(ScreenSample &ss, unsigned worldID,
     VisionarayGlobalState::DeviceObjectRegistry onDevice,
     vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
-    int AO_samples, float AO_radius)
+    float eps, int AO_samples, float AO_radius)
 {
   Ng = faceforward(Ng, viewDir, Ng);
   vec3 u, v, w = Ng;
@@ -31,7 +31,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
 
     Ray aoRay;
-    aoRay.ori = isectPos + dir * 1e-4f;
+    aoRay.ori = isectPos + dir * eps;
     aoRay.dir = dir;
     aoRay.tmin = 0.f;
     aoRay.tmax = AO_radius;

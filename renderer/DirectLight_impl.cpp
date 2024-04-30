@@ -36,6 +36,7 @@ struct ShadeRec
   float3 viewDir{0.f};
   float3 hitPos{0.f};
   bool hdriMiss{false};
+  float eps{1e-4f};
 };
 
 VSNRAY_FUNC
@@ -57,6 +58,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
   auto &viewDir = shadeRec.viewDir;
   auto &hitPos = shadeRec.hitPos;
   auto &hdriMiss = shadeRec.hdriMiss;
+  auto &eps = shadeRec.eps;
 
   auto &hr = hitRec.surface;
   auto &hrv = hitRec.volume;
@@ -84,6 +86,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
     if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
+      eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       if (rendererState.gradientShading &&
           sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn)) {
         gn = normalize(gn);
@@ -105,6 +108,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       result.instId = inst.userID;
 
       hitPos = ray.ori + hr.t * ray.dir;
+      eps = epsilonFrom(hitPos, ray.dir, hr.t);
       gn = getNormal(geom, hr.prim_id, hitPos, uv);
       sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
       float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
@@ -147,13 +151,13 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
       if (light.type == dco::Light::Point) {
-        ls = light.asPoint.sample(hitPos+1e-4f, ss.random);
+        ls = light.asPoint.sample(hitPos+eps, ss.random);
         intensity = light.asPoint.intensity(hitPos);
       } else if (light.type == dco::Light::Directional) {
-        ls = light.asDirectional.sample(hitPos+1e-4f, ss.random);
+        ls = light.asDirectional.sample(hitPos+eps, ss.random);
         intensity = light.asDirectional.intensity(hitPos);
       } else if (light.type == dco::Light::HDRI) {
-        ls = light.asHDRI.sample(hitPos+1e-4f, ss.random);
+        ls = light.asHDRI.sample(hitPos+eps, ss.random);
         intensity = light.asHDRI.intensity(ls.dir);
       }
 
@@ -257,8 +261,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     // Convert primary to shadow ray
     ray.ori = hitPos;
     ray.dir = ls.dir;
-    ray.tmin = 1e-4f;
-    ray.tmax = ls.dist-1e-4f;
+    ray.tmin = eps;
+    ray.tmax = ls.dist-eps;
   } else { // bounceID == 1
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
@@ -267,7 +271,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       gn = uniform_sample_sphere(ss.random(), ss.random());
 
     float aoV = rendererState.ambientSamples == 0 ? 1.f
-        : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos,
+        : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos, eps,
                         rendererState.ambientSamples,
                         rendererState.occlusionDistance);
     // visibility term

@@ -58,6 +58,13 @@ struct LCG
 
 typedef LCG<4> Random;
 
+VSNRAY_FUNC
+inline float epsilonFrom(const vec3 &P, const vec3 &dir, float t)
+{
+  constexpr float ulpEpsilon = 0x1.fp-21;
+  return max_element(vec4(abs(P), max_element(abs(dir)) * t)) * ulpEpsilon;
+}
+
 struct ScreenSample
 {
   int x, y;
