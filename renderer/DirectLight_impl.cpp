@@ -259,10 +259,10 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     }
 
     // Convert primary to shadow ray
-    ray.ori = hitPos;
-    ray.dir = ls.dir;
-    ray.tmin = eps;
-    ray.tmax = ls.dist-eps;
+    ray.ori = hitPos + sn * eps;
+    ray.dir = normalize(ls.dir);
+    ray.tmin = 0.f;
+    ray.tmax = ls.dist-1e-4f; // TODO: bias sample point
   } else { // bounceID == 1
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
