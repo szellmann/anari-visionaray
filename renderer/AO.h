@@ -21,7 +21,6 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
     float eps, int AO_samples, float AO_radius)
 {
-  Ns = faceforward(Ns, viewDir, Ng);
   vec3 u, v, w = Ns;
   make_orthonormal_basis(u,v,w);
   float weights = 0.f;
@@ -31,7 +30,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
 
     Ray aoRay;
-    aoRay.ori = isectPos + Ng * eps;
+    aoRay.ori = isectPos + Ns * eps;
     aoRay.dir = dir;
     aoRay.tmin = 0.f;
     aoRay.tmax = AO_radius;

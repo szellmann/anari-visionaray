@@ -101,7 +101,8 @@ bool Instance::isValid() const
 void Instance::dispatch()
 {
   deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
-  vgeom.asInstance.data.invXfm = inverse(vgeom.asInstance.data.xfm);
+  //vgeom.asInstance.data.invXfm = inverse(vgeom.asInstance.data.xfm);
+  vgeom.asInstance.data.normalXfm = transpose(m_xfmInvRot);
   deviceState()->dcos.instances.update(
       vgeom.asInstance.data.instID, vgeom.asInstance.data);
 

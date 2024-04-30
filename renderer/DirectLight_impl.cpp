@@ -81,7 +81,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     }
 
     float4 color{1.f};
-    float3 xfmDir = ray.dir;
     float2 uv{hr.u,hr.v};
 
     if (hitRec.volumeHit) {
@@ -95,8 +94,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
         gn = uniform_sample_sphere(ss.random(), ss.random());
 
-      result.Ng = gn;
-      result.Ns = gn;
       result.albedo = hrv.albedo;
     } else {
       result.depth = hr.t;
@@ -112,8 +109,13 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
       hitPos = ray.ori + hr.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
+
       gn = getNormal(geom, hr.prim_id, hitPos, uv);
       sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
+
+      gn = inst.normalXfm * gn;
+      sn = inst.normalXfm * sn;
+
       float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
       if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
         tng = tng4.xyz();
@@ -123,14 +125,15 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       }
       color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
-      result.Ng = gn;
-      result.Ns = sn;
       result.albedo = color.xyz();
-
-      xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
     }
 
-    viewDir = -xfmDir;
+    viewDir = -ray.dir;
+
+    sn = faceforward(sn, viewDir, gn);
+
+    result.Ng = gn;
+    result.Ns = sn;
 
     // Compute motion vector; assume for now the hit was diffuse!
     recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};

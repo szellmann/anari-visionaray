@@ -1215,7 +1215,7 @@ struct Instance
   index_bvh<BLS>::bvh_inst instBVH;
 #endif
   mat4 xfm;
-  mat4 invXfm;
+  mat3 normalXfm;
 };
 
 // Surface //

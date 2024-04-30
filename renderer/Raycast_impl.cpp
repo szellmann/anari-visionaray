@@ -35,6 +35,10 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     vec2f uv{hr.u,hr.v};
     vec3f gn = getNormal(geom, hr.prim_id, hitPos, uv);
     vec3f sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
+
+    gn = inst.normalXfm * gn;
+    sn = inst.normalXfm * sn;
+
     vec3f tng{0.f};
     vec3f btng{0.f};
     float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
@@ -46,13 +50,11 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     }
     vec4f color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
 
-    float3 xfmDir = (inst.invXfm * float4(ray.dir, 0.f)).xyz();
-
     // That doesn't work for instances..
     float3 shadedColor{0.f};
 
     if (rendererState.renderMode == RenderMode::Default) {
-      float3 viewDir = -xfmDir;
+      float3 viewDir = -ray.dir;
       for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
         const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
