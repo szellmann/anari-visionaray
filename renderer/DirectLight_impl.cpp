@@ -267,7 +267,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       gn = uniform_sample_sphere(ss.random(), ss.random());
 
     float aoV = rendererState.ambientSamples == 0 ? 1.f
-        : 1.f-computeAO(ss, worldID, onDevice, gn, viewDir, hitPos,
+        : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos,
                         rendererState.ambientSamples,
                         rendererState.occlusionDistance);
     // visibility term

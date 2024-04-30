@@ -18,7 +18,8 @@ inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
 VSNRAY_FUNC
 inline float computeAO(ScreenSample &ss, unsigned worldID,
     VisionarayGlobalState::DeviceObjectRegistry onDevice,
-    vec3 Ng, const vec3 viewDir, const vec3 isectPos, int AO_samples, float AO_radius)
+    vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
+    int AO_samples, float AO_radius)
 {
   Ng = faceforward(Ng, viewDir, Ng);
   vec3 u, v, w = Ng;
@@ -35,7 +36,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     aoRay.tmin = 0.f;
     aoRay.tmax = AO_radius;
 
-    float weight = max(0.f, dot(dir,Ng));
+    float weight = max(0.f, dot(dir,Ns));
     weights += weight;
     if (weight > 0.f && occluded(ss, aoRay, worldID, onDevice)) {
       aoCount += weight;
