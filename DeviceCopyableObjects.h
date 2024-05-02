@@ -5,6 +5,7 @@
 #include "visionaray/bvh.h"
 #include "visionaray/directional_light.h"
 #include "visionaray/matrix_camera.h"
+#include "visionaray/area_light.h"
 #include "visionaray/point_light.h"
 #include "visionaray/spot_light.h"
 #include "visionaray/thin_lens_camera.h"
@@ -1421,11 +1422,102 @@ inline Material makeDefaultMaterial()
   return mat;
 }
 
+// Quad (light) //
+/// TODO: this geom type is at the moment only used for quad _lights_,
+/// but could just as easily be used for the quad _primitive_ where
+/// we currently just use two visionaray triangles
+
+struct Quad
+{
+  vec3 v1, e1, e2;
+
+  VSNRAY_FUNC
+  inline void tessellate(
+      basic_triangle<3,float> &t1, basic_triangle<3,float> &t2) const {
+    t1.v1 = v1; t1.e1 = e1; t1.e2 = e1+e2;
+    t2.v1 = v1; t2.e1 = e1+e2; t2.e2 = e2;
+  }
+};
+
+VSNRAY_FUNC
+inline aabb get_bounds(const Quad &q)
+{
+  aabb bounds;
+  bounds.invalidate();
+  bounds.insert(q.v1);
+  bounds.insert(q.v1+q.e1);
+  bounds.insert(q.v1+q.e2);
+  bounds.insert(q.v1+q.e1+q.e2);
+  return bounds;
+}
+
+inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const Quad &q)
+{
+  basic_triangle<3,float> t1, t2;
+  q.tessellate(t1,t2);
+
+  auto hr1 = intersect(ray, t1);
+  auto hr2 = intersect(ray, t2);
+
+  hit_record<Ray, primitive<unsigned>> result;
+
+  if (hr1.hit) {
+    result.hit = true;
+    result.t = hr1.t;
+  }
+
+  if (hr2.hit && hr2.t < result.t) {
+    result.hit = true;
+    result.t = hr2.t;
+  }
+
+  if (result.hit)
+    result.isect_pos = ray.ori + ray.dir * result.t;
+
+  return result;
+}
+
+template <typename HR>
+VSNRAY_FUNC
+inline vec3 get_normal(const HR &hr, const Quad &q)
+{
+  (void)hr;
+  basic_triangle<3,float> t1, t2;
+  q.tessellate(t1,t2);
+  return normalize(cross(t1.e1,t1.e2));
+  //return normalize(cross(q.e1,q.e2));
+}
+
+VSNRAY_FUNC
+inline float area(const Quad &q)
+{
+  basic_triangle<3,float> t1, t2;
+  q.tessellate(t1,t2);
+  return area(t1) + area(t2);
+}
+
+template <typename RNG>
+VSNRAY_FUNC
+inline vec3 sample_surface(const Quad &q, const vec3 reference_point, RNG &rng)
+{
+  basic_triangle<3,float> t1, t2;
+  q.tessellate(t1,t2);
+
+  float A1 = area(t1);
+  float A2 = area(t2);
+
+  float r = rng();
+  if (A1/(A1+A2) < r)
+    return sample_surface(t1, reference_point, rng);
+  else
+    return sample_surface(t2, reference_point, rng);
+}
+
 // Light //
 
 struct Light
 {
-  enum Type { Directional, Point, Spot, HDRI, Unknown, };
+  enum Type { Directional, Point, Quad, Spot, HDRI, Unknown, };
   Type type{Unknown};
   unsigned lightID{UINT_MAX};
   bool visible{true};
@@ -1433,6 +1525,7 @@ struct Light
     directional_light<float> asDirectional;
     point_light<float> asPoint;
     spot_light<float> asSpot;
+    area_light<float,dco::Quad> asQuad;
   };
   struct {
 #ifdef WITH_CUDA

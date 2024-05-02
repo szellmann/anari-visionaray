@@ -6,6 +6,7 @@
 #include "Directional.h"
 #include "HDRI.h"
 #include "Point.h"
+#include "Quad.h"
 
 namespace visionaray {
 
@@ -36,6 +37,8 @@ Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
     return new Directional(s);
   else if (subtype == "point")
     return new Point(s);
+  else if (subtype == "quad")
+    return new QuadLight(s);
   else if (subtype == "hdri")
     return new HDRI(s);
   else

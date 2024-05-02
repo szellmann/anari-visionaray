@@ -56,6 +56,7 @@ set(SOURCES
     scene/light/Directional.cpp
     scene/light/HDRI.cpp
     scene/light/Point.cpp
+    scene/light/Quad.cpp
     scene/light/Spot.cpp
     scene/surface/geometry/BezierCurve.cpp
     scene/surface/geometry/Cone.cpp

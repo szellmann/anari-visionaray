@@ -4,13 +4,42 @@
 
 namespace visionaray {
 
+struct HitRecLight
+{
+  bool hit{false};
+  float t{FLT_MAX};
+  unsigned lightID{UINT_MAX};
+};
+
 struct HitRec
 {
   hit_record<Ray, primitive<unsigned>> surface;
   HitRecordVolume volume;
+  HitRecLight light;
   bool hit{false};
   bool volumeHit{false};
+  bool lightHit{false};
 };
+
+VSNRAY_FUNC
+HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
+    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
+{
+  HitRecLight hr;
+  dco::World world = onDevice.worlds[worldID];
+  for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
+    const dco::Light &light = onDevice.lights[world.allLights[lightID]];
+    if (light.type == dco::Light::Quad && light.visible) {
+      auto hrl = intersect(ray, light.asQuad.geometry());
+      if (hrl.hit && hrl.t < hr.t) {
+        hr.hit = true;
+        hr.t = hrl.t;
+        hr.lightID = lightID;
+      }
+    }
+  }
+  return hr;
+}
 
 VSNRAY_FUNC
 HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
@@ -18,9 +47,12 @@ HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
 {
   HitRec hr;
   hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID);
+  hr.light   = intersectLights(ss, ray, worldID, onDevice);
   hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
-  hr.hit = hr.surface.hit || hr.volume.hit;
-  hr.volumeHit = hr.volume.hit && (!hr.surface.hit || hr.volume.t < hr.surface.t);
+  hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
+  hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t < hr.surface.t);
+  hr.volumeHit = hr.volume.hit && (!hr.surface.hit || hr.volume.t < hr.surface.t)
+                               && (!hr.light.hit || hr.volume.t < hr.light.t);
   return hr;
 }
 
@@ -62,6 +94,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
   auto &hr = hitRec.surface;
   auto &hrv = hitRec.volume;
+  auto &hrl = hitRec.light;
 
   dco::World world = onDevice.worlds[worldID];
 
@@ -83,7 +116,14 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     float4 color{1.f};
     float2 uv{hr.u,hr.v};
 
-    if (hitRec.volumeHit) {
+    if (hitRec.lightHit) {
+      hitPos = ray.ori + hrl.t * ray.dir;
+      const dco::Light &light = onDevice.lights[world.allLights[hrl.lightID]];
+      if (light.type == dco::Light::Quad)
+        throughput = light.asQuad.intensity(hitPos);
+      hdriMiss = true; // TODO?!
+      return false;
+    } else if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
@@ -160,6 +200,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (light.type == dco::Light::Point) {
         ls = light.asPoint.sample(hitPos, ss.random);
         intensity = light.asPoint.intensity(hitPos);
+      } else if (light.type == dco::Light::Quad) {
+        ls = light.asQuad.sample(hitPos, ss.random);
+        intensity = light.asQuad.intensity(hitPos);
       } else if (light.type == dco::Light::Directional) {
         ls = light.asDirectional.sample(hitPos, ss.random);
         intensity = light.asDirectional.intensity(hitPos);
@@ -269,7 +312,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     ray.ori = hitPos + sn * eps;
     ray.dir = normalize(ls.dir);
     ray.tmin = 0.f;
-    ray.tmax = ls.dist-1e-4f; // TODO: bias sample point
+    ray.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
   } else { // bounceID == 1
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
