@@ -677,14 +677,14 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 diffuseColor = getRGBA(
       mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv).xyz();
 
-  // Metallic materials don't reflect diffusely:
-  diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
-
   // Fresnel
   auto pow2 = [](float f) { return f*f; };
   auto pow5 = [](float f) { return f*f*f*f*f; };
   vec3 f0 = lerp(vec3(pow2((1.f-ior)/(1.f+ior))), diffuseColor, metallic);
   vec3 F = f0 + (vec3(1.f) - f0) * pow5(1.f - fabsf(VdotH));
+
+  // Metallic materials don't reflect diffusely:
+  diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
 
   vec3 diffuseBRDF
       = (vec3(1.f)-F) * constants::inv_pi<float>() * diffuseColor * fmaxf(0.f,NdotL);
