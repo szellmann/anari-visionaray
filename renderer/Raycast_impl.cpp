@@ -227,6 +227,8 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
           ray.dbg = ss.debug();
 #endif
 
+          ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
+
           PixelSample ps = renderSample(ss,
                   ray,
                   worldID,

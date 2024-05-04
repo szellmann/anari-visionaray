@@ -9,7 +9,9 @@ namespace visionaray {
 
 // Renderer definitions ///////////////////////////////////////////////////////
 
-Renderer::Renderer(VisionarayGlobalState *s) : Object(ANARI_RENDERER, s)
+Renderer::Renderer(VisionarayGlobalState *s)
+  : Object(ANARI_RENDERER, s)
+  , m_clipPlanes(this)
 {
   s->objectCounts.renderers++;
 
@@ -27,6 +29,19 @@ void Renderer::commit()
 {
   // variables supported by ALL renderers
   auto commitCommonState = [this](auto &state) {
+    m_clipPlanes = getParamObject<Array1D>("clipPlane");
+    if (m_clipPlanes) {
+      m_clipPlanesOnDevice.resize(m_clipPlanes->size());
+      for (size_t i=0; i<m_clipPlanes->size(); ++i) {
+        m_clipPlanesOnDevice[i] = m_clipPlanes->beginAs<float4>()[i];
+      }
+      state.clipPlanes = m_clipPlanesOnDevice.devicePtr();
+      state.numClipPlanes = (unsigned)m_clipPlanesOnDevice.size();
+    } else {
+      state.clipPlanes = nullptr;
+      state.numClipPlanes = 0;
+    }
+
     state.bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
     state.ambientColor = getParam<vec3>("ambientColor", vec3(1.f));
     state.ambientRadiance = getParam<float>("ambientRadiance", 0.2f);

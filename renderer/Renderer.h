@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DeviceArray.h"
 #include "Object.h"
 #include "array/Array1D.h"
 #include "scene/volume/spatial_field/SpatialField.h"
@@ -73,6 +74,8 @@ struct Renderer : public Object
   bool stochasticRendering() const { return vrend.stochasticRendering(); }
 
  protected:
+  helium::CommitObserverPtr<Array1D> m_clipPlanes;
+  HostDeviceArray<float4> m_clipPlanesOnDevice;
   VisionarayRenderer vrend;
 };
 

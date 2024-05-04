@@ -101,6 +101,8 @@ struct RendererState
 {
   float4 bgColor{float3(0.f), 1.f};
   RenderMode renderMode{RenderMode::Default};
+  float4 *clipPlanes{nullptr};
+  unsigned numClipPlanes{0};
   int pixelSamples{1};
   int accumID{0};
   int envID{-1};
@@ -741,6 +743,22 @@ inline vec3 evalMaterial(const dco::Material &mat,
                                               lightIntensity);
   }
   return shadedColor;
+}
+
+VSNRAY_FUNC
+inline Ray clipRay(Ray ray, const float4 *clipPlanes, unsigned numClipPlanes)
+{
+  for (unsigned i=0; i<numClipPlanes; ++i) {
+    float3 N(clipPlanes[i].xyz());
+    float D(clipPlanes[i].w);
+    float s = dot(N,ray.dir);
+    if (s != 0.f) {
+      float t = (D-dot(N,ray.ori))/s;
+      if (s < 0.f) ray.tmin = fmaxf(ray.tmin,t);
+      else         ray.tmax = fminf(ray.tmax,t);
+    }
+  }
+  return ray;
 }
 
 template <bool EvalOpacity>
