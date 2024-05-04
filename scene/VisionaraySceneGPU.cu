@@ -405,6 +405,8 @@ void VisionaraySceneGPU::dispatch()
     group.materials = m_impl->parent->m_materials.devicePtr();
     group.numLights = m_impl->parent->m_lights.size();
     group.lights = m_impl->parent->m_lights.devicePtr();
+    group.objIds = m_impl->parent->m_objIds.devicePtr();
+    group.numObjIds = m_impl->parent->m_objIds.size();
     deviceState()->dcos.groups.update(m_impl->parent->m_groupID, group);
   }
 
