@@ -669,11 +669,11 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float alpha = roughness*roughness;
 
   const vec3 H = normalize(lightDir+viewDir);
-  const float NdotH = dot(Ns,H);
-  const float NdotL = dot(Ns,lightDir);
-  const float NdotV = dot(Ns,viewDir);
-  const float VdotH = dot(viewDir,H);
-  const float LdotH = dot(lightDir,H);
+  const float NdotH = fmaxf(0.f,dot(Ns,H));
+  const float NdotL = fmaxf(0.f,dot(Ns,lightDir));
+  const float NdotV = fmaxf(0.f,dot(Ns,viewDir));
+  const float VdotH = fmaxf(0.f,dot(viewDir,H));
+  const float LdotH = fmaxf(0.f,dot(lightDir,H));
 
   // Diffuse:
   vec3 diffuseColor = getRGBA(
@@ -683,25 +683,24 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   auto pow2 = [](float f) { return f*f; };
   auto pow5 = [](float f) { return f*f*f*f*f; };
   vec3 f0 = lerp(vec3(pow2((1.f-ior)/(1.f+ior))), diffuseColor, metallic);
-  vec3 F = f0 + (vec3(1.f) - f0) * pow5(1.f - fabsf(VdotH));
+  vec3 F = f0 + (vec3(1.f) - f0) * pow5(1.f - VdotH);
 
   // Metallic materials don't reflect diffusely:
   diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
 
-  vec3 diffuseBRDF
-      = (vec3(1.f)-F) * constants::inv_pi<float>() * diffuseColor * fmaxf(0.f,NdotL);
+  vec3 diffuseBRDF = constants::inv_pi<float>() * diffuseColor;
 
   // GGX microfacet distribution
   float D = (alpha*alpha*heaviside(NdotH))
     / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
 
   // Masking-shadowing term
-  float G = ((2.f * fabsf(NdotL) * heaviside(LdotH))
-        / (fabsf(NdotL) + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
-    *       ((2.f * fabsf(NdotV) * heaviside(VdotH))
-        / (fabsf(NdotV) + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
+  float G = ((2.f * NdotL * heaviside(LdotH))
+        / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
+    *       ((2.f * NdotV * heaviside(VdotH))
+        / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
 
-  float denom = 4.f * fabsf(NdotV) * fabsf(NdotL);
+  float denom = 4.f * NdotV * NdotL;
   vec3 specularBRDF = (F * D * G) / max(1e-4f,denom);
 
   return (diffuseBRDF + specularBRDF) * lightIntensity;
