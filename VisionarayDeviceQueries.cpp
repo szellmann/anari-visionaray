@@ -630,6 +630,54 @@ static const void * ANARI_RENDERER_raycast_heatMapScale_info(ANARIDataType param
       default: return nullptr;
    }
 }
+static const void * ANARI_RENDERER_raycast_ambientColor_info(ANARIDataType paramType, int infoName, ANARIDataType infoType) {
+   (void)paramType;
+   switch(infoName) {
+      case 0: // required
+         if(infoType == ANARI_BOOL) {
+            return &anari_false;
+         } else {
+            return nullptr;
+         }
+      case 1: // default
+         if(paramType == ANARI_FLOAT32_VEC3 && infoType == ANARI_FLOAT32_VEC3) {
+            static const float default_value[3] = {1.000000f, 1.000000f, 1.000000f};
+            return default_value;
+         } else {
+            return nullptr;
+         }
+      case 4: // description
+         {
+            static const char *description = "ambient light color (RGB)";
+            return description;
+         }
+      default: return nullptr;
+   }
+}
+static const void * ANARI_RENDERER_raycast_ambientRadiance_info(ANARIDataType paramType, int infoName, ANARIDataType infoType) {
+   (void)paramType;
+   switch(infoName) {
+      case 0: // required
+         if(infoType == ANARI_BOOL) {
+            return &anari_false;
+         } else {
+            return nullptr;
+         }
+      case 1: // default
+         if(paramType == ANARI_FLOAT32 && infoType == ANARI_FLOAT32) {
+            static const float default_value[1] = {0.200000f};
+            return default_value;
+         } else {
+            return nullptr;
+         }
+      case 4: // description
+         {
+            static const char *description = "ambient light intensity";
+            return description;
+         }
+      default: return nullptr;
+   }
+}
 static const void * ANARI_RENDERER_raycast_param_info(const char *paramName, ANARIDataType paramType, int infoName, ANARIDataType infoType) {
    switch(param_hash(paramName)) {
       case 61:
@@ -642,6 +690,10 @@ static const void * ANARI_RENDERER_raycast_param_info(const char *paramName, ANA
          return ANARI_RENDERER_raycast_heatMapEnabled_info(paramType, infoName, infoType);
       case 40:
          return ANARI_RENDERER_raycast_heatMapScale_info(paramType, infoName, infoType);
+      case 2:
+         return ANARI_RENDERER_raycast_ambientColor_info(paramType, infoName, infoType);
+      case 3:
+         return ANARI_RENDERER_raycast_ambientRadiance_info(paramType, infoName, infoType);
       default:
          return nullptr;
    }
@@ -10539,6 +10591,8 @@ static const void * ANARI_RENDERER_raycast_info(int infoName, ANARIDataType info
                {"mode", ANARI_STRING},
                {"heatMapEnabled", ANARI_BOOL},
                {"heatMapScale", ANARI_FLOAT32},
+               {"ambientColor", ANARI_FLOAT32_VEC3},
+               {"ambientRadiance", ANARI_FLOAT32},
                {0, ANARI_UNKNOWN}
             };
             return parameters;
