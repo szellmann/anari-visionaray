@@ -115,9 +115,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 if (cuda)
-  set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "${CMAKE_CUDA_FLAGS_RELWITHDEBINFO} -O2 -g")
-  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -O3")
-
 # set_target_properties(${PROJECT_NAME}_cuda PROPERTIES CUDA_ARCHITECTURES "all-major")
   set_target_properties(${PROJECT_NAME}_cuda PROPERTIES CUDA_ARCHITECTURES "native")
 
