@@ -1451,6 +1451,7 @@ inline aabb get_bounds(const Quad &q)
   return bounds;
 }
 
+VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const Quad &q)
 {
   basic_triangle<3,float> t1, t2;
