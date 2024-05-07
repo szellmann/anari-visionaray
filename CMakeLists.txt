@@ -145,8 +145,8 @@ if (cuda)
   target_link_libraries(${PROJECT_NAME}_cuda
       visionaray::visionaray anari::anari anari::helium)
 
-  if (TARGET CUDA::toolkit)
-    target_link_libraries(${PROJECT_NAME}_cuda CUDA::toolkit)
+  if (TARGET CUDA::cudart)
+    target_link_libraries(${PROJECT_NAME}_cuda CUDA::cudart)
   endif()
 
   target_include_directories(${PROJECT_NAME}_cuda PUBLIC
