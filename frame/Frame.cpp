@@ -210,6 +210,7 @@ void Frame::renderFrame()
 #ifdef WITH_CUDA
       cuda::for_each(0, size.x, 0, size.y, [=] VSNRAY_GPU_FUNC (int x, int y) {
         frame.accumBuffer[x+size.x*y] = vec4{0.f};
+        frame.depthBuffer[x+size.x*y] = 1e31f;
       });
 #else
       std::fill(frame.accumBuffer, frame.accumBuffer + size.x * size.y, vec4{0.f});
