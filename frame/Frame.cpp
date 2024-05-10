@@ -212,7 +212,8 @@ void Frame::renderFrame()
         frame.accumBuffer[x+size.x*y] = vec4{0.f};
       });
 #else
-      std::fill(m_accumBuffer.begin(), m_accumBuffer.end(), vec4{0.f});
+      std::fill(frame.accumBuffer, frame.accumBuffer + size.x * size.y, vec4{0.f});
+      std::fill(frame.depthBuffer, frame.depthBuffer + size.x * size.y, 1e31f);
 #endif
       rend.rendererState.accumID = 0;
       m_nextFrameReset = false;

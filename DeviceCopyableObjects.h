@@ -1813,6 +1813,9 @@ struct Frame
   {
     const auto idx = y * size.x + x;
 
+    if (!depthBuffer || s.depth > depthBuffer[idx])
+      return;
+
     if (depthBuffer)
       depthBuffer[idx] = s.depth;
     if (normalBuffer)
