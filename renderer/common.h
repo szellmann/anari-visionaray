@@ -707,7 +707,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
       mat.asPhysicallyBased.clearcoatRoughness, geom, samplers, primID, uv);
   const float ior = mat.asPhysicallyBased.ior;
 
-  const float alpha = roughness*roughness;
+  const float alpha = roughness;
 
   constexpr float EPS = 1e-14f;
   const vec3 H = normalize(lightDir+viewDir);
@@ -743,7 +743,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 specularBRDF = (F * D * G) / max(EPS,denom);
 
   // Clearcoat
-  float Dc = D_GGX(NdotH, clearcoatRoughness * clearcoatRoughness);
+  float Dc = D_GGX(NdotH, clearcoatRoughness);
   float Vc = V_Kelemen(LdotH, EPS);
   float Fc = F_Schlick(VdotH, 0.04f) * clearcoat;
   float Frc = (Dc * Vc) * Fc;
