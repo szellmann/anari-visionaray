@@ -668,12 +668,13 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
 
   const float alpha = roughness*roughness;
 
+  constexpr float EPS = 1e-14f;
   const vec3 H = normalize(lightDir+viewDir);
-  const float NdotH = fmaxf(0.f,dot(Ns,H));
-  const float NdotL = fmaxf(0.f,dot(Ns,lightDir));
-  const float NdotV = fmaxf(0.f,dot(Ns,viewDir));
-  const float VdotH = fmaxf(0.f,dot(viewDir,H));
-  const float LdotH = fmaxf(0.f,dot(lightDir,H));
+  const float NdotH = fmaxf(EPS,dot(Ns,H));
+  const float NdotL = fmaxf(EPS,dot(Ns,lightDir));
+  const float NdotV = fmaxf(EPS,dot(Ns,viewDir));
+  const float VdotH = fmaxf(EPS,dot(viewDir,H));
+  const float LdotH = fmaxf(EPS,dot(lightDir,H));
 
   // Diffuse:
   vec3 diffuseColor = getRGBA(
@@ -701,7 +702,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
         / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
 
   float denom = 4.f * NdotV * NdotL;
-  vec3 specularBRDF = (F * D * G) / max(1e-4f,denom);
+  vec3 specularBRDF = (F * D * G) / max(EPS,denom);
 
   return (diffuseBRDF + specularBRDF) * lightIntensity;
 }
