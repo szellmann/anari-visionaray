@@ -748,7 +748,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float Fc = F_Schlick(VdotH, 0.04f) * clearcoat;
   float Frc = (Dc * Vc) * Fc;
 
-  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) * lightIntensity;
+  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) * lightIntensity * NdotL;
 }
 
 VSNRAY_FUNC
