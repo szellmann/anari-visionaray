@@ -652,6 +652,43 @@ inline vec3 getPerturbedNormal(const dco::Material &mat,
 }
 
 VSNRAY_FUNC
+inline float pow2(float f)
+{
+  return f*f;
+}
+
+VSNRAY_FUNC
+inline float pow5(float f)
+{
+  return f*f*f*f*f;
+}
+
+VSNRAY_FUNC
+inline vec3 F_Schlick(float u, vec3 f0)
+{
+  return f0 + (vec3f(1.f) - f0) * pow5(1.f - u);
+}
+
+VSNRAY_FUNC
+inline float F_Schlick(float u, float f0)
+{
+  return f0 + (1.f - f0) * pow5(1.f - u);
+}
+
+VSNRAY_FUNC
+inline float D_GGX(float NdotH, float alpha)
+{
+  return (alpha*alpha*heaviside(NdotH))
+    / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
+}
+
+VSNRAY_FUNC
+inline float V_Kelemen(float LdotH, const float EPS)
+{
+  return 0.25f / fmaxf(EPS, (LdotH * LdotH));
+}
+
+VSNRAY_FUNC
 inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         const dco::Geometry &geom,
                                         const dco::Sampler *samplers,
@@ -664,6 +701,10 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
       mat.asPhysicallyBased.metallic, geom, samplers, primID, uv);
   const float roughness = getF(
       mat.asPhysicallyBased.roughness, geom, samplers, primID, uv);
+  const float clearcoat = getF(
+      mat.asPhysicallyBased.clearcoat, geom, samplers, primID, uv);
+  const float clearcoatRoughness = getF(
+      mat.asPhysicallyBased.clearcoatRoughness, geom, samplers, primID, uv);
   const float ior = mat.asPhysicallyBased.ior;
 
   const float alpha = roughness*roughness;
@@ -681,10 +722,8 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
       mat.asPhysicallyBased.baseColor, geom, samplers, primID, uv).xyz();
 
   // Fresnel
-  auto pow2 = [](float f) { return f*f; };
-  auto pow5 = [](float f) { return f*f*f*f*f; };
   vec3 f0 = lerp(vec3(pow2((1.f-ior)/(1.f+ior))), diffuseColor, metallic);
-  vec3 F = f0 + (vec3(1.f) - f0) * pow5(1.f - VdotH);
+  vec3 F = F_Schlick(VdotH, f0);
 
   // Metallic materials don't reflect diffusely:
   diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
@@ -692,8 +731,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 diffuseBRDF = constants::inv_pi<float>() * diffuseColor;
 
   // GGX microfacet distribution
-  float D = (alpha*alpha*heaviside(NdotH))
-    / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
+  float D = D_GGX(NdotH, alpha);
 
   // Masking-shadowing term
   float G = ((2.f * NdotL * heaviside(LdotH))
@@ -704,7 +742,13 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float denom = 4.f * NdotV * NdotL;
   vec3 specularBRDF = (F * D * G) / max(EPS,denom);
 
-  return (diffuseBRDF + specularBRDF) * lightIntensity;
+  // Clearcoat
+  float Dc = D_GGX(clearcoatRoughness, NdotH);
+  float Vc = V_Kelemen(LdotH, EPS);
+  float Fc = F_Schlick(VdotH, 0.04f) * clearcoat;
+  float Frc = (Dc * Vc) * Fc;
+
+  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) * lightIntensity;
 }
 
 VSNRAY_FUNC

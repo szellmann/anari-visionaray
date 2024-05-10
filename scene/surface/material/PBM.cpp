@@ -31,6 +31,17 @@ void PBM::commit()
   m_roughness.sampler = getParamObject<Sampler>("roughness");
   m_roughness.attribute = toAttribute(getParamString("roughness", "none"));
 
+  m_clearcoat.value = 0.f;
+  getParam("clearcoat", ANARI_FLOAT32, &m_clearcoat.value);
+  m_clearcoat.sampler = getParamObject<Sampler>("clearcoat");
+  m_clearcoat.attribute = toAttribute(getParamString("clearcoat", "none"));
+
+  m_clearcoatRoughness.value = 0.f;
+  getParam("clearcoatRoughness", ANARI_FLOAT32, &m_clearcoatRoughness.value);
+  m_clearcoatRoughness.sampler = getParamObject<Sampler>("clearcoatRoughness");
+  m_clearcoatRoughness.attribute
+      = toAttribute(getParamString("clearcoatRoughness", "none"));
+
   m_ior = 1.5f;
   getParam("ior", ANARI_FLOAT32, &m_ior);
 
@@ -75,6 +86,24 @@ void PBM::commit()
         = m_roughness.sampler->visionaraySampler().samplerID;
   } else {
     vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.clearcoat.f = m_clearcoat.value;
+  vmat.asPhysicallyBased.clearcoat.attribute = m_clearcoat.attribute;
+  if (m_clearcoat.sampler) {
+    vmat.asPhysicallyBased.clearcoat.samplerID
+        = m_clearcoat.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.clearcoat.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.clearcoatRoughness.f = m_clearcoatRoughness.value;
+  vmat.asPhysicallyBased.clearcoatRoughness.attribute = m_clearcoatRoughness.attribute;
+  if (m_clearcoatRoughness.sampler) {
+    vmat.asPhysicallyBased.clearcoatRoughness.samplerID
+        = m_clearcoatRoughness.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.clearcoatRoughness.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.ior = m_ior;

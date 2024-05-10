@@ -1405,6 +1405,8 @@ struct Material
       } normal;
       AlphaMode alphaMode;
       float alphaCutoff;
+      MaterialParamF clearcoat;
+      MaterialParamF clearcoatRoughness;
       float ior;
     } asPhysicallyBased;
   };
