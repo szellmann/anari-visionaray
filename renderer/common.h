@@ -694,18 +694,9 @@ inline float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness)
 VSNRAY_FUNC
 inline float D_GGX(float NdotH, float roughness, float EPS)
 {
-  float a = NdotH * roughness;
-  float k = roughness / fmaxf(EPS, 1.f - NdotH * NdotH + a * a);
-  return k * k * constants::inv_pi<float>();
-}
-
-VSNRAY_FUNC
-inline float G_SmithGGXCorrelated(float NdotV, float NdotL, float alpha, float EPS)
-{
-  float a2 = alpha * alpha;
-  float GGXL = NdotV * sqrtf((-NdotL * a2 + NdotL) * NdotL + a2);
-  float GGXV = NdotL * sqrtf((-NdotV * a2 + NdotV) * NdotV + a2);
-  return 0.5f / fmaxf(EPS, GGXV + GGXL);
+  float alpha = roughness;
+  return (alpha*alpha*heaviside(NdotH))
+    / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
 }
 
 VSNRAY_FUNC
@@ -762,7 +753,10 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float D = D_GGX(NdotH, alpha, EPS);
 
   // Masking-shadowing term
-  float G = G_SmithGGXCorrelated(NdotV, NdotL, alpha, EPS);
+  float G = ((2.f * NdotL * heaviside(LdotH))
+        / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
+    *       ((2.f * NdotV * heaviside(VdotH))
+        / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
 
   float denom = 4.f * NdotV * NdotL;
   vec3 specularBRDF = (F * D * G) / max(EPS,denom);
