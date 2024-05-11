@@ -663,6 +663,7 @@ inline float pow5(float f)
   return f*f*f*f*f;
 }
 
+// From: https://google.github.io/filament/Filament.html
 VSNRAY_FUNC
 inline vec3 F_Schlick(float u, vec3 f0)
 {
@@ -676,10 +677,20 @@ inline float F_Schlick(float u, float f0)
 }
 
 VSNRAY_FUNC
-inline float D_GGX(float NdotH, float alpha)
+inline float D_GGX(float NdotH, float roughness)
 {
-  return (alpha*alpha*heaviside(NdotH))
-    / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
+  float a = NdotH * roughness;
+  float k = roughness / (1.f - NdotH * NdotH + a * a);
+  return k * k * constants::inv_pi<float>();
+}
+
+VSNRAY_FUNC
+inline float G_SmithGGXCorrelated(float NdotV, float NdotL, float alpha)
+{
+  float a2 = alpha * alpha;
+  float GGXL = NdotV * sqrtf((-NdotL * a2 + NdotL) * NdotL + a2);
+  float GGXV = NdotL * sqrtf((-NdotV * a2 + NdotV) * NdotV + a2);
+  return 0.5f / (GGXV + GGXL);
 }
 
 VSNRAY_FUNC
@@ -707,13 +718,14 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
       mat.asPhysicallyBased.clearcoatRoughness, geom, samplers, primID, uv);
   const float ior = mat.asPhysicallyBased.ior;
 
-  const float alpha = roughness;
+  const float alpha = roughness * roughness;
+  const float clearcoatAlpha = clearcoatRoughness * clearcoatRoughness;
 
   constexpr float EPS = 1e-14f;
   const vec3 H = normalize(lightDir+viewDir);
+  const float NdotV = fabsf(dot(Ns,viewDir)) + EPS;
   const float NdotH = fmaxf(EPS,dot(Ns,H));
   const float NdotL = fmaxf(EPS,dot(Ns,lightDir));
-  const float NdotV = fmaxf(EPS,dot(Ns,viewDir));
   const float VdotH = fmaxf(EPS,dot(viewDir,H));
   const float LdotH = fmaxf(EPS,dot(lightDir,H));
 
@@ -734,16 +746,13 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float D = D_GGX(NdotH, alpha);
 
   // Masking-shadowing term
-  float G = ((2.f * NdotL * heaviside(LdotH))
-        / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
-    *       ((2.f * NdotV * heaviside(VdotH))
-        / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
+  float G = G_SmithGGXCorrelated(NdotV, NdotL, alpha);
 
   float denom = 4.f * NdotV * NdotL;
   vec3 specularBRDF = (F * D * G) / max(EPS,denom);
 
   // Clearcoat
-  float Dc = D_GGX(NdotH, clearcoatRoughness);
+  float Dc = D_GGX(NdotH, clearcoatAlpha);
   float Vc = V_Kelemen(LdotH, EPS);
   float Fc = F_Schlick(VdotH, 0.04f) * clearcoat;
   float Frc = (Dc * Vc) * Fc;
