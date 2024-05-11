@@ -677,6 +677,12 @@ inline float F_Schlick(float u, float f0)
 }
 
 VSNRAY_FUNC
+inline float F_Schlick(float u, float f0, float f90)
+{
+  return f0 + (f90 - f0) * pow5(1.f - u);
+}
+
+VSNRAY_FUNC
 inline float Fd_Lambert()
 {
   return constants::inv_pi<float>();
@@ -686,8 +692,8 @@ VSNRAY_FUNC
 inline float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness)
 {
   float f90 = 0.5f + 2.f * roughness * LdotH * LdotH;
-  float lightScatter = F_Schlick(NdotL, f90);
-  float viewScatter = F_Schlick(NdotV, f90);
+  float lightScatter = F_Schlick(NdotL, 1.f, f90);
+  float viewScatter = F_Schlick(NdotV, 1.f, f90);
   return lightScatter * viewScatter * constants::inv_pi<float>();
 }
 
@@ -764,7 +770,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   // Clearcoat
   float Dc = D_GGX(NdotH, clearcoatAlpha, EPS);
   float Vc = V_Kelemen(LdotH, EPS);
-  float Fc = F_Schlick(VdotH, 0.04f) * clearcoat;
+  float Fc = F_Schlick(LdotH, 0.04f) * clearcoat;
   float Frc = (Dc * Vc) * Fc;
 
   return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) * lightIntensity * NdotL;
