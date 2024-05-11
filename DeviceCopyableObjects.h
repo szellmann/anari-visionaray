@@ -1815,6 +1815,15 @@ struct Frame
   {
     const auto idx = y * size.x + x;
 
+    if (motionVecBuffer)
+      motionVecBuffer[idx] = s.motionVec;
+    if (taa.currBuffer)
+      taa.currBuffer[idx] = s.color;
+    if (taa.currAlbedoBuffer)
+      taa.currAlbedoBuffer[idx] = s.albedo;
+
+    // for the remaining values, only update if
+    // depth is closer than the previous sample
     if (!depthBuffer || s.depth > depthBuffer[idx])
       return;
 
@@ -1824,18 +1833,12 @@ struct Frame
       normalBuffer[idx] = s.Ng;
     if (albedoBuffer)
       albedoBuffer[idx] = s.albedo;
-    if (motionVecBuffer)
-      motionVecBuffer[idx] = s.motionVec;
     if (primIdBuffer)
       primIdBuffer[idx] = s.primId;
     if (objIdBuffer)
       objIdBuffer[idx] = s.objId;
     if (instIdBuffer)
       instIdBuffer[idx] = s.instId;
-    if (taa.currBuffer)
-      taa.currBuffer[idx] = s.color;
-    if (taa.currAlbedoBuffer)
-      taa.currAlbedoBuffer[idx] = s.albedo;
   }
 
   VSNRAY_FUNC
