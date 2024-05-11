@@ -677,6 +677,21 @@ inline float F_Schlick(float u, float f0)
 }
 
 VSNRAY_FUNC
+inline float Fd_Lambert()
+{
+  return constants::inv_pi<float>();
+}
+
+VSNRAY_FUNC
+inline float Fd_Burley(float NdotV, float NdotL, float LdotH, float roughness)
+{
+  float f90 = 0.5f + 2.f * roughness * LdotH * LdotH;
+  float lightScatter = F_Schlick(NdotL, f90);
+  float viewScatter = F_Schlick(NdotV, f90);
+  return lightScatter * viewScatter * constants::inv_pi<float>();
+}
+
+VSNRAY_FUNC
 inline float D_GGX(float NdotH, float roughness)
 {
   float a = NdotH * roughness;
@@ -740,7 +755,8 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   // Metallic materials don't reflect diffusely:
   diffuseColor = lerp(diffuseColor, vec3f(0.f), metallic);
 
-  vec3 diffuseBRDF = constants::inv_pi<float>() * diffuseColor;
+//vec3 diffuseBRDF = diffuseColor * Fd_Lambert();
+  vec3 diffuseBRDF = diffuseColor * Fd_Burley(NdotV, NdotL, LdotH, alpha);
 
   // GGX microfacet distribution
   float D = D_GGX(NdotH, alpha);
