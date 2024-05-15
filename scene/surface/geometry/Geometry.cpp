@@ -28,7 +28,6 @@ Geometry::~Geometry()
 {
   deviceState()->dcos.geometries.free(vgeom.geomID);
 
-//  rtcReleaseGeometry(m_embreeGeometry);
   deviceState()->objectCounts.geometries--;
 }
 

@@ -64,8 +64,6 @@ struct Group : public Object
   VisionarayScene vscene{nullptr};
 };
 
-// box3 getEmbreeSceneBounds(RTCScene scene);
-
 } // namespace visionaray
 
 VISIONARAY_ANARI_TYPEFOR_SPECIALIZATION(visionaray::Group *, ANARI_GROUP);

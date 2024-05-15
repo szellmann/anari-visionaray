@@ -30,13 +30,11 @@ bool Group::getProperty(
       visionaraySceneConstruct();
       visionaraySceneCommit();
     }
-    // auto bounds = getEmbreeSceneBounds(m_embreeScene);
-    // for (auto *v : volumes()) {
-    //   if (v->isValid())
-    //     bounds.extend(v->bounds());
-    // }
-    // std::memcpy(ptr, &bounds, sizeof(bounds));
-    return true;
+    if (vscene && vscene->isValid()) {
+      auto bounds = vscene->getBounds();
+      std::memcpy(ptr, &bounds, sizeof(bounds));
+      return true;
+    }
   }
 
   return Object::getProperty(name, type, ptr, flags);
@@ -210,14 +208,6 @@ void Group::cleanup()
     vscene->release();
   vscene = nullptr;
 }
-
-// box3 getEmbreeSceneBounds(RTCScene scene)
-// {
-//   RTCBounds eb;
-//   rtcGetSceneBounds(scene, &eb);
-//   return box3({eb.lower_x, eb.lower_y, eb.lower_z},
-//       {eb.upper_x, eb.upper_y, eb.upper_z});
-// }
 
 } // namespace visionaray
 
