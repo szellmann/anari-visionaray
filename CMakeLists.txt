@@ -5,6 +5,8 @@ project(anari_library_visionaray LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include(GNUInstallDirs)
+
 # note: we're often tracking the most recent changes from ANARI-SDK
 # (on branch "next_release")
 find_package(anari 0.10.0 REQUIRED)
