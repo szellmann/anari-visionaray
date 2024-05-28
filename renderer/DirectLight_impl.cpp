@@ -1,6 +1,6 @@
 
-#include "frame/for_each.h"
 #include "DirectLight_impl.h"
+#include "for_each.h"
 
 namespace visionaray {
 

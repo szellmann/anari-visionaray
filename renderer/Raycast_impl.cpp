@@ -1,5 +1,5 @@
 
-#include "frame/for_each.h"
+#include "for_each.h"
 #include "Raycast_impl.h"
 
 namespace visionaray {

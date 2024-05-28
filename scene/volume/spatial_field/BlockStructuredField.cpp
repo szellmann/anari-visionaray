@@ -1,7 +1,7 @@
 
 #include "BlockStructuredField.h"
+#include "for_each.h"
 #include "array/Array3D.h"
-#include "frame/for_each.h"
 
 namespace visionaray {
 
