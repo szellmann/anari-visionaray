@@ -52,6 +52,20 @@ namespace visionaray {
     template <typename Func>
     void for_each(thread_pool &pool,
                   int32_t xmin, int32_t xmax,
+                  Func func)
+    {
+      parallel_for(pool,
+          tiled_range1d<int32_t>(xmin, xmax, 1024),
+          [&](range1d<int32_t> r) {
+              for (int x = r.begin(); x != r.end(); ++x) {
+                func(x);
+              }
+          });
+    }
+
+    template <typename Func>
+    void for_each(thread_pool &pool,
+                  int32_t xmin, int32_t xmax,
                   int32_t ymin, int32_t ymax,
                   Func func)
     {
