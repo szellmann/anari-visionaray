@@ -34,6 +34,7 @@ inline void updateMC(const vec3i  mcID,
 
 struct GridAccel
 {
+  GridAccel(VisionarayGlobalState *s);
   void init(int3 dims, box3 worldBounds);
   void cleanup();
 
@@ -41,11 +42,15 @@ struct GridAccel
 
   box1 *valueRanges();
 
+  VisionarayGlobalState *deviceState() const;
+
   void computeMaxOpacities(dco::TransferFunction tf);
 
 private:
 
   dco::GridAccel vaccel;
+
+  VisionarayGlobalState *m_state{nullptr};
 
   // min/max ranges
   box1 *m_valueRanges{nullptr};

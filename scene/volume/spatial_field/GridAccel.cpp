@@ -1,6 +1,9 @@
 #include "GridAccel.h"
+#include "frame/for_each.h"
 
 namespace visionaray {
+
+GridAccel::GridAccel(VisionarayGlobalState *s) : m_state(s) {}
 
 void GridAccel::init(int3 dims, box3 worldBounds)
 {
@@ -42,39 +45,45 @@ box1 *GridAccel::valueRanges()
   return m_valueRanges;
 }
 
+VisionarayGlobalState *GridAccel::deviceState() const
+{
+  return m_state;
+}
+
 void GridAccel::computeMaxOpacities(dco::TransferFunction tf)
 {
   size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
 
-  for (size_t threadID=0; threadID<numMCs; ++threadID) {
-    box1 valueRange = m_valueRanges[threadID];
+  parallel::for_each(deviceState()->threadPool, 0, numMCs,
+    [&](size_t threadID) {
+      box1 valueRange = m_valueRanges[threadID];
 
-    if (valueRange.max < valueRange.min) {
-      m_maxOpacities[threadID] = 0.f;
-      continue;
-    }
+      if (valueRange.max < valueRange.min) {
+        m_maxOpacities[threadID] = 0.f;
+        return;
+      }
 
-    if (tf.type == dco::TransferFunction::_1D) {
-      valueRange.min -= tf.as1D.valueRange.min;
-      valueRange.min /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
-      valueRange.max -= tf.as1D.valueRange.min;
-      valueRange.max /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
-    }
+      if (tf.type == dco::TransferFunction::_1D) {
+        valueRange.min -= tf.as1D.valueRange.min;
+        valueRange.min /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
+        valueRange.max -= tf.as1D.valueRange.min;
+        valueRange.max /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
+      }
 
-    int numValues = tf.as1D.numValues;
+      int numValues = tf.as1D.numValues;
 
-    int lo = clamp(
-        int(valueRange.min * (numValues - 1)), 0, numValues - 1);
-    int hi = clamp(
-        int(valueRange.max * (numValues - 1)) + 1, 0, numValues - 1);
+      int lo = clamp(
+          int(valueRange.min * (numValues - 1)), 0, numValues - 1);
+      int hi = clamp(
+          int(valueRange.max * (numValues - 1)) + 1, 0, numValues - 1);
 
-    float maxOpacity = 0.f;
-    for (int i = lo; i <= hi; ++i) {
-      float tc = (i + .5f) / numValues;
-      maxOpacity = fmaxf(maxOpacity, tex1D(tf.as1D.sampler, tc).w);
-    }
-    m_maxOpacities[threadID] = maxOpacity;
-  }
+      float maxOpacity = 0.f;
+      for (int i = lo; i <= hi; ++i) {
+        float tc = (i + .5f) / numValues;
+        maxOpacity = fmaxf(maxOpacity, tex1D(tf.as1D.sampler, tc).w);
+      }
+      m_maxOpacities[threadID] = maxOpacity;
+    });
 }
 
 } // namespace visionaray

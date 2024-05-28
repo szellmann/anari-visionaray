@@ -11,6 +11,7 @@ namespace visionaray {
 
 SpatialField::SpatialField(VisionarayGlobalState *s)
     : Object(ANARI_SPATIAL_FIELD, s)
+    , m_gridAccel(s)
 {
   s->objectCounts.spatialFields++;
   vfield.fieldID = deviceState()->dcos.spatialFields.alloc(vfield);
