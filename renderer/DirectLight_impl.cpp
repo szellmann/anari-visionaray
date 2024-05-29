@@ -375,7 +375,8 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
         uint64_t clock_begin = clock64();
 
         float4 accumColor{0.f};
-        PixelSample firstSample;
+        PixelSample closestSample;
+        closestSample.depth = 1e31f;
         int spp = rendererState.pixelSamples;
 
         for (int sampleID=0; sampleID<spp; ++sampleID) {
@@ -431,8 +432,8 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
           }
 
           accumColor += ps.color;
-          if (sampleID == 0) {
-            firstSample = ps;
+          if (ps.depth < closestSample.depth) {
+            closestSample = ps;
           }
         }
 
@@ -445,7 +446,7 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
 
         // Color gets accumulated, depth, IDs, etc. are
         // taken from first sample
-        PixelSample finalSample = firstSample;
+        PixelSample finalSample = closestSample;
         finalSample.color = accumColor*(1.f/spp);
         if (rendererState.taaEnabled)
           frame.fillGBuffer(x, y, finalSample);
