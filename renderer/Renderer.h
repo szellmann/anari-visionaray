@@ -74,7 +74,7 @@ struct Renderer : public Object
   bool stochasticRendering() const { return vrend.stochasticRendering(); }
 
  protected:
-  helium::CommitObserverPtr<Array1D> m_clipPlanes;
+  helium::ChangeObserverPtr<Array1D> m_clipPlanes;
   HostDeviceArray<float4> m_clipPlanesOnDevice;
   VisionarayRenderer vrend;
 };

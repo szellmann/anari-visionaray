@@ -7,7 +7,7 @@
 #include "common.h"
 // helium
 #include "helium/BaseObject.h"
-#include "helium/utility/CommitObserverPtr.h"
+#include "helium/utility/ChangeObserverPtr.h"
 // visionaray
 #include "visionaray/math/math.h"
 // std

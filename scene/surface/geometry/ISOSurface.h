@@ -21,8 +21,8 @@ struct ISOSurface : public Geometry
 
   // Data //
 
-  helium::CommitObserverPtr<SpatialField> m_field;
-  helium::CommitObserverPtr<Array1D> m_isoValue;
+  helium::ChangeObserverPtr<SpatialField> m_field;
+  helium::ChangeObserverPtr<Array1D> m_isoValue;
 };
 
 } // namespace visionaray
