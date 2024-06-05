@@ -11,6 +11,8 @@
 #include "visionaray/thin_lens_camera.h"
 #if defined(WITH_CUDA)
 #include "visionaray/texture/cuda_texture.h"
+#elif defined(WITH_HIP)
+#include "visionaray/texture/hip_texture.h"
 #else
 #include "visionaray/texture/texture.h"
 #endif
@@ -31,6 +33,17 @@ template <typename P>
 using cuda_bvh          = bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>>;
 template <typename P>
 using cuda_index_bvh    = index_bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>, cuda::device_vector<unsigned>>;
+} // namespace visionaray
+#endif
+
+#if defined(WITH_HIP) && !defined(__HIPCC__)
+#include <visionaray/hip/device_vector.h>
+namespace visionaray {
+// visionaray only defines these when compiling with hipcc:
+template <typename P>
+using hip_bvh           = bvh_t<hip::device_vector<P>, hip::device_vector<bvh_node>>;
+template <typename P>
+using hip_index_bvh     = index_bvh_t<hip::device_vector<P>, hip::device_vector<bvh_node>, hip::device_vector<unsigned>>;
 } // namespace visionaray
 #endif
 
@@ -368,6 +381,8 @@ struct SpatialField
   struct {
 #ifdef WITH_CUDA
     cuda_texture_ref<float, 3> sampler;
+#elif defined(WITH_HIP)
+    hip_texture_ref<float, 3> sampler;
 #else
     texture_ref<float, 3> sampler;
 #endif
@@ -378,6 +393,8 @@ struct SpatialField
     // aren't the same!
 #ifdef WITH_CUDA
     cuda_index_bvh<UElem>::bvh_ref samplingBVH;
+#elif defined(WITH_HIP)
+    hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
     index_bvh<UElem>::bvh_ref samplingBVH;
 #endif
@@ -385,6 +402,8 @@ struct SpatialField
   struct {
 #ifdef WITH_CUDA
     cuda_index_bvh<Block>::bvh_ref samplingBVH;
+#elif defined(WITH_HIP)
+    hip_index_bvh<Block>::bvh_ref samplingBVH;
 #else
     index_bvh<Block>::bvh_ref samplingBVH;
 #endif
@@ -1060,6 +1079,17 @@ struct BLS
     cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
     cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
   };
+#elif defined(WITH_HIP)
+  union {
+    hip_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    hip_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    hip_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    hip_index_bvh<dco::Cone>::bvh_ref asCone;
+    hip_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    hip_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
+    hip_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    hip_index_bvh<dco::Volume>::bvh_ref asVolume;
+  };
 #else
   union {
     index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
@@ -1079,6 +1109,8 @@ struct WorldBLS : BLS
 {
 #ifdef WITH_CUDA
   cuda_index_bvh<BLS>::bvh_inst asInstance;
+#elif defined(WITH_HIP)
+  hip_index_bvh<BLS>::bvh_inst asInstance;
 #else
   index_bvh<BLS>::bvh_inst asInstance;
 #endif
@@ -1087,6 +1119,35 @@ struct WorldBLS : BLS
 VSNRAY_FUNC
 inline aabb get_bounds(const BLS &bls)
 {
+#ifdef WITH_HIP
+  // with HIP we currenlty assume that TLSs are built on the host:
+  bvh_node hip_root;
+  if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asTriangle.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  if (bls.type == BLS::Quad && bls.asQuad.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asQuad.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  else if (bls.type == BLS::Sphere && bls.asSphere.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asSphere.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  else if (bls.type == BLS::Cone && bls.asCone.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asCone.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asCylinder.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  else if (bls.type == BLS::BezierCurve && bls.asBezierCurve.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asBezierCurve.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  else if (bls.type == BLS::ISOSurface && bls.asISOSurface.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asISOSurface.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
+    HIP_SAFE_CALL(hipMemcpy(
+        &hip_root, bls.asVolume.nodes(), sizeof(hip_root), hipMemcpyDefault));
+  return hip_root.get_bounds();
+#else
   if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
     return bls.asTriangle.node(0).get_bounds();
   if (bls.type == BLS::Quad && bls.asQuad.num_nodes())
@@ -1103,6 +1164,7 @@ inline aabb get_bounds(const BLS &bls)
     return bls.asISOSurface.node(0).get_bounds();
   else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
     return bls.asVolume.node(0).get_bounds();
+#endif
 
   aabb inval;
   inval.invalidate();
@@ -1167,6 +1229,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
 #ifdef WITH_CUDA
 typedef cuda_index_bvh<WorldBLS>::bvh_ref TLS;
+#elif defined(WITH_HIP)
+typedef hip_index_bvh<WorldBLS>::bvh_ref TLS;
 #else
 typedef index_bvh<WorldBLS>::bvh_ref TLS;
 #endif
@@ -1212,6 +1276,8 @@ struct Instance
   unsigned groupID{UINT_MAX};
 #ifdef WITH_CUDA
   cuda_index_bvh<BLS>::bvh_inst instBVH;
+#elif defined(WITH_HIP)
+  hip_index_bvh<BLS>::bvh_inst instBVH;
 #else
   index_bvh<BLS>::bvh_inst instBVH;
 #endif
@@ -1310,6 +1376,12 @@ struct Sampler
     cuda_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
     cuda_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
     cuda_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+  };
+#elif defined(WITH_HIP)
+  union {
+    hip_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
+    hip_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
+    hip_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
   };
 #else
   texture_ref<vector<4, unorm<8>>, 1> asImage1D;
@@ -1509,6 +1581,8 @@ struct Light
   struct {
 #ifdef WITH_CUDA
     cuda_texture_ref<float4, 2> radiance;
+#elif defined(WITH_HIP)
+    hip_texture_ref<float4, 2> radiance;
 #else
     texture_ref<float4, 2> radiance;
 #endif
@@ -1586,6 +1660,8 @@ struct TransferFunction
     box1 valueRange{0.f, 1.f};
 #ifdef WITH_CUDA
     cuda_texture_ref<float4, 1> sampler;
+#elif defined(WITH_HIP)
+    hip_texture_ref<float4, 1> sampler;
 #else
     texture_ref<float4, 1> sampler;
 #endif
@@ -1690,6 +1766,8 @@ struct Frame
     float3 *prevAlbedoBuffer{nullptr};
 #ifdef WITH_CUDA
     cuda_texture_ref<float4, 2> history;
+#elif defined(WITH_HIP)
+    hip_texture_ref<float4, 2> history;
 #else
     texture_ref<float4, 2> history;
 #endif
@@ -1769,16 +1847,16 @@ struct Frame
     switch (colorType) {
     case ANARI_UFIXED8_VEC4: {
       auto c = cvt_uint32(s.color);
-      std::memcpy(color, &c, sizeof(c));
+      memcpy(color, &c, sizeof(c));
       break;
     }
     case ANARI_UFIXED8_RGBA_SRGB: {
       auto c = cvt_uint32_srgb(s.color);
-      std::memcpy(color, &c, sizeof(c));
+      memcpy(color, &c, sizeof(c));
       break;
     }
     case ANARI_FLOAT32_VEC4: {
-      std::memcpy(color, &s.color, sizeof(s.color));
+      memcpy(color, &s.color, sizeof(s.color));
       break;
     }
     default:

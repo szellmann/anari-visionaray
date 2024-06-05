@@ -7,7 +7,7 @@ namespace visionaray {
 VisionaraySceneImpl::VisionaraySceneImpl(
     VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
   : m_state(state)
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   , m_gpuScene(new VisionaraySceneGPU(this))
 #endif
 {
@@ -31,7 +31,7 @@ VisionaraySceneImpl::~VisionaraySceneImpl()
 
 void VisionaraySceneImpl::commit()
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->commit();
 #else
   unsigned triangleCount = 0;
@@ -298,7 +298,7 @@ void VisionaraySceneImpl::commit()
   std::cout << "  num lights in group   : " << m_lights.size() << '\n';
 #endif // WITH_CUDA
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->dispatch();
 #else
   dispatch();
@@ -322,7 +322,7 @@ void VisionaraySceneImpl::release()
 
 bool VisionaraySceneImpl::isValid() const
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   return m_gpuScene->isValid();
 #else
   if (type == World)
@@ -334,7 +334,7 @@ bool VisionaraySceneImpl::isValid() const
 
 aabb VisionaraySceneImpl::getBounds() const
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   return m_gpuScene->getBounds();
 #else
   if (type == World)
@@ -347,7 +347,7 @@ aabb VisionaraySceneImpl::getBounds() const
 void VisionaraySceneImpl::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
   m_geometries.set(geomID, geom.geomID);
@@ -416,6 +416,11 @@ void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
 
 #ifdef WITH_CUDA
 cuda_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
+{
+  return m_gpuScene->instBVH(xfm);
+}
+#elif defined(WITH_HIP)
+hip_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
 {
   return m_gpuScene->instBVH(xfm);
 }

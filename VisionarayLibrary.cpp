@@ -6,6 +6,8 @@
 
 #ifdef WITH_CUDA
 #include "anari_library_visionaray_cuda_export.h"
+#elif defined(WITH_HIP)
+#include "anari_library_visionaray_hip_export.h"
 #else
 #include "anari_library_visionaray_export.h"
 #endif
@@ -47,6 +49,12 @@ const char **VisionarayLibrary::getDeviceExtensions(const char * /*deviceType*/)
 #ifdef WITH_CUDA
 extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
     visionaray_cuda, handle, scb, scbPtr)
+{
+  return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
+}
+#elif defined(WITH_HIP)
+extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
+    visionaray_hip, handle, scb, scbPtr)
 {
   return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
 }

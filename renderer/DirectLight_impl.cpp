@@ -360,6 +360,23 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
   CUDA_SAFE_CALL(cudaMemcpy(framePtr, &frame, sizeof(frame), cudaMemcpyHostToDevice));
 
   cuda::for_each(0, size.x, 0, size.y,
+#elif defined(WITH_HIP)
+  VisionarayGlobalState::DeviceObjectRegistry *onDevicePtr;
+  HIP_SAFE_CALL(hipMalloc(&onDevicePtr, sizeof(DD)));
+  HIP_SAFE_CALL(hipMemcpy(onDevicePtr, &DD, sizeof(DD), hipMemcpyHostToDevice));
+
+  RendererState *rendererStatePtr;
+  HIP_SAFE_CALL(hipMalloc(&rendererStatePtr, sizeof(rendererState)));
+  HIP_SAFE_CALL(hipMemcpy(rendererStatePtr,
+                          &rendererState,
+                          sizeof(rendererState),
+                          hipMemcpyHostToDevice));
+
+  dco::Frame *framePtr;
+  HIP_SAFE_CALL(hipMalloc(&framePtr, sizeof(frame)));
+  HIP_SAFE_CALL(hipMemcpy(framePtr, &frame, sizeof(frame), hipMemcpyHostToDevice));
+
+  hip::for_each(0, size.x, 0, size.y,
 #else
   auto *onDevicePtr = &DD;
   auto *rendererStatePtr = &rendererState;
@@ -462,6 +479,10 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
   CUDA_SAFE_CALL(cudaFree(onDevicePtr));
   CUDA_SAFE_CALL(cudaFree(rendererStatePtr));
   CUDA_SAFE_CALL(cudaFree(framePtr));
+#elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipFree(onDevicePtr));
+  HIP_SAFE_CALL(hipFree(rendererStatePtr));
+  HIP_SAFE_CALL(hipFree(framePtr));
 #endif
 }
 

@@ -24,6 +24,13 @@ if (cuda)
   find_package(CUDAToolkit)
 endif()
 
+option(ANARI_VISIONARAY_ENABLE_HIP "Compile the HIP device" OFF)
+set(hip ${ANARI_VISIONARAY_ENABLE_HIP})
+if (hip)
+  enable_language(HIP)
+  find_package(hip)
+endif()
+
 anari_generate_queries(
   NAME visionaray
   PREFIX VisionarayDevice
@@ -45,6 +52,9 @@ endif()
 add_library(${PROJECT_NAME} SHARED)
 if (cuda)
   add_library(${PROJECT_NAME}_cuda SHARED)
+endif()
+if (hip)
+  add_library(${PROJECT_NAME}_hip SHARED)
 endif()
 
 set(SOURCES
@@ -157,6 +167,33 @@ if (cuda)
   endif()
 
   target_include_directories(${PROJECT_NAME}_cuda PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+  )
+endif()
+
+if (hip)
+  target_sources(${PROJECT_NAME}_hip PRIVATE ${SOURCES})
+  target_sources(${PROJECT_NAME}_hip PRIVATE
+    frame/Frame.hip
+    renderer/DirectLight_impl.hip
+    renderer/Raycast_impl.hip
+    scene/VisionaraySceneGPU.hip
+  )
+  target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
+
+  target_link_libraries(${PROJECT_NAME}_hip
+      visionaray::visionaray anari::anari anari::helium)
+
+  if (TARGET hip::host)
+    target_link_libraries(${PROJECT_NAME}_hip hip::host)
+  endif()
+
+  generate_export_header(${PROJECT_NAME}_hip
+    EXPORT_MACRO_NAME "VISIONARAY_DEVICE_INTERFACE"
+  )
+
+  target_include_directories(${PROJECT_NAME}_hip PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )

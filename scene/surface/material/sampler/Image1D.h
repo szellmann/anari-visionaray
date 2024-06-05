@@ -29,6 +29,8 @@ struct Image1D : public Sampler
 
 #ifdef WITH_CUDA
   cuda_texture<vector<4, unorm<8>>, 1> vimage;
+#elif defined(WITH_HIP)
+  hip_texture<vector<4, unorm<8>>, 1> vimage;
 #else
   texture<vector<4, unorm<8>>, 1> vimage;
 #endif

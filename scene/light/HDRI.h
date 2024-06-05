@@ -27,6 +27,8 @@ struct HDRI : public Light
 
 #ifdef WITH_CUDA
   cuda_texture<float4, 2> m_radianceTexture;
+#elif defined(WITH_HIP)
+  hip_texture<float4, 2> m_radianceTexture;
 #else
   texture<float4, 2> m_radianceTexture;
 #endif

@@ -38,6 +38,8 @@ void Image2D::commit()
   vsampler.outOffset = m_outOffset;
 #ifdef WITH_CUDA
   vsampler.asImage2D = cuda_texture_ref<vector<4, unorm<8>>, 2>(vimage);
+#elif defined(WITH_HIP)
+  vsampler.asImage2D = hip_texture_ref<vector<4, unorm<8>>, 2>(vimage);
 #else
   vsampler.asImage2D = texture_ref<vector<4, unorm<8>>, 2>(vimage);
 #endif
@@ -47,7 +49,7 @@ void Image2D::commit()
 
 void Image2D::updateImageData()
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<vector<4, unorm<8>>, 2> tex(m_image->size().x, m_image->size().y);
 #else
   vimage = texture<vector<4, unorm<8>>, 2>(m_image->size().x, m_image->size().y);
@@ -67,6 +69,8 @@ void Image2D::updateImageData()
 
 #ifdef WITH_CUDA
   vimage = cuda_texture<vector<4, unorm<8>>, 2>(tex);
+#elif defined(WITH_HIP)
+  vimage = hip_texture<vector<4, unorm<8>>, 2>(tex);
 #endif
 }
 

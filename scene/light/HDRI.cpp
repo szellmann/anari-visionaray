@@ -120,7 +120,7 @@ void HDRI::commit()
                             // (no support for float3 textures!)
   makeRGBA(m_radiance->data(), 3, width, height, rgba);
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<float4, 2> tex(width, height);
 #else
   m_radianceTexture = texture<float4, 2>(width, height);
@@ -132,10 +132,14 @@ void HDRI::commit()
 
 #ifdef WITH_CUDA
   m_radianceTexture = cuda_texture<float4, 2>(tex);
+#elif defined(WITH_HIP)
+  m_radianceTexture = hip_texture<float4, 2>(tex);
 #endif
 
 #ifdef WITH_CUDA
   vlight.asHDRI.radiance = cuda_texture_ref<float4, 2>(m_radianceTexture);
+#elif defined(WITH_HIP)
+  vlight.asHDRI.radiance = hip_texture_ref<float4, 2>(m_radianceTexture);
 #else
   vlight.asHDRI.radiance = texture_ref<float4, 2>(m_radianceTexture);
 #endif

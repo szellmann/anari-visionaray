@@ -19,7 +19,11 @@ struct VisionaraySceneGPU
   void dispatch();
   void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
 
+#ifdef WITH_CUDA
   cuda_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
+#elif defined(WITH_HIP)
+  hip_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
+#endif
  private:
   struct Impl;
   std::unique_ptr<Impl> m_impl;

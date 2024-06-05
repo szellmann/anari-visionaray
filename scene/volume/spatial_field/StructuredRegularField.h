@@ -35,6 +35,8 @@ struct StructuredRegularField : public SpatialField
 
 #ifdef WITH_CUDA
   cuda_texture<float, 3> m_dataTexture;
+#elif defined(WITH_HIP)
+  hip_texture<float, 3> m_dataTexture;
 #else
   texture<float, 3> m_dataTexture;
 #endif

@@ -5,6 +5,10 @@
 
 // std
 #include <cstdint>
+#ifdef __HIPCC__
+// hip
+#include <hip/hip_runtime.h>
+#endif
 // visionaray
 #include "visionaray/detail/parallel_for.h"
 #include "visionaray/detail/thread_pool.h"
@@ -198,6 +202,95 @@ namespace visionaray {
                                                func);
     }
   } // cuda
+#endif
+
+#ifdef __HIPCC__
+  namespace hip {
+    template <typename Func>
+    __global__ void for_each_kernel(int32_t xmin, int32_t xmax, Func func)
+    {
+      int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+
+      if (x < xmin || x >= xmax)
+        return;
+
+      func(x);
+    }
+
+    template <typename Func>
+    __global__ void for_each_kernel(int32_t xmin, int32_t xmax,
+                                    int32_t ymin, int32_t ymax,
+                                    Func func)
+    {
+      int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+      int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+
+      if (x < xmin || x >= xmax || y < ymin || y >= ymax)
+        return;
+
+      func(x, y);
+    }
+
+    template <typename Func>
+    __global__ void for_each_kernel(int32_t xmin, int32_t xmax,
+                                    int32_t ymin, int32_t ymax,
+                                    int32_t zmin, int32_t zmax,
+                                    Func func)
+    {
+      int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
+      int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+      int32_t z = blockIdx.z * blockDim.z + threadIdx.z;
+
+      if (x < xmin || x >= xmax || y < ymin || y >= ymax || z < zmin || z >= zmax)
+        return;
+
+      func(x, y, z);
+    }
+
+    template <typename Func>
+    void for_each(int32_t xmin, int32_t xmax, Func func)
+    {
+      dim3 blockSize = 256;
+      dim3 gridSize = div_up(xmax-xmin, (int)blockSize.x);
+
+      hipLaunchKernelGGL(
+        for_each_kernel<Func>, gridSize, blockSize, 0, 0, xmin, xmax, func);
+    }
+
+    template <typename Func>
+    void for_each(int32_t xmin, int32_t xmax,
+                  int32_t ymin, int32_t ymax,
+                  Func func)
+    {
+      dim3 blockSize = 64;
+      dim3 gridSize(
+              div_up(xmax-xmin, (int)blockSize.x),
+              div_up(ymax-ymin, (int)blockSize.y)
+              );
+
+      hipLaunchKernelGGL(
+        for_each_kernel<Func>, gridSize, blockSize, 0, 0,
+        xmin, xmax, ymin, ymax, func);
+    }
+
+    template <typename Func>
+    void for_each(int32_t xmin, int32_t xmax,
+                  int32_t ymin, int32_t ymax,
+                  int32_t zmin, int32_t zmax,
+                  Func func)
+    {
+      dim3 blockSize(8, 8, 8);
+      dim3 gridSize(
+              div_up(xmax-xmin, (int)blockSize.x),
+              div_up(ymax-ymin, (int)blockSize.y),
+              div_up(zmax-zmin, (int)blockSize.z)
+              );
+
+      hipLaunchKernelGGL(
+        for_each_kernel<Func>, gridSize, blockSize, 0, 0,
+        xmin, xmax, ymin, ymax, zmin, zmax, func);
+    }
+  } // hip
 #endif
 
 } // visionaray

@@ -37,6 +37,8 @@ void Image1D::commit()
   vsampler.outOffset = m_outOffset;
 #ifdef WITH_CUDA
   vsampler.asImage1D = cuda_texture_ref<vector<4, unorm<8>>, 1>(vimage);
+#elif defined(WITH_HIP)
+  vsampler.asImage1D = hip_texture_ref<vector<4, unorm<8>>, 1>(vimage);
 #else
   vsampler.asImage1D = texture_ref<vector<4, unorm<8>>, 1>(vimage);
 #endif
@@ -46,7 +48,7 @@ void Image1D::commit()
 
 void Image1D::updateImageData()
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<vector<4, unorm<8>>, 1> tex(m_image->size());
 #else
   vimage = texture<vector<4, unorm<8>>, 1>(m_image->size());
@@ -65,6 +67,8 @@ void Image1D::updateImageData()
 
 #ifdef WITH_CUDA
   vimage = cuda_texture<vector<4, unorm<8>>, 1>(tex);
+#elif defined(WITH_HIP)
+  vimage = hip_texture<vector<4, unorm<8>>, 1>(tex);
 #endif
 }
 

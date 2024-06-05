@@ -39,6 +39,8 @@ void Image3D::commit()
   vsampler.outOffset = m_outOffset;
 #ifdef WITH_CUDA
   vsampler.asImage3D = cuda_texture_ref<vector<4, unorm<8>>, 3>(vimage);
+#elif defined(WITH_HIP)
+  vsampler.asImage3D = hip_texture_ref<vector<4, unorm<8>>, 3>(vimage);
 #else
   vsampler.asImage3D = texture_ref<vector<4, unorm<8>>, 3>(vimage);
 #endif
@@ -48,7 +50,7 @@ void Image3D::commit()
 
 void Image3D::updateImageData()
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<vector<4, unorm<8>>, 3> tex(
       m_image->size().x, m_image->size().y, m_image->size().z);
 #else
@@ -71,6 +73,8 @@ void Image3D::updateImageData()
 
 #ifdef WITH_CUDA
   vimage = cuda_texture<vector<4, unorm<8>>, 3>(tex);
+#elif defined(WITH_HIP)
+  vimage = hip_texture<vector<4, unorm<8>>, 3>(tex);
 #endif
 }
 

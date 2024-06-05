@@ -11,6 +11,11 @@
 #include <cuda_runtime.h>
 // visionaray
 #include "visionaray/cuda/safe_call.h"
+#elif defined(WITH_HIP)
+// cuda
+#include <hip/hip_runtime.h>
+// visionaray
+#include "visionaray/hip/safe_call.h"
 #endif
 
 namespace visionaray {
@@ -131,6 +136,123 @@ struct DeviceArray
   T *devicePtr{nullptr};
   size_t len{0};
 };
+
+#elif defined(WITH_HIP)
+
+// ==================================================================
+// dynamic array for hip device data
+// ==================================================================
+
+template <typename T>
+struct DeviceArray
+{
+ public:
+  typedef T value_type;
+
+  DeviceArray() = default;
+
+  ~DeviceArray()
+  {
+    HIP_SAFE_CALL(hipFree(devicePtr));
+    devicePtr = nullptr;
+    len = 0;
+  }
+
+  DeviceArray(size_t n)
+  {
+    HIP_SAFE_CALL(hipMalloc(&devicePtr, n*sizeof(T)));
+    len = n;
+  }
+
+  DeviceArray(const DeviceArray &rhs)
+  {
+    if (&rhs != this) {
+      HIP_SAFE_CALL(hipMalloc(&devicePtr, rhs.len*sizeof(T)));
+      HIP_SAFE_CALL(hipMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
+                              hipMemcpyDeviceToDevice));
+      HIP_SAFE_CALL(hipDeviceSynchronize());
+      len = rhs.len;
+    }
+  }
+
+  DeviceArray(DeviceArray &&rhs)
+  {
+    if (&rhs != this) {
+      HIP_SAFE_CALL(hipMalloc(&devicePtr, rhs.len*sizeof(T)));
+      HIP_SAFE_CALL(hipMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
+                              hipMemcpyDeviceToDevice));
+      HIP_SAFE_CALL(hipDeviceSynchronize());
+      HIP_SAFE_CALL(hipFree(rhs.devicePtr));
+      len = rhs.len;
+      rhs.devicePtr = nullptr;
+      rhs.len = 0;
+    }
+  }
+
+  DeviceArray &operator=(const DeviceArray &rhs)
+  {
+    if (&rhs != this) {
+      HIP_SAFE_CALL(hipMalloc(&devicePtr, rhs.len*sizeof(T)));
+      HIP_SAFE_CALL(hipMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
+                              hipMemcpyDeviceToDevice));
+      HIP_SAFE_CALL(hipDeviceSynchronize());
+      len = rhs.len;
+    }
+    return *this;
+  }
+
+  DeviceArray &operator=(DeviceArray &&rhs)
+  {
+    if (&rhs != this) {
+      HIP_SAFE_CALL(hipMalloc(&devicePtr, rhs.len*sizeof(T)));
+      HIP_SAFE_CALL(hipMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
+                              hipMemcpyDeviceToDevice));
+      HIP_SAFE_CALL(hipDeviceSynchronize());
+      HIP_SAFE_CALL(hipFree(rhs.devicePtr));
+      rhs.devicePtr = nullptr;
+      rhs.len = 0;
+    }
+    return *this;
+  }
+
+  T *data()
+  { return devicePtr; }
+
+  const T *data() const
+  { return devicePtr; }
+
+  size_t size() const
+  { return len; }
+
+  void resize(size_t n)
+  {
+    if (n == len)
+      return;
+
+    T *temp{nullptr};
+    if (devicePtr && len > 0) {
+      HIP_SAFE_CALL(hipMalloc(&temp, len*sizeof(T)));
+      HIP_SAFE_CALL(hipMemcpy(temp, devicePtr, len*sizeof(T),
+                              hipMemcpyDeviceToDevice));
+      HIP_SAFE_CALL(hipDeviceSynchronize());
+      HIP_SAFE_CALL(hipFree(devicePtr));
+    }
+
+    HIP_SAFE_CALL(hipMalloc(&devicePtr, n*sizeof(T)));
+
+    if (temp) {
+      HIP_SAFE_CALL(hipMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
+                              hipMemcpyDeviceToDevice));
+      HIP_SAFE_CALL(hipDeviceSynchronize());
+    }
+
+    len = n;
+  }
+
+ private:
+  T *devicePtr{nullptr};
+  size_t len{0};
+};
 #endif
 
 // ==================================================================
@@ -217,7 +339,7 @@ struct HostDeviceArray : public std::vector<T>
   }
 
  protected:
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   DeviceArray<T> deviceData;
 #else
   Base deviceData;
@@ -237,6 +359,11 @@ struct HostDeviceArray : public std::vector<T>
                               Base::data(),
                               Base::size() * sizeof(T),
                               cudaMemcpyHostToDevice));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpy(deviceData.data(),
+                            Base::data(),
+                            Base::size() * sizeof(T),
+                            hipMemcpyHostToDevice));
 #else
     memcpy(deviceData.data(), Base::data(), Base::size() * sizeof(T));
 #endif
@@ -251,6 +378,11 @@ struct HostDeviceArray : public std::vector<T>
                               deviceData.data(),
                               Base::size() * sizeof(T),
                               cudaMemcpyDeviceToHost));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpy(Base::data(),
+                            deviceData.data(),
+                            Base::size() * sizeof(T),
+                            hipMemcpyDeviceToHost));
 #else
     memcpy(Base::data(), deviceData.data(), Base::size() * sizeof(T));
 #endif
@@ -333,6 +465,11 @@ struct DeviceObjectArray : private std::vector<T>
                      Base::data(),
                      Base::size() * sizeof(T),
                      cudaMemcpyHostToDevice));
+#elif defined(WITH_HIP)
+      HIP_SAFE_CALL(hipMemcpy(deviceData.data(),
+                    Base::data(),
+                    Base::size() * sizeof(T),
+                    hipMemcpyHostToDevice));
 #else
       // TODO: assert trivially copyable
       memcpy(deviceData.data(), Base::data(), Base::size() * sizeof(T));
@@ -343,7 +480,7 @@ struct DeviceObjectArray : private std::vector<T>
   }
 
   std::vector<DeviceObjectHandle> freeHandles;
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   DeviceArray<T> deviceData;
 #else
   Base deviceData;

@@ -40,6 +40,8 @@ struct TransferFunction1D : public Volume
 
 #ifdef WITH_CUDA
   cuda_texture<float4, 1> transFuncTexture;
+#elif defined(WITH_HIP)
+  hip_texture<float4, 1> transFuncTexture;
 #else
   texture<float4, 1> transFuncTexture;
 #endif
