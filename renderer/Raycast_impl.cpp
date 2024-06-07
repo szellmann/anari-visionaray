@@ -34,6 +34,12 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     vec3f hitPos = ray.ori + hr.t * ray.dir;
     vec2f uv{hr.u,hr.v};
     vec3f gn, sn;
+
+    float4 attribs[5];
+    for (int i=0; i<5; ++i) {
+      attribs[i] = getAttribute(geom, (dco::Attribute)i, hr.prim_id, uv);
+    }
+
     getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
 
     gn = inst.normalXfm * gn;
@@ -46,9 +52,9 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       tng = tng4.xyz();
       btng = cross(sn, tng) * tng4.w;
       sn = getPerturbedNormal(
-          mat, geom, onDevice.samplers, hr.prim_id, uv, tng, btng, sn);
+          mat, onDevice.samplers, attribs, hr.prim_id, tng, btng, sn);
     }
-    vec4f color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
+    vec4f color = getColor(mat, onDevice.samplers, attribs, hr.prim_id);
 
     // That doesn't work for instances..
     float3 shadedColor{0.f};
@@ -75,10 +81,10 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         }
 
         float3 brdf = evalMaterial(mat,
-                                   geom,
                                    onDevice.samplers,
+                                   attribs,
                                    hr.prim_id,
-                                   uv, gn, sn,
+                                   gn, sn,
                                    viewDir,
                                    ls.dir,
                                    intensity);
@@ -99,17 +105,18 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     else if (rendererState.renderMode == RenderMode::Bitangent)
       shadedColor = btng;
     else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
-      shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
+      shadedColor = attribs[(int)dco::Attribute::_0].xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
-      shadedColor = getAttribute(geom, dco::Attribute::_1, hr.prim_id, uv).xyz();
+      shadedColor = attribs[(int)dco::Attribute::_1].xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
-      shadedColor = getAttribute(geom, dco::Attribute::_2, hr.prim_id, uv).xyz();
+      shadedColor = attribs[(int)dco::Attribute::_2].xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
-      shadedColor = getAttribute(geom, dco::Attribute::_3, hr.prim_id, uv).xyz();
+      shadedColor = attribs[(int)dco::Attribute::_3].xyz();
     else if (rendererState.renderMode == RenderMode::GeometryColor)
-      shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
+      shadedColor = attribs[(int)dco::Attribute::Color].xyz();
 
-    float a = getOpacity(mat, geom, onDevice.samplers, hr.prim_id, uv);
+
+    float a = getOpacity(mat, onDevice.samplers, attribs, hr.prim_id);
     surfaceColor += (1.f-surfaceAlpha) * a * shadedColor;
     surfaceAlpha += (1.f-surfaceAlpha) * a;
 

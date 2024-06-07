@@ -67,6 +67,7 @@ struct ShadeRec
   float3 btng{0.f};
   float3 viewDir{0.f};
   float3 hitPos{0.f};
+  float4 attribs[5];
   bool hdriMiss{false};
   float eps{1e-4f};
 };
@@ -89,6 +90,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
   auto &btng = shadeRec.btng;
   auto &viewDir = shadeRec.viewDir;
   auto &hitPos = shadeRec.hitPos;
+  auto &attribs = shadeRec.attribs;
   auto &hdriMiss = shadeRec.hdriMiss;
   auto &eps = shadeRec.eps;
 
@@ -151,6 +153,10 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       hitPos = ray.ori + hr.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
 
+      for (int i=0; i<5; ++i) {
+        attribs[i] = getAttribute(geom, (dco::Attribute)i, hr.prim_id, uv);
+      }
+
       viewDir = -ray.dir;
 
       getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
@@ -165,9 +171,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         tng = tng4.xyz();
         btng = cross(sn, tng) * tng4.w;
         sn = getPerturbedNormal(
-            mat, geom, onDevice.samplers, hr.prim_id, uv, tng, btng, sn);
+            mat, onDevice.samplers, attribs, hr.prim_id, tng, btng, sn);
       }
-      color = getColor(mat, geom, onDevice.samplers, hr.prim_id, uv);
+      color = getColor(mat, onDevice.samplers, attribs, hr.prim_id);
 
       result.albedo = color.xyz();
     }
@@ -223,9 +229,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
           if (ls.pdf > 0.f) {
             shadedColor = evalMaterial(mat,
-                                       dummyGeom,
                                        onDevice.samplers, // not used..
-                                       UINT_MAX, vec2{}, // primID and uv, not used..
+                                       nullptr, // attribs, not used..
+                                       UINT_MAX, // primID, not used..
                                        gn, gn,
                                        viewDir, ls.dir,
                                        intensity);
@@ -258,10 +264,10 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (rendererState.renderMode == RenderMode::Default) {
         if (ls.pdf > 0.f) {
           shadedColor = evalMaterial(mat,
-                                     geom,
                                      onDevice.samplers,
+                                     attribs,
                                      hr.prim_id,
-                                     uv, gn, sn,
+                                     gn, sn,
                                      viewDir,
                                      ls.dir,
                                      intensity);
@@ -291,15 +297,15 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         vec3 hsv(angle,1.f,mag);
         shadedColor = hsv2rgb(hsv);
       } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
-        shadedColor = getAttribute(geom, dco::Attribute::_0, hr.prim_id, uv).xyz();
+        shadedColor = attribs[(int)dco::Attribute::_0].xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
-        shadedColor = getAttribute(geom, dco::Attribute::_1, hr.prim_id, uv).xyz();
+        shadedColor = attribs[(int)dco::Attribute::_1].xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
-        shadedColor = getAttribute(geom, dco::Attribute::_2, hr.prim_id, uv).xyz();
+        shadedColor = attribs[(int)dco::Attribute::_2].xyz();
       else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
-        shadedColor = getAttribute(geom, dco::Attribute::_3, hr.prim_id, uv).xyz();
+        shadedColor = attribs[(int)dco::Attribute::_3].xyz();
       else if (rendererState.renderMode == RenderMode::GeometryColor)
-        shadedColor = getAttribute(geom, dco::Attribute::Color, hr.prim_id, uv).xyz();
+        shadedColor = attribs[(int)dco::Attribute::Color].xyz();
 
       if (rendererState.renderMode == RenderMode::Default)
         baseColor = color.xyz();
