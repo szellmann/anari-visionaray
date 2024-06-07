@@ -143,9 +143,11 @@ bool Frame::getProperty(
   else if (type == ANARI_INT32 && name == "numSamples") {
     if (flags & ANARI_WAIT)
       wait();
-    helium::writeToVoidP(
-        ptr, m_renderer->visionarayRenderer().rendererState.accumID);
-    return true;
+    if (m_renderer) {
+      helium::writeToVoidP(
+          ptr, m_renderer->visionarayRenderer().rendererState.accumID);
+      return true;
+    }
   }
 
   return 0;
