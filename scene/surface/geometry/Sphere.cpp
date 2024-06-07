@@ -89,9 +89,9 @@ void Sphere::commit()
       vattributes[i].resize(sizeInBytes);
       vattributes[i].reset(m_vertexAttributes[i]->begin());
 
-      vgeom.asSphere.vertexAttributes[i].data = vattributes[i].devicePtr();
-      vgeom.asSphere.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.asSphere.vertexAttributes[i].typeInfo
+      vgeom.vertexAttributes[i].data = vattributes[i].devicePtr();
+      vgeom.vertexAttributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.vertexAttributes[i].typeInfo
           = getInfo(m_vertexAttributes[i]->elementType());
     }
   }

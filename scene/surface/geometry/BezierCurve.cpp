@@ -102,9 +102,9 @@ void BezierCurve::commit()
       vattributes[i].resize(sizeInBytes);
       vattributes[i].reset(m_vertexAttributes[i]->begin());
 
-      vgeom.asBezierCurve.vertexAttributes[i].data = vattributes[i].devicePtr();
-      vgeom.asBezierCurve.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.asBezierCurve.vertexAttributes[i].typeInfo
+      vgeom.vertexAttributes[i].data = vattributes[i].devicePtr();
+      vgeom.vertexAttributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.vertexAttributes[i].typeInfo
           = getInfo(m_vertexAttributes[i]->elementType());
     }
   }

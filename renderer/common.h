@@ -365,125 +365,98 @@ inline vec4 getTangent(
 }
 
 VSNRAY_FUNC
-inline dco::Array getVertexColors(const dco::Geometry &geom, dco::Attribute attrib)
-{
-  dco::Array arr;
-
-  if (attrib != dco::Attribute::None) {
-    if (geom.type == dco::Geometry::Triangle)
-      return geom.asTriangle.vertexAttributes[(int)attrib];
-    else if (geom.type == dco::Geometry::Quad)
-      return geom.asQuad.vertexAttributes[(int)attrib];
-    else if (geom.type == dco::Geometry::Sphere)
-      return geom.asSphere.vertexAttributes[(int)attrib];
-    else if (geom.type == dco::Geometry::Cone)
-      return geom.asCone.vertexAttributes[(int)attrib];
-    else if (geom.type == dco::Geometry::Cylinder)
-      return geom.asCylinder.vertexAttributes[(int)attrib];
-  }
-
-  return arr;
-}
-
-VSNRAY_FUNC
-inline dco::Array getPrimitiveColors(const dco::Geometry &geom, dco::Attribute attrib)
-{
-  dco::Array arr;
-
-  if (attrib != dco::Attribute::None)
-    return geom.primitiveAttributes[(int)attrib];
-
-  return arr;
-}
-
-VSNRAY_FUNC
 inline vec4 getAttribute(
     const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv)
 {
   const vec4 dflt{0.f, 0.f, 0.f, 1.f};
   vec4f color = dflt;
-  dco::Array vertexColors = getVertexColors(geom, attrib);
-  dco::Array primitiveColors = getPrimitiveColors(geom, attrib);
+
+  if (attrib == dco::Attribute::None)
+    return color;
+
+  dco::Array vertexColors = geom.vertexAttributes[(int)attrib];
+  dco::Array primitiveColors = geom.primitiveAttributes[(int)attrib];
 
   const TypeInfo &vertexColorInfo = vertexColors.typeInfo;
   const TypeInfo &primitiveColorInfo = primitiveColors.typeInfo;
 
   // vertex colors take precedence over primitive colors
-  if (geom.type == dco::Geometry::Triangle && vertexColors.len > 0) {
-    uint3 index = getTriangleIndex(geom, primID);
-    const auto *source1
-        = (const uint8_t *)vertexColors.data
-            + index.x * vertexColorInfo.sizeInBytes;
-    const auto *source2
-        = (const uint8_t *)vertexColors.data
-            + index.y * vertexColorInfo.sizeInBytes;
-    const auto *source3
-        = (const uint8_t *)vertexColors.data
-            + index.z * vertexColorInfo.sizeInBytes;
-    vec4f c1{dflt}, c2{dflt}, c3{dflt};
-    convert(&c1, source1, vertexColorInfo);
-    convert(&c2, source2, vertexColorInfo);
-    convert(&c3, source3, vertexColorInfo);
-    color = lerp(c1, c2, c3, uv.x, uv.y);
-  }
-  else if (geom.type == dco::Geometry::Quad && vertexColors.len > 0) {
-    uint4 index = getQuadIndex(geom, primID);
-    const auto *source1
-        = (const uint8_t *)vertexColors.data
-            + index.x * vertexColorInfo.sizeInBytes;
-    const auto *source2
-        = (const uint8_t *)vertexColors.data
-            + index.y * vertexColorInfo.sizeInBytes;
-    const auto *source3
-        = (const uint8_t *)vertexColors.data
-            + index.z * vertexColorInfo.sizeInBytes;
-    const auto *source4
-        = (const uint8_t *)vertexColors.data
-            + index.w * vertexColorInfo.sizeInBytes;
-    vec4f c1{dflt}, c2{dflt}, c3{dflt}, c4{dflt};
-    convert(&c1, source1, vertexColorInfo);
-    convert(&c2, source2, vertexColorInfo);
-    convert(&c3, source3, vertexColorInfo);
-    convert(&c4, source4, vertexColorInfo);
-    if (primID%2==0)
-      color = lerp(c1, c2, c4, uv.x, uv.y);
-    else
-      color = lerp(c3, c4, c2, 1.f-uv.x, 1.f-uv.y);
-  }
-  else if (geom.type == dco::Geometry::Sphere && vertexColors.len > 0) {
-    uint32_t index = getSphereIndex(geom, primID);
-    const auto *source
-        = (const uint8_t *)vertexColors.data
-            + index * vertexColorInfo.sizeInBytes;
-    convert(&color, source, vertexColorInfo);
-  }
-  else if (geom.type == dco::Geometry::Cone && vertexColors.len > 0) {
-    uint2 index = getConeIndex(geom, primID);
-    const auto *source1
-        = (const uint8_t *)vertexColors.data
-            + index.x * vertexColorInfo.sizeInBytes;
-    const auto *source2
-        = (const uint8_t *)vertexColors.data
-            + index.y * vertexColorInfo.sizeInBytes;
-    vec4f c1{dflt}, c2{dflt};
-    convert(&c1, source1, vertexColorInfo);
-    convert(&c2, source2, vertexColorInfo);
-    color = lerp(c1, c2, uv.x);
-  }
-  else if (geom.type == dco::Geometry::Cylinder && vertexColors.len > 0) {
-    uint2 index = getCylinderIndex(geom, primID);
-    const auto *source1
-        = (const uint8_t *)vertexColors.data
-            + index.x * vertexColorInfo.sizeInBytes;
-    const auto *source2
-        = (const uint8_t *)vertexColors.data
-            + index.y * vertexColorInfo.sizeInBytes;
-    vec4f c1{dflt}, c2{dflt};
-    convert(&c1, source1, vertexColorInfo);
-    convert(&c2, source2, vertexColorInfo);
-    color = lerp(c1, c2, uv.x);
-  }
-  else if (primitiveColors.len > 0) {
+  if (vertexColors.len > 0) {
+    if (geom.type == dco::Geometry::Triangle) {
+      uint3 index = getTriangleIndex(geom, primID);
+      const auto *source1
+          = (const uint8_t *)vertexColors.data
+              + index.x * vertexColorInfo.sizeInBytes;
+      const auto *source2
+          = (const uint8_t *)vertexColors.data
+              + index.y * vertexColorInfo.sizeInBytes;
+      const auto *source3
+          = (const uint8_t *)vertexColors.data
+              + index.z * vertexColorInfo.sizeInBytes;
+      vec4f c1{dflt}, c2{dflt}, c3{dflt};
+      convert(&c1, source1, vertexColorInfo);
+      convert(&c2, source2, vertexColorInfo);
+      convert(&c3, source3, vertexColorInfo);
+      color = lerp(c1, c2, c3, uv.x, uv.y);
+    }
+    else if (geom.type == dco::Geometry::Quad) {
+      uint4 index = getQuadIndex(geom, primID);
+      const auto *source1
+          = (const uint8_t *)vertexColors.data
+              + index.x * vertexColorInfo.sizeInBytes;
+      const auto *source2
+          = (const uint8_t *)vertexColors.data
+              + index.y * vertexColorInfo.sizeInBytes;
+      const auto *source3
+          = (const uint8_t *)vertexColors.data
+              + index.z * vertexColorInfo.sizeInBytes;
+      const auto *source4
+          = (const uint8_t *)vertexColors.data
+              + index.w * vertexColorInfo.sizeInBytes;
+      vec4f c1{dflt}, c2{dflt}, c3{dflt}, c4{dflt};
+      convert(&c1, source1, vertexColorInfo);
+      convert(&c2, source2, vertexColorInfo);
+      convert(&c3, source3, vertexColorInfo);
+      convert(&c4, source4, vertexColorInfo);
+      if (primID%2==0)
+        color = lerp(c1, c2, c4, uv.x, uv.y);
+      else
+        color = lerp(c3, c4, c2, 1.f-uv.x, 1.f-uv.y);
+    }
+    else if (geom.type == dco::Geometry::Sphere) {
+      uint32_t index = getSphereIndex(geom, primID);
+      const auto *source
+          = (const uint8_t *)vertexColors.data
+              + index * vertexColorInfo.sizeInBytes;
+      convert(&color, source, vertexColorInfo);
+    }
+    else if (geom.type == dco::Geometry::Cone) {
+      uint2 index = getConeIndex(geom, primID);
+      const auto *source1
+          = (const uint8_t *)vertexColors.data
+              + index.x * vertexColorInfo.sizeInBytes;
+      const auto *source2
+          = (const uint8_t *)vertexColors.data
+              + index.y * vertexColorInfo.sizeInBytes;
+      vec4f c1{dflt}, c2{dflt};
+      convert(&c1, source1, vertexColorInfo);
+      convert(&c2, source2, vertexColorInfo);
+      color = lerp(c1, c2, uv.x);
+    }
+    else if (geom.type == dco::Geometry::Cylinder) {
+      uint2 index = getCylinderIndex(geom, primID);
+      const auto *source1
+          = (const uint8_t *)vertexColors.data
+              + index.x * vertexColorInfo.sizeInBytes;
+      const auto *source2
+          = (const uint8_t *)vertexColors.data
+              + index.y * vertexColorInfo.sizeInBytes;
+      vec4f c1{dflt}, c2{dflt};
+      convert(&c1, source1, vertexColorInfo);
+      convert(&c2, source2, vertexColorInfo);
+      color = lerp(c1, c2, uv.x);
+    }
+  } else if (primitiveColors.len > 0) {
     const auto *source
         = (const uint8_t *)primitiveColors.data
             + primID * primitiveColorInfo.sizeInBytes;

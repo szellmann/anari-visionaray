@@ -93,9 +93,9 @@ void Cylinder::commit()
       vattributes[i].resize(sizeInBytes);
       vattributes[i].reset(m_vertexAttributes[i]->begin());
 
-      vgeom.asCylinder.vertexAttributes[i].data = vattributes[i].devicePtr();
-      vgeom.asCylinder.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.asCylinder.vertexAttributes[i].typeInfo
+      vgeom.vertexAttributes[i].data = vattributes[i].devicePtr();
+      vgeom.vertexAttributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.vertexAttributes[i].typeInfo
           = getInfo(m_vertexAttributes[i]->elementType());
     }
   }
