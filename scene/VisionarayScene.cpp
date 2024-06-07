@@ -111,7 +111,7 @@ void VisionaraySceneImpl::commit()
       unsigned index = quadCount++;
       builder.enable_spatial_splits(true);
       m_accelStorage.quadBLSs[index] = builder.build(
-        TriangleBVH{}, (const dco::Triangle *)geom.numPrims, geom.numPrims);
+        TriangleBVH{}, (const dco::Triangle *)geom.primitives, geom.numPrims);
     } else if (geom.type == dco::Geometry::Sphere) {
       unsigned index = sphereCount++;
       builder.enable_spatial_splits(true);
