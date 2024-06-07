@@ -88,9 +88,9 @@ void BezierCurve::commit()
     vindex.resize(m_index->size());
     vindex.reset(m_index->beginAs<unsigned>());
 
-    vgeom.asBezierCurve.index.data = m_index->begin();
-    vgeom.asBezierCurve.index.len = m_index->size();
-    vgeom.asBezierCurve.index.typeInfo = getInfo(m_index->elementType());
+    vgeom.index.data = m_index->begin();
+    vgeom.index.len = m_index->size();
+    vgeom.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {

@@ -72,18 +72,18 @@ void Triangle::commit()
     vindex.resize(m_index->size());
     vindex.reset(m_index->beginAs<uint3>());
 
-    vgeom.asTriangle.index.data = vindex.devicePtr();
-    vgeom.asTriangle.index.len = m_index->size();
-    vgeom.asTriangle.index.typeInfo = getInfo(m_index->elementType());
+    vgeom.index.data = vindex.devicePtr();
+    vgeom.index.len = m_index->size();
+    vgeom.index.typeInfo = getInfo(m_index->elementType());
   }
 
   if (m_vertexNormal) {
     vnormals.resize(m_vertexNormal->size());
     vnormals.reset(m_vertexNormal->beginAs<float3>());
 
-    vgeom.asTriangle.normal.data = vnormals.devicePtr();
-    vgeom.asTriangle.normal.len = m_vertexNormal->size();
-    vgeom.asTriangle.normal.typeInfo = getInfo(m_vertexNormal->elementType());
+    vgeom.normal.data = vnormals.devicePtr();
+    vgeom.normal.len = m_vertexNormal->size();
+    vgeom.normal.typeInfo = getInfo(m_vertexNormal->elementType());
   }
 
   if (m_vertexTangent) {
@@ -100,9 +100,9 @@ void Triangle::commit()
           "unsupported type for 'vertex.tangent' on triangle geometry");
     }
 
-    vgeom.asTriangle.tangent.data = vtangents.devicePtr();
-    vgeom.asTriangle.tangent.len = m_vertexTangent->size();
-    vgeom.asTriangle.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
+    vgeom.tangent.data = vtangents.devicePtr();
+    vgeom.tangent.len = m_vertexTangent->size();
+    vgeom.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {

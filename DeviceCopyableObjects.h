@@ -1251,36 +1251,26 @@ struct Geometry
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
-    Array index;
-    Array normal;
-    Array tangent;
   } asTriangle;
   struct {
     basic_triangle<3,float> *data{nullptr};
     size_t len{0};
-    Array index;
-    Array normal;
-    Array tangent;
   } asQuad;
   struct {
     basic_sphere<float> *data{nullptr};
     size_t len{0};
-    Array index;
   } asSphere;
   struct {
     dco::Cone *data{nullptr};
     size_t len{0};
-    Array index;
   } asCone;
   struct {
     basic_cylinder<float> *data{nullptr};
     size_t len{0};
-    Array index;
   } asCylinder;
   struct {
     dco::BezierCurve *data{nullptr};
     size_t len{0};
-    Array index;
   } asBezierCurve;
   struct {
     dco::ISOSurface data;
@@ -1294,6 +1284,9 @@ struct Geometry
 
   Array primitiveAttributes[5];
   Array vertexAttributes[5];
+  Array index;
+  Array normal;
+  Array tangent;
 
   VSNRAY_FUNC
   inline bool isValid() const

@@ -192,11 +192,11 @@ inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 }
 
 VSNRAY_FUNC
-inline uint32_t getSphereIndex(const dco::Geometry &geom, unsigned primID)
+inline uint32_t getSphereIndex(const dco::Array &indexArray, unsigned primID)
 {
   uint32_t index;
-  if (geom.asSphere.index.len > 0) {
-    index = ((uint32_t *)geom.asSphere.index.data)[primID];
+  if (indexArray.len > 0) {
+    index = ((uint32_t *)indexArray.data)[primID];
   } else {
     index = primID;
   }
@@ -204,11 +204,11 @@ inline uint32_t getSphereIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
-inline uint2 getConeIndex(const dco::Geometry &geom, unsigned primID)
+inline uint2 getConeIndex(const dco::Array &indexArray, unsigned primID)
 {
   uint2 index;
-  if (geom.asCone.index.len > 0) {
-    index = ((uint2 *)geom.asCone.index.data)[primID];
+  if (indexArray.len > 0) {
+    index = ((uint2 *)indexArray.data)[primID];
   } else {
     index = uint2(primID * 2, primID * 2 + 1);
   }
@@ -216,11 +216,11 @@ inline uint2 getConeIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
-inline uint2 getCylinderIndex(const dco::Geometry &geom, unsigned primID)
+inline uint2 getCylinderIndex(const dco::Array &indexArray, unsigned primID)
 {
   uint2 index;
-  if (geom.asCylinder.index.len > 0) {
-    index = ((uint2 *)geom.asCylinder.index.data)[primID];
+  if (indexArray.len > 0) {
+    index = ((uint2 *)indexArray.data)[primID];
   } else {
     index = uint2(primID * 2, primID * 2 + 1);
   }
@@ -228,11 +228,11 @@ inline uint2 getCylinderIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
-inline uint3 getTriangleIndex(const dco::Geometry &geom, unsigned primID)
+inline uint3 getTriangleIndex(const dco::Array &indexArray, unsigned primID)
 {
   uint3 index;
-  if (geom.asTriangle.index.len > 0) {
-    index = ((uint3 *)geom.asTriangle.index.data)[primID];
+  if (indexArray.len > 0) {
+    index = ((uint3 *)indexArray.data)[primID];
   } else {
     index = uint3(primID * 3, primID * 3 + 1, primID * 3 + 2);
   }
@@ -240,11 +240,11 @@ inline uint3 getTriangleIndex(const dco::Geometry &geom, unsigned primID)
 }
 
 VSNRAY_FUNC
-inline uint4 getQuadIndex(const dco::Geometry &geom, unsigned primID)
+inline uint4 getQuadIndex(const dco::Array &indexArray, unsigned primID)
 {
   uint4 index;
-  if (geom.asQuad.index.len > 0) {
-    index = ((uint4 *)geom.asQuad.index.data)[primID/2]; // primID refers to triangles!
+  if (indexArray.len > 0) {
+    index = ((uint4 *)indexArray.data)[primID/2]; // primID refers to triangles!
   } else {
     primID /= 2; // tri to quad
     index = uint4(primID * 4, primID * 4 + 1, primID * 4 + 2, primID * 4 + 3);
@@ -317,10 +317,10 @@ inline vec3 getShadingNormal(
   vec3f sn(1.f,0.f,0.f);
 
   if (geom.type == dco::Geometry::Triangle) {
-    if (geom.asTriangle.normal.len
-        && geom.asTriangle.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
-      uint3 index = getTriangleIndex(geom, primID);
-      auto *normals = (const vec3 *)geom.asTriangle.normal.data;
+    if (geom.normal.len
+        && geom.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+      uint3 index = getTriangleIndex(geom.index, primID);
+      auto *normals = (const vec3 *)geom.normal.data;
       vec3 n1 = normals[index.x];
       vec3 n2 = normals[index.y];
       vec3 n3 = normals[index.z];
@@ -343,16 +343,16 @@ inline vec4 getTangent(
   vec4f tng(0.f);
 
   if (geom.type == dco::Geometry::Triangle) {
-    if (geom.asTriangle.tangent.len) {
-      uint3 index = getTriangleIndex(geom, primID);
-      if (geom.asTriangle.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
-        auto *tangents = (const vec3 *)geom.asTriangle.tangent.data;
+    if (geom.tangent.len) {
+      uint3 index = getTriangleIndex(geom.index, primID);
+      if (geom.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+        auto *tangents = (const vec3 *)geom.tangent.data;
         vec3 tng1 = tangents[index.x];
         vec3 tng2 = tangents[index.y];
         vec3 tng3 = tangents[index.z];
         tng = vec4(lerp(tng1, tng2, tng3, uv.x, uv.y), 1.f);
-      } else if (geom.asTriangle.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC4) {
-        auto *tangents = (const vec4 *)geom.asTriangle.tangent.data;
+      } else if (geom.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC4) {
+        auto *tangents = (const vec4 *)geom.tangent.data;
         vec4 tng1 = tangents[index.x];
         vec4 tng2 = tangents[index.y];
         vec4 tng3 = tangents[index.z];
@@ -368,8 +368,7 @@ VSNRAY_FUNC
 inline vec4 getAttribute(
     const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv)
 {
-  const vec4 dflt{0.f, 0.f, 0.f, 1.f};
-  vec4f color = dflt;
+  vec4f color{0.f, 0.f, 0.f, 1.f};
 
   if (attrib == dco::Attribute::None)
     return color;
@@ -383,7 +382,7 @@ inline vec4 getAttribute(
   // vertex colors take precedence over primitive colors
   if (vertexColors.len > 0) {
     if (geom.type == dco::Geometry::Triangle) {
-      uint3 index = getTriangleIndex(geom, primID);
+      uint3 index = getTriangleIndex(geom.index, primID);
       const auto *source1
           = (const uint8_t *)vertexColors.data
               + index.x * vertexColorInfo.sizeInBytes;
@@ -393,14 +392,13 @@ inline vec4 getAttribute(
       const auto *source3
           = (const uint8_t *)vertexColors.data
               + index.z * vertexColorInfo.sizeInBytes;
-      vec4f c1{dflt}, c2{dflt}, c3{dflt};
-      convert(&c1, source1, vertexColorInfo);
-      convert(&c2, source2, vertexColorInfo);
-      convert(&c3, source3, vertexColorInfo);
+      vec4f c1 = toRGBA(source1, vertexColorInfo);
+      vec4f c2 = toRGBA(source2, vertexColorInfo);
+      vec4f c3 = toRGBA(source3, vertexColorInfo);
       color = lerp(c1, c2, c3, uv.x, uv.y);
     }
     else if (geom.type == dco::Geometry::Quad) {
-      uint4 index = getQuadIndex(geom, primID);
+      uint4 index = getQuadIndex(geom.index, primID);
       const auto *source1
           = (const uint8_t *)vertexColors.data
               + index.x * vertexColorInfo.sizeInBytes;
@@ -413,54 +411,51 @@ inline vec4 getAttribute(
       const auto *source4
           = (const uint8_t *)vertexColors.data
               + index.w * vertexColorInfo.sizeInBytes;
-      vec4f c1{dflt}, c2{dflt}, c3{dflt}, c4{dflt};
-      convert(&c1, source1, vertexColorInfo);
-      convert(&c2, source2, vertexColorInfo);
-      convert(&c3, source3, vertexColorInfo);
-      convert(&c4, source4, vertexColorInfo);
+      vec4f c1 = toRGBA(source1, vertexColorInfo);
+      vec4f c2 = toRGBA(source2, vertexColorInfo);
+      vec4f c3 = toRGBA(source3, vertexColorInfo);
+      vec4f c4 = toRGBA(source4, vertexColorInfo);
       if (primID%2==0)
         color = lerp(c1, c2, c4, uv.x, uv.y);
       else
         color = lerp(c3, c4, c2, 1.f-uv.x, 1.f-uv.y);
     }
     else if (geom.type == dco::Geometry::Sphere) {
-      uint32_t index = getSphereIndex(geom, primID);
+      uint32_t index = getSphereIndex(geom.index, primID);
       const auto *source
           = (const uint8_t *)vertexColors.data
               + index * vertexColorInfo.sizeInBytes;
-      convert(&color, source, vertexColorInfo);
+      color = toRGBA(source, vertexColorInfo);
     }
     else if (geom.type == dco::Geometry::Cone) {
-      uint2 index = getConeIndex(geom, primID);
+      uint2 index = getConeIndex(geom.index, primID);
       const auto *source1
           = (const uint8_t *)vertexColors.data
               + index.x * vertexColorInfo.sizeInBytes;
       const auto *source2
           = (const uint8_t *)vertexColors.data
               + index.y * vertexColorInfo.sizeInBytes;
-      vec4f c1{dflt}, c2{dflt};
-      convert(&c1, source1, vertexColorInfo);
-      convert(&c2, source2, vertexColorInfo);
+      vec4f c1 = toRGBA(source1, vertexColorInfo);
+      vec4f c2 = toRGBA(source2, vertexColorInfo);
       color = lerp(c1, c2, uv.x);
     }
     else if (geom.type == dco::Geometry::Cylinder) {
-      uint2 index = getCylinderIndex(geom, primID);
+      uint2 index = getCylinderIndex(geom.index, primID);
       const auto *source1
           = (const uint8_t *)vertexColors.data
               + index.x * vertexColorInfo.sizeInBytes;
       const auto *source2
           = (const uint8_t *)vertexColors.data
               + index.y * vertexColorInfo.sizeInBytes;
-      vec4f c1{dflt}, c2{dflt};
-      convert(&c1, source1, vertexColorInfo);
-      convert(&c2, source2, vertexColorInfo);
+      vec4f c1 = toRGBA(source1, vertexColorInfo);
+      vec4f c2 = toRGBA(source2, vertexColorInfo);
       color = lerp(c1, c2, uv.x);
     }
   } else if (primitiveColors.len > 0) {
     const auto *source
         = (const uint8_t *)primitiveColors.data
             + primID * primitiveColorInfo.sizeInBytes;
-    convert(&color, source, primitiveColorInfo);
+    color = toRGBA(source, primitiveColorInfo);
   }
 
   return color;
@@ -476,7 +471,7 @@ inline vec4 getSample(
     const TypeInfo &info = samp.asPrimitive.typeInfo;
     const auto *source = samp.asPrimitive.data
         + (primID * info.sizeInBytes) + (samp.asPrimitive.offset * info.sizeInBytes);
-    convert(&s, source, info);
+    s = toRGBA(source, info);
   } else if (samp.type == dco::Sampler::Transform) {
     vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
     s = samp.outTransform * inAttr + samp.outOffset;

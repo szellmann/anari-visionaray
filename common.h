@@ -143,122 +143,104 @@ constexpr TypeInfo getInfo(ANARIDataType type)
 }
 
 VSNRAY_FUNC
-inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
+inline vec4 toRGBA(const uint8_t *source, const TypeInfo &ti)
 {
+  vec4 result{0.f, 0.f, 0.f, 1.f};
   if (ti.fixed) {
     switch (ti.dataType) {
       case ANARI_UFIXED8: {
         unorm<8> u8;
         memcpy(&u8, source, sizeof(u8));
-        (*dest).x = float(u8);
-        (*dest).y = 0.f;
-        (*dest).z = 0.f;
-        (*dest).w = 1.f;
+        result.x = float(u8);
         break;
       }
       case ANARI_UFIXED8_VEC2: {
         vector<2, unorm<8>> u8;
         memcpy(&u8, source, sizeof(u8));
-        (*dest).x = float(u8.x);
-        (*dest).y = float(u8.y);
-        (*dest).z = 0.f;
-        (*dest).w = 1.f;
+        result.x = float(u8.x);
+        result.y = float(u8.y);
         break;
       }
       case ANARI_UFIXED8_VEC3: {
         vector<3, unorm<8>> u8;
         memcpy(&u8, source, sizeof(u8));
-        (*dest).x = float(u8.x);
-        (*dest).y = float(u8.y);
-        (*dest).z = float(u8.z);
-        (*dest).w = 1.f;
+        result.x = float(u8.x);
+        result.y = float(u8.y);
+        result.z = float(u8.z);
         break;
       }
       case ANARI_UFIXED8_VEC4: {
         vector<4, unorm<8>> u8;
         memcpy(&u8, source, sizeof(u8));
-        (*dest).x = float(u8.x);
-        (*dest).y = float(u8.y);
-        (*dest).z = float(u8.z);
-        (*dest).w = float(u8.w);
+        result.x = float(u8.x);
+        result.y = float(u8.y);
+        result.z = float(u8.z);
+        result.w = float(u8.w);
         break;
       }
       case ANARI_UFIXED16: {
         unorm<16> u16;
         memcpy(&u16, source, sizeof(u16));
-        (*dest).x = float(u16);
-        (*dest).y = 0.f;
-        (*dest).z = 0.f;
-        (*dest).w = 1.f;
+        result.x = float(u16);
         break;
       }
       case ANARI_UFIXED16_VEC2: {
         vector<2, unorm<16>> u16;
         memcpy(&u16, source, sizeof(u16));
-        (*dest).x = float(u16.x);
-        (*dest).y = float(u16.y);
-        (*dest).z = 0.f;
-        (*dest).w = 1.f;
+        result.x = float(u16.x);
+        result.y = float(u16.y);
         break;
       }
       case ANARI_UFIXED16_VEC3: {
         vector<3, unorm<16>> u16;
         memcpy(&u16, source, sizeof(u16));
-        (*dest).x = float(u16.x);
-        (*dest).y = float(u16.y);
-        (*dest).z = float(u16.z);
-        (*dest).w = 1.f;
+        result.x = float(u16.x);
+        result.y = float(u16.y);
+        result.z = float(u16.z);
         break;
       }
       case ANARI_UFIXED16_VEC4: {
         vector<4, unorm<16>> u16;
         memcpy(&u16, source, sizeof(u16));
-        (*dest).x = float(u16.x);
-        (*dest).y = float(u16.y);
-        (*dest).z = float(u16.z);
-        (*dest).w = float(u16.w);
+        result.x = float(u16.x);
+        result.y = float(u16.y);
+        result.z = float(u16.z);
+        result.w = float(u16.w);
         break;
       }
       case ANARI_UFIXED32: {
         unorm<32> u32;
         memcpy(&u32, source, sizeof(u32));
-        (*dest).x = float(u32);
-        (*dest).y = 0.f;
-        (*dest).z = 0.f;
-        (*dest).w = 1.f;
+        result.x = float(u32);
         break;
       }
       case ANARI_UFIXED32_VEC2: {
         vector<2, unorm<32>> u32;
         memcpy(&u32, source, sizeof(u32));
-        (*dest).x = float(u32.x);
-        (*dest).y = float(u32.y);
-        (*dest).z = 0.f;
-        (*dest).w = 1.f;
+        result.x = float(u32.x);
+        result.y = float(u32.y);
         break;
       }
       case ANARI_UFIXED32_VEC3: {
         vector<3, unorm<32>> u32;
         memcpy(&u32, source, sizeof(u32));
-        (*dest).x = float(u32.x);
-        (*dest).y = float(u32.y);
-        (*dest).z = float(u32.z);
-        (*dest).w = 1.f;
+        result.x = float(u32.x);
+        result.y = float(u32.y);
+        result.z = float(u32.z);
         break;
       }
       case ANARI_UFIXED32_VEC4: {
         vector<4, unorm<32>> u32;
         memcpy(&u32, source, sizeof(u32));
-        (*dest).x = float(u32.x);
-        (*dest).y = float(u32.y);
-        (*dest).z = float(u32.z);
-        (*dest).w = float(u32.w);
+        result.x = float(u32.x);
+        result.y = float(u32.y);
+        result.z = float(u32.z);
+        result.w = float(u32.w);
         break;
       }
     }
   } else {
-    *dest = vec4(0.f, 0.f, 0.f, 1.f);
-    memcpy(dest, source, ti.sizeInBytes);
+    memcpy(&result, source, ti.sizeInBytes);
   }
 
   if (ti.sRGB) {
@@ -266,6 +248,8 @@ inline void convert(vec4 *dest, const uint8_t *source, const TypeInfo &ti)
 
     }
   }
+
+  return result;
 }
 
 } // namespace visionaray

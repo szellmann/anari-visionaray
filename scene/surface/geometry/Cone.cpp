@@ -83,9 +83,9 @@ void Cone::commit()
     vindex.resize(m_index->size());
     vindex.reset(m_index->beginAs<uint2>());
 
-    vgeom.asCone.index.data = m_index->begin();
-    vgeom.asCone.index.len = m_index->size();
-    vgeom.asCone.index.typeInfo = getInfo(m_index->elementType());
+    vgeom.index.data = m_index->begin();
+    vgeom.index.len = m_index->size();
+    vgeom.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {

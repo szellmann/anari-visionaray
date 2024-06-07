@@ -83,18 +83,18 @@ void Quad::commit()
     vindex.resize(m_index->size());
     vindex.reset(m_index->beginAs<uint3>());
 
-    vgeom.asQuad.index.data = vindex.devicePtr();
-    vgeom.asQuad.index.len = m_index->size();
-    vgeom.asQuad.index.typeInfo = getInfo(m_index->elementType());
+    vgeom.index.data = vindex.devicePtr();
+    vgeom.index.len = m_index->size();
+    vgeom.index.typeInfo = getInfo(m_index->elementType());
   }
 
   if (m_vertexNormal) {
     vnormals.resize(m_vertexNormal->size());
     vnormals.reset(m_vertexNormal->beginAs<float3>());
 
-    vgeom.asQuad.normal.data = vnormals.devicePtr();
-    vgeom.asQuad.normal.len = m_vertexNormal->size();
-    vgeom.asQuad.normal.typeInfo = getInfo(m_vertexNormal->elementType());
+    vgeom.normal.data = vnormals.devicePtr();
+    vgeom.normal.len = m_vertexNormal->size();
+    vgeom.normal.typeInfo = getInfo(m_vertexNormal->elementType());
   }
 
   if (m_vertexTangent) {
@@ -111,9 +111,9 @@ void Quad::commit()
           "unsupported type for 'vertex.tangent' on quad geometry");
     }
 
-    vgeom.asQuad.tangent.data = vtangents.devicePtr();
-    vgeom.asQuad.tangent.len = m_vertexTangent->size();
-    vgeom.asQuad.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
+    vgeom.tangent.data = vtangents.devicePtr();
+    vgeom.tangent.len = m_vertexTangent->size();
+    vgeom.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {

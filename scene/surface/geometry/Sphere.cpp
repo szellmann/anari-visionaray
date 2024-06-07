@@ -75,9 +75,9 @@ void Sphere::commit()
     vindex.resize(m_index->size());
     vindex.reset(m_index->beginAs<uint32_t>());
 
-    vgeom.asSphere.index.data = vindex.devicePtr();
-    vgeom.asSphere.index.len = m_index->size();
-    vgeom.asSphere.index.typeInfo = getInfo(m_index->elementType());
+    vgeom.index.data = vindex.devicePtr();
+    vgeom.index.len = m_index->size();
+    vgeom.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {

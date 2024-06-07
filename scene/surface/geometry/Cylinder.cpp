@@ -79,9 +79,9 @@ void Cylinder::commit()
     vindex.resize(m_index->size());
     vindex.reset(m_index->beginAs<uint2>());
 
-    vgeom.asCylinder.index.data = m_index->begin();
-    vgeom.asCylinder.index.len = m_index->size();
-    vgeom.asCylinder.index.typeInfo = getInfo(m_index->elementType());
+    vgeom.index.data = m_index->begin();
+    vgeom.index.len = m_index->size();
+    vgeom.index.typeInfo = getInfo(m_index->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {
