@@ -253,70 +253,17 @@ inline uint4 getQuadIndex(const dco::Array &indexArray, unsigned primID)
 }
 
 VSNRAY_FUNC
-inline vec3 getNormal(
-    const dco::Geometry &geom, unsigned primID, const vec3 hitPos, const vec2 uv)
+inline void getNormals(const dco::Geometry &geom,
+                       unsigned primID,
+                       const vec3 hitPos,
+                       const vec2 uv,
+                       vec3 &Ng,
+                       vec3 &Ns)
 {
-  vec3f gn(1.f,0.f,0.f);
-
-        // TODO: doesn't work for instances yet
+  // TODO: doesn't work for instances yet
   if (geom.type == dco::Geometry::Triangle) {
-    auto tri = geom.asTriangle.data[primID];
-    gn = normalize(cross(tri.e1,tri.e2));
-  } else if (geom.type == dco::Geometry::Quad) {
-    auto qtri = geom.asQuad.data[primID];
-    gn = normalize(cross(qtri.e1,qtri.e2));
-  } else if (geom.type == dco::Geometry::Sphere) {
-    auto sph = geom.asSphere.data[primID];
-    gn = normalize((hitPos-sph.center) / sph.radius);
-  } else if (geom.type == dco::Geometry::Cone) {
-    // reconstruct normal (see https://iquilezles.org/articles/intersectors/)
-    auto cone = geom.asCone.data[primID];
-    const vec3f ba = cone.v2 - cone.v1;
-    const float m0 = dot(ba,ba);
-    if (uv.x <= 0.f) {
-      gn = -ba*rsqrt(m0);
-    } else if (uv.x >= 1) {
-      gn = ba*rsqrt(m0);
-    } else {
-      const float ra = cone.r1;
-      const float rr = cone.r1 - cone.r2;
-      const float hy = m0 + rr*rr;
-      const float y = uv.y; // uv.y stores the unnormalized cone parameter t!
-      const vec3f localPos = hitPos-cone.v1;
-      gn = normalize(m0*(m0*localPos+rr*ba*ra)-ba*hy*y);
-    }
-  } else if (geom.type == dco::Geometry::Cylinder) {
-    auto cyl = geom.asCylinder.data[primID];
-    vec3f axis = normalize(cyl.v2-cyl.v1);
-    if (length(hitPos-cyl.v1) < cyl.radius)
-      gn = -axis;
-    else if (length(hitPos-cyl.v2) < cyl.radius)
-      gn = axis;
-    else {
-      float t = dot(hitPos-cyl.v1, axis);
-      vec3f pt = cyl.v1 + t * axis;
-      gn = normalize(hitPos-pt);
-    }
-  } else if (geom.type == dco::Geometry::BezierCurve) {
-    float t = uv.x;
-    vec3f curvePos = geom.asBezierCurve.data[primID].f(t);
-    return normalize(hitPos-curvePos);
-  } else if (geom.type == dco::Geometry::ISOSurface) {
-    if (!sampleGradient(geom.asISOSurface.data.field,hitPos,gn)) {
-      return vec3f(0.f);
-    }
-    gn = normalize(gn);
-  }
-  return gn;
-}
-
-VSNRAY_FUNC
-inline vec3 getShadingNormal(
-    const dco::Geometry &geom, unsigned primID, const vec3 hitPos, const vec2 uv)
-{
-  vec3f sn(1.f,0.f,0.f);
-
-  if (geom.type == dco::Geometry::Triangle) {
+    auto tri = geom.as<dco::Triangle>(primID);
+    Ng = normalize(cross(tri.e1,tri.e2));
     if (geom.normal.len
         && geom.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
       uint3 index = getTriangleIndex(geom.index, primID);
@@ -324,16 +271,63 @@ inline vec3 getShadingNormal(
       vec3 n1 = normals[index.x];
       vec3 n2 = normals[index.y];
       vec3 n3 = normals[index.z];
-      sn = lerp(n1, n2, n3, uv.x, uv.y);
-      sn = normalize(sn);
+      Ns = lerp(n1, n2, n3, uv.x, uv.y);
+      Ns = normalize(Ns);
     } else {
-      sn = getNormal(geom, primID, hitPos, uv);
+      Ns = Ng;
     }
-  } else {
-    sn = getNormal(geom, primID, hitPos, uv);
+  } else if (geom.type == dco::Geometry::Quad) {
+    auto qtri = geom.as<dco::Triangle>(primID);
+    Ng = normalize(cross(qtri.e1,qtri.e2));
+    Ns = Ng;
+  } else if (geom.type == dco::Geometry::Sphere) {
+    auto sph = geom.as<dco::Sphere>(primID);
+    Ng = normalize((hitPos-sph.center) / sph.radius);
+    Ns = Ng;
+  } else if (geom.type == dco::Geometry::Cone) {
+    // reconstruct normal (see https://iquilezles.org/articles/intersectors/)
+    auto cone = geom.as<dco::Cone>(primID);
+    const vec3f ba = cone.v2 - cone.v1;
+    const float m0 = dot(ba,ba);
+    if (uv.x <= 0.f) {
+      Ng = -ba*rsqrt(m0);
+    } else if (uv.x >= 1) {
+      Ng = ba*rsqrt(m0);
+    } else {
+      const float ra = cone.r1;
+      const float rr = cone.r1 - cone.r2;
+      const float hy = m0 + rr*rr;
+      const float y = uv.y; // uv.y stores the unnormalized cone parameter t!
+      const vec3f localPos = hitPos-cone.v1;
+      Ng = normalize(m0*(m0*localPos+rr*ba*ra)-ba*hy*y);
+    }
+    Ns = Ng;
+  } else if (geom.type == dco::Geometry::Cylinder) {
+    auto cyl = geom.as<dco::Cylinder>(primID);
+    vec3f axis = normalize(cyl.v2-cyl.v1);
+    if (length(hitPos-cyl.v1) < cyl.radius)
+      Ng = -axis;
+    else if (length(hitPos-cyl.v2) < cyl.radius)
+      Ng = axis;
+    else {
+      float t = dot(hitPos-cyl.v1, axis);
+      vec3f pt = cyl.v1 + t * axis;
+      Ng = normalize(hitPos-pt);
+    }
+    Ns = Ng;
+  } else if (geom.type == dco::Geometry::BezierCurve) {
+    float t = uv.x;
+    vec3f curvePos = geom.as<dco::BezierCurve>(primID).f(t);
+    Ng = normalize(hitPos-curvePos);
+    Ns = Ng;
+  } else if (geom.type == dco::Geometry::ISOSurface) {
+    if (!sampleGradient(geom.asISOSurface.field,hitPos,Ng)) {
+      Ng = vec3f(0.f);
+    } else {
+      Ng = normalize(Ng);
+    }
+    Ns = Ng;
   }
-
-  return sn;
 }
 
 VSNRAY_FUNC
@@ -465,20 +459,20 @@ VSNRAY_FUNC
 inline vec4 getSample(
     const dco::Sampler &samp, const dco::Geometry geom, unsigned primID, const vec2 uv)
 {
-  vec4f s{0.f, 0.f, 0.f, 1.f};
-
   if (samp.type == dco::Sampler::Primitive) {
     const TypeInfo &info = samp.asPrimitive.typeInfo;
     const auto *source = samp.asPrimitive.data
         + (primID * info.sizeInBytes) + (samp.asPrimitive.offset * info.sizeInBytes);
-    s = toRGBA(source, info);
+    return toRGBA(source, info);
   } else if (samp.type == dco::Sampler::Transform) {
     vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
-    s = samp.outTransform * inAttr + samp.outOffset;
+    return samp.outTransform * inAttr + samp.outOffset;
   } else {
     vec4f inAttr = getAttribute(geom, samp.inAttribute, primID, uv);
 
     inAttr = samp.inTransform * inAttr + samp.inOffset;
+
+    vec4f s{0.f, 0.f, 0.f, 1.f};
 
     if (samp.type == dco::Sampler::Image1D)
       s = tex1D(samp.asImage1D, inAttr.x);
@@ -487,10 +481,8 @@ inline vec4 getSample(
     else if (samp.type == dco::Sampler::Image3D)
       s = tex3D(samp.asImage3D, inAttr.xyz());
 
-    s = samp.outTransform * s + samp.outOffset;
+    return samp.outTransform * s + samp.outOffset;
   }
-
-  return s;
 }
 
 VSNRAY_FUNC
@@ -499,16 +491,12 @@ inline vec4 getRGBA(const dco::MaterialParamRGB &param,
                     const dco::Sampler *samplers,
                     unsigned primID, const vec2 uv)
 {
-  vec4f rgba{0.f, 0.f, 0.f, 1.f};
-  if (param.samplerID < UINT_MAX) {
-    const auto &samp = samplers[param.samplerID];
-    rgba = getSample(samp, geom, primID, uv);
-  } else if (param.attribute != dco::Attribute::None) {
-    rgba = getAttribute(geom, param.attribute, primID, uv);
-  } else {
-    rgba = vec4f(param.rgb, 1.f);
-  }
-  return rgba;
+  if (param.samplerID < UINT_MAX)
+    return getSample(samplers[param.samplerID], geom, primID, uv);
+  else if (param.attribute != dco::Attribute::None)
+    return getAttribute(geom, param.attribute, primID, uv);
+  else
+    return vec4f(param.rgb, 1.f);
 }
 
 VSNRAY_FUNC
@@ -517,16 +505,12 @@ inline float getF(const dco::MaterialParamF &param,
                   const dco::Sampler *samplers,
                   unsigned primID, const vec2 uv)
 {
-  float f = 1.f;
-  if (param.samplerID < UINT_MAX) {
-    const auto &samp = samplers[param.samplerID];
-    f = getSample(samp, geom, primID, uv).x;
-  } else if (param.attribute != dco::Attribute::None) {
-    f = getAttribute(geom, param.attribute, primID, uv).x;
-  } else {
-    f = param.f;
-  }
-  return f;
+  if (param.samplerID < UINT_MAX)
+    return getSample(samplers[param.samplerID], geom, primID, uv).x;
+  else if (param.attribute != dco::Attribute::None)
+    return getAttribute(geom, param.attribute, primID, uv).x;
+  else
+    return param.f;
 }
 
 VSNRAY_FUNC

@@ -151,7 +151,7 @@ inline HitRecordVolume sampleFreeFlightDistanceAllVolumes(
     const auto &inst = onDevice.instances[hrv.inst_id];
     const auto &group = onDevice.groups[inst.groupID];
     const auto &geom = onDevice.geometries[group.geoms[hrv.geom_id]];
-    const auto &vol = geom.asVolume.data;
+    const auto &vol = geom.asVolume;
     HitRecordVolume hr = sampleFreeFlightDistance(ss, ray, vol, onDevice);
     if (hr.t < result.t) {
       result = hr;

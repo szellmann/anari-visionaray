@@ -1228,6 +1228,12 @@ struct Surface
   unsigned matID{UINT_MAX};
 };
 
+// Geometry types (for dispatch) //
+
+using Triangle = basic_triangle<3,float>;
+using Sphere = basic_sphere<float>;
+using Cylinder = basic_cylinder<float>;
+
 // Geometry //
 
 struct Geometry
@@ -1248,39 +1254,27 @@ struct Geometry
   Type type{Unknown};
   unsigned geomID{UINT_MAX};
   bool updated{false};
-  struct {
-    basic_triangle<3,float> *data{nullptr};
-    size_t len{0};
-  } asTriangle;
-  struct {
-    basic_triangle<3,float> *data{nullptr};
-    size_t len{0};
-  } asQuad;
-  struct {
-    basic_sphere<float> *data{nullptr};
-    size_t len{0};
-  } asSphere;
-  struct {
-    dco::Cone *data{nullptr};
-    size_t len{0};
-  } asCone;
-  struct {
-    basic_cylinder<float> *data{nullptr};
-    size_t len{0};
-  } asCylinder;
-  struct {
-    dco::BezierCurve *data{nullptr};
-    size_t len{0};
-  } asBezierCurve;
-  struct {
-    dco::ISOSurface data;
-  } asISOSurface;
-  struct {
-    dco::Volume data;
-  } asVolume;
-  struct {
-    dco::Instance data;
-  } asInstance;
+  void *primitives{nullptr};
+  size_t numPrims{0};
+
+  template <typename Primitive>
+  VSNRAY_FUNC
+  Primitive &as(unsigned primID)
+  {
+    return ((Primitive *)primitives)[primID];
+  }
+
+  template <typename Primitive>
+  VSNRAY_FUNC
+  const Primitive &as(unsigned primID) const
+  {
+    return ((const Primitive *)primitives)[primID];
+  }
+
+  // special handling (for now..)
+  dco::ISOSurface asISOSurface;
+  dco::Volume     asVolume;
+  dco::Instance   asInstance;
 
   Array primitiveAttributes[5];
   Array vertexAttributes[5];
@@ -1292,7 +1286,7 @@ struct Geometry
   inline bool isValid() const
   {
     if (type == ISOSurface) {
-      return asISOSurface.data.numValues > 0;
+      return asISOSurface.numValues > 0;
     }
     // TODO..
     return true;

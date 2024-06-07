@@ -81,8 +81,8 @@ void BezierCurve::commit()
     }
   }
 
-  vgeom.asBezierCurve.data = m_curves.devicePtr();
-  vgeom.asBezierCurve.len = m_curves.size();
+  vgeom.primitives = m_curves.devicePtr();
+  vgeom.numPrims = m_curves.size();
 
   if (m_index) {
     vindex.resize(m_index->size());
