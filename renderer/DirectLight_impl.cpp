@@ -153,8 +153,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
       viewDir = -ray.dir;
 
-      gn = getNormal(geom, hr.prim_id, hitPos, uv);
-      sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
+      getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
 
       gn = inst.normalXfm * gn;
       sn = inst.normalXfm * sn;

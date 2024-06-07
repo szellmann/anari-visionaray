@@ -33,8 +33,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
     vec3f hitPos = ray.ori + hr.t * ray.dir;
     vec2f uv{hr.u,hr.v};
-    vec3f gn = getNormal(geom, hr.prim_id, hitPos, uv);
-    vec3f sn = getShadingNormal(geom, hr.prim_id, hitPos, uv);
+    vec3f gn, sn;
+    getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
 
     gn = inst.normalXfm * gn;
     sn = inst.normalXfm * sn;
@@ -149,7 +149,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     const auto &inst = onDevice.instances[hr.inst_id];
     const auto &group = onDevice.groups[inst.groupID];
     const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-    const auto &vol = geom.asVolume.data;
+    const auto &vol = geom.asVolume;
 
     float3 color(0.f);
     float alpha = 0.f;

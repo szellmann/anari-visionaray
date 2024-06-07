@@ -65,8 +65,8 @@ void Triangle::commit()
     }
   }
 
-  vgeom.asTriangle.data = m_triangles.devicePtr();
-  vgeom.asTriangle.len = m_triangles.size();
+  vgeom.primitives = m_triangles.devicePtr();
+  vgeom.numPrims = m_triangles.size();
 
   if (m_index) {
     vindex.resize(m_index->size());

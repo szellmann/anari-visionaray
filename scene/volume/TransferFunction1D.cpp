@@ -17,7 +17,7 @@ TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d)
   , m_opacityData(this)
 {
   vgeom.type = dco::Geometry::Volume;
-  vgeom.asVolume.data.type = dco::Volume::TransferFunction1D;
+  vgeom.asVolume.type = dco::Volume::TransferFunction1D;
   vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
 
   vtransfunc.type = dco::TransferFunction::_1D;
@@ -106,14 +106,17 @@ void TransferFunction1D::commit()
   tex.set_filter_mode(Linear);
   tex.set_address_mode(Clamp);
 
-  vgeom.asVolume.data.bounds = m_bounds;
-  vgeom.asVolume.data.volID = m_field->visionaraySpatialField().fieldID;
-  vgeom.asVolume.data.asTransferFunction1D.tfID = vtransfunc.tfID;
-  vgeom.asVolume.data.asTransferFunction1D.fieldID
-      = m_field->visionaraySpatialField().fieldID;
-  vgeom.asVolume.data.asTransferFunction1D.densityScale = m_densityScale;
+  vgeom.primitives = &vgeom.asVolume;
+  vgeom.numPrims = 1;
 
-  vtransfunc.volID = vgeom.asVolume.data.volID;
+  vgeom.asVolume.bounds = m_bounds;
+  vgeom.asVolume.volID = m_field->visionaraySpatialField().fieldID;
+  vgeom.asVolume.asTransferFunction1D.tfID = vtransfunc.tfID;
+  vgeom.asVolume.asTransferFunction1D.fieldID
+      = m_field->visionaraySpatialField().fieldID;
+  vgeom.asVolume.asTransferFunction1D.densityScale = m_densityScale;
+
+  vtransfunc.volID = vgeom.asVolume.volID;
   vtransfunc.as1D.numValues = tex.size()[0];
   vtransfunc.as1D.valueRange = m_valueRange;
 #ifdef WITH_CUDA
