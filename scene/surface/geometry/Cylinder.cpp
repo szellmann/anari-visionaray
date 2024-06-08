@@ -72,8 +72,8 @@ void Cylinder::commit()
     }
   }
 
-  vgeom.primitives = m_cylinders.devicePtr();
-  vgeom.numPrims = m_cylinders.size();
+  vgeom.primitives.data = m_cylinders.devicePtr();
+  vgeom.primitives.len = m_cylinders.size();
 
   if (m_index) {
     vindex.resize(m_index->size());

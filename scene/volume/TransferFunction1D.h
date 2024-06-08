@@ -45,6 +45,8 @@ struct TransferFunction1D : public Volume
 #endif
 
   dco::TransferFunction vtransfunc;
+
+  HostDeviceArray<dco::Volume> m_volume;
 };
 
 } // namespace visionaray

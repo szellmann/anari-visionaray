@@ -68,8 +68,8 @@ void Sphere::commit()
     }
   }
 
-  vgeom.primitives = m_spheres.devicePtr();
-  vgeom.numPrims = m_spheres.size();
+  vgeom.primitives.data = m_spheres.devicePtr();
+  vgeom.primitives.len = m_spheres.size();
 
   if (m_index) {
     vindex.resize(m_index->size());

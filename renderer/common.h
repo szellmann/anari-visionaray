@@ -321,7 +321,7 @@ inline void getNormals(const dco::Geometry &geom,
     Ng = normalize(hitPos-curvePos);
     Ns = Ng;
   } else if (geom.type == dco::Geometry::ISOSurface) {
-    if (!sampleGradient(geom.asISOSurface.field,hitPos,Ng)) {
+    if (!sampleGradient(geom.as<dco::ISOSurface>(0).field,hitPos,Ng)) {
       Ng = vec3f(0.f);
     } else {
       Ng = normalize(Ng);

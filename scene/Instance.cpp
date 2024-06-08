@@ -9,14 +9,15 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
   vgeom.type = dco::Geometry::Instance;
   vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
-  vgeom.asInstance.instID
-      = deviceState()->dcos.instances.alloc(vgeom.asInstance);
+  m_instance.resize(1);
+  m_instance[0].instID
+      = deviceState()->dcos.instances.alloc(m_instance[0]);
   s->objectCounts.instances++;
 }
 
 Instance::~Instance()
 {
-  deviceState()->dcos.instances.free(vgeom.asInstance.instID);
+  deviceState()->dcos.instances.free(m_instance[0].instID);
   deviceState()->dcos.geometries.free(vgeom.geomID);
 
   deviceState()->objectCounts.instances--;
@@ -71,20 +72,21 @@ dco::Geometry Instance::visionarayGeometry() const
 
 void Instance::visionarayGeometryUpdate()
 {
-  vgeom.primitives = &vgeom.asInstance;
-  vgeom.numPrims = 1;
-
-  vgeom.asInstance.userID = m_id;
-  vgeom.asInstance.groupID = group()->visionarayScene()->m_groupID;
-  vgeom.asInstance.xfm = m_xfm;
+  m_instance[0].userID = m_id;
+  m_instance[0].groupID = group()->visionarayScene()->m_groupID;
+  m_instance[0].xfm = m_xfm;
 
   // set xfm
-  mat3f rot = top_left(vgeom.asInstance.xfm);
-  vec3f trans(vgeom.asInstance.xfm(0,3),
-              vgeom.asInstance.xfm(1,3),
-              vgeom.asInstance.xfm(2,3));
+  mat3f rot = top_left(m_instance[0].xfm);
+  vec3f trans(m_instance[0].xfm(0,3),
+              m_instance[0].xfm(1,3),
+              m_instance[0].xfm(2,3));
   mat4x3 xfm{rot, trans};
-  vgeom.asInstance.instBVH = group()->visionarayScene()->instBVH(xfm);
+  m_instance[0].instBVH = group()->visionarayScene()->instBVH(xfm);
+  m_instance[0].normalXfm = inverse(transpose(m_xfmInvRot));
+
+  vgeom.primitives.data = m_instance.devicePtr();
+  vgeom.primitives.len = m_instance.size();
 
   dispatch();
 }
@@ -104,9 +106,7 @@ bool Instance::isValid() const
 void Instance::dispatch()
 {
   deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
-  vgeom.asInstance.normalXfm = inverse(transpose(m_xfmInvRot));
-  deviceState()->dcos.instances.update(
-      vgeom.asInstance.instID, vgeom.asInstance);
+  deviceState()->dcos.instances.update(m_instance[0].instID, m_instance[0]);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();

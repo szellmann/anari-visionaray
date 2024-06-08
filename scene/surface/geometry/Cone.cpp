@@ -76,8 +76,8 @@ void Cone::commit()
     }
   }
 
-  vgeom.primitives = m_cones.devicePtr();
-  vgeom.numPrims = m_cones.size();
+  vgeom.primitives.data = m_cones.devicePtr();
+  vgeom.primitives.len = m_cones.size();
 
   if (m_index) {
     vindex.resize(m_index->size());

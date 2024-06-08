@@ -1254,28 +1254,22 @@ struct Geometry
   Type type{Unknown};
   unsigned geomID{UINT_MAX};
   bool updated{false};
-  void *primitives{nullptr};
-  size_t numPrims{0};
 
   template <typename Primitive>
   VSNRAY_FUNC
   Primitive &as(unsigned primID)
   {
-    return ((Primitive *)primitives)[primID];
+    return ((Primitive *)primitives.data)[primID];
   }
 
   template <typename Primitive>
   VSNRAY_FUNC
   const Primitive &as(unsigned primID) const
   {
-    return ((const Primitive *)primitives)[primID];
+    return ((const Primitive *)primitives.data)[primID];
   }
 
-  // special handling (for now..)
-  dco::ISOSurface asISOSurface;
-  dco::Volume     asVolume;
-  dco::Instance   asInstance;
-
+  Array primitives;
   Array primitiveAttributes[5];
   Array vertexAttributes[5];
   Array index;
@@ -1286,7 +1280,7 @@ struct Geometry
   inline bool isValid() const
   {
     if (type == ISOSurface) {
-      return asISOSurface.numValues > 0;
+      return as<dco::ISOSurface>(0).numValues > 0;
     }
     // TODO..
     return true;

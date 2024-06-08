@@ -106,42 +106,43 @@ void VisionaraySceneImpl::commit()
       unsigned index = triangleCount++;
       builder.enable_spatial_splits(true);
       m_accelStorage.triangleBLSs[index] = builder.build(
-        TriangleBVH{}, (const dco::Triangle *)geom.primitives, geom.numPrims);
+        TriangleBVH{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
     } else if (geom.type == dco::Geometry::Quad) {
       unsigned index = quadCount++;
       builder.enable_spatial_splits(true);
       m_accelStorage.quadBLSs[index] = builder.build(
-        TriangleBVH{}, (const dco::Triangle *)geom.primitives, geom.numPrims);
+        TriangleBVH{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
     } else if (geom.type == dco::Geometry::Sphere) {
       unsigned index = sphereCount++;
       builder.enable_spatial_splits(true);
       m_accelStorage.sphereBLSs[index] = builder.build(
-        SphereBVH{}, (const dco::Sphere *)geom.primitives, geom.numPrims);
+        SphereBVH{}, (const dco::Sphere *)geom.primitives.data, geom.primitives.len);
     } else if (geom.type == dco::Geometry::Cone) {
       unsigned index = coneCount++;
       builder.enable_spatial_splits(false); // no spatial splits for cones yet!
       m_accelStorage.coneBLSs[index] = builder.build(
-        ConeBVH{}, (const dco::Cone *)geom.primitives, geom.numPrims);
+        ConeBVH{}, (const dco::Cone *)geom.primitives.data, geom.primitives.len);
     } else if (geom.type == dco::Geometry::Cylinder) {
       unsigned index = cylinderCount++;
       builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
       m_accelStorage.cylinderBLSs[index] = builder.build(
-        CylinderBVH{}, (const dco::Cylinder *)geom.primitives, geom.numPrims);
+        CylinderBVH{}, (const dco::Cylinder *)geom.primitives.data, geom.primitives.len);
     } else if (geom.type == dco::Geometry::BezierCurve) {
       unsigned index = bezierCurveCount++;
       builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
       m_accelStorage.bezierCurveBLSs[index] = builder.build(
-        BezierCurveBVH{}, (const dco::BezierCurve *)geom.primitives, geom.numPrims);
+        BezierCurveBVH{},
+        (const dco::BezierCurve *)geom.primitives.data, geom.primitives.len);
     } else if (geom.type == dco::Geometry::ISOSurface) {
       unsigned index = isoCount++;
       builder.enable_spatial_splits(false); // no spatial splits for ISOs
       m_accelStorage.isoSurfaceBLSs[index] = builder.build(
-        ISOSurfaceBVH{}, &geom.asISOSurface, 1);
+        ISOSurfaceBVH{}, (const dco::ISOSurface *)geom.primitives.data, 1);
     } else if (geom.type == dco::Geometry::Volume) {
       unsigned index = volumeCount++;
       builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
       m_accelStorage.volumeBLSs[index] = builder.build(
-        VolumeBVH{}, &geom.asVolume, 1);
+        VolumeBVH{}, (const dco::Volume *)geom.primitives.data, 1);
     } else if (geom.type == dco::Geometry::Instance) {
       instanceCount++;
     }
@@ -198,8 +199,8 @@ void VisionaraySceneImpl::commit()
       } else if (geom.type == dco::Geometry::Instance) {
         instanceCount++;
         bls.type = dco::BLS::Instance;
-        bls.asInstance = geom.asInstance.instBVH;
-        bls.asInstance.set_inst_id(geom.asInstance.instID);
+        bls.asInstance = geom.as<dco::Instance>(0).instBVH;
+        bls.asInstance.set_inst_id(geom.as<dco::Instance>(0).instID);
       }
       m_worldBLSs.update(bls.blsID, bls);
     } else {
@@ -269,7 +270,7 @@ void VisionaraySceneImpl::commit()
 
       if (geom.type != dco::Geometry::Instance) continue;
 
-      dco::Instance inst = geom.asInstance;
+      dco::Instance inst = geom.as<dco::Instance>(0);
       dco::Group group = m_state->dcos.groups[inst.groupID];
 
       for (unsigned i=0; i<group.numLights; ++i)
@@ -354,34 +355,34 @@ void VisionaraySceneImpl::attachGeometry(
 
   // Patch geomID into scene primitives
   if (geom.type == dco::Geometry::Triangle) {
-    for (size_t i=0;i<geom.numPrims;++i) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
       geom.as<dco::Triangle>(i).geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Quad) {
-    for (size_t i=0;i<geom.numPrims;++i) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
       geom.as<dco::Triangle>(i).geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Sphere) {
-    for (size_t i=0;i<geom.numPrims;++i) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
       geom.as<dco::Sphere>(i).geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Cone) {
-    for (size_t i=0;i<geom.numPrims;++i) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
       geom.as<dco::Cone>(i).geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::Cylinder) {
-    for (size_t i=0;i<geom.numPrims;++i) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
       geom.as<dco::Cylinder>(i).geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::BezierCurve) {
-    for (size_t i=0;i<geom.numPrims;++i) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
       geom.as<dco::BezierCurve>(i).geom_id = geomID;
     }
   } else if (geom.type == dco::Geometry::ISOSurface) {
-    geom.asISOSurface.isoID = geomID;
-    geom.asISOSurface.geomID = geomID;
+    geom.as<dco::ISOSurface>(0).isoID = geomID;
+    geom.as<dco::ISOSurface>(0).geomID = geomID;
   } else if (geom.type == dco::Geometry::Volume) {
-    geom.asVolume.geomID = geomID;
+    geom.as<dco::Volume>(0).geomID = geomID;
   }
 
   m_geometries.set(geomID, geom.geomID);

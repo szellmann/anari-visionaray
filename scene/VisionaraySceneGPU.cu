@@ -103,7 +103,7 @@ void VisionaraySceneGPU::commit()
   for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
     if (!dco::validHandle(geomID)) continue;
 
-    const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
+    dco::Geometry geom = deviceState()->dcos.geometries[geomID];
     if (!geom.isValid()) continue;
 
     switch (geom.type) {
@@ -162,8 +162,8 @@ void VisionaraySceneGPU::commit()
       unsigned index = triangleCount++;
       builder.enable_spatial_splits(true);
       // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_triangle<3,float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
         CPU::TriangleBVH{}, hostData.data(), hostData.size());
@@ -173,8 +173,8 @@ void VisionaraySceneGPU::commit()
       unsigned index = quadCount++;
       builder.enable_spatial_splits(true);
       // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_triangle<3,float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
         CPU::TriangleBVH{}, hostData.data(), hostData.size());
@@ -184,8 +184,8 @@ void VisionaraySceneGPU::commit()
       unsigned index = sphereCount++;
       builder.enable_spatial_splits(true);
       // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_sphere<float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_sphere<float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
         CPU::SphereBVH{}, hostData.data(), hostData.size());
@@ -195,8 +195,8 @@ void VisionaraySceneGPU::commit()
       unsigned index = coneCount++;
       builder.enable_spatial_splits(false); // no spatial splits for cones yet!
       // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<dco::Cone> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<dco::Cone> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
         CPU::ConeBVH{}, hostData.data(), hostData.size());
@@ -206,8 +206,8 @@ void VisionaraySceneGPU::commit()
       unsigned index = cylinderCount++;
       builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
       // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_cylinder<float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
         CPU::CylinderBVH{}, hostData.data(), hostData.size());
@@ -217,8 +217,8 @@ void VisionaraySceneGPU::commit()
       unsigned index = bezierCurveCount++;
       builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
       // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<dco::BezierCurve> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<dco::BezierCurve> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
         CPU::BezierCurveBVH{}, hostData.data(), hostData.size());
@@ -228,14 +228,20 @@ void VisionaraySceneGPU::commit()
       unsigned index = isoCount++;
       builder.enable_spatial_splits(false); // no spatial splits for ISOs
       // Until we have a high-quality GPU builder, do that on the CPU!
+      dco::ISOSurface iso;
+      CUDA_SAFE_CALL(cudaMemcpy(&iso, geom.primitives.data,
+          sizeof(iso), cudaMemcpyDeviceToHost));
       auto accelStorage = builder.build(
-        CPU::ISOSurfaceBVH{}, &geom.asISOSurface, 1);
+        CPU::ISOSurfaceBVH{}, &iso, 1);
       m_impl->m_accelStorage.isoSurfaceBLSs[index]
         = GPU::ISOSurfaceBVH(accelStorage);
     } else if (geom.type == dco::Geometry::Volume) {
       unsigned index = volumeCount++;
       builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-      auto accelStorage = builder.build(CPU::VolumeBVH{}, &geom.asVolume, 1);
+      dco::Volume vol;
+      CUDA_SAFE_CALL(cudaMemcpy(&vol, geom.primitives.data,
+          sizeof(vol), cudaMemcpyDeviceToHost));
+      auto accelStorage = builder.build(CPU::VolumeBVH{}, &vol, 1);
       m_impl->m_accelStorage.volumeBLSs[index]
         = GPU::VolumeBVH(accelStorage);
     } else if (geom.type == dco::Geometry::Instance) {
@@ -294,8 +300,11 @@ void VisionaraySceneGPU::commit()
       } else if (geom.type == dco::Geometry::Instance) {
         instanceCount++;
         bls.type = dco::BLS::Instance;
-        bls.asInstance = geom.asInstance.instBVH;
-        bls.asInstance.set_inst_id(geom.asInstance.instID);
+        dco::Instance inst;
+        CUDA_SAFE_CALL(cudaMemcpy(&inst, geom.primitives.data,
+                                  sizeof(inst), cudaMemcpyDefault));
+        bls.asInstance = inst.instBVH;
+        bls.asInstance.set_inst_id(inst.instID);
       }
       m_impl->parent->m_worldBLSs.update(bls.blsID, bls);
     } else {
@@ -368,7 +377,9 @@ void VisionaraySceneGPU::commit()
 
       if (geom.type != dco::Geometry::Instance) continue;
 
-      dco::Instance inst = geom.asInstance;
+      dco::Instance inst;
+      CUDA_SAFE_CALL(cudaMemcpy(&inst, geom.primitives.data,
+                                sizeof(inst), cudaMemcpyDefault));
       dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
       std::vector<dco::Handle> groupLights(group.numLights);
@@ -426,66 +437,76 @@ void VisionaraySceneGPU::attachGeometry(
 
   // Patch geomID into scene primitives
   // (first copy to CPU, patch there, then copy back...)
-  if (geom.numPrims > 0) {
+  if (geom.primitives.len > 0) {
     if (geom.type == dco::Geometry::Triangle) {
-      std::vector<basic_triangle<3,float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.numPrims;++i) {
+      for (size_t i=0;i<geom.primitives.len;++i) {
         hostData[i].geom_id = geomID;
       }
-      CUDA_SAFE_CALL(cudaMemcpy(geom.primitives, hostData.data(),
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::Quad) {
-      std::vector<basic_triangle<3,float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.numPrims;++i) {
+      for (size_t i=0;i<geom.primitives.len;++i) {
         hostData[i].geom_id = geomID;
       }
-      CUDA_SAFE_CALL(cudaMemcpy(geom.primitives, hostData.data(),
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::Sphere) {
-      std::vector<basic_sphere<float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_sphere<float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.numPrims;++i) {
+      for (size_t i=0;i<geom.primitives.len;++i) {
         hostData[i].geom_id = geomID;
       }
-      CUDA_SAFE_CALL(cudaMemcpy(geom.primitives, hostData.data(),
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::Cone) {
-      std::vector<dco::Cone> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<dco::Cone> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.numPrims;++i) {
+      for (size_t i=0;i<geom.primitives.len;++i) {
         hostData[i].geom_id = geomID;
       }
-      CUDA_SAFE_CALL(cudaMemcpy(geom.primitives, hostData.data(),
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::Cylinder) {
-      std::vector<basic_cylinder<float>> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.numPrims;++i) {
+      for (size_t i=0;i<geom.primitives.len;++i) {
         hostData[i].geom_id = geomID;
       }
-      CUDA_SAFE_CALL(cudaMemcpy(geom.primitives, hostData.data(),
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::BezierCurve) {
-      std::vector<dco::BezierCurve> hostData(geom.numPrims);
-      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives,
+      std::vector<dco::BezierCurve> hostData(geom.primitives.len);
+      CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
           hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.numPrims;++i) {
+      for (size_t i=0;i<geom.primitives.len;++i) {
         hostData[i].geom_id = geomID;
       }
-      CUDA_SAFE_CALL(cudaMemcpy(geom.primitives, hostData.data(),
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
           hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::ISOSurface) {
-      geom.asISOSurface.isoID = geomID;
-      geom.asISOSurface.geomID = geomID;
+      dco::ISOSurface iso;
+      CUDA_SAFE_CALL(cudaMemcpy(&iso, geom.primitives.data,
+                                sizeof(iso), cudaMemcpyDeviceToHost));
+      iso.isoID = geomID;
+      iso.geomID = geomID;
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, &iso,
+                                sizeof(iso), cudaMemcpyHostToDevice));
     } else if (geom.type == dco::Geometry::Volume) {
-      geom.asVolume.geomID = geomID;
+      dco::Volume vol;
+      CUDA_SAFE_CALL(cudaMemcpy(&vol, geom.primitives.data,
+                                sizeof(vol), cudaMemcpyDeviceToHost));
+      vol.geomID = geomID;
+      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, &vol,
+                                sizeof(vol), cudaMemcpyHostToDevice));
     }
   }
 
