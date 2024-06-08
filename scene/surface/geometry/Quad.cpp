@@ -76,8 +76,8 @@ void Quad::commit()
     }
   }
 
-  vgeom.primitives = m_triangles.devicePtr();
-  vgeom.numPrims = m_triangles.size();
+  vgeom.primitives.data = m_triangles.devicePtr();
+  vgeom.primitives.len = m_triangles.size();
 
   if (m_index) {
     vindex.resize(m_index->size());

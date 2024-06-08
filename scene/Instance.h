@@ -36,6 +36,8 @@ struct Instance : public Object
   helium::IntrusivePtr<Group> m_group;
   dco::Geometry vgeom;
 
+  HostDeviceArray<dco::Instance> m_instance;
+
   void dispatch();
 };
 

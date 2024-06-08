@@ -156,7 +156,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     const auto &inst = onDevice.instances[hr.inst_id];
     const auto &group = onDevice.groups[inst.groupID];
     const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-    const auto &vol = geom.asVolume;
+    const auto &vol = geom.as<dco::Volume>(0);
 
     float3 color(0.f);
     float alpha = 0.f;

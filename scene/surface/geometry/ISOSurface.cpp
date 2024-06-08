@@ -34,13 +34,16 @@ void ISOSurface::commit()
     return;
   }
 
-  vgeom.primitives = &vgeom.asISOSurface;
-  vgeom.numPrims = 1;
+  m_isoSurface.resize(1);
 
-  vgeom.asISOSurface.field = m_field->visionaraySpatialField();
-  vgeom.asISOSurface.bounds = m_field->bounds();
-  vgeom.asISOSurface.numValues = m_isoValue->size();
-  vgeom.asISOSurface.values = m_isoValue->beginAs<float>();
+  m_isoSurface[0].field = m_field->visionaraySpatialField();
+  m_isoSurface[0].bounds = m_field->bounds();
+  m_isoSurface[0].numValues = m_isoValue->size();
+  m_isoSurface[0].values = m_isoValue->beginAs<float>();
+
+  vgeom.primitives.data = m_isoSurface.devicePtr();
+  vgeom.primitives.len = m_isoSurface.size();
+
   vgeom.updated = true;
 
   dispatch();
