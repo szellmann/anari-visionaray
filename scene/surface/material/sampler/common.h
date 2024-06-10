@@ -14,7 +14,7 @@ static bool imageSamplerFormatSupported(ANARIDataType type)
          type == ANARI_FLOAT32_VEC4  ||
          type == ANARI_UFIXED8       ||
          type == ANARI_UFIXED8_VEC3  ||
-         type == ANARI_UFIXED8_VEC3  ||
+         type == ANARI_UFIXED8_VEC4  ||
          type == ANARI_UFIXED16_VEC4 ||
          type == ANARI_UFIXED16_VEC4;
 }
