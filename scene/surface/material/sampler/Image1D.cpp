@@ -1,5 +1,6 @@
 
 #include "Image1D.h"
+#include "common.h"
 #include "scene/surface/common.h"
 #include "scene/surface/geometry/Geometry.h"
 
@@ -52,23 +53,7 @@ void Image1D::updateImageData()
   auto &tex = vimage;
 #endif
 
-  if (m_image->elementType() == ANARI_FLOAT32_VEC3)
-    tex.reset(m_image->dataAs<vec3>(), PF_RGB32F, PF_RGBA8, AlphaIsOne);
-  else if (m_image->elementType() == ANARI_FLOAT32_VEC4)
-    tex.reset(m_image->dataAs<vec4>(), PF_RGBA32F, PF_RGBA8);
-  else if (m_image->elementType() == ANARI_UFIXED8)
-    tex.reset((const unorm<8> *)m_image->data(), PF_R8, PF_RGBA8, AlphaIsOne);
-  else if (m_image->elementType() == ANARI_UFIXED8_VEC3)
-    tex.reset((const vector<3, unorm<8>> *)m_image->data(),
-              PF_RGB8, PF_RGBA8, AlphaIsOne);
-  else if (m_image->elementType() == ANARI_UFIXED8_VEC4)
-    tex.reset((const vector<4, unorm<8>> *)m_image->data());
-  else if (m_image->elementType() == ANARI_UFIXED16_VEC3)
-    tex.reset((const vector<3, unorm<16>> *)m_image->data(),
-              PF_RGB16UI, PF_RGBA8, AlphaIsOne);
-  else if (m_image->elementType() == ANARI_UFIXED16_VEC4)
-    tex.reset((const vector<4, unorm<16>> *)m_image->data(), PF_RGBA16UI, PF_RGBA8);
-  else {
+  if (!imageSamplerUpdateData(tex, m_image)) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "unsupported element type Image1D sampler: %s",
         anari::toString(m_image->elementType()));
