@@ -54,7 +54,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.baseColor.rgb = m_baseColor.value.xyz();
   vmat.asPhysicallyBased.baseColor.attribute = m_baseColor.attribute;
-  if (m_baseColor.sampler) {
+  if (m_baseColor.sampler && m_baseColor.sampler->isValid()) {
     vmat.asPhysicallyBased.baseColor.samplerID
         = m_baseColor.sampler->visionaraySampler().samplerID;
   } else {
@@ -63,7 +63,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.opacity.f = m_opacity.value;
   vmat.asPhysicallyBased.opacity.attribute = m_opacity.attribute;
-  if (m_opacity.sampler) {
+  if (m_opacity.sampler && m_opacity.sampler->isValid()) {
     vmat.asPhysicallyBased.opacity.samplerID
         = m_opacity.sampler->visionaraySampler().samplerID;
   } else {
@@ -72,7 +72,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.metallic.f = m_metallic.value;
   vmat.asPhysicallyBased.metallic.attribute = m_metallic.attribute;
-  if (m_metallic.sampler) {
+  if (m_metallic.sampler && m_metallic.sampler->isValid()) {
     vmat.asPhysicallyBased.metallic.samplerID
         = m_metallic.sampler->visionaraySampler().samplerID;
   } else {
@@ -81,7 +81,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.roughness.f = m_roughness.value;
   vmat.asPhysicallyBased.roughness.attribute = m_roughness.attribute;
-  if (m_roughness.sampler) {
+  if (m_roughness.sampler && m_roughness.sampler->isValid()) {
     vmat.asPhysicallyBased.roughness.samplerID
         = m_roughness.sampler->visionaraySampler().samplerID;
   } else {
@@ -90,7 +90,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.clearcoat.f = m_clearcoat.value;
   vmat.asPhysicallyBased.clearcoat.attribute = m_clearcoat.attribute;
-  if (m_clearcoat.sampler) {
+  if (m_clearcoat.sampler && m_clearcoat.sampler->isValid()) {
     vmat.asPhysicallyBased.clearcoat.samplerID
         = m_clearcoat.sampler->visionaraySampler().samplerID;
   } else {
@@ -99,7 +99,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.clearcoatRoughness.f = m_clearcoatRoughness.value;
   vmat.asPhysicallyBased.clearcoatRoughness.attribute = m_clearcoatRoughness.attribute;
-  if (m_clearcoatRoughness.sampler) {
+  if (m_clearcoatRoughness.sampler && m_clearcoatRoughness.sampler->isValid()) {
     vmat.asPhysicallyBased.clearcoatRoughness.samplerID
         = m_clearcoatRoughness.sampler->visionaraySampler().samplerID;
   } else {
@@ -108,7 +108,7 @@ void PBM::commit()
 
   vmat.asPhysicallyBased.ior = m_ior;
 
-  if (m_normal.sampler) {
+  if (m_normal.sampler && m_normal.sampler->isValid()) {
     vmat.asPhysicallyBased.normal.samplerID
         = m_normal.sampler->visionaraySampler().samplerID;
   } else {

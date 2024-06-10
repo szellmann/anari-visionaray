@@ -29,7 +29,7 @@ void Matte::commit()
   vmat.type = dco::Material::Matte;
   vmat.asMatte.color.rgb = m_color.xyz();
   vmat.asMatte.color.attribute = m_colorAttribute;
-  if (m_colorSampler) {
+  if (m_colorSampler && m_colorSampler->isValid()) {
     vmat.asMatte.color.samplerID = m_colorSampler->visionaraySampler().samplerID;
   } else {
     vmat.asMatte.color.samplerID = UINT_MAX;
@@ -37,7 +37,7 @@ void Matte::commit()
 
   vmat.asMatte.opacity.f = m_opacity.value;
   vmat.asMatte.opacity.attribute = m_opacity.attribute;
-  if (m_opacity.sampler) {
+  if (m_opacity.sampler && m_opacity.sampler->isValid()) {
     vmat.asMatte.opacity.samplerID
         = m_opacity.sampler->visionaraySampler().samplerID;
   } else {
