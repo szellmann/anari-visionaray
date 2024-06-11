@@ -40,6 +40,11 @@ Sampler *Sampler::createInstance(std::string_view subtype, VisionarayGlobalState
     return (Sampler *)new UnknownObject(ANARI_SAMPLER, s);
 }
 
+bool Sampler::isValid() const
+{
+  return vsampler.isValid();
+}
+
 dco::Sampler Sampler::visionaraySampler() const
 {
   return vsampler;

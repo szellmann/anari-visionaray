@@ -17,6 +17,8 @@ struct Sampler : public Object
   static Sampler *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
 
+  bool isValid() const;
+
   dco::Sampler visionaraySampler() const;
 
  protected:
