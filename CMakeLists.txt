@@ -35,7 +35,7 @@ anari_generate_queries(
 if (cuda)
   anari_generate_queries(
     NAME visionaray_cuda
-    PREFIX VisionarayDevice
+    PREFIX VisionarayCUDADevice
     CPP_NAMESPACE visionaray
     JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_cuda_device.json
     JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
@@ -94,7 +94,6 @@ set(SOURCES
     scene/World.cpp
     Object.cpp
     VisionarayDevice.cpp
-    VisionarayDeviceQueries.cpp
     VisionarayGlobalState.cpp
     VisionarayLibrary.cpp
 )
@@ -106,6 +105,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   renderer/Raycast_impl.cpp
   scene/volume/spatial_field/BlockStructuredField.cpp
   scene/volume/spatial_field/UnstructuredField.cpp
+  VisionarayDeviceQueries.cpp
 )
 
 include(GenerateExportHeader)
@@ -133,6 +133,7 @@ if (cuda)
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
+    VisionarayCUDADeviceQueries.cpp
   )
   set_source_files_properties(
     frame/Frame.cu

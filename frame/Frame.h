@@ -60,10 +60,10 @@ struct Frame : public helium::BaseFrame
   dco::Frame vframe;
 
   template <typename Array>
-  void *mapHostDeviceArray(Array &arr)
+  void *mapHostDeviceArray(Array &arr, bool onDevice=false)
   {
 #ifdef WITH_CUDA
-    if (1) {
+    if (!onDevice) {
       arr.unmapDevice();
       return (void *)arr.hostPtr();
     } else {

@@ -325,9 +325,15 @@ void *Frame::map(std::string_view channel,
   if (channel == "color" || channel == "channel.color") {
     *pixelType = vframe.colorType;
     return mapColorBuffer();
+  } if (channel == "channel.colorCUDA" || channel == "channel.colorGPU") {
+    *pixelType = vframe.colorType;
+    return mapHostDeviceArray(m_pixelBuffer, true);
   } else if (channel == "depth" || channel == "channel.depth") {
     *pixelType = ANARI_FLOAT32;
     return mapDepthBuffer();
+  } if (channel == "channel.depthCUDA" || channel == "channel.depthGPU") {
+    *pixelType = vframe.colorType;
+    return mapHostDeviceArray(m_depthBuffer, true);
   } else if (channel == "channel.normal" && !m_normalBuffer.empty()) {
     *pixelType = ANARI_FLOAT32_VEC3;
     return mapHostDeviceArray(m_normalBuffer);
@@ -343,7 +349,7 @@ void *Frame::map(std::string_view channel,
   } else if (channel == "channel.instanceId" && !m_instIdBuffer.empty()) {
     *pixelType = ANARI_UINT32;
     return mapHostDeviceArray(m_instIdBuffer);
-  }else {
+  } else {
     *width = 0;
     *height = 0;
     *pixelType = ANARI_UNKNOWN;
