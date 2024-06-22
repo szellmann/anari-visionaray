@@ -49,6 +49,16 @@ if (cuda)
   )
 endif()
 
+if (hip)
+  anari_generate_queries(
+    NAME visionaray_hip
+    PREFIX VisionarayHIPDevice
+    CPP_NAMESPACE visionaray
+    JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_hip_device.json
+    JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+endif()
+
 add_library(${PROJECT_NAME} SHARED)
 if (cuda)
   add_library(${PROJECT_NAME}_cuda SHARED)
@@ -180,6 +190,7 @@ if (hip)
     renderer/DirectLight_impl.hip
     renderer/Raycast_impl.hip
     scene/VisionaraySceneGPU.hip
+    VisionarayHIPDeviceQueries.cpp
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
 
