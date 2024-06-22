@@ -167,6 +167,11 @@ void Frame::renderFrame()
     CUDA_SAFE_CALL(cudaEventCreate(&start));
     CUDA_SAFE_CALL(cudaEventCreate(&stop));
     CUDA_SAFE_CALL(cudaEventRecord(start));
+#elif defined(WITH_HIP)
+    hipEvent_t start, stop;
+    HIP_SAFE_CALL(hipEventCreate(&start));
+    HIP_SAFE_CALL(hipEventCreate(&stop));
+    HIP_SAFE_CALL(hipEventRecord(start));
 #else
     auto start = std::chrono::steady_clock::now();
 #endif
@@ -223,6 +228,13 @@ void Frame::renderFrame()
           frame.depthBuffer[x+size.x*y] = 1e31f;
         }
       });
+#elif WITH_HIP
+      hip::for_each(0, size.x, 0, size.y, [=] VSNRAY_GPU_FUNC (int x, int y) {
+        frame.accumBuffer[x+size.x*y] = vec4{0.f};
+        if (frame.depthBuffer) {
+          frame.depthBuffer[x+size.x*y] = 1e31f;
+        }
+      });
 #else
       std::fill(frame.accumBuffer, frame.accumBuffer + size.x * size.y, vec4{0.f});
       if (frame.depthBuffer) {
@@ -265,6 +277,9 @@ void Frame::renderFrame()
 #ifdef WITH_CUDA
       frame.taa.history = cuda_texture_ref<float4, 2>(taa.history);
       cudaDeviceSynchronize();
+#elif defined(WITH_HIP)
+      frame.taa.history = hip_texture_ref<float4, 2>(taa.history);
+      hipDeviceSynchronize();
 #else
       frame.taa.history = texture_ref<float4, 2>(taa.history);
 #endif
@@ -272,6 +287,8 @@ void Frame::renderFrame()
       // TAA pass
 #ifdef WITH_CUDA
       cuda::for_each(0, size.x, 0, size.y,
+//#elif WITH_HIP
+//      hip::for_each(0, size.x, 0, size.y,
 #else
       parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif
@@ -304,6 +321,12 @@ void Frame::renderFrame()
     CUDA_SAFE_CALL(cudaEventSynchronize(stop));
     float ms = 0.0f;
     CUDA_SAFE_CALL(cudaEventElapsedTime(&ms, start, stop));
+    m_duration = ms/1000.f;
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipEventRecord(stop));
+    HIP_SAFE_CALL(hipEventSynchronize(stop));
+    float ms = 0.0f;
+    HIP_SAFE_CALL(hipEventElapsedTime(&ms, start, stop));
     m_duration = ms/1000.f;
 #else
     auto end = std::chrono::steady_clock::now();
@@ -442,7 +465,7 @@ bool Frame::checkTAAReset()
       taa.currAlbedoBuffer.resize(numPixels, vec3{0.f});
       taa.prevAlbedoBuffer.resize(numPixels, vec3{0.f});
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
       texture<float4, 2> historyTex(vframe.size.x, vframe.size.y);
 #else
       taa.history = texture<float4, 2>(vframe.size.x, vframe.size.y);
@@ -455,6 +478,8 @@ bool Frame::checkTAAReset()
       historyTex.set_normalized_coords(true);
 #ifdef WITH_CUDA
       taa.history = cuda_texture<float4, 2>(historyTex);
+#elif defined(WITH_HIP)
+      taa.history = hip_texture<float4, 2>(historyTex);
 #endif
 
       vframe.taa.currBuffer = taa.currBuffer.devicePtr();

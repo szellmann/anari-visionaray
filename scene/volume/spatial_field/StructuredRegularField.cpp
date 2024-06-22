@@ -37,7 +37,7 @@ void StructuredRegularField::commit()
 
   setStepSize(min_element(m_spacing / 2.f));
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<float, 3> tex(m_dims.x, m_dims.y, m_dims.z);
 #else
   m_dataTexture = texture<float, 3>(m_dims.x, m_dims.y, m_dims.z);
@@ -66,6 +66,9 @@ void StructuredRegularField::commit()
 #ifdef WITH_CUDA
   m_dataTexture = cuda_texture<float, 3>(tex);
   vfield.asStructuredRegular.sampler = cuda_texture_ref<float, 3>(m_dataTexture);
+#elif defined(WITH_HIP)
+  m_dataTexture = hip_texture<float, 3>(tex);
+  vfield.asStructuredRegular.sampler = hip_texture_ref<float, 3>(m_dataTexture);
 #else
   vfield.asStructuredRegular.sampler = texture_ref<float, 3>(m_dataTexture);
 #endif
@@ -89,7 +92,7 @@ aabb StructuredRegularField::bounds() const
 
 void StructuredRegularField::buildGrid()
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   return;
 #endif
   int3 gridDims{16, 16, 16};

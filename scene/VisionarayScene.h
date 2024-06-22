@@ -10,7 +10,7 @@
 #include "surface/material/Material.h"
 #include "light/Light.h"
 #include "DeviceCopyableObjects.h"
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 #include "VisionaraySceneGPU.h"
 #endif
 
@@ -18,7 +18,7 @@ namespace visionaray {
 
 struct VisionaraySceneImpl
 {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   friend struct VisionaraySceneGPU;
 #endif
 
@@ -82,6 +82,8 @@ struct VisionaraySceneImpl
   aabb getBounds() const;
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
+#elif defined(WITH_HIP)
+  hip_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
 #else
   index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
 #endif
@@ -90,7 +92,7 @@ struct VisionaraySceneImpl
   void dispatch();
 
   VisionarayGlobalState *deviceState();
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   std::unique_ptr<VisionaraySceneGPU> m_gpuScene{nullptr};
 #endif
 };

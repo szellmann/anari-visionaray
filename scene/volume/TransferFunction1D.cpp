@@ -4,6 +4,8 @@
 // visionaray
 #ifdef WITH_CUDA
 #include <visionaray/texture/cuda_texture.h>
+#elif defined(WITH_HIP)
+#include <visionaray/texture/hip_texture.h>
 #endif
 // ours
 #include "TransferFunction1D.h"
@@ -95,7 +97,7 @@ void TransferFunction1D::commit()
 
     tf[i] = vec4(color, alpha);
   }
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<float4, 1> tex(tf.size());
 #else
   transFuncTexture = texture<float4, 1>(tf.size());
@@ -124,13 +126,16 @@ void TransferFunction1D::commit()
 #ifdef WITH_CUDA
   transFuncTexture = cuda_texture<float4, 1>(tex);
   vtransfunc.as1D.sampler = cuda_texture_ref<float4, 1>(transFuncTexture);
+#elif defined(WITH_HIP)
+  transFuncTexture = hip_texture<float4, 1>(tex);
+  vtransfunc.as1D.sampler = hip_texture_ref<float4, 1>(transFuncTexture);
 #else
   vtransfunc.as1D.sampler = texture_ref<float4, 1>(transFuncTexture);
 #endif
 
   dispatch();
 
-#ifndef WITH_CUDA
+#if !defined(WITH_CUDA) && !defined(WITH_HIP)
   m_field->gridAccel().computeMaxOpacities(
       deviceState()->onDevice.transferFunctions[vtransfunc.tfID]);
 #endif

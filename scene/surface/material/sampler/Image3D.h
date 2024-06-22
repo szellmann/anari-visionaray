@@ -31,6 +31,8 @@ struct Image3D : public Sampler
 
 #ifdef WITH_CUDA
   cuda_texture<vector<4, unorm<8>>, 3> vimage;
+#elif defined(WITH_HIP)
+  hip_texture<vector<4, unorm<8>>, 3> vimage;
 #else
   texture<vector<4, unorm<8>>, 3> vimage;
 #endif
