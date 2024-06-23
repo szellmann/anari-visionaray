@@ -81,7 +81,7 @@ void Quad::commit()
 
   if (m_index) {
     vindex.resize(m_index->size());
-    vindex.reset(m_index->beginAs<uint3>());
+    vindex.reset(m_index->beginAs<uint4>());
 
     vgeom.index.data = vindex.devicePtr();
     vgeom.index.len = m_index->size();
