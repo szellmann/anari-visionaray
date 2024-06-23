@@ -214,6 +214,38 @@ if (hip)
   )
 endif()
 
+## Sample viewer ##
+
+option(ANARI_VISIONARAY_ENABLE_VIEWER "Compile the sample viewer application" OFF)
+if (ANARI_VISIONARAY_ENABLE_VIEWER)
+  find_package(Boost COMPONENTS filesystem iostreams system)
+  add_executable(visionaraySampleViewer)
+  target_sources(visionaraySampleViewer PRIVATE
+    apps/viewer.cpp
+    apps/AnariCamera.cpp
+  )
+  target_link_libraries(visionaraySampleViewer visionaray::visionaray_common anari::anari)
+  target_compile_definitions(visionaraySampleViewer
+    PRIVATE
+      DATA_PATH="${CMAKE_CURRENT_SOURCE_DIR}/apps/data"
+  )
+endif()
+
+## BRDF debugger ##
+option(ANARI_VISIONARAY_ENABLE_BRDF_DEBUGGER "Compile the brdf debugger application" OFF)
+if (ANARI_VISIONARAY_ENABLE_BRDF_DEBUGGER)
+  find_package(Boost COMPONENTS filesystem iostreams system)
+  add_executable(visionarayBRDFDebugger)
+  target_sources(visionarayBRDFDebugger PRIVATE
+    apps/brdfDebugger.cpp
+    apps/AnariCamera.cpp
+  )
+  target_link_libraries(visionarayBRDFDebugger visionaray::visionaray_common anari::anari)
+  target_include_directories(visionarayBRDFDebugger PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+  )
+endif()
+
 ## Installation ##
 
 set(DEVICE_LIBS ${PROJECT_NAME})
