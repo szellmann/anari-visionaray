@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "VISIONARAY_CUDA_DEVICE",
+    "name": "VISIONARAY_HIP_DEVICE",
     "type": "device",
     "dependencies": [
       "anari_core_1_0",
@@ -34,8 +34,7 @@
       "khr_sampler_transform",
       "khr_spatial_field_structured_regular",
       "khr_volume_transfer_function1d",
-      "vsnray_camera_matrix",
-      "visrtx_cuda_output_buffers"
+      "vsnray_camera_matrix"
     ]
   },
   "objects": [

@@ -198,9 +198,23 @@ void VisionaraySceneImpl::commit()
         bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Instance) {
         instanceCount++;
-        bls.type = dco::BLS::Instance;
-        bls.asInstance = geom.as<dco::Instance>(0).instBVH;
-        bls.asInstance.set_inst_id(geom.as<dco::Instance>(0).instID);
+        if (geom.as<dco::Instance>(0).type == dco::Instance::Transform) {
+          bls.type = dco::BLS::Transform;
+          bls.asTransform = geom.as<dco::Instance>(0).asTransform.instBVH;
+          bls.asTransform.set_inst_id(geom.as<dco::Instance>(0).instID);
+        } else if (geom.as<dco::Instance>(0).type == dco::Instance::MotionTransform) {
+          bls.type = dco::BLS::MotionTransform;
+          bls.asMotionTransform.theBVH
+              = geom.as<dco::Instance>(0).asMotionTransform.theBVH;
+          bls.asMotionTransform.time
+              = geom.as<dco::Instance>(0).asMotionTransform.time;
+          bls.asMotionTransform.affineInv
+              = geom.as<dco::Instance>(0).asMotionTransform.affineInv;
+          bls.asMotionTransform.transInv
+              = geom.as<dco::Instance>(0).asMotionTransform.transInv;
+          bls.asMotionTransform.len = geom.as<dco::Instance>(0).asMotionTransform.len;
+          bls.asMotionTransform.instID = geom.as<dco::Instance>(0).instID;
+        }
       }
       m_worldBLSs.update(bls.blsID, bls);
     } else {
@@ -415,16 +429,32 @@ void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
 }
 
 #ifdef WITH_CUDA
+cuda_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
+{
+  return m_gpuScene->refBVH();
+}
+
 cuda_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
 {
   return m_gpuScene->instBVH(xfm);
 }
 #elif defined(WITH_HIP)
+hip_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
+{
+  return m_gpuScene->refBVH();
+}
+
 hip_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
 {
   return m_gpuScene->instBVH(xfm);
 }
 #else
+index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
+{
+  assert(type == Group);
+  return m_TLS.ref();
+}
+
 index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
 {
   assert(type == Group);

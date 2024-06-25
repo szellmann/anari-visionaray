@@ -74,6 +74,7 @@ struct Ray : basic_ray<float>
     Volume = 0x100,
   };
   unsigned intersectionMask = All;
+  float time{0.f};
   void *prd{nullptr};
 
 #if 1
@@ -1063,7 +1064,8 @@ struct BLS
     BezierCurve,
     ISOSurface,
     Volume,
-    Instance,
+    Transform,
+    MotionTransform,
     Unknown,
   };
   Type type{Unknown};
@@ -1107,13 +1109,23 @@ struct BLS
 // only world BLS's have instances
 struct WorldBLS : BLS
 {
+  union {
 #ifdef WITH_CUDA
-  cuda_index_bvh<BLS>::bvh_inst asInstance;
+    cuda_index_bvh<BLS>::bvh_inst asTransform;
 #elif defined(WITH_HIP)
-  hip_index_bvh<BLS>::bvh_inst asInstance;
+    hip_index_bvh<BLS>::bvh_inst asTransform;
 #else
-  index_bvh<BLS>::bvh_inst asInstance;
+    index_bvh<BLS>::bvh_inst asTransform;
 #endif
+    struct {
+      index_bvh<BLS>::bvh_ref theBVH;
+      box1 time;
+      int instID;
+      mat3 *affineInv;
+      vec3 *transInv;
+      unsigned len;
+    } asMotionTransform;
+  };
 };
 
 VSNRAY_FUNC
@@ -1174,17 +1186,31 @@ inline aabb get_bounds(const BLS &bls)
 VSNRAY_FUNC
 inline aabb get_bounds(const WorldBLS &bls)
 {
-  if (bls.type == BLS::Instance && bls.asInstance.num_nodes()) {
+  if (bls.type == BLS::Transform && bls.asTransform.num_nodes()) {
 
-    aabb bound = bls.asInstance.node(0).get_bounds();
-    mat3f rot = inverse(bls.asInstance.affine_inv());
-    vec3f trans = -bls.asInstance.trans_inv();
+    aabb bound = bls.asTransform.node(0).get_bounds();
+    mat3f rot = inverse(bls.asTransform.affine_inv());
+    vec3f trans = -bls.asTransform.trans_inv();
     auto verts = compute_vertices(bound);
     aabb result;
     result.invalidate();
     for (vec3 v : verts) {
       v = rot * v + trans;
       result.insert(v);
+    }
+    return result;
+  } else if (bls.type == BLS::MotionTransform && bls.asMotionTransform.len) {
+    aabb result;
+    result.invalidate();
+    for (unsigned i = 0; i < bls.asMotionTransform.len; ++i) {
+      aabb bound = bls.asMotionTransform.theBVH.node(0).get_bounds();
+      mat3f rot = inverse(bls.asMotionTransform.affineInv[i]);
+      vec3f trans = -bls.asMotionTransform.transInv[i];
+      auto verts = compute_vertices(bound);
+      for (vec3 v : verts) {
+        v = rot * v + trans;
+        result.insert(v);
+      }
     }
     return result;
   } else {
@@ -1219,8 +1245,38 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(
     const Ray &ray, const WorldBLS &bls)
 {
-  if (bls.type == BLS::Instance)
-    return intersect(ray,bls.asInstance);
+  if (bls.type == BLS::Transform)
+    return intersect(ray,bls.asTransform);
+  else if (bls.type == BLS::MotionTransform) {
+
+    float rayTime = clamp(ray.time,
+                          bls.asMotionTransform.time.min,
+                          bls.asMotionTransform.time.max);
+
+    float time01 = rayTime - bls.asMotionTransform.time.min
+        / (bls.asMotionTransform.time.max - bls.asMotionTransform.time.min);
+
+    unsigned ID1 = unsigned(float(bls.asMotionTransform.len-1) * time01);
+    unsigned ID2 = min(bls.asMotionTransform.len-1, ID1+1);
+
+    float frac = time01 * (bls.asMotionTransform.len-1) - ID1;
+
+    mat3 affineInv = lerp(bls.asMotionTransform.affineInv[ID1],
+                          bls.asMotionTransform.affineInv[ID2],
+                          frac);
+
+    vec3 transInv = lerp(bls.asMotionTransform.transInv[ID1],
+                         bls.asMotionTransform.transInv[ID2],
+                         frac);
+
+    Ray xfmRay(ray);
+    xfmRay.ori = affineInv * (xfmRay.ori + transInv);
+    xfmRay.dir = affineInv * xfmRay.dir;
+
+    auto hr = intersect(xfmRay,bls.asMotionTransform.theBVH);
+    hr.inst_id = hr.hit ? bls.asMotionTransform.instID : ~0u;
+    return hr;
+  }
   else
     return intersect(ray, (const BLS &)bls);
 }
@@ -1271,18 +1327,41 @@ enum class Attribute
 
 struct Instance
 {
+  enum Type { Transform, MotionTransform, Unknown, };
+  Type type{Unknown};
   unsigned instID{UINT_MAX};
   unsigned userID{UINT_MAX};
   unsigned groupID{UINT_MAX};
+  union {
+    struct {
 #ifdef WITH_CUDA
-  cuda_index_bvh<BLS>::bvh_inst instBVH;
+        cuda_index_bvh<BLS>::bvh_inst instBVH;
 #elif defined(WITH_HIP)
-  hip_index_bvh<BLS>::bvh_inst instBVH;
+        hip_index_bvh<BLS>::bvh_inst instBVH;
 #else
-  index_bvh<BLS>::bvh_inst instBVH;
+        index_bvh<BLS>::bvh_inst instBVH;
 #endif
-  mat4 xfm;
-  mat3 normalXfm;
+      mat4 xfm;
+      mat3 normalXfm;
+    } asTransform;
+    struct {
+#ifdef WITH_CUDA
+      cuda_index_bvh<BLS>::bvh_ref theBVH;
+#elif defined(WITH_HIP)
+      hip_index_bvh<BLS>::bvh_ref theBVH;
+#else
+      index_bvh<BLS>::bvh_ref theBVH;
+#endif
+      box1 time;
+      // TODO: use arrays, but that needs to be trivially
+      // constructible for that!
+      mat4 *xfms;
+      mat3 *normalXfms;
+      mat3 *affineInv;
+      vec3 *transInv;
+      size_t len;
+    } asMotionTransform;
+  };
 };
 
 // Surface //
@@ -1675,6 +1754,7 @@ struct Camera
   enum Type { Matrix, Pinhole, Ortho, Unknown, };
   Type type{Unknown};
   unsigned camID{UINT_MAX};
+  box1 shutter{0.5f, 0.5f};
   matrix_camera asMatrixCam;
   thin_lens_camera asPinholeCam;
   struct {
@@ -1716,15 +1796,17 @@ struct Camera
   VSNRAY_FUNC
   inline Ray primary_ray(RNG &rng, float x, float y, float width, float height) const
   {
+    Ray ray;
     if (type == Pinhole)
-      return asPinholeCam.primary_ray(Ray{}, rng, x, y, width, height);
+      ray = asPinholeCam.primary_ray(Ray{}, rng, x, y, width, height);
     else if (type == Ortho)
-      return asOrthoCam.primary_ray(Ray{}, x, y, width, height);
+      ray = asOrthoCam.primary_ray(Ray{}, x, y, width, height);
     else if (type == Matrix)
-      return asMatrixCam.primary_ray(Ray{}, x, y, width, height);
+      ray = asMatrixCam.primary_ray(Ray{}, x, y, width, height);
 
-    assert(0);
-    return {};
+    ray.time = lerp(shutter.min, shutter.max, rng());
+
+    return ray;
   }
 };
 

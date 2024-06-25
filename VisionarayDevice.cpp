@@ -182,10 +182,10 @@ ANARIGroup VisionarayDevice::newGroup()
   return (ANARIGroup) new Group(deviceState());
 }
 
-ANARIInstance VisionarayDevice::newInstance(const char * /*subtype*/)
+ANARIInstance VisionarayDevice::newInstance(const char *subtype)
 {
   initDevice();
-  return (ANARIInstance) new Instance(deviceState());
+  return (ANARIInstance)Instance::createInstance(subtype, deviceState());
 }
 
 // Top-level Worlds ///////////////////////////////////////////////////////////

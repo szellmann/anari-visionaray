@@ -312,13 +312,22 @@ void VisionaraySceneGPU::commit()
         bls.asVolume = m_impl->m_accelStorage.volumeBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Instance) {
         instanceCount++;
-        bls.type = dco::BLS::Instance;
         dco::Instance inst;
         HIP_SAFE_CALL(hipMemcpy(&inst, geom.primitives.data,
                                 sizeof(inst), hipMemcpyDefault));
-        bls.type = dco::BLS::Instance;
-        bls.asInstance = inst.instBVH;
-        bls.asInstance.set_inst_id(inst.instID);
+        if (inst.type == dco::Instance::Transform) {
+          bls.type = dco::BLS::Transform;
+          bls.asTransform = inst.asTransform.instBVH;
+          bls.asTransform.set_inst_id(inst.instID);
+        } else {
+          bls.type = dco::BLS::MotionTransform;
+          bls.asMotionTransform.theBVH = inst.asMotionTransform.theBVH;
+          bls.asMotionTransform.time = inst.asMotionTransform.time;
+          bls.asMotionTransform.affineInv = inst.asMotionTransform.affineInv;
+          bls.asMotionTransform.transInv = inst.asMotionTransform.transInv;
+          bls.asMotionTransform.len = inst.asMotionTransform.len;
+          bls.asMotionTransform.instID = inst.instID;
+        }
       }
       m_impl->parent->m_worldBLSs.update(bls.blsID, bls);
     } else {
@@ -539,6 +548,11 @@ void VisionaraySceneGPU::attachGeometry(
 hip_index_bvh<dco::BLS>::bvh_inst VisionaraySceneGPU::instBVH(mat4x3 xfm)
 {
   return m_impl->m_TLS.inst(xfm);
+}
+
+hip_index_bvh<dco::BLS>::bvh_ref VisionaraySceneGPU::refBVH()
+{
+  return m_impl->m_TLS.ref();
 }
 
 VisionarayGlobalState *VisionaraySceneGPU::deviceState()

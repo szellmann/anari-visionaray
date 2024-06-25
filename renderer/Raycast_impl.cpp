@@ -42,8 +42,9 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
     getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
 
-    gn = inst.normalXfm * gn;
-    sn = inst.normalXfm * sn;
+    mat3 nxfm = getNormalTransform(inst, ray);
+    gn = nxfm * gn;
+    sn = nxfm * sn;
 
     vec3f tng{0.f};
     vec3f btng{0.f};
