@@ -164,55 +164,25 @@ void VisionaraySceneImpl::commit()
       dco::WorldBLS bls;
       bls.blsID = m_worldBLSs.alloc(bls);
 
-      if (geom.type == dco::Geometry::Triangle) {
-        unsigned index = triangleCount++;
-        bls.type = dco::BLS::Triangle;
-        bls.asTriangle = m_accelStorage.triangleBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Quad) {
-        unsigned index = quadCount++;
-        bls.type = dco::BLS::Quad;
-        bls.asQuad = m_accelStorage.quadBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Sphere) {
-        unsigned index = sphereCount++;
-        bls.type = dco::BLS::Sphere;
-        bls.asSphere = m_accelStorage.sphereBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Cone) {
-        unsigned index = coneCount++;
-        bls.type = dco::BLS::Cone;
-        bls.asCone = m_accelStorage.coneBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Cylinder) {
-        unsigned index = cylinderCount++;
-        bls.type = dco::BLS::Cylinder;
-        bls.asCylinder = m_accelStorage.cylinderBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::BezierCurve) {
-        unsigned index = bezierCurveCount++;
-        bls.type = dco::BLS::BezierCurve;
-        bls.asBezierCurve = m_accelStorage.bezierCurveBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::ISOSurface) {
-        unsigned index = isoCount++;
-        bls.type = dco::BLS::ISOSurface;
-        bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Volume) {
-        unsigned index = volumeCount++;
-        bls.type = dco::BLS::Volume;
-        bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Instance) {
-        instanceCount++;
-        const dco::Instance &inst = geom.as<dco::Instance>(0);
+      if (geom.type != dco::Geometry::Instance) {
+        // TODO: error!
+      }
 
-        bls.asInstance = inst.theBVH;
-        bls.instID = inst.instID;
+      instanceCount++;
+      const dco::Instance &inst = geom.as<dco::Instance>(0);
 
-        bls.affineInv = inst.affineInv;
-        bls.transInv = inst.transInv;
-        bls.len = inst.len;
-        bls.time = inst.time;
+      bls.theBVH = inst.theBVH;
+      bls.instID = inst.instID;
 
-        if (inst.type == dco::Instance::Transform) {
-          bls.type = dco::BLS::Transform;
-        } else if (inst.type == dco::Instance::MotionTransform) {
-          bls.type = dco::BLS::MotionTransform;
-        }
+      bls.affineInv = inst.affineInv;
+      bls.transInv = inst.transInv;
+      bls.len = inst.len;
+      bls.time = inst.time;
+
+      if (inst.type == dco::Instance::Transform) {
+        bls.type = dco::WorldBLS::Transform;
+      } else if (inst.type == dco::Instance::MotionTransform) {
+        bls.type = dco::WorldBLS::MotionTransform;
       }
       m_worldBLSs.update(bls.blsID, bls);
     } else {

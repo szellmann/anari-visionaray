@@ -1052,7 +1052,7 @@ VSNRAY_FUNC inline void split_primitive(
 
 // BLS primitives //
 
-struct BLSBase 
+struct BLS
 {
   enum Type {
     Triangle,
@@ -1064,16 +1064,10 @@ struct BLSBase
     BezierCurve,
     ISOSurface,
     Volume,
-    Transform,
-    MotionTransform,
     Unknown,
   };
   Type type{Unknown};
   unsigned blsID{UINT_MAX};
-};
-
-struct BLS : BLSBase
-{
 #ifdef WITH_CUDA
   union {
     cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
@@ -1111,44 +1105,21 @@ struct BLS : BLSBase
 };
 
 // only world BLS's have instances
-struct WorldBLS : BLSBase
+struct WorldBLS
 {
+  enum Type {
+    Transform,
+    MotionTransform,
+    Unknown,
+  };
+  Type type{Unknown};
+  unsigned blsID{UINT_MAX};
 #ifdef WITH_CUDA
-  union {
-    cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    cuda_index_bvh<dco::Cone>::bvh_ref asCone;
-    cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    cuda_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
-    cuda_index_bvh<BLS>::bvh_ref asInstance;
-  };
+  cuda_index_bvh<BLS>::bvh_ref theBVH;
 #elif defined(WITH_HIP)
-  union {
-    hip_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    hip_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    hip_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    hip_index_bvh<dco::Cone>::bvh_ref asCone;
-    hip_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    hip_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    hip_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    hip_index_bvh<dco::Volume>::bvh_ref asVolume;
-    hip_index_bvh<BLS>::bvh_ref asInstance;
-  };
+  hip_index_bvh<BLS>::bvh_ref theBVH;
 #else
-  union {
-    index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    index_bvh<dco::Cone>::bvh_ref asCone;
-    index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    index_bvh<dco::Volume>::bvh_ref asVolume;
-    index_bvh<BLS>::bvh_ref asInstance;
-  };
+  index_bvh<BLS>::bvh_ref theBVH;
 #endif
   int instID;
   mat3 *affineInv;
@@ -1215,54 +1186,9 @@ inline aabb get_bounds(const BLS &bls)
 VSNRAY_FUNC
 inline aabb get_bounds(const WorldBLS &bls)
 {
-#ifdef WITH_HIP
-  // with HIP we currenlty assume that TLSs are built on the host:
-  bvh_node hip_root;
-  if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asTriangle.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  if (bls.type == BLS::Quad && bls.asQuad.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asQuad.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  else if (bls.type == BLS::Sphere && bls.asSphere.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asSphere.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  else if (bls.type == BLS::Cone && bls.asCone.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asCone.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asCylinder.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  else if (bls.type == BLS::BezierCurve && bls.asBezierCurve.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asBezierCurve.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  else if (bls.type == BLS::ISOSurface && bls.asISOSurface.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asISOSurface.nodes(), sizeof(hip_root), hipMemcpyDefault));
-  else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
-    HIP_SAFE_CALL(hipMemcpy(
-        &hip_root, bls.asVolume.nodes(), sizeof(hip_root), hipMemcpyDefault));
-#else
-  if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
-    return bls.asTriangle.node(0).get_bounds();
-  if (bls.type == BLS::Quad && bls.asQuad.num_nodes())
-    return bls.asQuad.node(0).get_bounds();
-  else if (bls.type == BLS::Sphere && bls.asSphere.num_nodes())
-    return bls.asSphere.node(0).get_bounds();
-  else if (bls.type == BLS::Cone && bls.asCone.num_nodes())
-    return bls.asCone.node(0).get_bounds();
-  else if (bls.type == BLS::Cylinder && bls.asCylinder.num_nodes())
-    return bls.asCylinder.node(0).get_bounds();
-  else if (bls.type == BLS::BezierCurve && bls.asBezierCurve.num_nodes())
-    return bls.asBezierCurve.node(0).get_bounds();
-  else if (bls.type == BLS::ISOSurface && bls.asISOSurface.num_nodes())
-    return bls.asISOSurface.node(0).get_bounds();
-  else if (bls.type == BLS::Volume && bls.asVolume.num_nodes())
-    return bls.asVolume.node(0).get_bounds();
-#endif
-  else if (bls.type == BLS::Transform && bls.asInstance.num_nodes()) {
+  if (bls.type == WorldBLS::Transform && bls.theBVH.num_nodes()) {
 
-    aabb bound = bls.asInstance.node(0).get_bounds();
+    aabb bound = bls.theBVH.node(0).get_bounds();
     mat3f rot = inverse(bls.affineInv[0]);
     vec3f trans = -bls.transInv[0];
     auto verts = compute_vertices(bound);
@@ -1273,11 +1199,11 @@ inline aabb get_bounds(const WorldBLS &bls)
       result.insert(v);
     }
     return result;
-  } else if (bls.type == BLS::MotionTransform && bls.len) {
+  } else if (bls.type == WorldBLS::MotionTransform && bls.len) {
     aabb result;
     result.invalidate();
     for (unsigned i = 0; i < bls.len; ++i) {
-      aabb bound = bls.asInstance.node(0).get_bounds();
+      aabb bound = bls.theBVH.node(0).get_bounds();
       mat3f rot = inverse(bls.affineInv[i]);
       vec3f trans = -bls.transInv[i];
       auto verts = compute_vertices(bound);
@@ -1289,11 +1215,7 @@ inline aabb get_bounds(const WorldBLS &bls)
     return result;
   }
 
-#ifdef WITH_HIP
-  return hip_root.get_bounds();
-#else
   return {};
-#endif
 }
 
 VSNRAY_FUNC
@@ -1326,28 +1248,11 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   mat3 affineInv;
   vec3 transInv;
 
-  if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    return intersect(ray,bls.asTriangle);
-  else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    return intersect(ray,bls.asQuad);
-  else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    return intersect(ray,bls.asSphere);
-  else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    return intersect(ray,bls.asCone);
-  else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    return intersect(ray,bls.asCylinder);
-  else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    return intersect(ray,bls.asBezierCurve);
-  else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    return intersect(ray,bls.asISOSurface);
-  else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    return intersect(ray,bls.asVolume);
-
   // Instance types:
-  else if (bls.type == BLS::Transform) {
+  if (bls.type == WorldBLS::Transform) {
     affineInv = bls.affineInv[0];
     transInv = bls.transInv[0];
-  } else if (bls.type == BLS::MotionTransform) {
+  } else if (bls.type == WorldBLS::MotionTransform) {
     float rayTime = clamp(ray.time, bls.time.min, bls.time.max);
 
     float time01 = rayTime - bls.time.min / (bls.time.max - bls.time.min);
@@ -1370,7 +1275,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   xfmRay.ori = affineInv * (xfmRay.ori + transInv);
   xfmRay.dir = affineInv * xfmRay.dir;
 
-  auto hr = intersect(xfmRay,bls.asInstance);
+  auto hr = intersect(xfmRay,bls.theBVH);
   hr.inst_id = hr.hit ? bls.instID : ~0u;
   return hr;
 }
