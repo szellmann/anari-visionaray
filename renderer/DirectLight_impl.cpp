@@ -324,7 +324,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     int volV = hitRec.volumeHit ? 0 : 1;
 
     float aoV = rendererState.ambientSamples == 0 ? 1.f
-        : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos, eps, ray.time,
+        : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos, ray.time, eps,
                         rendererState.ambientSamples,
                         rendererState.occlusionDistance);
     // visibility term
