@@ -21,10 +21,8 @@ struct VisionaraySceneGPU
 
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::BLS>::bvh_ref refBVH();
-  cuda_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
 #elif defined(WITH_HIP)
   hip_index_bvh<dco::BLS>::bvh_ref refBVH();
-  hip_index_bvh<dco::BLS>::bvh_inst instBVH(mat4x3 xfm);
 #endif
  private:
   struct Impl;

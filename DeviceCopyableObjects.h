@@ -1109,21 +1109,28 @@ struct BLS
 // only world BLS's have instances
 struct WorldBLS : BLS
 {
-  union {
+  // asInstance:
+  // TODO: it would be even better if the bvh_ref
+  // was bumped into the base classes union; this
+  // could potentially be achieved via CRTP?
+  int instID;
 #ifdef WITH_CUDA
-    cuda_index_bvh<BLS>::bvh_inst asTransform;
+  cuda_index_bvh<BLS>::bvh_ref theBVH;
 #elif defined(WITH_HIP)
-    hip_index_bvh<BLS>::bvh_inst asTransform;
+  hip_index_bvh<BLS>::bvh_ref theBVH;
 #else
-    index_bvh<BLS>::bvh_inst asTransform;
+  index_bvh<BLS>::bvh_ref theBVH;
 #endif
+  union {
     struct {
-      index_bvh<BLS>::bvh_ref theBVH;
-      box1 time;
-      int instID;
+      mat3 affineInv;
+      vec3 transInv;
+    } asTransform;
+    struct {
       mat3 *affineInv;
       vec3 *transInv;
       unsigned len;
+      box1 time;
     } asMotionTransform;
   };
 };
@@ -1186,11 +1193,11 @@ inline aabb get_bounds(const BLS &bls)
 VSNRAY_FUNC
 inline aabb get_bounds(const WorldBLS &bls)
 {
-  if (bls.type == BLS::Transform && bls.asTransform.num_nodes()) {
+  if (bls.type == BLS::Transform && bls.theBVH.num_nodes()) {
 
-    aabb bound = bls.asTransform.node(0).get_bounds();
-    mat3f rot = inverse(bls.asTransform.affine_inv());
-    vec3f trans = -bls.asTransform.trans_inv();
+    aabb bound = bls.theBVH.node(0).get_bounds();
+    mat3f rot = inverse(bls.asTransform.affineInv);
+    vec3f trans = -bls.asTransform.transInv;
     auto verts = compute_vertices(bound);
     aabb result;
     result.invalidate();
@@ -1203,7 +1210,7 @@ inline aabb get_bounds(const WorldBLS &bls)
     aabb result;
     result.invalidate();
     for (unsigned i = 0; i < bls.asMotionTransform.len; ++i) {
-      aabb bound = bls.asMotionTransform.theBVH.node(0).get_bounds();
+      aabb bound = bls.theBVH.node(0).get_bounds();
       mat3f rot = inverse(bls.asMotionTransform.affineInv[i]);
       vec3f trans = -bls.asMotionTransform.transInv[i];
       auto verts = compute_vertices(bound);
@@ -1245,10 +1252,19 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(
     const Ray &ray, const WorldBLS &bls)
 {
-  if (bls.type == BLS::Transform)
-    return intersect(ray,bls.asTransform);
-  else if (bls.type == BLS::MotionTransform) {
+  const bool isInstance = bls.type == BLS::Transform ||
+                          bls.type == BLS::MotionTransform;
 
+  if (!isInstance)
+    return intersect(ray, (const BLS &)bls);
+
+  mat3 affineInv;
+  vec3 transInv;
+
+  if (bls.type == BLS::Transform) {
+    affineInv = bls.asTransform.affineInv;
+    transInv = bls.asTransform.transInv;
+  } else if (bls.type == BLS::MotionTransform) {
     float rayTime = clamp(ray.time,
                           bls.asMotionTransform.time.min,
                           bls.asMotionTransform.time.max);
@@ -1261,24 +1277,22 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
     float frac = time01 * (bls.asMotionTransform.len-1) - ID1;
 
-    mat3 affineInv = lerp(bls.asMotionTransform.affineInv[ID1],
-                          bls.asMotionTransform.affineInv[ID2],
-                          frac);
+    affineInv = lerp(bls.asMotionTransform.affineInv[ID1],
+                     bls.asMotionTransform.affineInv[ID2],
+                     frac);
 
-    vec3 transInv = lerp(bls.asMotionTransform.transInv[ID1],
-                         bls.asMotionTransform.transInv[ID2],
-                         frac);
-
-    Ray xfmRay(ray);
-    xfmRay.ori = affineInv * (xfmRay.ori + transInv);
-    xfmRay.dir = affineInv * xfmRay.dir;
-
-    auto hr = intersect(xfmRay,bls.asMotionTransform.theBVH);
-    hr.inst_id = hr.hit ? bls.asMotionTransform.instID : ~0u;
-    return hr;
+    transInv = lerp(bls.asMotionTransform.transInv[ID1],
+                    bls.asMotionTransform.transInv[ID2],
+                    frac);
   }
-  else
-    return intersect(ray, (const BLS &)bls);
+
+  Ray xfmRay(ray);
+  xfmRay.ori = affineInv * (xfmRay.ori + transInv);
+  xfmRay.dir = affineInv * xfmRay.dir;
+
+  auto hr = intersect(xfmRay,bls.theBVH);
+  hr.inst_id = hr.hit ? bls.instID : ~0u;
+  return hr;
 }
 
 // TLS //
@@ -1332,27 +1346,21 @@ struct Instance
   unsigned instID{UINT_MAX};
   unsigned userID{UINT_MAX};
   unsigned groupID{UINT_MAX};
+#ifdef WITH_CUDA
+  cuda_index_bvh<BLS>::bvh_ref theBVH;
+#elif defined(WITH_HIP)
+  hip_index_bvh<BLS>::bvh_ref theBVH;
+#else
+  index_bvh<BLS>::bvh_ref theBVH;
+#endif
   union {
     struct {
-#ifdef WITH_CUDA
-        cuda_index_bvh<BLS>::bvh_inst instBVH;
-#elif defined(WITH_HIP)
-        hip_index_bvh<BLS>::bvh_inst instBVH;
-#else
-        index_bvh<BLS>::bvh_inst instBVH;
-#endif
       mat4 xfm;
       mat3 normalXfm;
+      mat3 affineInv;
+      vec3 transInv;
     } asTransform;
     struct {
-#ifdef WITH_CUDA
-      cuda_index_bvh<BLS>::bvh_ref theBVH;
-#elif defined(WITH_HIP)
-      hip_index_bvh<BLS>::bvh_ref theBVH;
-#else
-      index_bvh<BLS>::bvh_ref theBVH;
-#endif
-      box1 time;
       // TODO: use arrays, but that needs to be trivially
       // constructible for that!
       mat4 *xfms;
@@ -1360,6 +1368,7 @@ struct Instance
       mat3 *affineInv;
       vec3 *transInv;
       size_t len;
+      box1 time;
     } asMotionTransform;
   };
 };

@@ -198,22 +198,21 @@ void VisionaraySceneImpl::commit()
         bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Instance) {
         instanceCount++;
-        if (geom.as<dco::Instance>(0).type == dco::Instance::Transform) {
+        const dco::Instance &inst = geom.as<dco::Instance>(0);
+
+        bls.theBVH = inst.theBVH;
+        bls.instID = inst.instID;
+
+        if (inst.type == dco::Instance::Transform) {
           bls.type = dco::BLS::Transform;
-          bls.asTransform = geom.as<dco::Instance>(0).asTransform.instBVH;
-          bls.asTransform.set_inst_id(geom.as<dco::Instance>(0).instID);
-        } else if (geom.as<dco::Instance>(0).type == dco::Instance::MotionTransform) {
+          bls.asTransform.affineInv = inst.asTransform.affineInv;
+          bls.asTransform.transInv = inst.asTransform.transInv;
+        } else if (inst.type == dco::Instance::MotionTransform) {
           bls.type = dco::BLS::MotionTransform;
-          bls.asMotionTransform.theBVH
-              = geom.as<dco::Instance>(0).asMotionTransform.theBVH;
-          bls.asMotionTransform.time
-              = geom.as<dco::Instance>(0).asMotionTransform.time;
-          bls.asMotionTransform.affineInv
-              = geom.as<dco::Instance>(0).asMotionTransform.affineInv;
-          bls.asMotionTransform.transInv
-              = geom.as<dco::Instance>(0).asMotionTransform.transInv;
+          bls.asMotionTransform.affineInv = inst.asMotionTransform.affineInv;
+          bls.asMotionTransform.transInv = inst.asMotionTransform.transInv;
           bls.asMotionTransform.len = geom.as<dco::Instance>(0).asMotionTransform.len;
-          bls.asMotionTransform.instID = geom.as<dco::Instance>(0).instID;
+          bls.asMotionTransform.time = inst.asMotionTransform.time;
         }
       }
       m_worldBLSs.update(bls.blsID, bls);
@@ -433,32 +432,16 @@ cuda_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
 {
   return m_gpuScene->refBVH();
 }
-
-cuda_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
-{
-  return m_gpuScene->instBVH(xfm);
-}
 #elif defined(WITH_HIP)
 hip_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
 {
   return m_gpuScene->refBVH();
-}
-
-hip_index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
-{
-  return m_gpuScene->instBVH(xfm);
 }
 #else
 index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
 {
   assert(type == Group);
   return m_TLS.ref();
-}
-
-index_bvh<dco::BLS>::bvh_inst VisionaraySceneImpl::instBVH(mat4x3 xfm)
-{
-  assert(type == Group);
-  return m_TLS.inst(xfm);
 }
 #endif
 

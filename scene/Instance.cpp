@@ -90,14 +90,12 @@ void Instance::visionarayGeometryUpdate()
   m_instance[0].groupID = group()->visionarayScene()->m_groupID;
 
   // set xfm
+  m_instance[0].theBVH = group()->visionarayScene()->refBVH();
   m_instance[0].asTransform.xfm = m_xfm;
-  mat3f rot = top_left(m_instance[0].asTransform.xfm);
-  vec3f trans(m_instance[0].asTransform.xfm(0,3),
-              m_instance[0].asTransform.xfm(1,3),
-              m_instance[0].asTransform.xfm(2,3));
-  mat4x3 xfm{rot, trans};
-  m_instance[0].asTransform.instBVH = group()->visionarayScene()->instBVH(xfm);
-  m_instance[0].asTransform.normalXfm = inverse(transpose(m_xfmInvRot));
+  m_instance[0].asTransform.affineInv = inverse(top_left(m_xfm));
+  m_instance[0].asTransform.transInv = -m_xfm(3).xyz();
+  m_instance[0].asTransform.normalXfm
+      = inverse(transpose(m_instance[0].asTransform.affineInv ));
 
   vgeom.primitives.data = m_instance.devicePtr();
   vgeom.primitives.len = m_instance.size();
