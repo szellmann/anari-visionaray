@@ -19,7 +19,7 @@ VSNRAY_FUNC
 inline float computeAO(ScreenSample &ss, unsigned worldID,
     VisionarayGlobalState::DeviceObjectRegistry onDevice,
     vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
-    float eps, int AO_samples, float AO_radius)
+    float time, float eps, int AO_samples, float AO_radius)
 {
   vec3 u, v, w = Ns;
   make_orthonormal_basis(u,v,w);
@@ -34,6 +34,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
     aoRay.dir = dir;
     aoRay.tmin = 0.f;
     aoRay.tmax = AO_radius;
+    aoRay.time = time;
 
     float weight = max(0.f, dot(dir,Ns));
     weights += weight;
