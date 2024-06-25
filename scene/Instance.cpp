@@ -40,11 +40,21 @@ Instance *Instance::createInstance(
 void Instance::commit()
 {
   m_id = getParam<uint32_t>("id", ~0u);
-  m_xfm = getParam<mat4>("transform", mat4::identity());
-  m_xfmInvRot = inverse(top_left(m_xfm));
   m_group = getParamObject<Group>("group");
+  mat4 xfm = getParam<mat4>("transform", mat4::identity());
+
   if (!m_group)
     reportMessage(ANARI_SEVERITY_WARNING, "missing 'group' on ANARIInstance");
+
+  m_xfms.resize(1);
+  m_normalXfms.resize(1);
+  m_affineInv.resize(1);
+  m_transInv.resize(1);
+
+  m_xfms[0] = xfm;
+  m_affineInv[0] = inverse(top_left(m_xfms[0]));
+  m_transInv[0] = -m_xfms[0](3).xyz();
+  m_normalXfms[0] = inverse(transpose(m_affineInv[0]));
 
   dispatch();
 }
@@ -52,21 +62,6 @@ void Instance::commit()
 uint32_t Instance::id() const
 {
   return m_id;
-}
-
-const mat4 &Instance::xfm() const
-{
-  return m_xfm;
-}
-
-const mat3 &Instance::xfmInvRot() const
-{
-  return m_xfmInvRot;
-}
-
-bool Instance::xfmIsIdentity() const
-{
-  return xfm() == mat4::identity();
 }
 
 const Group *Instance::group() const
@@ -89,13 +84,12 @@ void Instance::visionarayGeometryUpdate()
   m_instance[0].userID = m_id;
   m_instance[0].groupID = group()->visionarayScene()->m_groupID;
 
-  // set xfm
   m_instance[0].theBVH = group()->visionarayScene()->refBVH();
-  m_instance[0].asTransform.xfm = m_xfm;
-  m_instance[0].asTransform.affineInv = inverse(top_left(m_xfm));
-  m_instance[0].asTransform.transInv = -m_xfm(3).xyz();
-  m_instance[0].asTransform.normalXfm
-      = inverse(transpose(m_instance[0].asTransform.affineInv ));
+  m_instance[0].xfms = m_xfms.devicePtr();
+  m_instance[0].normalXfms = m_normalXfms.devicePtr();
+  m_instance[0].affineInv = m_affineInv.devicePtr();
+  m_instance[0].transInv = m_transInv.devicePtr();
+  m_instance[0].len = m_xfms.size();
 
   vgeom.primitives.data = m_instance.devicePtr();
   vgeom.primitives.len = m_instance.size();

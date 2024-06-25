@@ -607,23 +607,20 @@ VSNRAY_FUNC
 inline mat3 getNormalTransform(const dco::Instance &inst, const Ray &ray)
 {
   if (inst.type == dco::Instance::Transform) {
-    return inst.asTransform.normalXfm;
+    return inst.normalXfms[0];
   } else if (inst.type == dco::Instance::MotionTransform) {
 
-    float rayTime = clamp(ray.time,
-                          inst.asMotionTransform.time.min,
-                          inst.asMotionTransform.time.max);
+    float rayTime = clamp(ray.time, inst.time.min, inst.time.max);
 
-    float time01 = rayTime - inst.asMotionTransform.time.min
-        / (inst.asMotionTransform.time.max - inst.asMotionTransform.time.min);
+    float time01 = rayTime - inst.time.min / (inst.time.max - inst.time.min);
 
-    unsigned ID1 = unsigned(float(inst.asMotionTransform.len-1) * time01);
-    unsigned ID2 = min((unsigned)inst.asMotionTransform.len-1, ID1+1);
+    unsigned ID1 = unsigned(float(inst.len-1) * time01);
+    unsigned ID2 = min((unsigned)inst.len-1, ID1+1);
 
-    float frac = time01 * (inst.asMotionTransform.len-1) - ID1;
+    float frac = time01 * (inst.len-1) - ID1;
 
-    return lerp(inst.asMotionTransform.normalXfms[ID1],
-                inst.asMotionTransform.normalXfms[ID2],
+    return lerp(inst.normalXfms[ID1],
+                inst.normalXfms[ID2],
                 frac);
   }
 

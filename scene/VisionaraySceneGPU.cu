@@ -303,19 +303,18 @@ void VisionaraySceneGPU::commit()
         CUDA_SAFE_CALL(cudaMemcpy(&inst, geom.primitives.data,
                                   sizeof(inst), cudaMemcpyDefault));
 
-        bls.theBVH = inst.theBVH;
+        bls.asInstance = inst.theBVH;
         bls.instID = inst.instID;
+
+        bls.affineInv = inst.affineInv;
+        bls.transInv = inst.transInv;
+        bls.len = inst.len;
+        bls.time = inst.time;
 
         if (inst.type == dco::Instance::Transform) {
           bls.type = dco::BLS::Transform;
-          bls.asTransform.affineInv = inst.asTransform.affineInv;
-          bls.asTransform.transInv = inst.asTransform.transInv;
         } else if (inst.type == dco::Instance::MotionTransform) {
           bls.type = dco::BLS::MotionTransform;
-          bls.asMotionTransform.affineInv = inst.asMotionTransform.affineInv;
-          bls.asMotionTransform.transInv = inst.asMotionTransform.transInv;
-          bls.asMotionTransform.len = inst.asMotionTransform.len;
-          bls.asMotionTransform.time = inst.asMotionTransform.time;
         }
       }
       m_impl->parent->m_worldBLSs.update(bls.blsID, bls);

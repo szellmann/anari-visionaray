@@ -18,9 +18,6 @@ struct Instance : public Object
   void commit() override;
 
   uint32_t id() const;
-  const mat4 &xfm() const;
-  const mat3 &xfmInvRot() const;
-  bool xfmIsIdentity() const;
 
   const Group *group() const;
   Group *group();
@@ -34,12 +31,15 @@ struct Instance : public Object
 
  protected:
   uint32_t m_id{~0u};
-  mat4 m_xfm;
-  mat3 m_xfmInvRot;
   helium::IntrusivePtr<Group> m_group;
   dco::Geometry vgeom;
 
   HostDeviceArray<dco::Instance> m_instance;
+
+  HostDeviceArray<mat4> m_xfms;
+  HostDeviceArray<mat3> m_normalXfms;
+  HostDeviceArray<mat3> m_affineInv;
+  HostDeviceArray<vec3> m_transInv;
 
   void dispatch();
 };

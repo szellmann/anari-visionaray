@@ -42,12 +42,12 @@ void MotionTransform::visionarayGeometryUpdate()
   m_instance[0].groupID = group()->visionarayScene()->m_groupID;
 
   m_instance[0].theBVH = group()->visionarayScene()->refBVH();
-  m_instance[0].asMotionTransform.xfms = m_xfms.devicePtr();
-  m_instance[0].asMotionTransform.normalXfms = m_normalXfms.devicePtr();
-  m_instance[0].asMotionTransform.affineInv = m_affineInv.devicePtr();
-  m_instance[0].asMotionTransform.transInv = m_transInv.devicePtr();
-  m_instance[0].asMotionTransform.len = m_xfms.size();
-  m_instance[0].asMotionTransform.time = m_time;
+  m_instance[0].xfms = m_xfms.devicePtr();
+  m_instance[0].normalXfms = m_normalXfms.devicePtr();
+  m_instance[0].affineInv = m_affineInv.devicePtr();
+  m_instance[0].transInv = m_transInv.devicePtr();
+  m_instance[0].len = m_xfms.size();
+  m_instance[0].time = m_time;
 
   vgeom.primitives.data = m_instance.devicePtr();
   vgeom.primitives.len = m_instance.size();
