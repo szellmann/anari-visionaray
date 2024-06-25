@@ -28,9 +28,9 @@ void MotionTransform::commit()
   m_transInv.resize(m_motionTransform->size());
   for (size_t i = 0; i < m_motionTransform->size(); ++i) {
     m_xfms[i] = m_motionTransform->dataAs<mat4>()[i];
-    m_affineInv[i] = inverse(top_left(m_xfms[i]));
+    m_affineInv[i] = inverse(transpose(top_left(m_xfms[i])));
     m_transInv[i] = -m_xfms[i](3).xyz();
-    m_normalXfms[i] = inverse(transpose(m_affineInv[i]));
+    m_normalXfms[i] = inverse(m_affineInv[i]);
   }
 
   Instance::dispatch();

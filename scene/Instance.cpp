@@ -52,9 +52,9 @@ void Instance::commit()
   m_transInv.resize(1);
 
   m_xfms[0] = xfm;
-  m_affineInv[0] = inverse(top_left(m_xfms[0]));
+  m_affineInv[0] = inverse(transpose(top_left(m_xfms[0])));
   m_transInv[0] = -m_xfms[0](3).xyz();
-  m_normalXfms[0] = inverse(transpose(m_affineInv[0]));
+  m_normalXfms[0] = inverse(m_affineInv[0]);
 
   dispatch();
 }
