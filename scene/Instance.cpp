@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "Instance.h"
+// subtypes
+#include "MotionTransform.h"
 
 namespace visionaray {
 
@@ -10,6 +12,7 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
   vgeom.type = dco::Geometry::Instance;
   vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
   m_instance.resize(1);
+  m_instance[0].type = dco::Instance::Transform;
   m_instance[0].instID
       = deviceState()->dcos.instances.alloc(m_instance[0]);
   s->objectCounts.instances++;
@@ -21,6 +24,17 @@ Instance::~Instance()
   deviceState()->dcos.geometries.free(vgeom.geomID);
 
   deviceState()->objectCounts.instances--;
+}
+
+Instance *Instance::createInstance(
+    std::string_view subtype, VisionarayGlobalState *s)
+{
+  if (subtype == "transform")
+    return new Instance(s); // base type implements transform!
+  else if (subtype == "motionTransform")
+    return new MotionTransform(s);
+  else
+    return new Instance(s); // base type implements transform!
 }
 
 void Instance::commit()
@@ -74,16 +88,16 @@ void Instance::visionarayGeometryUpdate()
 {
   m_instance[0].userID = m_id;
   m_instance[0].groupID = group()->visionarayScene()->m_groupID;
-  m_instance[0].xfm = m_xfm;
 
   // set xfm
-  mat3f rot = top_left(m_instance[0].xfm);
-  vec3f trans(m_instance[0].xfm(0,3),
-              m_instance[0].xfm(1,3),
-              m_instance[0].xfm(2,3));
+  m_instance[0].asTransform.xfm = m_xfm;
+  mat3f rot = top_left(m_instance[0].asTransform.xfm);
+  vec3f trans(m_instance[0].asTransform.xfm(0,3),
+              m_instance[0].asTransform.xfm(1,3),
+              m_instance[0].asTransform.xfm(2,3));
   mat4x3 xfm{rot, trans};
-  m_instance[0].instBVH = group()->visionarayScene()->instBVH(xfm);
-  m_instance[0].normalXfm = inverse(transpose(m_xfmInvRot));
+  m_instance[0].asTransform.instBVH = group()->visionarayScene()->instBVH(xfm);
+  m_instance[0].asTransform.normalXfm = inverse(transpose(m_xfmInvRot));
 
   vgeom.primitives.data = m_instance.devicePtr();
   vgeom.primitives.len = m_instance.size();

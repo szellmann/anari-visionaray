@@ -312,13 +312,13 @@ void VisionaraySceneGPU::commit()
         bls.asVolume = m_impl->m_accelStorage.volumeBLSs[index].ref();
       } else if (geom.type == dco::Geometry::Instance) {
         instanceCount++;
-        bls.type = dco::BLS::Instance;
+        bls.type = dco::BLS::Transform;
         dco::Instance inst;
         HIP_SAFE_CALL(hipMemcpy(&inst, geom.primitives.data,
                                 sizeof(inst), hipMemcpyDefault));
         bls.type = dco::BLS::Instance;
-        bls.asInstance = inst.instBVH;
-        bls.asInstance.set_inst_id(inst.instID);
+        bls.asTransform = inst.asTransform.instBVH;
+        bls.asTransform.set_inst_id(inst.instID);
       }
       m_impl->parent->m_worldBLSs.update(bls.blsID, bls);
     } else {

@@ -12,6 +12,9 @@ struct Instance : public Object
   Instance(VisionarayGlobalState *s);
   ~Instance() override;
 
+  static Instance *createInstance(
+      std::string_view subtype, VisionarayGlobalState *s);
+
   void commit() override;
 
   uint32_t id() const;
@@ -23,13 +26,13 @@ struct Instance : public Object
   Group *group();
 
   dco::Geometry visionarayGeometry() const;
-  void visionarayGeometryUpdate();
+  virtual void visionarayGeometryUpdate();
 
   void markCommitted() override;
 
   bool isValid() const override;
 
- private:
+ protected:
   uint32_t m_id{~0u};
   mat4 m_xfm;
   mat3 m_xfmInvRot;

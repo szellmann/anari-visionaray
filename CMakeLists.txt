@@ -110,6 +110,7 @@ set(SOURCES
     scene/volume/Volume.cpp
     scene/Group.cpp
     scene/Instance.cpp
+    scene/MotionTransform.cpp
     scene/VisionarayScene.cpp
     scene/World.cpp
     Object.cpp
