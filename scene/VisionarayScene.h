@@ -32,12 +32,13 @@ struct VisionaraySceneImpl
   typedef index_bvh<dco::Volume>             VolumeBVH;
 
   typedef index_bvh<dco::BLS> TLS;
-  typedef index_bvh<dco::WorldBLS> WorldTLS;
+  typedef index_bvh<dco::Instance> WorldTLS;
 
   enum Type { World, Group, };
   Type type;
 
   // Surface data //
+  DeviceHandleArray m_instances;
   DeviceHandleArray m_geometries;
   DeviceHandleArray m_materials;
   DeviceHandleArray m_lights;
@@ -49,7 +50,7 @@ struct VisionaraySceneImpl
   TLS m_TLS;
   WorldTLS m_worldTLS;
   DeviceObjectArray<dco::BLS> m_BLSs;
-  DeviceObjectArray<dco::WorldBLS> m_worldBLSs;
+  DeviceObjectArray<dco::Instance> m_worldBLSs;
 
   // Accel storage //
   struct {
@@ -74,6 +75,7 @@ struct VisionaraySceneImpl
   void commit();
   void release();
   bool isValid() const;
+  void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
   void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
   void attachGeometry(
       dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID=~0u);

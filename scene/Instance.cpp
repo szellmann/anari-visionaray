@@ -9,19 +9,15 @@ namespace visionaray {
 
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
-  vgeom.type = dco::Geometry::Instance;
-  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
-  m_instance.resize(1);
-  m_instance[0].type = dco::Instance::Transform;
-  m_instance[0].instID
-      = deviceState()->dcos.instances.alloc(m_instance[0]);
+  vinstance.type = dco::Instance::Transform;
+  vinstance.instID
+      = deviceState()->dcos.instances.alloc(vinstance);
   s->objectCounts.instances++;
 }
 
 Instance::~Instance()
 {
-  deviceState()->dcos.instances.free(m_instance[0].instID);
-  deviceState()->dcos.geometries.free(vgeom.geomID);
+  deviceState()->dcos.instances.free(vinstance.instID);
 
   deviceState()->objectCounts.instances--;
 }
@@ -74,25 +70,22 @@ Group *Instance::group()
   return m_group.ptr;
 }
 
-dco::Geometry Instance::visionarayGeometry() const
+dco::Instance Instance::visionarayInstance() const
 {
-  return vgeom;
+  return vinstance;
 }
 
-void Instance::visionarayGeometryUpdate()
+void Instance::visionarayInstanceUpdate()
 {
-  m_instance[0].userID = m_id;
-  m_instance[0].groupID = group()->visionarayScene()->m_groupID;
+  vinstance.userID = m_id;
+  vinstance.groupID = group()->visionarayScene()->m_groupID;
 
-  m_instance[0].theBVH = group()->visionarayScene()->refBVH();
-  m_instance[0].xfms = m_xfms.devicePtr();
-  m_instance[0].normalXfms = m_normalXfms.devicePtr();
-  m_instance[0].affineInv = m_affineInv.devicePtr();
-  m_instance[0].transInv = m_transInv.devicePtr();
-  m_instance[0].len = m_xfms.size();
-
-  vgeom.primitives.data = m_instance.devicePtr();
-  vgeom.primitives.len = m_instance.size();
+  vinstance.theBVH = group()->visionarayScene()->refBVH();
+  vinstance.xfms = m_xfms.devicePtr();
+  vinstance.normalXfms = m_normalXfms.devicePtr();
+  vinstance.affineInv = m_affineInv.devicePtr();
+  vinstance.transInv = m_transInv.devicePtr();
+  vinstance.len = m_xfms.size();
 
   dispatch();
 }
@@ -111,11 +104,9 @@ bool Instance::isValid() const
 
 void Instance::dispatch()
 {
-  deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
-  deviceState()->dcos.instances.update(m_instance[0].instID, m_instance[0]);
+  deviceState()->dcos.instances.update(vinstance.instID, vinstance);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
   deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 

@@ -6,7 +6,7 @@ MotionTransform::MotionTransform(VisionarayGlobalState *s)
   : Instance(s)
   , m_motionTransform(this)
 {
-  m_instance[0].type = dco::Instance::MotionTransform;
+  vinstance.type = dco::Instance::MotionTransform;
 }
 
 void MotionTransform::commit()
@@ -36,21 +36,18 @@ void MotionTransform::commit()
   Instance::dispatch();
 }
 
-void MotionTransform::visionarayGeometryUpdate()
+void MotionTransform::visionarayInstanceUpdate()
 {
-  m_instance[0].userID = m_id;
-  m_instance[0].groupID = group()->visionarayScene()->m_groupID;
+  vinstance.userID = m_id;
+  vinstance.groupID = group()->visionarayScene()->m_groupID;
 
-  m_instance[0].theBVH = group()->visionarayScene()->refBVH();
-  m_instance[0].xfms = m_xfms.devicePtr();
-  m_instance[0].normalXfms = m_normalXfms.devicePtr();
-  m_instance[0].affineInv = m_affineInv.devicePtr();
-  m_instance[0].transInv = m_transInv.devicePtr();
-  m_instance[0].len = m_xfms.size();
-  m_instance[0].time = m_time;
-
-  vgeom.primitives.data = m_instance.devicePtr();
-  vgeom.primitives.len = m_instance.size();
+  vinstance.theBVH = group()->visionarayScene()->refBVH();
+  vinstance.xfms = m_xfms.devicePtr();
+  vinstance.normalXfms = m_normalXfms.devicePtr();
+  vinstance.affineInv = m_affineInv.devicePtr();
+  vinstance.transInv = m_transInv.devicePtr();
+  vinstance.len = m_xfms.size();
+  vinstance.time = m_time;
 
   dispatch();
 }

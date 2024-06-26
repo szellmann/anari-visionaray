@@ -165,7 +165,7 @@ bool Frame::getProperty(
     CUDA_SAFE_CALL(cudaEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
     m_duration /= 1000.f;
 #elif defined(WITH_HIP)
-    HIP_SAFE_CALL(hipEventElapsedTime(&ms, m_eventStart, m_eventStop));
+    HIP_SAFE_CALL(hipEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
     m_duration /= 1000.f;
 #else
     m_duration = std::chrono::duration<float>(m_eventStop - m_eventStart).count();
@@ -209,6 +209,8 @@ void Frame::renderFrame()
       reportMessage(
           ANARI_SEVERITY_ERROR, "skipping render of incomplete frame object");
 #ifdef WITH_CUDA
+      // TODO: outside this function!
+#elif defined(WITH_HIP)
       // TODO: outside this function!
 #else
       std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
@@ -316,8 +318,8 @@ void Frame::renderFrame()
       // TAA pass
 #ifdef WITH_CUDA
       cuda::for_each(0, size.x, 0, size.y,
-//#elif WITH_HIP
-//      hip::for_each(0, size.x, 0, size.y,
+#elif WITH_HIP
+      hip::for_each(0, size.x, 0, size.y,
 #else
       parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif

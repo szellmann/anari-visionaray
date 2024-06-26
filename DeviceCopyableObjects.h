@@ -1104,30 +1104,6 @@ struct BLS
 #endif
 };
 
-// only world BLS's have instances
-struct WorldBLS
-{
-  enum Type {
-    Transform,
-    MotionTransform,
-    Unknown,
-  };
-  Type type{Unknown};
-  unsigned blsID{UINT_MAX};
-#ifdef WITH_CUDA
-  cuda_index_bvh<BLS>::bvh_ref theBVH;
-#elif defined(WITH_HIP)
-  hip_index_bvh<BLS>::bvh_ref theBVH;
-#else
-  index_bvh<BLS>::bvh_ref theBVH;
-#endif
-  int instID;
-  mat3 *affineInv;
-  vec3 *transInv;
-  unsigned len;
-  box1 time;
-};
-
 VSNRAY_FUNC
 inline aabb get_bounds(const BLS &bls)
 {
@@ -1184,41 +1160,6 @@ inline aabb get_bounds(const BLS &bls)
 }
 
 VSNRAY_FUNC
-inline aabb get_bounds(const WorldBLS &bls)
-{
-  if (bls.type == WorldBLS::Transform && bls.theBVH.num_nodes()) {
-
-    aabb bound = bls.theBVH.node(0).get_bounds();
-    mat3f rot = inverse(bls.affineInv[0]);
-    vec3f trans = -bls.transInv[0];
-    auto verts = compute_vertices(bound);
-    aabb result;
-    result.invalidate();
-    for (vec3 v : verts) {
-      v = rot * v + trans;
-      result.insert(v);
-    }
-    return result;
-  } else if (bls.type == WorldBLS::MotionTransform && bls.len) {
-    aabb result;
-    result.invalidate();
-    for (unsigned i = 0; i < bls.len; ++i) {
-      aabb bound = bls.theBVH.node(0).get_bounds();
-      mat3f rot = inverse(bls.affineInv[i]);
-      vec3f trans = -bls.transInv[i];
-      auto verts = compute_vertices(bound);
-      for (vec3 v : verts) {
-        v = rot * v + trans;
-        result.insert(v);
-      }
-    }
-    return result;
-  }
-
-  return {};
-}
-
-VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS &bls)
 {
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
@@ -1239,73 +1180,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
     return intersect(ray,bls.asVolume);
 
   return {};
-}
-
-VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const WorldBLS &bls)
-{
-  mat3 affineInv;
-  vec3 transInv;
-
-  // Instance types:
-  if (bls.type == WorldBLS::Transform) {
-    affineInv = bls.affineInv[0];
-    transInv = bls.transInv[0];
-  } else if (bls.type == WorldBLS::MotionTransform) {
-    float rayTime = clamp(ray.time, bls.time.min, bls.time.max);
-
-    float time01 = rayTime - bls.time.min / (bls.time.max - bls.time.min);
-
-    unsigned ID1 = unsigned(float(bls.len-1) * time01);
-    unsigned ID2 = min(bls.len-1, ID1+1);
-
-    float frac = time01 * (bls.len-1) - ID1;
-
-    affineInv = lerp(bls.affineInv[ID1],
-                     bls.affineInv[ID2],
-                     frac);
-
-    transInv = lerp(bls.transInv[ID1],
-                    bls.transInv[ID2],
-                    frac);
-  }
-
-  Ray xfmRay(ray);
-  xfmRay.ori = affineInv * (xfmRay.ori + transInv);
-  xfmRay.dir = affineInv * xfmRay.dir;
-
-  auto hr = intersect(xfmRay,bls.theBVH);
-  hr.inst_id = hr.hit ? bls.instID : ~0u;
-  return hr;
-}
-
-// TLS //
-
-#ifdef WITH_CUDA
-typedef cuda_index_bvh<WorldBLS>::bvh_ref TLS;
-#elif defined(WITH_HIP)
-typedef hip_index_bvh<WorldBLS>::bvh_ref TLS;
-#else
-typedef index_bvh<WorldBLS>::bvh_ref TLS;
-#endif
-
-VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
-    Ray ray, const TLS &tls)
-{
-  ray.intersectionMask
-      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cone | Ray::Cylinder |
-        Ray::Curve | Ray::BezierCurve | Ray::ISOSurface;
-  return intersect(ray, tls);
-}
-
-VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
-    Ray ray, const TLS &tls)
-{
-  ray.intersectionMask = Ray::Volume;
-  return intersect(ray, tls);
 }
 
 // Array //
@@ -1342,9 +1216,110 @@ struct Instance
   mat3 *normalXfms;
   mat3 *affineInv;
   vec3 *transInv;
-  size_t len;
+  unsigned len;
   box1 time;
 };
+
+VSNRAY_FUNC
+inline aabb get_bounds(const Instance &bls)
+{
+  if (bls.type == Instance::Transform && bls.theBVH.num_nodes()) {
+
+    aabb bound = bls.theBVH.node(0).get_bounds();
+    mat3f rot = inverse(bls.affineInv[0]);
+    vec3f trans = -bls.transInv[0];
+    auto verts = compute_vertices(bound);
+    aabb result;
+    result.invalidate();
+    for (vec3 v : verts) {
+      v = rot * v + trans;
+      result.insert(v);
+    }
+    return result;
+  } else if (bls.type == Instance::MotionTransform && bls.len) {
+    aabb result;
+    result.invalidate();
+    for (unsigned i = 0; i < bls.len; ++i) {
+      aabb bound = bls.theBVH.node(0).get_bounds();
+      mat3f rot = inverse(bls.affineInv[i]);
+      vec3f trans = -bls.transInv[i];
+      auto verts = compute_vertices(bound);
+      for (vec3 v : verts) {
+        v = rot * v + trans;
+        result.insert(v);
+      }
+    }
+    return result;
+  }
+
+  return {};
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const Ray &ray, const Instance &bls)
+{
+  mat3 affineInv;
+  vec3 transInv;
+
+  if (bls.type == Instance::Transform) {
+    affineInv = bls.affineInv[0];
+    transInv = bls.transInv[0];
+  } else if (bls.type == Instance::MotionTransform) {
+    float rayTime = clamp(ray.time, bls.time.min, bls.time.max);
+
+    float time01 = rayTime - bls.time.min / (bls.time.max - bls.time.min);
+
+    unsigned ID1 = unsigned(float(bls.len-1) * time01);
+    unsigned ID2 = min(bls.len-1, ID1+1);
+
+    float frac = time01 * (bls.len-1) - ID1;
+
+    affineInv = lerp(bls.affineInv[ID1],
+                     bls.affineInv[ID2],
+                     frac);
+
+    transInv = lerp(bls.transInv[ID1],
+                    bls.transInv[ID2],
+                    frac);
+  }
+
+  Ray xfmRay(ray);
+  xfmRay.ori = affineInv * (xfmRay.ori + transInv);
+  xfmRay.dir = affineInv * xfmRay.dir;
+
+  auto hr = intersect(xfmRay,bls.theBVH);
+  hr.inst_id = hr.hit ? bls.instID : ~0u;
+  return hr;
+}
+
+// TLS //
+
+#ifdef WITH_CUDA
+typedef cuda_index_bvh<Instance>::bvh_ref TLS;
+#elif defined(WITH_HIP)
+typedef hip_index_bvh<Instance>::bvh_ref TLS;
+#else
+typedef index_bvh<Instance>::bvh_ref TLS;
+#endif
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
+    Ray ray, const TLS &tls)
+{
+  ray.intersectionMask
+      = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cone | Ray::Cylinder |
+        Ray::Curve | Ray::BezierCurve | Ray::ISOSurface;
+  return intersect(ray, tls);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
+    Ray ray, const TLS &tls)
+{
+  ray.intersectionMask = Ray::Volume;
+  return intersect(ray, tls);
+}
 
 // Surface //
 
@@ -1375,7 +1350,6 @@ struct Geometry
     BezierCurve,
     ISOSurface,
     Volume,
-    Instance,
     Unknown,
   };
   Type type{Unknown};

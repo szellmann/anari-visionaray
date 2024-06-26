@@ -12,7 +12,7 @@ void split_primitive(aabb& L, aabb& R, float plane, int axis, dco::BLS const& pr
   // empty
 }
 
-void split_primitive(aabb& L, aabb& R, float plane, int axis, dco::WorldBLS const& prim)
+void split_primitive(aabb& L, aabb& R, float plane, int axis, dco::Instance const& prim)
 {
   // empty
 }
@@ -29,7 +29,7 @@ struct VisionaraySceneGPU::Impl
   typedef hip_index_bvh<dco::Volume>             VolumeBVH;
 
   typedef hip_index_bvh<dco::BLS> TLS;
-  typedef hip_index_bvh<dco::WorldBLS> WorldTLS;
+  typedef hip_index_bvh<dco::Instance> WorldTLS;
 
   // Accel storage //
   struct {
@@ -102,206 +102,217 @@ void VisionaraySceneGPU::commit()
   using CPU = VisionaraySceneImpl;
   using GPU = Impl;
 
-  // create refs (on device!):
-  unsigned triangleCount = 0;
-  unsigned quadCount = 0;
-  unsigned sphereCount = 0;
-  unsigned coneCount = 0;
-  unsigned cylinderCount = 0;
-  unsigned bezierCurveCount = 0;
-  unsigned isoCount = 0;
-  unsigned volumeCount = 0;
-  unsigned instanceCount = 0;
+  if (m_impl->parent->type == CPU::World) {
+    m_impl->parent->m_worldBLSs.clear();
 
-  for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
-    if (!dco::validHandle(geomID)) continue;
+    for (const dco::Handle &instID : m_impl->parent->m_instances) {
+      if (!dco::validHandle(instID)) continue;
 
-    dco::Geometry geom = deviceState()->dcos.geometries[geomID];
-    if (!geom.isValid()) continue;
-
-    switch (geom.type) {
-      case dco::Geometry::Triangle:
-        triangleCount++;
-        break;
-      case dco::Geometry::Quad:
-        quadCount++;
-        break;
-      case dco::Geometry::Sphere:
-        sphereCount++;
-        break;
-      case dco::Geometry::Cone:
-        coneCount++;
-        break;
-      case dco::Geometry::Cylinder:
-        cylinderCount++;
-        break;
-      case dco::Geometry::BezierCurve:
-        bezierCurveCount++;
-        break;
-      case dco::Geometry::ISOSurface:
-        isoCount++;
-        break;
-      case dco::Geometry::Volume:
-        volumeCount++;
-        break;
-      case dco::Geometry::Instance:
-      default:
-        break;
-    }
-  }
-
-  m_impl->m_accelStorage.triangleBLSs.resize(triangleCount);
-  m_impl->m_accelStorage.quadBLSs.resize(quadCount);
-  m_impl->m_accelStorage.sphereBLSs.resize(sphereCount);
-  m_impl->m_accelStorage.coneBLSs.resize(coneCount);
-  m_impl->m_accelStorage.cylinderBLSs.resize(cylinderCount);
-  m_impl->m_accelStorage.bezierCurveBLSs.resize(bezierCurveCount);
-  m_impl->m_accelStorage.isoSurfaceBLSs.resize(isoCount);
-  m_impl->m_accelStorage.volumeBLSs.resize(volumeCount);
-  // No instance storage: instance BLSs are the TLSs of child scenes
-
-  // first, build BLSs
-  triangleCount = quadCount = sphereCount = coneCount = cylinderCount
-                = bezierCurveCount = isoCount = volumeCount = 0;
-  for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
-    if (!dco::validHandle(geomID)) continue;
-
-    const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
-    if (!geom.isValid()) continue;
-
-    binned_sah_builder builder;
-
-    if (geom.type == dco::Geometry::Triangle) {
-      unsigned index = triangleCount++;
-      builder.enable_spatial_splits(true);
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::TriangleBVH{}, hostData.data(), hostData.size());
-      m_impl->m_accelStorage.triangleBLSs[index]
-        = GPU::TriangleBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::Quad) {
-      unsigned index = quadCount++;
-      builder.enable_spatial_splits(true);
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::TriangleBVH{}, hostData.data(), hostData.size());
-      m_impl->m_accelStorage.quadBLSs[index]
-        = GPU::TriangleBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::Sphere) {
-      unsigned index = sphereCount++;
-      builder.enable_spatial_splits(true);
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_sphere<float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::SphereBVH{}, hostData.data(), hostData.size());
-      m_impl->m_accelStorage.sphereBLSs[index]
-        = GPU::SphereBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::Cone) {
-      unsigned index = coneCount++;
-      builder.enable_spatial_splits(false); // no spatial splits for cones yet!
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<dco::Cone> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::ConeBVH{}, hostData.data(), hostData.size());
-      m_impl->m_accelStorage.coneBLSs[index]
-        = GPU::ConeBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::Cylinder) {
-      unsigned index = cylinderCount++;
-      builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::CylinderBVH{}, hostData.data(), hostData.size());
-      m_impl->m_accelStorage.cylinderBLSs[index]
-        = GPU::CylinderBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::BezierCurve) {
-      unsigned index = bezierCurveCount++;
-      builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      std::vector<dco::BezierCurve> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::BezierCurveBVH{}, hostData.data(), hostData.size());
-      m_impl->m_accelStorage.bezierCurveBLSs[index]
-        = GPU::BezierCurveBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::ISOSurface) {
-      unsigned index = isoCount++;
-      builder.enable_spatial_splits(false); // no spatial splits for ISOs
-      // Until we have a high-quality GPU builder, do that on the CPU!
-      dco::ISOSurface iso;
-      HIP_SAFE_CALL(hipMemcpy(&iso, geom.primitives.data,
-          sizeof(iso), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(
-        CPU::ISOSurfaceBVH{}, &iso, 1);
-      m_impl->m_accelStorage.isoSurfaceBLSs[index]
-        = GPU::ISOSurfaceBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::Volume) {
-      unsigned index = volumeCount++;
-      builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-      dco::Volume vol;
-      HIP_SAFE_CALL(hipMemcpy(&vol, geom.primitives.data,
-          sizeof(vol), hipMemcpyDeviceToHost));
-      auto accelStorage = builder.build(CPU::VolumeBVH{}, &vol, 1);
-      m_impl->m_accelStorage.volumeBLSs[index]
-        = GPU::VolumeBVH(accelStorage);
-    } else if (geom.type == dco::Geometry::Instance) {
-      instanceCount++;
-    }
-  }
-
-  m_impl->parent->m_BLSs.clear();
-  m_impl->parent->m_worldBLSs.clear();
-
-  // now initialize BVH refs for use in shader code:
-  triangleCount = quadCount = sphereCount = coneCount = cylinderCount
-                = bezierCurveCount = isoCount = volumeCount = 0;
-  for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
-    if (!dco::validHandle(geomID)) continue;
-
-    const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
-    if (!geom.isValid()) continue;
-
-    if (m_impl->parent->type == CPU::World) {
-      dco::WorldBLS bls;
-      bls.blsID = m_impl->parent->m_worldBLSs.alloc(bls);
-
-      if (geom.type != dco::Geometry::Instance) {
-        // TODO: error!
-      }
-
-      instanceCount++;
       dco::Instance inst;
-      HIP_SAFE_CALL(hipMemcpy(&inst, geom.primitives.data,
+      HIP_SAFE_CALL(hipMemcpy(&inst, deviceState()->onDevice.instances+instID,
                               sizeof(inst), hipMemcpyDefault));
 
-      bls.theBVH = inst.theBVH;
-      bls.instID = inst.instID;
+      m_impl->parent->m_worldBLSs.alloc(inst);
+    }
 
-      bls.affineInv = inst.affineInv;
-      bls.transInv = inst.transInv;
-      bls.len = inst.len;
-      bls.time = inst.time;
+    // Build TLS
+    binned_sah_builder tlsBuilder;
+    typedef index_bvh<dco::Instance> WorldTLS;
+    auto h_worldTLS = tlsBuilder.build(
+        WorldTLS{}, m_impl->parent->m_worldBLSs.devicePtr(),
+        m_impl->parent->m_worldBLSs.size());
+    m_impl->m_worldTLS = GPU::WorldTLS(h_worldTLS);
 
-      if (inst.type == dco::Instance::Transform) {
-        bls.type = dco::WorldBLS::Transform;
-      } else {
-        bls.type = dco::WorldBLS::MotionTransform;
+    // Build flat list of lights
+    m_impl->parent->m_allLights.clear();
+
+    // world lights
+    for (unsigned i=0; i<m_impl->parent->m_lights.size(); ++i)
+      m_impl->parent->m_allLights.push_back(m_impl->parent->m_lights[i]);
+
+    // instanced lights
+    for (const dco::Handle &instID : m_impl->parent->m_instances) {
+      if (!dco::validHandle(instID)) continue;
+
+      dco::Instance inst;
+      HIP_SAFE_CALL(hipMemcpy(&inst, deviceState()->onDevice.instances+instID,
+                              sizeof(inst), hipMemcpyDefault));
+      dco::Group group = deviceState()->dcos.groups[inst.groupID];
+
+      std::vector<dco::Handle> groupLights(group.numLights);
+      HIP_SAFE_CALL(hipMemcpy(groupLights.data(), group.lights,
+                                group.numLights*sizeof(dco::Handle),
+                                hipMemcpyDefault));
+      for (unsigned i=0; i<group.numLights; ++i)
+        m_impl->parent->m_allLights.push_back(groupLights[i]);
+    }
+  } else {
+    // create refs (on device!):
+    unsigned triangleCount = 0;
+    unsigned quadCount = 0;
+    unsigned sphereCount = 0;
+    unsigned coneCount = 0;
+    unsigned cylinderCount = 0;
+    unsigned bezierCurveCount = 0;
+    unsigned isoCount = 0;
+    unsigned volumeCount = 0;
+
+    for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
+      if (!dco::validHandle(geomID)) continue;
+
+      dco::Geometry geom = deviceState()->dcos.geometries[geomID];
+      if (!geom.isValid()) continue;
+
+      switch (geom.type) {
+        case dco::Geometry::Triangle:
+          triangleCount++;
+          break;
+        case dco::Geometry::Quad:
+          quadCount++;
+          break;
+        case dco::Geometry::Sphere:
+          sphereCount++;
+          break;
+        case dco::Geometry::Cone:
+          coneCount++;
+          break;
+        case dco::Geometry::Cylinder:
+          cylinderCount++;
+          break;
+        case dco::Geometry::BezierCurve:
+          bezierCurveCount++;
+          break;
+        case dco::Geometry::ISOSurface:
+          isoCount++;
+          break;
+        case dco::Geometry::Volume:
+          volumeCount++;
+          break;
+        default:
+          break;
       }
-      m_impl->parent->m_worldBLSs.update(bls.blsID, bls);
-    } else {
+    }
+
+    m_impl->m_accelStorage.triangleBLSs.resize(triangleCount);
+    m_impl->m_accelStorage.quadBLSs.resize(quadCount);
+    m_impl->m_accelStorage.sphereBLSs.resize(sphereCount);
+    m_impl->m_accelStorage.coneBLSs.resize(coneCount);
+    m_impl->m_accelStorage.cylinderBLSs.resize(cylinderCount);
+    m_impl->m_accelStorage.bezierCurveBLSs.resize(bezierCurveCount);
+    m_impl->m_accelStorage.isoSurfaceBLSs.resize(isoCount);
+    m_impl->m_accelStorage.volumeBLSs.resize(volumeCount);
+
+    // first, build BLSs
+    triangleCount = quadCount = sphereCount = coneCount = cylinderCount
+                  = bezierCurveCount = isoCount = volumeCount = 0;
+    for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
+      if (!dco::validHandle(geomID)) continue;
+
+      const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
+      if (!geom.isValid()) continue;
+
+      binned_sah_builder builder;
+
+      if (geom.type == dco::Geometry::Triangle) {
+        unsigned index = triangleCount++;
+        builder.enable_spatial_splits(true);
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+        HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+            hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::TriangleBVH{}, hostData.data(), hostData.size());
+        m_impl->m_accelStorage.triangleBLSs[index]
+          = GPU::TriangleBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::Quad) {
+        unsigned index = quadCount++;
+        builder.enable_spatial_splits(true);
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+        HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+            hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::TriangleBVH{}, hostData.data(), hostData.size());
+        m_impl->m_accelStorage.quadBLSs[index]
+          = GPU::TriangleBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::Sphere) {
+        unsigned index = sphereCount++;
+        builder.enable_spatial_splits(true);
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        std::vector<basic_sphere<float>> hostData(geom.primitives.len);
+        HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+            hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::SphereBVH{}, hostData.data(), hostData.size());
+        m_impl->m_accelStorage.sphereBLSs[index]
+          = GPU::SphereBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::Cone) {
+        unsigned index = coneCount++;
+        builder.enable_spatial_splits(false); // no spatial splits for cones yet!
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        std::vector<dco::Cone> hostData(geom.primitives.len);
+        HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+            hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::ConeBVH{}, hostData.data(), hostData.size());
+        m_impl->m_accelStorage.coneBLSs[index]
+          = GPU::ConeBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::Cylinder) {
+        unsigned index = cylinderCount++;
+        builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
+        HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+            hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::CylinderBVH{}, hostData.data(), hostData.size());
+        m_impl->m_accelStorage.cylinderBLSs[index]
+          = GPU::CylinderBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::BezierCurve) {
+        unsigned index = bezierCurveCount++;
+        builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        std::vector<dco::BezierCurve> hostData(geom.primitives.len);
+        HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+            hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::BezierCurveBVH{}, hostData.data(), hostData.size());
+        m_impl->m_accelStorage.bezierCurveBLSs[index]
+          = GPU::BezierCurveBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::ISOSurface) {
+        unsigned index = isoCount++;
+        builder.enable_spatial_splits(false); // no spatial splits for ISOs
+        // Until we have a high-quality GPU builder, do that on the CPU!
+        dco::ISOSurface iso;
+        HIP_SAFE_CALL(hipMemcpy(&iso, geom.primitives.data,
+            sizeof(iso), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(
+          CPU::ISOSurfaceBVH{}, &iso, 1);
+        m_impl->m_accelStorage.isoSurfaceBLSs[index]
+          = GPU::ISOSurfaceBVH(accelStorage);
+      } else if (geom.type == dco::Geometry::Volume) {
+        unsigned index = volumeCount++;
+        builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
+        dco::Volume vol;
+        HIP_SAFE_CALL(hipMemcpy(&vol, geom.primitives.data,
+            sizeof(vol), hipMemcpyDeviceToHost));
+        auto accelStorage = builder.build(CPU::VolumeBVH{}, &vol, 1);
+        m_impl->m_accelStorage.volumeBLSs[index]
+          = GPU::VolumeBVH(accelStorage);
+      }
+    }
+
+    m_impl->parent->m_BLSs.clear();
+
+    // now initialize BVH refs for use in shader code:
+    triangleCount = quadCount = sphereCount = coneCount = cylinderCount
+                  = bezierCurveCount = isoCount = volumeCount = 0;
+    for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
+      if (!dco::validHandle(geomID)) continue;
+
+      const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
+      if (!geom.isValid()) continue;
+
       dco::BLS bls;
       bls.blsID = m_impl->parent->m_BLSs.alloc(bls);
 
@@ -340,53 +351,14 @@ void VisionaraySceneGPU::commit()
       }
       m_impl->parent->m_BLSs.update(bls.blsID, bls);
     }
-  }
 
-  // Build TLS
-  binned_sah_builder tlsBuilder;
-  if (m_impl->parent->type == CPU::World) {
-    typedef index_bvh<dco::WorldBLS> WorldTLS;
-    auto h_worldTLS = tlsBuilder.build(
-        WorldTLS{}, m_impl->parent->m_worldBLSs.devicePtr(),
-        m_impl->parent->m_worldBLSs.size());
-    m_impl->m_worldTLS = GPU::WorldTLS(h_worldTLS);
-  } else {
+    // Build TLS
+    binned_sah_builder tlsBuilder;
     typedef index_bvh<dco::BLS> TLS;
     auto h_TLS = tlsBuilder.build(
         TLS{}, m_impl->parent->m_BLSs.devicePtr(),
         m_impl->parent->m_BLSs.size());
     m_impl->m_TLS = GPU::TLS(h_TLS);
-  }
-
-  // World: build flat list of lights
-  if (m_impl->parent->type == CPU::World) {
-    m_impl->parent->m_allLights.clear();
-
-    // world lights
-    for (unsigned i=0; i<m_impl->parent->m_lights.size(); ++i)
-      m_impl->parent->m_allLights.push_back(m_impl->parent->m_lights[i]);
-
-    // instanced lights
-    for (const dco::Handle &geomID : m_impl->parent->m_geometries) {
-      if (!dco::validHandle(geomID)) continue;
-
-      const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
-      if (!geom.isValid()) continue;
-
-      if (geom.type != dco::Geometry::Instance) continue;
-
-      dco::Instance inst;
-      HIP_SAFE_CALL(hipMemcpy(&inst, geom.primitives.data,
-                              sizeof(inst), hipMemcpyDefault));
-      dco::Group group = deviceState()->dcos.groups[inst.groupID];
-
-      std::vector<dco::Handle> groupLights(group.numLights);
-      HIP_SAFE_CALL(hipMemcpy(groupLights.data(), group.lights,
-                                group.numLights*sizeof(dco::Handle),
-                                hipMemcpyDefault));
-      for (unsigned i=0; i<group.numLights; ++i)
-        m_impl->parent->m_allLights.push_back(groupLights[i]);
-    }
   }
 }
 

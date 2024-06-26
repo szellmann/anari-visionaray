@@ -13,7 +13,7 @@ struct MotionTransform : public Instance
 
   void commit() override;
 
-  void visionarayGeometryUpdate() override;
+  void visionarayInstanceUpdate() override;
 
  private:
   helium::ChangeObserverPtr<Array1D> m_motionTransform;

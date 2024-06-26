@@ -192,8 +192,8 @@ void World::rebuildTLS()
     if (i && i->isValid()
         && (!i->group()->surfaces().empty()
             || !i->group()->volumes().empty())) {
-      i->visionarayGeometryUpdate();
-      vscene->attachGeometry(i->visionarayGeometry(), dco::makeDefaultMaterial(), id);
+      i->visionarayInstanceUpdate();
+      vscene->attachInstance(i->visionarayInstance(), id, i->id());
     } else if (i->group()->surfaces().empty() && i->group()->volumes().empty() && 
        !i->group()->lights().empty()) {
 

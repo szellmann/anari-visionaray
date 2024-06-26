@@ -22,8 +22,8 @@ struct Instance : public Object
   const Group *group() const;
   Group *group();
 
-  dco::Geometry visionarayGeometry() const;
-  virtual void visionarayGeometryUpdate();
+  dco::Instance visionarayInstance() const;
+  virtual void visionarayInstanceUpdate();
 
   void markCommitted() override;
 
@@ -32,9 +32,7 @@ struct Instance : public Object
  protected:
   uint32_t m_id{~0u};
   helium::IntrusivePtr<Group> m_group;
-  dco::Geometry vgeom;
-
-  HostDeviceArray<dco::Instance> m_instance;
+  dco::Instance vinstance;
 
   HostDeviceArray<mat4> m_xfms;
   HostDeviceArray<mat3> m_normalXfms;
