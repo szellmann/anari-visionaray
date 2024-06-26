@@ -9,6 +9,7 @@
 // helium
 #include "helium/BaseFrame.h"
 // std
+#include <chrono>
 #include <future>
 #include <vector>
 
@@ -113,7 +114,18 @@ struct Frame : public helium::BaseFrame
   helium::TimeStamp m_lastCommitOccured{0};
   helium::TimeStamp m_frameLastRendered{0};
 
+#ifdef WITH_CUDA
+  cudaEvent_t m_eventStart;
+  cudaEvent_t m_eventStop;
+#elif defined(WITH_HIP)
+  hipEvent_t m_eventStart;
+  hipEvent_t m_eventStop;
+#else
   mutable std::future<void> m_future;
+  typedef std::chrono::time_point<std::chrono::steady_clock> Event_t;
+  Event_t m_eventStart;
+  Event_t m_eventStop;
+#endif
 };
 
 } // namespace visionaray

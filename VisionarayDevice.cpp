@@ -47,14 +47,26 @@ const char **query_extensions();
 
 void *VisionarayDevice::mapArray(ANARIArray a)
 {
+#ifdef WITH_CUDA
+  // TODO: set device
+#elif defined(WITH_HIP)
+  // TODO: set device
+#else
   deviceState()->renderingSemaphore.arrayMapAcquire();
+#endif
   return helium::BaseDevice::mapArray(a);
 }
 
 void VisionarayDevice::unmapArray(ANARIArray a)
 {
   helium::BaseDevice::unmapArray(a);
+#ifdef WITH_CUDA
+  // TODO: set device
+#elif defined(WITH_HIP)
+  // TODO: set device
+#else
   deviceState()->renderingSemaphore.arrayMapRelease();
+#endif
 }
 
 // API Objects ////////////////////////////////////////////////////////////////

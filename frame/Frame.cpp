@@ -1,6 +1,5 @@
 // std
 #include <algorithm>
-#include <chrono>
 #include <random>
 #include <thread>
 // ours
@@ -35,11 +34,34 @@ Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
 {
   vframe.frameID = deviceState()->dcos.frames.alloc(vframe);
   s->objectCounts.frames++;
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaEventCreate(&m_eventStart));
+  CUDA_SAFE_CALL(cudaEventCreate(&m_eventStop));
+
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
+#elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipEventCreate(&m_eventStart));
+  HIP_SAFE_CALL(hipEventCreate(&m_eventStop));
+
+  HIP_SAFE_CALL(hipEventRecord(m_eventStart));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStop));
+#else
+  m_eventStart = std::chrono::steady_clock::now();
+  m_eventStop = std::chrono::steady_clock::now();
+#endif
 }
 
 Frame::~Frame()
 {
   wait();
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaEventDestroy(m_eventStart));
+  CUDA_SAFE_CALL(cudaEventDestroy(m_eventStop));
+#elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipEventDestroy(m_eventStart));
+  HIP_SAFE_CALL(hipEventDestroy(m_eventStop));
+#endif
   deviceState()->dcos.frames.free(vframe.frameID);
   deviceState()->objectCounts.frames--;
 }
@@ -137,6 +159,17 @@ bool Frame::getProperty(
     const std::string_view &name, ANARIDataType type, void *ptr, uint32_t flags)
 {
   if (type == ANARI_FLOAT32 && name == "duration") {
+    if (flags & ANARI_WAIT)
+      wait();
+#ifdef WITH_CUDA
+    CUDA_SAFE_CALL(cudaEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
+    m_duration /= 1000.f;
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipEventElapsedTime(&ms, m_eventStart, m_eventStop));
+    m_duration /= 1000.f;
+#else
+    m_duration = std::chrono::duration<float>(m_eventStop - m_eventStart).count();
+#endif
     helium::writeToVoidP(ptr, m_duration);
     return true;
   }
@@ -161,21 +194,15 @@ void Frame::renderFrame()
   state->waitOnCurrentFrame();
   state->currentFrame = this;
 
-  m_future = async<void>([&, state, this]() {
 #ifdef WITH_CUDA
-    cudaEvent_t start, stop;
-    CUDA_SAFE_CALL(cudaEventCreate(&start));
-    CUDA_SAFE_CALL(cudaEventCreate(&stop));
-    CUDA_SAFE_CALL(cudaEventRecord(start));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart));
 #elif defined(WITH_HIP)
-    hipEvent_t start, stop;
-    HIP_SAFE_CALL(hipEventCreate(&start));
-    HIP_SAFE_CALL(hipEventCreate(&stop));
-    HIP_SAFE_CALL(hipEventRecord(start));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStart));
 #else
-    auto start = std::chrono::steady_clock::now();
-#endif
+  m_future = async<void>([&, state, this]() {
+    m_eventStart = std::chrono::steady_clock::now();
     state->renderingSemaphore.frameStart();
+#endif
     state->commitBufferFlush();
 
     if (!isValid()) {
@@ -185,11 +212,12 @@ void Frame::renderFrame()
       // TODO: outside this function!
 #else
       std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
-#endif
       state->renderingSemaphore.frameEnd();
+#endif
       return;
     }
 
+#if !defined(WITH_CUDA) && !defined(WITH_HIP)
     if (state->commitBufferLastFlush() <= m_frameLastRendered) {
       if (!m_renderer->stochasticRendering()) {
         state->renderingSemaphore.frameEnd();
@@ -198,6 +226,7 @@ void Frame::renderFrame()
     }
 
     m_frameLastRendered = helium::newTimeStamp();
+#endif
 
     checkAccumulationReset();
     // TAA is a parameter on the renderer; we check it here to
@@ -314,25 +343,15 @@ void Frame::renderFrame()
 #endif
     }
 
-    state->renderingSemaphore.frameEnd();
-
 #ifdef WITH_CUDA
-    CUDA_SAFE_CALL(cudaEventRecord(stop));
-    CUDA_SAFE_CALL(cudaEventSynchronize(stop));
-    float ms = 0.0f;
-    CUDA_SAFE_CALL(cudaEventElapsedTime(&ms, start, stop));
-    m_duration = ms/1000.f;
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
 #elif defined(WITH_HIP)
-    HIP_SAFE_CALL(hipEventRecord(stop));
-    HIP_SAFE_CALL(hipEventSynchronize(stop));
-    float ms = 0.0f;
-    HIP_SAFE_CALL(hipEventElapsedTime(&ms, start, stop));
-    m_duration = ms/1000.f;
+  HIP_SAFE_CALL(hipEventRecord(m_eventStop));
 #else
-    auto end = std::chrono::steady_clock::now();
-    m_duration = std::chrono::duration<float>(end - start).count();
-#endif
+    state->renderingSemaphore.frameEnd();
+    m_eventStop = std::chrono::steady_clock::now();
   });
+#endif
 }
 
 void *Frame::map(std::string_view channel,
@@ -412,17 +431,29 @@ void *Frame::mapDepthBuffer()
 
 bool Frame::ready() const
 {
+#ifdef WITH_CUDA
+  return cudaEventSynchronize(m_eventStop) == cudaSuccess;
+#elif WITH_HIP
+  return hipEventSynchronize(m_eventStop) == hipSuccess;
+#else
   return is_ready(m_future);
+#endif
 }
 
 void Frame::wait() const
 {
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaEventSynchronize(m_eventStop));
+#elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipEventSynchronize(m_eventStop));
+#else
   if (m_future.valid()) {
     m_future.get();
     this->refDec(helium::RefType::INTERNAL);
     if (deviceState()->currentFrame == this)
       deviceState()->currentFrame = nullptr;
   }
+#endif
 }
 
 void Frame::checkAccumulationReset()

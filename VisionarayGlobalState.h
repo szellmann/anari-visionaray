@@ -80,12 +80,19 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::Frame *frames{nullptr};
   } onDevice;
 
+#ifdef WITH_CUDA
+  cudaStream_t stream;
+#elif defined(WITH_HIP)
+  hipStream_t stream;
+#else
   RenderingSemaphore renderingSemaphore;
+#endif
   Frame *currentFrame{nullptr};
 
   // Helper methods //
 
   VisionarayGlobalState(ANARIDevice d);
+  ~VisionarayGlobalState();
   void waitOnCurrentFrame() const;
 };
 
