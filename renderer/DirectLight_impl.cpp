@@ -159,7 +159,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
       viewDir = -ray.dir;
 
-      getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
+      float3 localHitPos = hr.isect_pos;
+      getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
       mat3 nxfm = getNormalTransform(inst, ray);
       gn = nxfm * gn;
@@ -167,7 +168,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
       sn = faceforward(sn, viewDir, gn);
 
-      float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
+      float4 tng4 = getTangent(geom, hr.prim_id, localHitPos, uv);
       if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
         tng = tng4.xyz();
         btng = cross(sn, tng) * tng4.w;

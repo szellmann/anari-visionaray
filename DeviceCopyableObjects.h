@@ -1289,7 +1289,12 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   xfmRay.dir = affineInv * xfmRay.dir;
 
   auto hr = intersect(xfmRay,bls.theBVH);
-  hr.inst_id = hr.hit ? bls.instID : ~0u;
+  if (hr.hit) {
+    hr.isect_pos = xfmRay.ori + hr.t * xfmRay.dir;
+    hr.inst_id = bls.instID;
+  } else {
+    hr.inst_id = ~0u;
+  }
   return hr;
 }
 

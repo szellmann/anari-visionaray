@@ -32,6 +32,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
     vec3f hitPos = ray.ori + hr.t * ray.dir;
+    vec3f localHitPos = hr.isect_pos;
     vec2f uv{hr.u,hr.v};
     vec3f gn, sn;
 
@@ -40,7 +41,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       attribs[i] = getAttribute(geom, (dco::Attribute)i, hr.prim_id, uv);
     }
 
-    getNormals(geom, hr.prim_id, hitPos, uv, gn, sn);
+    getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
     mat3 nxfm = getNormalTransform(inst, ray);
     gn = nxfm * gn;
@@ -48,7 +49,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
     vec3f tng{0.f};
     vec3f btng{0.f};
-    float4 tng4 = getTangent(geom, hr.prim_id, hitPos, uv);
+    float4 tng4 = getTangent(geom, hr.prim_id, localHitPos, uv);
     if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
       tng = tng4.xyz();
       btng = cross(sn, tng) * tng4.w;
