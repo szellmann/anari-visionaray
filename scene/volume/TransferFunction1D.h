@@ -46,8 +46,6 @@ struct TransferFunction1D : public Volume
   texture<float4, 1> transFuncTexture;
 #endif
 
-  dco::TransferFunction vtransfunc;
-
   HostDeviceArray<dco::Volume> m_volume;
 };
 

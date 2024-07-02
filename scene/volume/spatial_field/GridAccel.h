@@ -44,7 +44,7 @@ struct GridAccel
 
   VisionarayGlobalState *deviceState() const;
 
-  void computeMaxOpacities(dco::TransferFunction tf);
+  void computeMaxOpacities(dco::TransferFunction1D tf);
 
 private:
 

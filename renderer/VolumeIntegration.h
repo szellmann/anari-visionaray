@@ -7,16 +7,14 @@
 namespace visionaray {
 
 VSNRAY_FUNC
-inline float4 postClassify(ScreenSample &ss, dco::TransferFunction tf, float v) {
-  if (tf.type == dco::TransferFunction::_1D) {
-    box1 valueRange = tf.as1D.valueRange;
-    v = (v - valueRange.min) / (valueRange.max - valueRange.min);
-    float4 clr = tex1D(tf.as1D.sampler, v);
-    // if (ss.debug()) {
-    //   printf("v: %f, clr: (%f,%f,%f)\n",v,clr.x,clr.y,clr.z);
-    // }
-    return clr;
-  }
+inline float4 postClassify(ScreenSample &ss, dco::TransferFunction1D tf, float v) {
+  box1 valueRange = tf.valueRange;
+  v = (v - valueRange.min) / (valueRange.max - valueRange.min);
+  float4 clr = tex1D(tf.sampler, v);
+  // if (ss.debug()) {
+  //   printf("v: %f, clr: (%f,%f,%f)\n",v,clr.x,clr.y,clr.z);
+  // }
+  return clr;
 
   return {};
 }
@@ -28,7 +26,7 @@ inline float rayMarchVolume(ScreenSample &ss,
                             VisionarayGlobalState::DeviceObjectRegistry onDevice,
                             float3 &color,
                             float &alpha) {
-  float dt = onDevice.spatialFields[vol.asTransferFunction1D.fieldID].baseDT;
+  float dt = onDevice.spatialFields[vol.fieldID].baseDT;
   auto boxHit = intersect(ray, vol.bounds);
   // if (ss.debug()) {
   //   printf("boxHit: %f,%f\n",boxHit.tnear,boxHit.tfar);
@@ -39,9 +37,9 @@ inline float rayMarchVolume(ScreenSample &ss,
   for (;t<boxHit.tfar&&alpha<0.99f;t+=dt) {
     float3 P = ray.ori+ray.dir*t;
     float v = 0.f;
-    if (sampleField(onDevice.spatialFields[vol.asTransferFunction1D.fieldID],P,v)) {
+    if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
       float4 sample
-          = postClassify(ss,onDevice.transferFunctions[vol.asTransferFunction1D.tfID],v);
+          = postClassify(ss,vol.asTransferFunction1D,v);
       color += dt * (1.f-alpha) * sample.w * sample.xyz();
       alpha += dt * (1.f-alpha) * sample.w;
     }
@@ -66,7 +64,7 @@ inline HitRecordVolume sampleFreeFlightDistance(
     ScreenSample &ss, Ray ray, const dco::Volume &vol,
     VisionarayGlobalState::DeviceObjectRegistry onDevice) {
 
-  const auto &sf = onDevice.spatialFields[vol.asTransferFunction1D.fieldID];
+  const auto &sf = onDevice.spatialFields[vol.fieldID];
 
   HitRecordVolume hr;
 
@@ -90,14 +88,14 @@ inline HitRecordVolume sampleFreeFlightDistance(
       float v = 0.f;
       if (sampleField(sf,P,v)) {
         float4 sample
-            = postClassify(ss,onDevice.transferFunctions[vol.asTransferFunction1D.tfID],v);
+            = postClassify(ss,vol.asTransferFunction1D,v);
         hr.albedo = sample.xyz();
         hr.extinction = sample.w;
         float u = ss.random();
         if (hr.extinction >= u * majorant) {
           hr.hit = true;
           hr.volID = vol.volID;
-          hr.fieldID = vol.asTransferFunction1D.fieldID;
+          hr.fieldID = vol.fieldID;
           hr.Tr = 0.f;
           hr.t = t;
           return false; // stop traversal

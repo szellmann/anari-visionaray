@@ -20,14 +20,10 @@ TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d)
 {
   vgeom.type = dco::Geometry::Volume;
   vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
-
-  vtransfunc.type = dco::TransferFunction::_1D;
-  vtransfunc.tfID = deviceState()->dcos.transferFunctions.alloc(vtransfunc);
 }
 
 TransferFunction1D::~TransferFunction1D()
 {
-  deviceState()->dcos.transferFunctions.free(vtransfunc.volID);
   deviceState()->dcos.geometries.free(vgeom.geomID);
 }
 
@@ -112,32 +108,31 @@ void TransferFunction1D::commit()
   m_volume[0].type = dco::Volume::TransferFunction1D;
   m_volume[0].bounds = m_bounds;
   m_volume[0].volID = m_field->visionaraySpatialField().fieldID;
-  m_volume[0].asTransferFunction1D.tfID = vtransfunc.tfID;
-  m_volume[0].asTransferFunction1D.fieldID
-      = m_field->visionaraySpatialField().fieldID;
-  m_volume[0].asTransferFunction1D.densityScale = m_densityScale;
+  m_volume[0].fieldID = m_field->visionaraySpatialField().fieldID;
+  m_volume[0].densityScale = m_densityScale;
+
+  m_volume[0].asTransferFunction1D.numValues = tex.size()[0];
+  m_volume[0].asTransferFunction1D.valueRange = m_valueRange;
+#ifdef WITH_CUDA
+  transFuncTexture = cuda_texture<float4, 1>(tex);
+  m_volume[0].asTransferFunction1D.sampler
+      = cuda_texture_ref<float4, 1>(transFuncTexture);
+#elif defined(WITH_HIP)
+  transFuncTexture = hip_texture<float4, 1>(tex);
+  m_volume[0].asTransferFunction1D.sampler
+      = hip_texture_ref<float4, 1>(transFuncTexture);
+#else
+  m_volume[0].asTransferFunction1D.sampler
+      = texture_ref<float4, 1>(transFuncTexture);
+#endif
 
   vgeom.primitives.data = m_volume.devicePtr();
   vgeom.primitives.len = m_volume.size();
 
-  vtransfunc.volID = m_volume[0].volID;
-  vtransfunc.as1D.numValues = tex.size()[0];
-  vtransfunc.as1D.valueRange = m_valueRange;
-#ifdef WITH_CUDA
-  transFuncTexture = cuda_texture<float4, 1>(tex);
-  vtransfunc.as1D.sampler = cuda_texture_ref<float4, 1>(transFuncTexture);
-#elif defined(WITH_HIP)
-  transFuncTexture = hip_texture<float4, 1>(tex);
-  vtransfunc.as1D.sampler = hip_texture_ref<float4, 1>(transFuncTexture);
-#else
-  vtransfunc.as1D.sampler = texture_ref<float4, 1>(transFuncTexture);
-#endif
-
   dispatch();
 
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
-  m_field->gridAccel().computeMaxOpacities(
-      deviceState()->onDevice.transferFunctions[vtransfunc.tfID]);
+  m_field->gridAccel().computeMaxOpacities(m_volume[0].asTransferFunction1D);
 #endif
 }
 
@@ -154,12 +149,9 @@ aabb TransferFunction1D::bounds() const
 void TransferFunction1D::dispatch()
 {
   deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
-  deviceState()->dcos.transferFunctions.update(vtransfunc.tfID, vtransfunc);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
-  deviceState()->onDevice.transferFunctions
-      = deviceState()->dcos.transferFunctions.devicePtr();
 }
 
 } // namespace visionaray

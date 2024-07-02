@@ -469,6 +469,21 @@ inline bool sampleGradient(SpatialField sf, vec3 P, float3 &value) {
   }
 }
 
+// Transfer functions //
+
+struct TransferFunction1D
+{
+  unsigned numValues;
+  box1 valueRange;
+#ifdef WITH_CUDA
+  cuda_texture_ref<float4, 1> sampler;
+#elif defined(WITH_HIP)
+  hip_texture_ref<float4, 1> sampler;
+#else
+  texture_ref<float4, 1> sampler;
+#endif
+};
+
 // Volume //
 
 struct Volume
@@ -478,12 +493,10 @@ struct Volume
 
   unsigned volID{UINT_MAX};
   unsigned geomID{UINT_MAX}; // ID in group (internally realized as geom)
+  unsigned fieldID{UINT_MAX}; // _should_ be same as volID
+  float densityScale;
 
-  struct {
-    unsigned tfID{UINT_MAX};
-    unsigned fieldID{UINT_MAX}; // _should_ be same as volID
-    float densityScale;
-  } asTransferFunction1D;
+  struct TransferFunction1D asTransferFunction1D;
 
   aabb bounds;
 };
@@ -1684,28 +1697,6 @@ struct World
   unsigned numLights{0};
   // flat list of lights active in all groups:
   Handle *allLights{nullptr};
-};
-
-// Transfer functions //
-
-struct TransferFunction
-{
-  enum Type { _1D, Unknown, };
-  Type type{Unknown};
-
-  unsigned tfID{UINT_MAX};
-  unsigned volID{UINT_MAX};
-  struct {
-    unsigned numValues;
-    box1 valueRange{0.f, 1.f};
-#ifdef WITH_CUDA
-    cuda_texture_ref<float4, 1> sampler;
-#elif defined(WITH_HIP)
-    hip_texture_ref<float4, 1> sampler;
-#else
-    texture_ref<float4, 1> sampler;
-#endif
-  } as1D;
 };
 
 // Camera //

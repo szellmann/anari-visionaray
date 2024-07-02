@@ -50,7 +50,7 @@ VisionarayGlobalState *GridAccel::deviceState() const
   return m_state;
 }
 
-void GridAccel::computeMaxOpacities(dco::TransferFunction tf)
+void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
 {
   size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
 
@@ -63,14 +63,12 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction tf)
         return;
       }
 
-      if (tf.type == dco::TransferFunction::_1D) {
-        valueRange.min -= tf.as1D.valueRange.min;
-        valueRange.min /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
-        valueRange.max -= tf.as1D.valueRange.min;
-        valueRange.max /= tf.as1D.valueRange.max - tf.as1D.valueRange.min;
-      }
+      valueRange.min -= tf.valueRange.min;
+      valueRange.min /= tf.valueRange.max - tf.valueRange.min;
+      valueRange.max -= tf.valueRange.min;
+      valueRange.max /= tf.valueRange.max - tf.valueRange.min;
 
-      int numValues = tf.as1D.numValues;
+      int numValues = tf.numValues;
 
       int lo = clamp(
           int(valueRange.min * (numValues - 1)), 0, numValues - 1);
@@ -80,7 +78,7 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction tf)
       float maxOpacity = 0.f;
       for (int i = lo; i <= hi; ++i) {
         float tc = (i + .5f) / numValues;
-        maxOpacity = fmaxf(maxOpacity, tex1D(tf.as1D.sampler, tc).w);
+        maxOpacity = fmaxf(maxOpacity, tex1D(tf.sampler, tc).w);
       }
       m_maxOpacities[threadID] = maxOpacity;
     });
