@@ -163,7 +163,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     float3 color(0.f);
     float alpha = 0.f;
 
-    rayMarchVolume(ss, ray, vol, onDevice, color, alpha);
+    rayMarchVolume(ss, ray, vol, color, alpha);
     result.color = over(float4(color,alpha), result.color);
     result.Ng = float3{}; // TODO: gradient
     result.Ns = float3{}; // TODO..

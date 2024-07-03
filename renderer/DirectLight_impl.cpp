@@ -129,9 +129,15 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       hitPos = ray.ori + hrv.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
-      if (rendererState.gradientShading &&
-          sampleGradient(onDevice.spatialFields[hrv.fieldID],hitPos,gn)) {
-        gn = normalize(gn);
+
+      if (rendererState.gradientShading) {
+        const dco::Instance &inst = onDevice.instances[hrv.inst_id];
+        const dco::Group &group = onDevice.groups[inst.groupID];
+        const dco::Geometry &geom = onDevice.geometries[group.geoms[hrv.geom_id]];
+        const dco::Volume &vol = geom.as<dco::Volume>(0);
+
+        if (sampleGradient(vol.field,hitPos,gn))
+          gn = normalize(gn);
       }
 
       if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)

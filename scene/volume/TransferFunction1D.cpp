@@ -108,7 +108,7 @@ void TransferFunction1D::commit()
   m_volume[0].type = dco::Volume::TransferFunction1D;
   m_volume[0].bounds = m_bounds;
   m_volume[0].volID = m_field->visionaraySpatialField().fieldID;
-  m_volume[0].fieldID = m_field->visionaraySpatialField().fieldID;
+  m_volume[0].field = m_field->visionaraySpatialField();
   m_volume[0].densityScale = m_densityScale;
 
   m_volume[0].asTransferFunction1D.numValues = tex.size()[0];

@@ -493,9 +493,9 @@ struct Volume
 
   unsigned volID{UINT_MAX};
   unsigned geomID{UINT_MAX}; // ID in group (internally realized as geom)
-  unsigned fieldID{UINT_MAX}; // _should_ be same as volID
   float densityScale;
 
+  SpatialField field;
   struct TransferFunction1D asTransferFunction1D;
 
   aabb bounds;

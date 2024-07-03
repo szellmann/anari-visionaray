@@ -23,10 +23,9 @@ VSNRAY_FUNC
 inline float rayMarchVolume(ScreenSample &ss,
                             Ray ray,
                             const dco::Volume &vol,
-                            VisionarayGlobalState::DeviceObjectRegistry onDevice,
                             float3 &color,
                             float &alpha) {
-  float dt = onDevice.spatialFields[vol.fieldID].baseDT;
+  float dt = vol.field.baseDT;
   auto boxHit = intersect(ray, vol.bounds);
   // if (ss.debug()) {
   //   printf("boxHit: %f,%f\n",boxHit.tnear,boxHit.tfar);
@@ -37,7 +36,7 @@ inline float rayMarchVolume(ScreenSample &ss,
   for (;t<boxHit.tfar&&alpha<0.99f;t+=dt) {
     float3 P = ray.ori+ray.dir*t;
     float v = 0.f;
-    if (sampleField(onDevice.spatialFields[vol.fieldID],P,v)) {
+    if (sampleField(vol.field,P,v)) {
       float4 sample
           = postClassify(ss,vol.asTransferFunction1D,v);
       color += dt * (1.f-alpha) * sample.w * sample.xyz();
@@ -50,21 +49,19 @@ inline float rayMarchVolume(ScreenSample &ss,
 struct HitRecordVolume
 {
   bool hit{false};
-  unsigned volID{UINT_MAX};
-  unsigned fieldID{UINT_MAX};
   float t{FLT_MAX};
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
+  int geom_id{-1};
   int inst_id{-1};
 };
 
 VSNRAY_FUNC
 inline HitRecordVolume sampleFreeFlightDistance(
-    ScreenSample &ss, Ray ray, const dco::Volume &vol,
-    VisionarayGlobalState::DeviceObjectRegistry onDevice) {
+    ScreenSample &ss, Ray ray, const dco::Volume &vol) {
 
-  const auto &sf = onDevice.spatialFields[vol.fieldID];
+  const auto &sf = vol.field;
 
   HitRecordVolume hr;
 
@@ -94,8 +91,6 @@ inline HitRecordVolume sampleFreeFlightDistance(
         float u = ss.random();
         if (hr.extinction >= u * majorant) {
           hr.hit = true;
-          hr.volID = vol.volID;
-          hr.fieldID = vol.fieldID;
           hr.Tr = 0.f;
           hr.t = t;
           return false; // stop traversal
@@ -150,9 +145,10 @@ inline HitRecordVolume sampleFreeFlightDistanceAllVolumes(
     const auto &group = onDevice.groups[inst.groupID];
     const auto &geom = onDevice.geometries[group.geoms[hrv.geom_id]];
     const auto &vol = geom.as<dco::Volume>(0);
-    HitRecordVolume hr = sampleFreeFlightDistance(ss, ray, vol, onDevice);
+    HitRecordVolume hr = sampleFreeFlightDistance(ss, ray, vol);
     if (hr.t < result.t) {
       result = hr;
+      result.geom_id = hrv.geom_id;
       result.inst_id = hrv.inst_id;
     }
     auto boxHit = intersect(ray, vol.bounds);
