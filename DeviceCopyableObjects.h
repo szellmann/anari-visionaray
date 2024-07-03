@@ -563,7 +563,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     hr.t = FLT_MAX;
     hr.hit = false;
     hr.geom_id = vol.geomID;
-    //hr.inst_id = ??????
 
     float3 albedo;
     float Tr{1.f};
@@ -629,7 +628,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
         hrv.hit = true;
         hrv.t = hr.t;
         hrv.geom_id = hr.geom_id;
-        hrv.inst_id = hr.inst_id;
         hrv.albedo = albedo;
         hrv.Tr = Tr;
         hrv.extinction = extinction;
@@ -1465,7 +1463,9 @@ inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
   ray.prd = &prd;
 
   ray.intersectionMask = Ray::Volume;
-  intersect(ray, tls);
+  auto hr = intersect(ray, tls);
+
+  result.inst_id = hr.inst_id;
 
   return result;
 }
