@@ -14,7 +14,7 @@ struct HitRecLight
 struct HitRec
 {
   hit_record<Ray, primitive<unsigned>> surface;
-  HitRecordVolume volume;
+  dco::HitRecordVolume volume;
   HitRecLight light;
   bool hit{false};
   bool volumeHit{false};

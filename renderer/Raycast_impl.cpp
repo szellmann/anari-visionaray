@@ -152,7 +152,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     result.color = over(float4(surfaceColor, surfaceAlpha), rendererState.bgColor);
   }
 
-  hr = intersectVolumes(ray, onDevice.TLSs[worldID]);
+  hr = intersectVolumeBounds(ray, onDevice.TLSs[worldID]);
 
   if (hr.hit) {
     const auto &inst = onDevice.instances[hr.inst_id];

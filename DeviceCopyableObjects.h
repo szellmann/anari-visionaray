@@ -72,6 +72,7 @@ struct Ray : basic_ray<float>
     BezierCurve = 0x40,
     ISOSurface = 0x80,
     Volume = 0x100,
+    VolumeBounds = 0x200,
   };
   unsigned intersectionMask = All;
   float time{0.f};
@@ -484,6 +485,13 @@ struct TransferFunction1D
 #endif
 };
 
+VSNRAY_FUNC
+inline float4 postClassify(TransferFunction1D tf, float v) {
+  box1 valueRange = tf.valueRange;
+  v = (v - valueRange.min) / (valueRange.max - valueRange.min);
+  return tex1D(tf.sampler, v);
+}
+
 // Volume //
 
 struct Volume
@@ -512,19 +520,124 @@ inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const Volum
   assert(0);
 }
 
-VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const Volume &vol)
+struct HitRecordVolume
 {
-  auto hr = intersect(ray,vol.bounds);
-  // we just report that we did hit the box; the user
-  // is later expected to intersect the volume bounds
-  // themselves to compute [t0,t1]
-  hit_record<Ray, primitive<unsigned>> result;
-  result.hit = hr.hit && (hr.tfar >= ray.tmin);
-  result.t = max(ray.tmin,hr.tnear);
-  result.geom_id = vol.geomID;
-  return result;
+  bool hit{false};
+  float t{FLT_MAX};
+  float3 albedo{0.f,0.f,0.f};
+  float extinction{0.f};
+  float Tr{1.f};
+  int geom_id{-1};
+  int inst_id{-1};
+};
+
+struct VolumePRD
+{
+  HitRecordVolume *hr;
+  Random *rnd;
+};
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol)
+{
+  auto boxHit = intersect(ray,vol.bounds);
+  if (ray.intersectionMask & Ray::VolumeBounds) {
+    // we just report that we did hit the box; the user
+    // is later expected to intersect the volume bounds
+    // themselves to compute [t0,t1]
+    hit_record<Ray, primitive<unsigned>> result;
+    result.hit = boxHit.hit && (boxHit.tfar >= ray.tmin);
+    result.t = max(ray.tmin,boxHit.tnear);
+    result.geom_id = vol.geomID;
+    return result;
+  } else {
+    VolumePRD &prd = *(VolumePRD *)ray.prd;
+
+    HitRecordVolume &hrv = *prd.hr;
+    Random &rnd = *prd.rnd;
+  
+    const auto &sf = vol.field;
+    dco::GridAccel grid = sf.gridAccel;
+
+    hit_record<Ray, primitive<unsigned>> hr;
+    hr.t = FLT_MAX;
+    hr.hit = false;
+    hr.geom_id = vol.geomID;
+    //hr.inst_id = ??????
+
+    float3 albedo;
+    float Tr{1.f};
+    float extinction{0.f};
+
+    auto woodcockFunc = [&](const int leafID, float t0, float t1) {
+
+      const float majorant = grid.isValid() ? grid.maxOpacities[leafID] : 1.f;
+      float t = t0;
+
+      while (1) {
+        if (majorant <= 0.f)
+          break;
+
+        t -= logf(1.f - rnd()) / majorant;
+
+        if (t >= t1)
+          break;
+
+        float3 P = ray.ori+ray.dir*t;
+        float v = 0.f;
+        if (sampleField(sf,P,v)) {
+          float4 sample
+              = postClassify(vol.asTransferFunction1D,v);
+          albedo = sample.xyz();
+          extinction = sample.w;
+          float u = rnd();
+          if (extinction >= u * majorant) {
+            hr.hit = true;
+            Tr = 0.f;
+            hr.t = t;
+            return false; // stop traversal
+          }
+        }
+      }
+
+      return true; // cont. traversal to the next spat. partition
+    };
+
+    ray.tmin = max(ray.tmin, boxHit.tnear);
+    ray.tmax = min(ray.tmax, boxHit.tfar);
+
+    // transform ray to voxel space
+    ray.ori = sf.pointToVoxelSpace(ray.ori);
+    ray.dir = sf.vectorToVoxelSpace(ray.dir);
+
+    const float dt_scale = length(ray.dir);
+    ray.dir = normalize(ray.dir);
+
+    ray.tmin = ray.tmin * dt_scale;
+    ray.tmax = ray.tmax * dt_scale;
+
+    hr.t = ray.tmax;
+    if (sf.gridAccel.isValid())
+      dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
+    else
+      woodcockFunc(-1, ray.tmin, ray.tmax);
+
+    if (hr.hit) {
+      hr.t /= dt_scale;
+
+      if (hr.t < hrv.t) {
+        hrv.hit = true;
+        hrv.t = hr.t;
+        hrv.geom_id = hr.geom_id;
+        hrv.inst_id = hr.inst_id;
+        hrv.albedo = albedo;
+        hrv.Tr = Tr;
+        hrv.extinction = extinction;
+      }
+    }
+
+    return hr;
+  }
 }
 
 // ISO surface //
@@ -1191,6 +1304,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
     return intersect(ray,bls.asISOSurface);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
     return intersect(ray,bls.asVolume);
+  else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
+    return intersect(ray,bls.asVolume);
 
   return {};
 }
@@ -1332,11 +1447,27 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
 }
 
 VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersectVolumes(
+inline hit_record<Ray, primitive<unsigned>> intersectVolumeBounds(
     Ray ray, const TLS &tls)
 {
-  ray.intersectionMask = Ray::Volume;
+  ray.intersectionMask = Ray::VolumeBounds;
   return intersect(ray, tls);
+}
+
+VSNRAY_FUNC
+inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
+{
+  HitRecordVolume result;
+
+  VolumePRD prd;
+  prd.hr = &result;
+  prd.rnd = (Random *)ray.prd;
+  ray.prd = &prd;
+
+  ray.intersectionMask = Ray::Volume;
+  intersect(ray, tls);
+
+  return result;
 }
 
 // Surface //
