@@ -501,7 +501,7 @@ struct Volume
 
   unsigned volID{UINT_MAX};
   unsigned geomID{UINT_MAX}; // ID in group (internally realized as geom)
-  float densityScale;
+  float unitDistance;
 
   SpatialField field;
   struct TransferFunction1D asTransferFunction1D;
@@ -577,7 +577,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
         if (majorant <= 0.f)
           break;
 
-        t -= logf(1.f - rnd()) / majorant;
+        t -= (logf(1.f - rnd()) / majorant) * vol.unitDistance;
 
         if (t >= t1)
           break;

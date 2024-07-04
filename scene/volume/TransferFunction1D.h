@@ -33,7 +33,7 @@ struct TransferFunction1D : public Volume
   aabb m_bounds;
 
   box1 m_valueRange{0.f, 1.f};
-  float m_densityScale{1.f};
+  float m_unitDistance{1.f};
 
   helium::ChangeObserverPtr<Array1D> m_colorData;
   helium::ChangeObserverPtr<Array1D> m_opacityData;

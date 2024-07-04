@@ -56,7 +56,11 @@ void TransferFunction1D::commit()
 
   m_colorData = getParamObject<Array1D>("color");
   m_opacityData = getParamObject<Array1D>("opacity");
-  m_densityScale = getParam<float>("densityScale", 1.f);
+  float densityScale = 1.f; // old, some apps may still use this!
+  if (getParam("densityScale", ANARI_FLOAT32, &densityScale))
+    m_unitDistance = densityScale;
+  else
+    m_unitDistance = getParam<float>("unitDistance", 1.f);
 
   if (!m_colorData) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -109,7 +113,7 @@ void TransferFunction1D::commit()
   m_volume[0].bounds = m_bounds;
   m_volume[0].volID = m_field->visionaraySpatialField().fieldID;
   m_volume[0].field = m_field->visionaraySpatialField();
-  m_volume[0].densityScale = m_densityScale;
+  m_volume[0].unitDistance = m_unitDistance;
 
   m_volume[0].asTransferFunction1D.numValues = tex.size()[0];
   m_volume[0].asTransferFunction1D.valueRange = m_valueRange;
