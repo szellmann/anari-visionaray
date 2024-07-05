@@ -243,11 +243,13 @@ void VisionaraySceneImpl::commit()
 
 void VisionaraySceneImpl::release()
 {
+  m_instances.clear();
   m_geometries.clear();
   m_BLSs.clear();
   m_worldBLSs.clear();
   m_accelStorage.triangleBLSs.clear();
   m_accelStorage.sphereBLSs.clear();
+  m_accelStorage.coneBLSs.clear();
   m_accelStorage.cylinderBLSs.clear();
   m_accelStorage.bezierCurveBLSs.clear();
   m_accelStorage.isoSurfaceBLSs.clear();
