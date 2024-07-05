@@ -131,9 +131,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       viewDir = -ray.dir;
 
       if (rendererState.gradientShading) {
-        const dco::Instance &inst = onDevice.instances[hrv.inst_id];
+        const dco::Instance &inst = onDevice.instances[hrv.instID];
         const dco::Group &group = onDevice.groups[inst.groupID];
-        const dco::Geometry &geom = onDevice.geometries[group.geoms[hrv.geom_id]];
+        const dco::Geometry &geom = onDevice.geometries[group.geoms[hrv.volID]];
         const dco::Volume &vol = geom.as<dco::Volume>(0);
 
         if (sampleGradient(vol.field,hitPos,gn))
@@ -197,7 +197,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    int instID = hitRec.volumeHit ? hrv.inst_id : hr.inst_id;
+    int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
     const dco::Instance &inst = onDevice.instances[instID];
     const dco::Group &group = onDevice.groups[inst.groupID];
     light_sample<float> ls;

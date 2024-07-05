@@ -527,8 +527,8 @@ struct HitRecordVolume
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
-  int geom_id{-1};
-  int inst_id{-1};
+  int volID{-1};
+  int instID{-1};
 };
 
 struct VolumePRD
@@ -627,7 +627,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       if (hr.t < hrv.t) {
         hrv.hit = true;
         hrv.t = hr.t;
-        hrv.geom_id = hr.geom_id;
+        hrv.volID = hr.geom_id;
         hrv.albedo = albedo;
         hrv.Tr = Tr;
         hrv.extinction = extinction;
@@ -1465,7 +1465,7 @@ inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
   ray.intersectionMask = Ray::Volume;
   auto hr = intersect(ray, tls);
 
-  result.inst_id = hr.inst_id;
+  result.instID = hr.inst_id;
 
   return result;
 }
