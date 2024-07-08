@@ -133,11 +133,21 @@ void TransferFunction1D::commit()
   vgeom.primitives.data = m_volume.devicePtr();
   vgeom.primitives.len = m_volume.size();
 
+  // Trigger a BVH rebuild:
+  vgeom.updated = true;
+
   dispatch();
 
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
   m_field->gridAccel().computeMaxOpacities(m_volume[0].asTransferFunction1D);
 #endif
+}
+
+void TransferFunction1D::markCommitted()
+{
+  Object::markCommitted();
+  deviceState()->objectUpdates.lastBLSCommitSceneRequest =
+      helium::newTimeStamp();
 }
 
 bool TransferFunction1D::isValid() const

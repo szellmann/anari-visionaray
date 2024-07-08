@@ -18,6 +18,7 @@ struct TransferFunction1D : public Volume
   ~TransferFunction1D() override;
 
   void commit() override;
+  void markCommitted() override;
 
   bool isValid() const override;
 

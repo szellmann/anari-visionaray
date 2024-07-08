@@ -188,8 +188,24 @@ void Group::visionaraySceneCommit()
         });
   }
 
-  // TODO: for volumes (?); yet we currently don't support volumes that change
-  // their shape
+  // Same if transfer functions changed:
+  if (m_volumeData) {
+    std::for_each(m_volumeData->handlesBegin(),
+        m_volumeData->handlesEnd(),
+        [&](auto *o) {
+          auto *v = (Volume *)o;
+          if (v && v->isValid()) {
+            if (v->visionarayGeometry().updated) {
+              vscene->updateGeometry(v->visionarayGeometry());
+              v->visionarayGeometry().setUpdated(false);
+            }
+          }
+        });
+  }
+
+  // TODO:
+  // Same for lights? especiall for visible area light sources that move outside
+  // the scene bounds?!
 
   vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
