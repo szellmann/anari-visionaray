@@ -44,7 +44,7 @@ void ISOSurface::commit()
   vgeom.primitives.data = m_isoSurface.devicePtr();
   vgeom.primitives.len = m_isoSurface.size();
 
-  vgeom.updated = true;
+  lastUpdateRequest = helium::newTimeStamp();
 
   dispatch();
 }

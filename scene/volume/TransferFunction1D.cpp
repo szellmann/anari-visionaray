@@ -134,7 +134,7 @@ void TransferFunction1D::commit()
   vgeom.primitives.len = m_volume.size();
 
   // Trigger a BVH rebuild:
-  vgeom.updated = true;
+  lastUpdateRequest = helium::newTimeStamp();
 
   dispatch();
 

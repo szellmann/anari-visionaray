@@ -18,6 +18,8 @@ struct Volume : public Object
   virtual aabb bounds() const = 0;
   dco::Geometry visionarayGeometry() const;
 
+  helium::TimeStamp lastUpdateRequest{0};
+  helium::TimeStamp lastUpdate{0};
  protected:
   uint32_t m_id{~0u};
   dco::Geometry vgeom;

@@ -1503,7 +1503,6 @@ struct Geometry
   };
   Type type{Unknown};
   unsigned geomID{UINT_MAX};
-  bool updated{false};
 
   template <typename Primitive>
   VSNRAY_FUNC
@@ -1534,12 +1533,6 @@ struct Geometry
     }
     // TODO..
     return true;
-  }
-
-  VSNRAY_FUNC
-  inline void setUpdated(const bool up)
-  {
-    updated = up;
   }
 };
 

@@ -44,6 +44,12 @@ uint32_t Surface::id() const
 {
   return m_id;
 }
+
+Geometry *Surface::geometry()
+{
+  return m_geometry.ptr;
+}
+
 const Geometry *Surface::geometry() const
 {
   return m_geometry.ptr;

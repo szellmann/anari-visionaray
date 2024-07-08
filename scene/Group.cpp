@@ -180,9 +180,9 @@ void Group::visionaraySceneCommit()
         [&](auto *o) {
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
-            if (s->geometry()->visionarayGeometry().updated) {
+            if (s->geometry()->lastUpdateRequest > s->geometry()->lastUpdate) {
               vscene->updateGeometry(s->geometry()->visionarayGeometry());
-              s->geometry()->visionarayGeometry().setUpdated(false);
+              s->geometry()->lastUpdate = helium::newTimeStamp();
             }
           }
         });
@@ -195,9 +195,9 @@ void Group::visionaraySceneCommit()
         [&](auto *o) {
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
-            if (v->visionarayGeometry().updated) {
+            if (v->lastUpdateRequest > v->lastUpdate) {
               vscene->updateGeometry(v->visionarayGeometry());
-              v->visionarayGeometry().setUpdated(false);
+              v->lastUpdate = helium::newTimeStamp();
             }
           }
         });
