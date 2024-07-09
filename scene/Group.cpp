@@ -133,7 +133,7 @@ void Group::visionaraySceneConstruct()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
-            vscene->attachGeometry(v->visionarayGeometry(), id++, v->id());
+            vscene->attachVolume(v->visionarayVolume(), id++, v->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid volume(%p) in building BLS",
@@ -196,7 +196,7 @@ void Group::visionaraySceneCommit()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             if (v->lastUpdateRequest > v->lastUpdate) {
-              vscene->updateGeometry(v->visionarayGeometry());
+              vscene->updateVolume(v->visionarayVolume());
               v->lastUpdate = helium::newTimeStamp();
             }
           }

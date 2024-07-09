@@ -170,12 +170,14 @@ void VisionaraySceneGPU::commit()
         case dco::Geometry::ISOSurface:
           isoCount++;
           break;
-        case dco::Geometry::Volume:
-          volumeCount++;
-          break;
         default:
           break;
       }
+    }
+
+    for (const dco::Handle &volID : m_impl->parent->m_volumes) {
+      if (!dco::validHandle(volID)) continue;
+      volumeCount++;
     }
 
     m_impl->m_accelStorage.triangleBLSs.resize(triangleCount);
@@ -275,16 +277,19 @@ void VisionaraySceneGPU::commit()
           CPU::ISOSurfaceBVH{}, &iso, 1);
         m_impl->m_accelStorage.isoSurfaceBLSs[index]
           = GPU::ISOSurfaceBVH(accelStorage);
-      } else if (geom.type == dco::Geometry::Volume) {
-        unsigned index = volumeCount++;
-        builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-        dco::Volume vol;
-        CUDA_SAFE_CALL(cudaMemcpy(&vol, geom.primitives.data,
-            sizeof(vol), cudaMemcpyDeviceToHost));
-        auto accelStorage = builder.build(CPU::VolumeBVH{}, &vol, 1);
-        m_impl->m_accelStorage.volumeBLSs[index]
-          = GPU::VolumeBVH(accelStorage);
       }
+    }
+
+    for (const dco::Handle &volID : m_impl->parent->m_volumes) {
+      if (!dco::validHandle(volID)) continue;
+
+      const dco::Volume &vol = deviceState()->dcos.volumes[volID];
+
+      binned_sah_builder builder;
+      unsigned index = volumeCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
+      auto accelStorage = builder.build(CPU::VolumeBVH{}, &vol, 1);
+      m_impl->m_accelStorage.volumeBLSs[index] = GPU::VolumeBVH(accelStorage);
     }
 
     m_impl->parent->m_BLSs.clear();
@@ -329,11 +334,20 @@ void VisionaraySceneGPU::commit()
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
         bls.asISOSurface = m_impl->m_accelStorage.isoSurfaceBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Volume) {
-        unsigned index = volumeCount++;
-        bls.type = dco::BLS::Volume;
-        bls.asVolume = m_impl->m_accelStorage.volumeBLSs[index].ref();
       }
+      m_impl->parent->m_BLSs.update(bls.blsID, bls);
+    }
+
+    for (const dco::Handle &volID : m_impl->parent->m_volumes) {
+      if (!dco::validHandle(volID)) continue;
+
+      dco::BLS bls;
+      bls.blsID = m_impl->parent->m_BLSs.alloc(bls);
+
+      unsigned index = volumeCount++;
+      bls.type = dco::BLS::Volume;
+      bls.asVolume = m_impl->m_accelStorage.volumeBLSs[index].ref();
+
       m_impl->parent->m_BLSs.update(bls.blsID, bls);
     }
 
@@ -453,13 +467,6 @@ void VisionaraySceneGPU::attachGeometry(
       iso.geomID = geomID;
       CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, &iso,
                                 sizeof(iso), cudaMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::Volume) {
-      dco::Volume vol;
-      CUDA_SAFE_CALL(cudaMemcpy(&vol, geom.primitives.data,
-                                sizeof(vol), cudaMemcpyDeviceToHost));
-      vol.geomID = geomID;
-      CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, &vol,
-                                sizeof(vol), cudaMemcpyHostToDevice));
     }
   }
 
@@ -469,6 +476,22 @@ void VisionaraySceneGPU::attachGeometry(
 
   // Upload/set accessible pointers
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
+}
+
+void VisionaraySceneGPU::attachVolume(
+    dco::Volume vol, unsigned volID, unsigned userID)
+{
+  m_impl->parent->m_volumes.set(volID, vol.volID);
+  m_impl->parent->m_objIds.set(volID, userID);
+
+  // Patch geomID into scene primitive
+  vol.volID = volID;
+
+  m_impl->parent->m_volumes.set(volID, vol.volID);
+  m_impl->parent->m_objIds.set(volID, userID);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 cuda_index_bvh<dco::BLS>::bvh_ref VisionaraySceneGPU::refBVH()

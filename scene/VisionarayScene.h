@@ -41,6 +41,7 @@ struct VisionaraySceneImpl
   DeviceHandleArray m_instances;
   DeviceHandleArray m_geometries;
   DeviceHandleArray m_materials;
+  DeviceHandleArray m_volumes;
   DeviceHandleArray m_lights;
   HostDeviceArray<uint32_t> m_objIds;
   // flat list of lights (only used if type is World!)
@@ -79,7 +80,9 @@ struct VisionaraySceneImpl
   void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
   void attachGeometry(
       dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID=~0u);
+  void attachVolume(dco::Volume vol, unsigned geomID, unsigned userID=~0u);
   void updateGeometry(dco::Geometry geom);
+  void updateVolume(dco::Volume vol);
   void attachLight(dco::Light light, unsigned id);
   aabb getBounds() const;
 #ifdef WITH_CUDA

@@ -18,13 +18,11 @@ TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d)
   , m_colorData(this)
   , m_opacityData(this)
 {
-  vgeom.type = dco::Geometry::Volume;
-  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
+  vvol.type = dco::Volume::TransferFunction1D;
 }
 
 TransferFunction1D::~TransferFunction1D()
 {
-  deviceState()->dcos.geometries.free(vgeom.geomID);
 }
 
 void TransferFunction1D::commit()
@@ -107,31 +105,22 @@ void TransferFunction1D::commit()
   tex.set_filter_mode(Linear);
   tex.set_address_mode(Clamp);
 
-  m_volume.resize(1);
+  vvol.bounds = m_bounds;
+  vvol.volID = m_field->visionaraySpatialField().fieldID;
+  vvol.field = m_field->visionaraySpatialField();
+  vvol.unitDistance = m_unitDistance;
 
-  m_volume[0].type = dco::Volume::TransferFunction1D;
-  m_volume[0].bounds = m_bounds;
-  m_volume[0].volID = m_field->visionaraySpatialField().fieldID;
-  m_volume[0].field = m_field->visionaraySpatialField();
-  m_volume[0].unitDistance = m_unitDistance;
-
-  m_volume[0].asTransferFunction1D.numValues = tex.size()[0];
-  m_volume[0].asTransferFunction1D.valueRange = m_valueRange;
+  vvol.asTransferFunction1D.numValues = tex.size()[0];
+  vvol.asTransferFunction1D.valueRange = m_valueRange;
 #ifdef WITH_CUDA
   transFuncTexture = cuda_texture<float4, 1>(tex);
-  m_volume[0].asTransferFunction1D.sampler
-      = cuda_texture_ref<float4, 1>(transFuncTexture);
+  vvol.asTransferFunction1D.sampler = cuda_texture_ref<float4, 1>(transFuncTexture);
 #elif defined(WITH_HIP)
   transFuncTexture = hip_texture<float4, 1>(tex);
-  m_volume[0].asTransferFunction1D.sampler
-      = hip_texture_ref<float4, 1>(transFuncTexture);
+  vvol.asTransferFunction1D.sampler = hip_texture_ref<float4, 1>(transFuncTexture);
 #else
-  m_volume[0].asTransferFunction1D.sampler
-      = texture_ref<float4, 1>(transFuncTexture);
+  vvol.asTransferFunction1D.sampler = texture_ref<float4, 1>(transFuncTexture);
 #endif
-
-  vgeom.primitives.data = m_volume.devicePtr();
-  vgeom.primitives.len = m_volume.size();
 
   // Trigger a BVH rebuild:
   lastUpdateRequest = helium::newTimeStamp();
@@ -139,7 +128,7 @@ void TransferFunction1D::commit()
   dispatch();
 
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
-  m_field->gridAccel().computeMaxOpacities(m_volume[0].asTransferFunction1D);
+  m_field->gridAccel().computeMaxOpacities(vvol.asTransferFunction1D);
 #endif
 }
 
@@ -162,10 +151,10 @@ aabb TransferFunction1D::bounds() const
 
 void TransferFunction1D::dispatch()
 {
-  deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
+  deviceState()->dcos.volumes.update(vvol.volID, vvol);
 
   // Upload/set accessible pointers
-  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 } // namespace visionaray

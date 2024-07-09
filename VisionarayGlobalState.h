@@ -49,7 +49,6 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   {
     // One TLS per world
     DeviceObjectArray<dco::TLS> TLSs;
-   // DeviceObjectArray<float> worldEPS;
     DeviceObjectArray<dco::World> worlds; // TODO: move TLSs and EPS in here!
     DeviceObjectArray<dco::Group> groups;
     DeviceObjectArray<dco::Surface> surfaces;
@@ -57,6 +56,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     DeviceObjectArray<dco::Geometry> geometries;
     DeviceObjectArray<dco::Material> materials;
     DeviceObjectArray<dco::Sampler> samplers;
+    DeviceObjectArray<dco::Volume> volumes;
     DeviceObjectArray<dco::SpatialField> spatialFields;
     DeviceObjectArray<dco::Light> lights;
     DeviceObjectArray<dco::Frame> frames;
@@ -65,7 +65,6 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   struct DeviceObjectRegistry
   {
     dco::TLS *TLSs{nullptr};
-    //float *worldEPS{nullptr};
     dco::World *worlds{nullptr};
     dco::Group *groups{nullptr};
     dco::Surface *surfaces{nullptr};
@@ -73,6 +72,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     dco::Geometry *geometries{nullptr};
     dco::Material *materials{nullptr};
     dco::Sampler *samplers{nullptr};
+    dco::Volume *volumes{nullptr};
     dco::SpatialField *spatialFields{nullptr};
     dco::Light *lights{nullptr};
     dco::Frame *frames{nullptr};

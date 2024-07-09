@@ -106,12 +106,14 @@ void VisionaraySceneImpl::commit()
         case dco::Geometry::ISOSurface:
           isoCount++;
           break;
-        case dco::Geometry::Volume:
-          volumeCount++;
-          break;
         default:
           break;
       }
+    }
+
+    for (const dco::Handle &volID : m_volumes) {
+      if (!dco::validHandle(volID)) continue;
+      volumeCount++;
     }
 
     m_accelStorage.triangleBLSs.resize(triangleCount);
@@ -170,12 +172,18 @@ void VisionaraySceneImpl::commit()
         builder.enable_spatial_splits(false); // no spatial splits for ISOs
         m_accelStorage.isoSurfaceBLSs[index] = builder.build(
           ISOSurfaceBVH{}, (const dco::ISOSurface *)geom.primitives.data, 1);
-      } else if (geom.type == dco::Geometry::Volume) {
-        unsigned index = volumeCount++;
-        builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-        m_accelStorage.volumeBLSs[index] = builder.build(
-          VolumeBVH{}, (const dco::Volume *)geom.primitives.data, 1);
       }
+    }
+
+    for (const dco::Handle &volID : m_volumes) {
+      if (!dco::validHandle(volID)) continue;
+
+      const dco::Volume &vol = deviceState()->dcos.volumes[volID];
+
+      binned_sah_builder builder;
+      unsigned index = volumeCount++;
+      builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
+      m_accelStorage.volumeBLSs[index] = builder.build(VolumeBVH{}, &vol, 1);
     }
 
     m_BLSs.clear();
@@ -220,11 +228,20 @@ void VisionaraySceneImpl::commit()
         unsigned index = isoCount++;
         bls.type = dco::BLS::ISOSurface;
         bls.asISOSurface = m_accelStorage.isoSurfaceBLSs[index].ref();
-      } else if (geom.type == dco::Geometry::Volume) {
-        unsigned index = volumeCount++;
-        bls.type = dco::BLS::Volume;
-        bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
       }
+      m_BLSs.update(bls.blsID, bls);
+    }
+
+    for (const dco::Handle &volID : m_volumes) {
+      if (!dco::validHandle(volID)) continue;
+
+      dco::BLS bls;
+      bls.blsID = m_BLSs.alloc(bls);
+
+      unsigned index = volumeCount++;
+      bls.type = dco::BLS::Volume;
+      bls.asVolume = m_accelStorage.volumeBLSs[index].ref();
+
       m_BLSs.update(bls.blsID, bls);
     }
 
@@ -332,8 +349,6 @@ void VisionaraySceneImpl::attachGeometry(
   } else if (geom.type == dco::Geometry::ISOSurface) {
     geom.as<dco::ISOSurface>(0).isoID = geomID;
     geom.as<dco::ISOSurface>(0).geomID = geomID;
-  } else if (geom.type == dco::Geometry::Volume) {
-    geom.as<dco::Volume>(0).geomID = geomID;
   }
 
   m_geometries.set(geomID, geom.geomID);
@@ -352,12 +367,34 @@ void VisionaraySceneImpl::attachGeometry(
   m_materials.set(geomID, mat.matID);
 }
 
+void VisionaraySceneImpl::attachVolume(
+    dco::Volume vol, unsigned volID, unsigned userID)
+{
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  m_gpuScene->attachVolume(vol, volID, userID);
+#else
+  m_volumes.set(volID, vol.volID);
+  m_objIds.set(volID, userID);
+
+  // Patch volID into scene primitives:
+  vol.volID = volID;
+#endif
+}
+
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
 {
   deviceState()->dcos.geometries.update(geom.geomID, geom);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
+}
+
+void VisionaraySceneImpl::updateVolume(dco::Volume vol)
+{
+  deviceState()->dcos.volumes.update(vol.volID, vol);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
@@ -405,6 +442,8 @@ void VisionaraySceneImpl::dispatch()
     group.geoms = m_geometries.devicePtr();
     group.numMaterials = m_materials.size();
     group.materials = m_materials.devicePtr();
+    group.numVolumes = m_volumes.size();
+    group.volumes = m_volumes.devicePtr();
     group.numLights = m_lights.size();
     group.lights = m_lights.devicePtr();
     group.objIds = m_objIds.devicePtr();

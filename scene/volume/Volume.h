@@ -16,13 +16,13 @@ struct Volume : public Object
   uint32_t id() const;
   static Volume *createInstance(std::string_view subtype, VisionarayGlobalState *d);
   virtual aabb bounds() const = 0;
-  dco::Geometry visionarayGeometry() const;
+  dco::Volume visionarayVolume() const;
 
   helium::TimeStamp lastUpdateRequest{0};
   helium::TimeStamp lastUpdate{0};
  protected:
   uint32_t m_id{~0u};
-  dco::Geometry vgeom;
+  dco::Volume vvol;
 };
 
 } // namespace visionaray

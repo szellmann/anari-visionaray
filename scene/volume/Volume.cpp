@@ -14,15 +14,14 @@ namespace visionaray {
 
 Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s)
 {
-  memset(&vgeom,0,sizeof(vgeom));
-  vgeom.type = dco::Geometry::Volume;
-  vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
+  memset(&vvol,0,sizeof(vvol));
+  vvol.volID = deviceState()->dcos.volumes.alloc(vvol);
   s->objectCounts.volumes++;
 }
 
 Volume::~Volume()
 {
-  deviceState()->dcos.geometries.free(vgeom.geomID);
+  deviceState()->dcos.volumes.free(vvol.volID);
 
   deviceState()->objectCounts.volumes--;
 }
@@ -45,9 +44,9 @@ Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *
     return (Volume *)new UnknownObject(ANARI_VOLUME, s);
 }
 
-dco::Geometry Volume::visionarayGeometry() const
+dco::Volume Volume::visionarayVolume() const
 {
-  return vgeom;
+  return vvol;
 }
 
 } // namespace visionaray

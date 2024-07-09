@@ -500,7 +500,6 @@ struct Volume
   Type type{Unknown};
 
   unsigned volID{UINT_MAX};
-  unsigned geomID{UINT_MAX}; // ID in group (internally realized as geom)
   float unitDistance;
 
   SpatialField field;
@@ -548,7 +547,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     hit_record<Ray, primitive<unsigned>> result;
     result.hit = boxHit.hit && (boxHit.tfar >= ray.tmin);
     result.t = max(ray.tmin,boxHit.tnear);
-    result.geom_id = vol.geomID;
+    result.geom_id = vol.volID;
     return result;
   } else {
     VolumePRD &prd = *(VolumePRD *)ray.prd;
@@ -562,7 +561,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     hit_record<Ray, primitive<unsigned>> hr;
     hr.t = FLT_MAX;
     hr.hit = false;
-    hr.geom_id = vol.geomID;
+    hr.geom_id = vol.volID;
 
     float3 albedo;
     float Tr{1.f};
@@ -1498,7 +1497,6 @@ struct Geometry
     Curve,
     BezierCurve,
     ISOSurface,
-    Volume,
     Unknown,
   };
   Type type{Unknown};
@@ -1806,6 +1804,8 @@ struct Group
   Handle *geoms{nullptr};
   unsigned numMaterials{0};
   Handle *materials{nullptr};
+  unsigned numVolumes{0};
+  Handle *volumes{nullptr};
   unsigned numLights{0};
   Handle *lights{nullptr};
   uint32_t *objIds{nullptr}; // surface IDs, volume IDs, etc.

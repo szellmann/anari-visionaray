@@ -133,8 +133,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (rendererState.gradientShading) {
         const dco::Instance &inst = onDevice.instances[hrv.instID];
         const dco::Group &group = onDevice.groups[inst.groupID];
-        const dco::Geometry &geom = onDevice.geometries[group.geoms[hrv.volID]];
-        const dco::Volume &vol = geom.as<dco::Volume>(0);
+        const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.volID]];
 
         if (sampleGradient(vol.field,hitPos,gn))
           gn = normalize(gn);
