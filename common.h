@@ -68,17 +68,17 @@ typedef LCG<4> Random;
 
 struct TypeInfo
 {
-  ANARIDataType dataType{ANARI_UNKNOWN};
-  unsigned sizeInBytes{0};
-  unsigned numComponents{0};
-  bool fixed{false};
-  bool sRGB{false};
+  ANARIDataType dataType;
+  unsigned sizeInBytes;
+  unsigned numComponents;
+  bool fixed;
+  bool sRGB;
 };
 
 VSNRAY_FUNC
 constexpr TypeInfo getInfo(ANARIDataType type)
 {
-  TypeInfo ti;
+  TypeInfo ti{};
 
   if (type == ANARI_UFIXED8) {
     ti.dataType = type;

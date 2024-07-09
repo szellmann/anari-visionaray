@@ -1564,13 +1564,13 @@ struct Sampler
     texture_ref<vector<4, unorm<8>>, 2> asImage2D;
     texture_ref<vector<4, unorm<8>>, 3> asImage3D;
 #endif
+    struct {
+      TypeInfo typeInfo;
+      size_t len; // in elements
+      const uint8_t *data;
+      uint32_t offset;
+    } asPrimitive;
   };
-  struct {
-    TypeInfo typeInfo;
-    size_t len{0}; // in elements
-    const uint8_t *data{nullptr};
-    uint32_t offset{0};
-  } asPrimitive;
 
   VSNRAY_FUNC
   bool isValid() const
