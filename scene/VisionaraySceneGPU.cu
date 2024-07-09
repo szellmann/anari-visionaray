@@ -478,22 +478,6 @@ void VisionaraySceneGPU::attachGeometry(
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
-void VisionaraySceneGPU::attachVolume(
-    dco::Volume vol, unsigned volID, unsigned userID)
-{
-  m_impl->parent->m_volumes.set(volID, vol.volID);
-  m_impl->parent->m_objIds.set(volID, userID);
-
-  // Patch geomID into scene primitive
-  vol.volID = volID;
-
-  m_impl->parent->m_volumes.set(volID, vol.volID);
-  m_impl->parent->m_objIds.set(volID, userID);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
-}
-
 cuda_index_bvh<dco::BLS>::bvh_ref VisionaraySceneGPU::refBVH()
 {
   return m_impl->m_TLS.ref();

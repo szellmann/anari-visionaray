@@ -370,15 +370,14 @@ void VisionaraySceneImpl::attachGeometry(
 void VisionaraySceneImpl::attachVolume(
     dco::Volume vol, unsigned volID, unsigned userID)
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
-  m_gpuScene->attachVolume(vol, volID, userID);
-#else
+  // Patch volID into scene primitives:
+  vol.volID = volID;
+
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
 
-  // Patch volID into scene primitives:
-  vol.volID = volID;
-#endif
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
