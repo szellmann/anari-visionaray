@@ -1754,44 +1754,44 @@ struct Light
     point_light<float> asPoint;
     spot_light<float> asSpot;
     area_light<float,dco::Quad> asQuad;
-  };
-  struct {
+    struct {
 #ifdef WITH_CUDA
-    cuda_texture_ref<float4, 2> radiance;
+      cuda_texture_ref<float4, 2> radiance;
 #elif defined(WITH_HIP)
-    hip_texture_ref<float4, 2> radiance;
+      hip_texture_ref<float4, 2> radiance;
 #else
-    texture_ref<float4, 2> radiance;
+      texture_ref<float4, 2> radiance;
 #endif
-    float scale{1.f};
-    struct CDF {
-      float *rows{nullptr};
-      float *lastCol{nullptr};
-      unsigned width{0};
-      unsigned height{0};
-    } cdf;
+      float scale;
+      struct CDF {
+        float *rows;
+        float *lastCol;
+        unsigned width;
+        unsigned height;
+      } cdf;
 
-    template <typename RNG>
-    VSNRAY_FUNC
-    inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
-    {
-      CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol, cdf.width, cdf.height, rng(), rng());
-      float invjacobian = cdf.width*cdf.height/float(4*M_PI);
-      float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
-      light_sample<float> ls;
-      ls.dir = L;
-      ls.dist = FLT_MAX;
-      ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
-      return ls;
-    }
+      template <typename RNG>
+      VSNRAY_FUNC
+      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      {
+        CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol, cdf.width, cdf.height, rng(), rng());
+        float invjacobian = cdf.width*cdf.height/float(4*M_PI);
+        float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
+        light_sample<float> ls;
+        ls.dir = L;
+        ls.dist = FLT_MAX;
+        ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
+        return ls;
+      }
 
-    VSNRAY_FUNC
-    inline float3 intensity(const float3 dir) const
-    {
-      return tex2D(radiance, toUV(dir)).xyz()*scale;
-    }
+      VSNRAY_FUNC
+      inline float3 intensity(const float3 dir) const
+      {
+        return tex2D(radiance, toUV(dir)).xyz()*scale;
+      }
 
-  } asHDRI;
+    } asHDRI;
+  };
 };
 
 // Group //
