@@ -380,36 +380,38 @@ struct SpatialField
     return rot * object;
   }
 
-  struct {
+  union {
+    struct {
 #ifdef WITH_CUDA
-    cuda_texture_ref<float, 3> sampler;
+      cuda_texture_ref<float, 3> sampler;
 #elif defined(WITH_HIP)
-    hip_texture_ref<float, 3> sampler;
+      hip_texture_ref<float, 3> sampler;
 #else
-    texture_ref<float, 3> sampler;
+      texture_ref<float, 3> sampler;
 #endif
-  } asStructuredRegular;
-  struct {
-    // Sampling BVH. This BVH is in _voxel_ space, so rays that take samples
-    // must first be transformed there from world space in case these spaces
-    // aren't the same!
+    } asStructuredRegular;
+    struct {
+      // Sampling BVH. This BVH is in _voxel_ space, so rays that take samples
+      // must first be transformed there from world space in case these spaces
+      // aren't the same!
 #ifdef WITH_CUDA
-    cuda_index_bvh<UElem>::bvh_ref samplingBVH;
+      cuda_index_bvh<UElem>::bvh_ref samplingBVH;
 #elif defined(WITH_HIP)
-    hip_index_bvh<UElem>::bvh_ref samplingBVH;
+      hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
-    index_bvh<UElem>::bvh_ref samplingBVH;
+      index_bvh<UElem>::bvh_ref samplingBVH;
 #endif
-  } asUnstructured;
-  struct {
+    } asUnstructured;
+    struct {
 #ifdef WITH_CUDA
-    cuda_index_bvh<Block>::bvh_ref samplingBVH;
+      cuda_index_bvh<Block>::bvh_ref samplingBVH;
 #elif defined(WITH_HIP)
-    hip_index_bvh<Block>::bvh_ref samplingBVH;
+      hip_index_bvh<Block>::bvh_ref samplingBVH;
 #else
-    index_bvh<Block>::bvh_ref samplingBVH;
+      index_bvh<Block>::bvh_ref samplingBVH;
 #endif
-  } asBlockStructured;
+    } asBlockStructured;
+  };
 };
 
 VSNRAY_FUNC
@@ -503,7 +505,9 @@ struct Volume
   float unitDistance;
 
   SpatialField field;
-  struct TransferFunction1D asTransferFunction1D;
+  union {
+    struct TransferFunction1D asTransferFunction1D;
+  };
 
   aabb bounds;
 };
@@ -1546,23 +1550,21 @@ struct Sampler
   float4 inOffset{0.f};
   mat4 outTransform{mat4::identity()};
   float4 outOffset{0.f};
-#ifdef WITH_CUDA
   union {
+#ifdef WITH_CUDA
     cuda_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
     cuda_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
     cuda_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
-  };
 #elif defined(WITH_HIP)
-  union {
     hip_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
     hip_texture_ref<vector<4, unorm<8>>, 2> asImage2D;
     hip_texture_ref<vector<4, unorm<8>>, 3> asImage3D;
-  };
 #else
-  texture_ref<vector<4, unorm<8>>, 1> asImage1D;
-  texture_ref<vector<4, unorm<8>>, 2> asImage2D;
-  texture_ref<vector<4, unorm<8>>, 3> asImage3D;
+    texture_ref<vector<4, unorm<8>>, 1> asImage1D;
+    texture_ref<vector<4, unorm<8>>, 2> asImage2D;
+    texture_ref<vector<4, unorm<8>>, 3> asImage3D;
 #endif
+  };
   struct {
     TypeInfo typeInfo;
     size_t len{0}; // in elements
