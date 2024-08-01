@@ -63,6 +63,7 @@ void VisionaraySceneImpl::commit()
 
       const dco::Instance &inst = deviceState()->dcos.instances[instID];
 
+      if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = m_state->dcos.groups[inst.groupID];
 
       for (unsigned i=0; i<group.numLights; ++i)

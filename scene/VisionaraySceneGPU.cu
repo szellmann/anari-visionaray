@@ -122,6 +122,8 @@ void VisionaraySceneGPU::commit()
       dco::Instance inst;
       CUDA_SAFE_CALL(cudaMemcpy(&inst, deviceState()->onDevice.instances+instID,
                                 sizeof(inst), cudaMemcpyDefault));
+
+      if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
       std::vector<dco::Handle> groupLights(group.numLights);

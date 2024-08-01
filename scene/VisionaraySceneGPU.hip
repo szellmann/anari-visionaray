@@ -137,6 +137,8 @@ void VisionaraySceneGPU::commit()
       dco::Instance inst;
       HIP_SAFE_CALL(hipMemcpy(&inst, deviceState()->onDevice.instances+instID,
                               sizeof(inst), hipMemcpyDefault));
+
+      if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
       std::vector<dco::Handle> groupLights(group.numLights);
