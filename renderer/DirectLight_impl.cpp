@@ -130,11 +130,11 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
 
-      if (rendererState.gradientShading) {
-        const dco::Instance &inst = onDevice.instances[hrv.instID];
-        const dco::Group &group = onDevice.groups[inst.groupID];
-        const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.volID]];
+      const dco::Instance &inst = onDevice.instances[hrv.instID];
+      const dco::Group &group = onDevice.groups[inst.groupID];
+      const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.volID]];
 
+      if (rendererState.gradientShading) {
         if (sampleGradient(vol.field,hitPos,gn))
           gn = normalize(gn);
       }
@@ -144,6 +144,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
       result.depth = hrv.t;
       result.albedo = hrv.albedo;
+      result.objId = group.objIds[hrv.volID];
+      result.instId = inst.userID;
     } else {
       result.depth = hr.t;
       result.primId = hr.prim_id;
