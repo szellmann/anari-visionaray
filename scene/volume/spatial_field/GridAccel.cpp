@@ -12,11 +12,8 @@ void GridAccel::init(int3 dims, box3 worldBounds)
 
   size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
 
-  delete[] m_valueRanges;
-  delete[] m_maxOpacities;
-
-  m_valueRanges = new box1[numMCs];
-  m_maxOpacities = new float[numMCs];
+  m_valueRanges.resize(numMCs);
+  m_maxOpacities.resize(numMCs);
 
   for (size_t i=0; i<numMCs; ++i) {
     auto &vr = m_valueRanges[i];
@@ -25,24 +22,13 @@ void GridAccel::init(int3 dims, box3 worldBounds)
 
   vaccel.dims = m_dims;
   vaccel.worldBounds = m_worldBounds;
-  vaccel.valueRanges = m_valueRanges;
-  vaccel.maxOpacities = m_maxOpacities;
-}
-
-void GridAccel::cleanup()
-{
-  delete[] m_valueRanges;
-  delete[] m_maxOpacities;
+  vaccel.valueRanges = m_valueRanges.devicePtr();
+  vaccel.maxOpacities = m_maxOpacities.devicePtr();
 }
 
 dco::GridAccel &GridAccel::visionarayAccel()
 {
   return vaccel;
-}
-
-box1 *GridAccel::valueRanges()
-{
-  return m_valueRanges;
 }
 
 VisionarayGlobalState *GridAccel::deviceState() const
@@ -56,10 +42,10 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
 
   parallel::for_each(deviceState()->threadPool, 0, numMCs,
     [&](size_t threadID) {
-      box1 valueRange = m_valueRanges[threadID];
+      box1 valueRange = vaccel.valueRanges[threadID];
 
       if (valueRange.max < valueRange.min) {
-        m_maxOpacities[threadID] = 0.f;
+        vaccel.maxOpacities[threadID] = 0.f;
         return;
       }
 
@@ -80,7 +66,7 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
         float tc = (i + .5f) / numValues;
         maxOpacity = fmaxf(maxOpacity, tex1D(tf.sampler, tc).w);
       }
-      m_maxOpacities[threadID] = maxOpacity;
+      vaccel.maxOpacities[threadID] = maxOpacity;
     });
 }
 

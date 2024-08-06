@@ -187,6 +187,8 @@ void UnstructuredField::buildGrid()
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(dims, worldBounds);
 
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
     box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
     box1f valueRange{FLT_MAX, -FLT_MAX};
@@ -223,7 +225,7 @@ void UnstructuredField::buildGrid()
       for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
         for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
           const vec3i mcID(mcx,mcy,mcz);
-          updateMC(mcID,dims,valueRange,m_gridAccel.valueRanges());
+          updateMC(mcID,dims,valueRange,vaccel.valueRanges);
         }
       }
     }

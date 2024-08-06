@@ -144,6 +144,8 @@ void BlockStructuredField::buildGrid()
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(dims, worldBounds);
 
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
   size_t numBlocks = m_blocks.size();
   parallel::for_each(deviceState()->threadPool, 0, numBlocks,
     [&](size_t blockID) {
@@ -171,7 +173,7 @@ void BlockStructuredField::buildGrid()
               for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
                 for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
                   const vec3i mcID(mcx,mcy,mcz);
-                  updateMC(mcID,dims,scalar,m_gridAccel.valueRanges());
+                  updateMC(mcID,dims,scalar,vaccel.valueRanges);
                 }
               }
             }

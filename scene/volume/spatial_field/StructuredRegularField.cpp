@@ -99,6 +99,8 @@ void StructuredRegularField::buildGrid()
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(gridDims, worldBounds);
 
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
   for (unsigned z=0; z<m_dims.z; ++z) {
     for (unsigned y=0; y<m_dims.y; ++y) {
       for (unsigned x=0; x<m_dims.x; ++x) {
@@ -118,7 +120,7 @@ void StructuredRegularField::buildGrid()
           for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
             for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
               const vec3i mcID(mcx,mcy,mcz);
-              updateMC(mcID,gridDims,value,m_gridAccel.valueRanges());
+              updateMC(mcID,gridDims,value,vaccel.valueRanges);
             }
           }
         }

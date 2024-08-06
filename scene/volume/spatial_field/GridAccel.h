@@ -36,11 +36,8 @@ struct GridAccel
 {
   GridAccel(VisionarayGlobalState *s);
   void init(int3 dims, box3 worldBounds);
-  void cleanup();
 
   dco::GridAccel &visionarayAccel();
-
-  box1 *valueRanges();
 
   VisionarayGlobalState *deviceState() const;
 
@@ -53,10 +50,10 @@ private:
   VisionarayGlobalState *m_state{nullptr};
 
   // min/max ranges
-  box1 *m_valueRanges{nullptr};
+  HostDeviceArray<box1> m_valueRanges;
 
   // majorants/max opacities
-  float *m_maxOpacities{nullptr};
+  HostDeviceArray<float> m_maxOpacities;
 
   // Number of MCs
   int3 m_dims{0};

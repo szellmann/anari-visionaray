@@ -23,8 +23,6 @@ SpatialField::SpatialField(VisionarayGlobalState *s)
 
 SpatialField::~SpatialField()
 {
-  m_gridAccel.cleanup();
-
   deviceState()->dcos.spatialFields.free(vfield.fieldID);
 
   deviceState()->objectCounts.spatialFields--;
