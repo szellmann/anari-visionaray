@@ -103,7 +103,6 @@ set(SOURCES
     scene/surface/material/Matte.cpp
     scene/surface/material/PBM.cpp
     scene/surface/Surface.cpp
-    scene/volume/spatial_field/GridAccel.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/spatial_field/StructuredRegularField.cpp
     scene/volume/TransferFunction1D.cpp
@@ -125,6 +124,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   renderer/DirectLight_impl.cpp
   renderer/Raycast_impl.cpp
   scene/volume/spatial_field/BlockStructuredField.cpp
+  scene/volume/spatial_field/GridAccel.cpp
   scene/volume/spatial_field/UnstructuredField.cpp
   VisionarayDeviceQueries.cpp
 )
@@ -152,6 +152,7 @@ if (cuda)
     renderer/DirectLight_impl.cu
     renderer/Raycast_impl.cu
     scene/volume/spatial_field/BlockStructuredField.cu
+    scene/volume/spatial_field/GridAccel.cu
     scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
     VisionarayCUDADeviceQueries.cpp
@@ -161,6 +162,7 @@ if (cuda)
     renderer/DirectLight_impl.cu
     renderer/Raycast_impl.cu
     scene/volume/spatial_field/BlockStructuredField.cu
+    scene/volume/spatial_field/GridAccel.cu
     scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
     PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"

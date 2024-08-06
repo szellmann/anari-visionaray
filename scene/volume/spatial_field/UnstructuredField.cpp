@@ -178,11 +178,60 @@ aabb UnstructuredField::bounds() const
   return {};
 }
 
+#ifdef WITH_CUDA
+__global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
+                                               const vec4f      *vertices,
+                                               const dco::UElem *elements,
+                                               size_t            numElems)
+{
+  size_t cellID = blockIdx.x * size_t(blockDim.x) + threadIdx.x;
+
+  if (cellID >= numElems)
+    return;
+
+// TODO: deduplicate, refactor into function
+  box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
+  box1f valueRange{FLT_MAX, -FLT_MAX};
+
+  uint64_t numVertices = elements[cellID].end-elements[cellID].begin;
+  if (numVertices > 0) {
+    for (uint64_t i=elements[cellID].begin; i<elements[cellID].end; ++i) {
+      const vec4f V = vertices[elements[cellID].indexBuffer[i]];
+      cellBounds.extend(V.xyz());
+      valueRange.extend(V.w);
+    }
+  } else { // grid!
+    assert(0 && "Not implemented yet!");
+  }
+
+  const vec3i loMC = projectOnGrid(cellBounds.min,vaccel.dims,vaccel.worldBounds);
+  const vec3i upMC = projectOnGrid(cellBounds.max,vaccel.dims,vaccel.worldBounds);
+
+  for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
+    for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
+      for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
+        const vec3i mcID(mcx,mcy,mcz);
+        updateMC(mcID,vaccel.dims,valueRange,vaccel.valueRanges);
+      }
+    }
+  }
+}
+#endif
+
 void UnstructuredField::buildGrid()
 {
 #ifdef WITH_CUDA
-  return;
-#endif
+  int3 dims{64, 64, 64};
+  box3f worldBounds = {bounds().min,bounds().max};
+  m_gridAccel.init(dims, worldBounds);
+
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
+  size_t numThreads = 1024;
+  size_t numElems = m_elements.size();
+  UnstructuredField_buildGridGPU<<<div_up(numElems, numThreads), numThreads>>>(
+    vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems);
+#else
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(dims, worldBounds);
@@ -218,18 +267,19 @@ void UnstructuredField::buildGrid()
       }
     }
 
-    const vec3i loMC = projectOnGrid(cellBounds.min,dims,worldBounds);
-    const vec3i upMC = projectOnGrid(cellBounds.max,dims,worldBounds);
+    const vec3i loMC = projectOnGrid(cellBounds.min,vaccel.dims,vaccel.worldBounds);
+    const vec3i upMC = projectOnGrid(cellBounds.max,vaccel.dims,vaccel.worldBounds);
 
     for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
       for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
         for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
           const vec3i mcID(mcx,mcy,mcz);
-          updateMC(mcID,dims,valueRange,vaccel.valueRanges);
+          updateMC(mcID,vaccel.dims,valueRange,vaccel.valueRanges);
         }
       }
     }
   }
+#endif
 }
 
 } // visionaray

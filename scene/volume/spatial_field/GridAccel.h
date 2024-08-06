@@ -39,6 +39,8 @@ struct GridAccel
 
   dco::GridAccel &visionarayAccel();
 
+  bool isValid() const;
+
   VisionarayGlobalState *deviceState() const;
 
   void computeMaxOpacities(dco::TransferFunction1D tf);

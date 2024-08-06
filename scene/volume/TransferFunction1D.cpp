@@ -127,9 +127,8 @@ void TransferFunction1D::commit()
 
   dispatch();
 
-#if !defined(WITH_CUDA) && !defined(WITH_HIP)
-  m_field->gridAccel().computeMaxOpacities(vvol.asTransferFunction1D);
-#endif
+  if (m_field->gridAccel().isValid())
+    m_field->gridAccel().computeMaxOpacities(vvol.asTransferFunction1D);
 }
 
 void TransferFunction1D::markCommitted()
