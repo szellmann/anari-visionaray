@@ -554,6 +554,15 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     result.geom_id = vol.volID;
     return result;
   } else {
+    hit_record<Ray, primitive<unsigned>> hr;
+    hr.t = FLT_MAX;
+    hr.hit = false;
+
+    if (!boxHit.hit)
+      return hr;
+
+    hr.geom_id = vol.volID;
+
     VolumePRD &prd = *(VolumePRD *)ray.prd;
 
     HitRecordVolume &hrv = *prd.hr;
@@ -561,11 +570,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
   
     const auto &sf = vol.field;
     dco::GridAccel grid = sf.gridAccel;
-
-    hit_record<Ray, primitive<unsigned>> hr;
-    hr.t = FLT_MAX;
-    hr.hit = false;
-    hr.geom_id = vol.volID;
 
     float3 albedo;
     float Tr{1.f};
