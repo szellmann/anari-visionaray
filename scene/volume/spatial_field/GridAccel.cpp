@@ -45,11 +45,17 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
   size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
 
 #ifdef WITH_CUDA
+  dco::GridAccel *gridPtr;
+  CUDA_SAFE_CALL(cudaMalloc(&gridPtr, sizeof(vaccel)));
+  CUDA_SAFE_CALL(cudaMemcpy(gridPtr, &vaccel, sizeof(vaccel), cudaMemcpyHostToDevice));
   cuda::for_each(0, numMCs,
 #else
+  auto *gridPtr = &vaccel;
   parallel::for_each(deviceState()->threadPool, 0, numMCs,
 #endif
     [=] VSNRAY_GPU_FUNC (size_t threadID) {
+      const auto &vaccel = *gridPtr;
+
       box1 valueRange = vaccel.valueRanges[threadID];
 
       if (valueRange.max < valueRange.min) {
@@ -76,6 +82,9 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
       }
       vaccel.maxOpacities[threadID] = maxOpacity;
     });
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaFree(gridPtr));
+#endif
 }
 
 } // namespace visionaray
