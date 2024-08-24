@@ -106,7 +106,6 @@ void TransferFunction1D::commit()
   tex.set_address_mode(Clamp);
 
   vvol.bounds = m_bounds;
-  vvol.volID = m_field->visionaraySpatialField().fieldID;
   vvol.field = m_field->visionaraySpatialField();
   vvol.unitDistance = m_unitDistance;
 
