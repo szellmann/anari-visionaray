@@ -543,108 +543,113 @@ struct VolumePRD
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol)
 {
+  VolumePRD &prd = *(VolumePRD *)ray.prd;
+  HitRecordVolume &hrv = *prd.hr;
+
   auto boxHit = intersect(ray,vol.bounds);
+
+  hit_record<Ray, primitive<unsigned>> hr;
+  hr.t = FLT_MAX;
+  hr.hit = false;
+
+  if (!boxHit.hit)
+    return hr;
+
   if (ray.intersectionMask & Ray::VolumeBounds) {
     // we just report that we did hit the box; the user
     // is later expected to intersect the volume bounds
     // themselves to compute [t0,t1]
-    hit_record<Ray, primitive<unsigned>> result;
-    result.hit = boxHit.hit && (boxHit.tfar >= ray.tmin);
-    result.t = max(ray.tmin,boxHit.tnear);
-    result.geom_id = vol.volID;
-    return result;
-  } else {
-    hit_record<Ray, primitive<unsigned>> hr;
-    hr.t = FLT_MAX;
-    hr.hit = false;
-
-    if (!boxHit.hit)
-      return hr;
-
+    hr.hit = boxHit.hit && (boxHit.tfar >= ray.tmin);
+    hr.t = max(ray.tmin,boxHit.tnear);
     hr.geom_id = vol.volID;
+    if (hr.t < hrv.t) {
+      hrv.hit = true;
+      hrv.t = hr.t;
+      hrv.volID = hr.geom_id;
+    }
+    return hr;
+  }
 
-    VolumePRD &prd = *(VolumePRD *)ray.prd;
+  Random &rnd = *prd.rnd;
 
-    HitRecordVolume &hrv = *prd.hr;
-    Random &rnd = *prd.rnd;
+  hr.geom_id = vol.volID;
   
-    const auto &sf = vol.field;
-    dco::GridAccel grid = sf.gridAccel;
+  const auto &sf = vol.field;
+  dco::GridAccel grid = sf.gridAccel;
 
-    float3 albedo;
-    float Tr{1.f};
-    float extinction{0.f};
-    float unitDistance = vol.unitDistance;
+  float3 albedo;
+  float Tr{1.f};
+  float extinction{0.f};
+  float unitDistance = vol.unitDistance;
 
-    auto woodcockFunc = [&](const int leafID, float t0, float t1) {
+  auto woodcockFunc = [&](const int leafID, float t0, float t1) {
 
-      const float majorant = grid.isValid() ? grid.maxOpacities[leafID] : 1.f;
-      float t = t0;
+    const float majorant = grid.isValid() ? grid.maxOpacities[leafID] : 1.f;
+    float t = t0;
 
-      while (1) {
-        if (majorant <= 0.f)
-          break;
+    while (1) {
+      if (majorant <= 0.f)
+        break;
 
-        t -= (logf(1.f - rnd()) / majorant) * unitDistance;
+      t -= (logf(1.f - rnd()) / majorant) * unitDistance;
 
-        if (t >= t1)
-          break;
+      if (t >= t1)
+        break;
 
-        float3 P = ray.ori+ray.dir*t;
-        float v = 0.f;
-        if (sampleField(sf,P,v)) {
-          float4 sample
-              = postClassify(vol.asTransferFunction1D,v);
-          albedo = sample.xyz();
-          extinction = sample.w;
-          float u = rnd();
-          if (extinction >= u * majorant) {
-            hr.hit = true;
-            Tr = 0.f;
-            hr.t = t;
-            return false; // stop traversal
-          }
+      float3 P = ray.ori+ray.dir*t;
+      float v = 0.f;
+      if (sampleField(sf,P,v)) {
+        float4 sample
+            = postClassify(vol.asTransferFunction1D,v);
+        albedo = sample.xyz();
+        extinction = sample.w;
+        float u = rnd();
+        if (extinction >= u * majorant) {
+          hr.hit = true;
+          Tr = 0.f;
+          hr.t = t;
+          return false; // stop traversal
         }
-      }
-
-      return true; // cont. traversal to the next spat. partition
-    };
-
-    ray.tmin = max(ray.tmin, boxHit.tnear);
-    ray.tmax = min(ray.tmax, boxHit.tfar);
-
-    // transform ray to voxel space
-    ray.ori = sf.pointToVoxelSpace(ray.ori);
-    ray.dir = sf.vectorToVoxelSpace(ray.dir);
-
-    const float dt_scale = length(ray.dir);
-    ray.dir = normalize(ray.dir);
-
-    ray.tmin = ray.tmin * dt_scale;
-    ray.tmax = ray.tmax * dt_scale;
-    unitDistance = unitDistance * dt_scale;
-
-    hr.t = ray.tmax;
-    if (sf.gridAccel.isValid())
-      dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
-    else
-      woodcockFunc(-1, ray.tmin, ray.tmax);
-
-    if (hr.hit) {
-      hr.t /= dt_scale;
-
-      if (hr.t < hrv.t) {
-        hrv.hit = true;
-        hrv.t = hr.t;
-        hrv.volID = hr.geom_id;
-        hrv.albedo = albedo;
-        hrv.Tr = Tr;
-        hrv.extinction = extinction;
       }
     }
 
-    return hr;
+    return true; // cont. traversal to the next spat. partition
+  };
+
+  ray.tmin = max(ray.tmin, boxHit.tnear);
+  ray.tmax = min(ray.tmax, boxHit.tfar);
+
+  // transform ray to voxel space
+  ray.ori = sf.pointToVoxelSpace(ray.ori);
+  ray.dir = sf.vectorToVoxelSpace(ray.dir);
+
+  const float dt_scale = length(ray.dir);
+  ray.dir = normalize(ray.dir);
+
+  ray.tmin = ray.tmin * dt_scale;
+  ray.tmax = ray.tmax * dt_scale;
+  unitDistance = unitDistance * dt_scale;
+
+  hr.t = ray.tmax;
+  if (sf.gridAccel.isValid())
+    dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
+  else
+    woodcockFunc(-1, ray.tmin, ray.tmax);
+
+  if (hr.hit) {
+    hr.t /= dt_scale;
+
+    if (hr.t < hrv.t) {
+      hrv.hit = true;
+      hrv.t = hr.t;
+      hrv.volID = hr.geom_id;
+      hrv.albedo = albedo;
+      hrv.Tr = Tr;
+      hrv.extinction = extinction;
+    }
   }
+
+  return hr;
 }
 
 // ISO surface //
@@ -1454,11 +1459,21 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
 }
 
 VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersectVolumeBounds(
-    Ray ray, const TLS &tls)
+inline HitRecordVolume intersectVolumeBounds(Ray ray, const TLS &tls)
 {
+  HitRecordVolume result;
+
+  VolumePRD prd;
+  prd.hr = &result;
+  ray.prd = &prd;
+
   ray.intersectionMask = Ray::VolumeBounds;
-  return intersect(ray, tls);
+
+  auto hr = intersect(ray, tls);
+
+  result.instID = hr.inst_id;
+
+  return result;
 }
 
 VSNRAY_FUNC

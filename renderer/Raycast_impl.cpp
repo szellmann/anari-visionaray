@@ -152,13 +152,12 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     result.color = over(float4(surfaceColor, surfaceAlpha), rendererState.bgColor);
   }
 
-  hr = intersectVolumeBounds(ray, onDevice.TLSs[worldID]);
+  auto hrv = intersectVolumeBounds(ray, onDevice.TLSs[worldID]);
 
-  if (hr.hit) {
-    const auto &inst = onDevice.instances[hr.inst_id];
+  if (hrv.hit) {
+    const auto &inst = onDevice.instances[hrv.instID];
     const auto &group = onDevice.groups[inst.groupID];
-    const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-    const auto &vol = geom.as<dco::Volume>(0);
+    const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.volID]];
 
     float3 color(0.f);
     float alpha = 0.f;
@@ -168,8 +167,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     result.Ng = float3{}; // TODO: gradient
     result.Ns = float3{}; // TODO..
     result.albedo = float3{}; // TODO..
-    result.primId = hr.prim_id;
-    result.objId = group.objIds[hr.geom_id];
+    result.objId = group.objIds[hrv.volID];
     result.instId = inst.userID;
 
     hit = true;
