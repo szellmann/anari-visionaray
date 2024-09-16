@@ -400,6 +400,8 @@ void VisionaraySceneGPU::dispatch()
     group.geoms = m_impl->parent->m_geometries.devicePtr();
     group.numMaterials = m_impl->parent->m_materials.size();
     group.materials = m_impl->parent->m_materials.devicePtr();
+    group.numVolumes = m_impl->parent->m_volumes.size();
+    group.volumes = m_impl->parent->m_volumes.devicePtr();
     group.numLights = m_impl->parent->m_lights.size();
     group.lights = m_impl->parent->m_lights.devicePtr();
     group.objIds = m_impl->parent->m_objIds.devicePtr();
