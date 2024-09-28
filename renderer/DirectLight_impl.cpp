@@ -118,6 +118,10 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     float4 color{1.f};
     float2 uv{hr.u,hr.v};
 
+    int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
+    const dco::Instance &inst = onDevice.instances[instID];
+    const dco::Group &group = onDevice.groups[inst.groupID];
+
     if (hitRec.lightHit) {
       hitPos = ray.ori + hrl.t * ray.dir;
       const dco::Light &light = onDevice.lights[world.allLights[hrl.lightID]];
@@ -130,8 +134,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
 
-      const dco::Instance &inst = onDevice.instances[hrv.instID];
-      const dco::Group &group = onDevice.groups[inst.groupID];
       const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.volID]];
 
       if (rendererState.gradientShading) {
@@ -150,8 +152,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       result.depth = hr.t;
       result.primId = hr.prim_id;
 
-      const dco::Instance &inst = onDevice.instances[hr.inst_id];
-      const dco::Group &group = onDevice.groups[inst.groupID];
       const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
 
@@ -199,9 +199,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
-    const dco::Instance &inst = onDevice.instances[instID];
-    const dco::Group &group = onDevice.groups[inst.groupID];
     light_sample<float> ls;
     vec3f intensity(0.f);
     float dist = 1.f;
@@ -267,8 +264,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       baseColor = hrv.albedo;
     } else {
       // That doesn't work for instances..
-      const auto &inst = onDevice.instances[hr.inst_id];
-      const auto &group = onDevice.groups[inst.groupID];
       const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
       if (rendererState.renderMode == RenderMode::Default) {
