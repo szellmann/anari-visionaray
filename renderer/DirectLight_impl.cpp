@@ -146,8 +146,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
         gn = uniform_sample_sphere(ss.random(), ss.random());
 
+      color.xyz() = hrv.albedo;
+
       result.depth = hrv.t;
-      result.albedo = hrv.albedo;
       result.objId = group.objIds[hrv.volID];
       result.instId = inst.userID;
     } else {
@@ -186,12 +187,11 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
             mat, onDevice.samplers, attribs, hr.prim_id, tng, btng, sn);
       }
       color = getColor(mat, onDevice.samplers, attribs, hr.prim_id);
-
-      result.albedo = color.xyz();
     }
 
     result.Ng = gn;
     result.Ns = sn;
+    result.albedo = color.xyz();
 
     // Compute motion vector; assume for now the hit was diffuse!
     recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
@@ -228,13 +228,12 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       dist = light.type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
     }
 
-    if (hitRec.volumeHit) {
-      if (rendererState.renderMode == RenderMode::Default) {
+    if (rendererState.renderMode == RenderMode::Default) {
+      if (hitRec.volumeHit) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
           dco::Material mat;
           mat.type = dco::Material::Matte;
           mat.asMatte.color.rgb = hrv.albedo;
-          dco::Geometry dummyGeom;
 
           if (ls.pdf > 0.f) {
             shadedColor = evalMaterial(mat,
@@ -242,33 +241,17 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                        nullptr, // attribs, not used..
                                        UINT_MAX, // primID, not used..
                                        gn, gn,
-                                       viewDir, ls.dir,
+                                       viewDir,
+                                       ls.dir,
                                        intensity);
             shadedColor = shadedColor / ls.pdf / (dist*dist);
           }
         }
         else
           shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
-      } else if (rendererState.renderMode == RenderMode::Ng) {
-        shadedColor = gn;
-      } else if (rendererState.renderMode == RenderMode::Ns) {
-        shadedColor = sn;
-      } else if (rendererState.renderMode == RenderMode::Albedo) {
-        shadedColor = hrv.albedo;
-      } else if (rendererState.renderMode == RenderMode::MotionVec) {
-        vec2 xy = normalize(result.motionVec.xy());
-        float angle = (1.f+ sinf(xy.x)) *.5f;
-        float mag = 1.f;//length(result.motionVec.xy());
-        vec3 hsv(angle,1.f,mag);
-        shadedColor = hsv2rgb(hsv);
-      }
-
-      baseColor = hrv.albedo;
-    } else {
-      // That doesn't work for instances..
-      const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-      const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
-      if (rendererState.renderMode == RenderMode::Default) {
+      } else {
+        const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
+        const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
         if (ls.pdf > 0.f) {
           shadedColor = evalMaterial(mat,
                                      onDevice.samplers,
@@ -281,44 +264,40 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
           shadedColor = shadedColor / ls.pdf / (dist*dist);
         }
       }
-      else if (rendererState.renderMode == RenderMode::Ng)
-        shadedColor = (gn + float3(1.f)) * float3(0.5f);
-      else if (rendererState.renderMode == RenderMode::Ns)
-        shadedColor = (sn + float3(1.f)) * float3(0.5f);
-      else if (rendererState.renderMode == RenderMode::Tangent)
-        shadedColor = tng;
-      else if (rendererState.renderMode == RenderMode::Bitangent)
-        shadedColor = btng;
-      else if (rendererState.renderMode == RenderMode::Albedo)
-        shadedColor = color.xyz();
-      else if (rendererState.renderMode == RenderMode::MotionVec) {
-        vec2 xy = result.motionVec.xy();
-        //xy.x /= float(ss.frameSize.x);
-        //xy.y /= float(ss.frameSize.y);
-        float x = xy.x, y = xy.y;
-        vec2 plr = length(xy) < 1e-10f ? vec2(0.f) : vec2(sqrt(x * x + y * y),atan(y / x));
-        //float angle = length(xy) < 1e-8f ? 0 : acos(dot(xy, vec2(1,0))/length(xy)) * visionaray::constants::radians_to_degrees<float>();
-        //float angle = (plr.y+M_PI*.5f) * visionaray::constants::radians_to_degrees<float>();
-        float angle = 180+plr.y * visionaray::constants::radians_to_degrees<float>();
-        float mag = plr.x;
-        vec3 hsv(angle,1.f,mag);
-        shadedColor = hsv2rgb(hsv);
-      } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
-        shadedColor = attribs[(int)dco::Attribute::_0].xyz();
-      else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
-        shadedColor = attribs[(int)dco::Attribute::_1].xyz();
-      else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
-        shadedColor = attribs[(int)dco::Attribute::_2].xyz();
-      else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
-        shadedColor = attribs[(int)dco::Attribute::_3].xyz();
-      else if (rendererState.renderMode == RenderMode::GeometryColor)
-        shadedColor = attribs[(int)dco::Attribute::Color].xyz();
-
-      if (rendererState.renderMode == RenderMode::Default)
-        baseColor = color.xyz();
-      else
-        baseColor = shadedColor;
     }
+    else if (rendererState.renderMode == RenderMode::Ng)
+      shadedColor = (gn + float3(1.f)) * float3(0.5f);
+    else if (rendererState.renderMode == RenderMode::Ns)
+      shadedColor = (sn + float3(1.f)) * float3(0.5f);
+    else if (rendererState.renderMode == RenderMode::Tangent)
+      shadedColor = tng;
+    else if (rendererState.renderMode == RenderMode::Bitangent)
+      shadedColor = btng;
+    else if (rendererState.renderMode == RenderMode::Albedo)
+      shadedColor = color.xyz();
+    else if (rendererState.renderMode == RenderMode::MotionVec) {
+      vec2 xy = result.motionVec.xy();
+      float x = xy.x, y = xy.y;
+      vec2 plr = length(xy) < 1e-10f ? vec2(0.f) : vec2(sqrt(x * x + y * y),atan(y / x));
+      float angle = 180+plr.y * visionaray::constants::radians_to_degrees<float>();
+      float mag = plr.x;
+      vec3 hsv(angle,1.f,mag);
+      shadedColor = hsv2rgb(hsv);
+    } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
+      shadedColor = attribs[(int)dco::Attribute::_0].xyz();
+    else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
+      shadedColor = attribs[(int)dco::Attribute::_1].xyz();
+    else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
+      shadedColor = attribs[(int)dco::Attribute::_2].xyz();
+    else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
+      shadedColor = attribs[(int)dco::Attribute::_3].xyz();
+    else if (rendererState.renderMode == RenderMode::GeometryColor)
+      shadedColor = attribs[(int)dco::Attribute::Color].xyz();
+
+    if (rendererState.renderMode == RenderMode::Default)
+      baseColor = color.xyz();
+    else
+      baseColor = shadedColor;
 
     // Convert primary to shadow ray
     ray.ori = hitPos + sn * eps;
