@@ -229,40 +229,38 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     }
 
     if (rendererState.renderMode == RenderMode::Default) {
+      auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
       if (hitRec.volumeHit) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
           dco::Material mat;
           mat.type = dco::Material::Matte;
           mat.asMatte.color.rgb = hrv.albedo;
 
-          if (ls.pdf > 0.f) {
-            shadedColor = evalMaterial(mat,
-                                       onDevice.samplers, // not used..
-                                       nullptr, // attribs, not used..
-                                       UINT_MAX, // primID, not used..
-                                       gn, gn,
-                                       viewDir,
-                                       ls.dir,
-                                       intensity);
-            shadedColor = shadedColor / ls.pdf / (dist*dist);
-          }
-        }
-        else
-          shadedColor = hrv.albedo * intensity / ls.pdf / (dist*dist);
-      } else {
-        const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-        const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
-        if (ls.pdf > 0.f) {
           shadedColor = evalMaterial(mat,
-                                     onDevice.samplers,
-                                     attribs,
-                                     hr.prim_id,
-                                     gn, sn,
+                                     onDevice.samplers, // not used..
+                                     nullptr, // attribs, not used..
+                                     UINT_MAX, // primID, not used..
+                                     gn, gn,
                                      viewDir,
                                      ls.dir,
                                      intensity);
-          shadedColor = shadedColor / ls.pdf / (dist*dist);
+          shadedColor = shadedColor * safe_rcp(ls.pdf) / (dist*dist);
         }
+        else
+          shadedColor = hrv.albedo * intensity * safe_rcp(ls.pdf) / (dist*dist);
+      } else {
+        const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
+        const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
+
+        shadedColor = evalMaterial(mat,
+                                   onDevice.samplers,
+                                   attribs,
+                                   hr.prim_id,
+                                   gn, sn,
+                                   viewDir,
+                                   ls.dir,
+                                   intensity);
+        shadedColor = shadedColor * safe_rcp(ls.pdf) / (dist*dist);
       }
     }
     else if (rendererState.renderMode == RenderMode::Ng)
