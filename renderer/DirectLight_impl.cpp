@@ -118,10 +118,6 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     float4 color{1.f};
     float2 uv{hr.u,hr.v};
 
-    int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
-    const dco::Instance &inst = onDevice.instances[instID];
-    const dco::Group &group = onDevice.groups[inst.groupID];
-
     if (hitRec.lightHit) {
       hitPos = ray.ori + hrl.t * ray.dir;
       const dco::Light &light = onDevice.lights[world.allLights[hrl.lightID]];
@@ -129,7 +125,13 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         throughput = light.asQuad.intensity(hitPos);
       hdriMiss = true; // TODO?!
       return false;
-    } else if (hitRec.volumeHit) {
+    }
+
+    int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
+    const dco::Instance &inst = onDevice.instances[instID];
+    const dco::Group &group = onDevice.groups[inst.groupID];
+
+    if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
