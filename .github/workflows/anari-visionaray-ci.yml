@@ -2,7 +2,7 @@ name: anari-visionaray CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ci ]
   pull_request:
     branches: [ main ]
 
@@ -11,17 +11,43 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
         config: [Release, Debug]
+        cuda: [ON, OFF]
 
     steps:
     - uses: actions/checkout@v3
 
+    - name: Add NVIDIA package repositories
+      if: >-
+        matrix.os == 'ubuntu-24.04' &&
+        matrix.cuda == 'ON'
+      run: |
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
+        sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600
+        sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/3bf863cc.pub
+        sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/ /"
+        sudo apt update
+
+    - name: Install CUDA
+      if: >-
+        matrix.os == 'ubuntu-24.04' &&
+        matrix.cuda == 'ON'
+      run: sudo apt-get install -y cuda-toolkit-12-6
+
+    - name: Setup CUDA
+      if: >-
+        matrix.os == 'ubuntu-24.04' &&
+        matrix.cuda == 'ON'
+      run: |
+        echo "/usr/local/cuda-12.6/bin" >> $GITHUB_PATH
+        echo "LD_LIBRARY_PATH=/usr/local/cuda-12.6/lib64:$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
     - name: Install Packages
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       run: |
         sudo apt update
-        sudo apt install -y libglew-dev libboost-all-dev # nvidia-cuda-toolkit
+        sudo apt install -y libglew-dev libboost-all-dev
 
     - name: Checkout ANARI-SDK
       uses: actions/checkout@v3
@@ -58,7 +84,8 @@ jobs:
          -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF \
          -DVSNRAY_ENABLE_VIEWER:BOOL=OFF \
          -DVSNRAY_ENABLE_COMMON:BOOL=OFF \
-         -DVSNRAY_ENABLE_CUDA:BOOL=OFF
+         -DVSNRAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }} \
+         -DVSNRAY_ENABLE_TBB:BOOL=OFF
         cmake --build visionaray/build --target install
 
     - name: Configure CMake
@@ -69,7 +96,7 @@ jobs:
         -DCMAKE_BUILD_TYPE=${{ matrix.config }}
         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/build/install
         -DBUILD_SHARED_LIBS:BOOL=ON
-        -DANARI_VISIONARAY_ENABLE_CUDA:BOOL=OFF # cuda and gcc-11.4 don't work together
+        -DANARI_VISIONARAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }}
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{ matrix.config }} --target install
