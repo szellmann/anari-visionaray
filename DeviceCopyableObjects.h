@@ -244,14 +244,11 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 {
   hit_record<Ray, primitive<unsigned>> result;
   float3 pos = ray.ori;
+  result.hit = false;
 
   if (!block.filterDomain().contains(pos)) {
-    result.hit = false;
     return result;
   }
-
-  result.t = 0.f;
-  result.hit = true;
 
   float *prd = (float *)ray.prd;
   float &sumWeightedValues = prd[0];
@@ -444,7 +441,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
 
     auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
 
-    if (!hr.hit || basisPRD[1] == 0.f)
+    if (basisPRD[1] == 0.f)
       return false;
 
     value = basisPRD[0]/basisPRD[1];
