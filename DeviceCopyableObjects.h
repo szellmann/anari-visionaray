@@ -415,7 +415,7 @@ struct SpatialField
 };
 
 VSNRAY_FUNC
-inline bool sampleField(SpatialField sf, vec3 P, float &value) {
+inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
   // This assumes that P is in voxel space!
   if (sf.type == SpatialField::StructuredRegular) {
     value = tex3D(sf.asStructuredRegular.sampler,P);
