@@ -741,27 +741,46 @@ inline vec3 evalMaterial(const dco::Material &mat,
   return shadedColor;
 }
 
-typedef light_sample<float> LightSample;
+struct LightSample : light_sample<float>
+{
+  float3 intensity;
+  float3 dir;
+  float pdf;
+  float dist;
+  float dist2;
+};
 
 VSNRAY_FUNC
 inline LightSample sampleLight(const dco::Light &light, vec3f hitPos, Random &rnd)
 {
   LightSample result;
+  light_sample<float> ls;
   if (light.type == dco::Light::Point) {
-    result = light.asPoint.sample(hitPos, rnd);
-    result.intensity = light.asPoint.intensity(hitPos);
+    ls = light.asPoint.sample(hitPos, rnd);
+    ls.intensity = light.asPoint.intensity(hitPos);
   } else if (light.type == dco::Light::Quad) {
-    result = light.asQuad.sample(hitPos, rnd);
-    result.intensity = light.asQuad.intensity(hitPos);
+    ls = light.asQuad.sample(hitPos, rnd);
+    ls.intensity = light.asQuad.intensity(hitPos);
   } else if (light.type == dco::Light::Directional) {
-    result = light.asDirectional.sample(hitPos, rnd);
-    result.intensity = light.asDirectional.intensity(hitPos);
+    ls = light.asDirectional.sample(hitPos, rnd);
+    ls.intensity = light.asDirectional.intensity(hitPos);
   } else if (light.type == dco::Light::HDRI) {
-    result = light.asHDRI.sample(hitPos, rnd);
-    result.intensity = light.asHDRI.intensity(result.dir);
+    ls = light.asHDRI.sample(hitPos, rnd);
+    ls.intensity = light.asHDRI.intensity(result.dir);
   }
-  float dist = result.dist;
-  result.dist = light.type == dco::Light::Directional||dco::Light::HDRI ? 1.f : dist;
+
+  result.intensity = ls.intensity;
+  result.dir = ls.dir;
+  result.pdf = ls.pdf;
+  result.dist = ls.dist;
+
+  if (light.type == dco::Light::Directional
+    ||light.type == dco::Light::HDRI) {
+    result.dist2 = 1.f; // infinite lights are not attenuated by distance!
+  } else {
+    result.dist2 = ls.dist*ls.dist;
+  }
+
   return result;
 }
 

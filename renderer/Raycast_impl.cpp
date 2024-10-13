@@ -66,7 +66,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
         const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
-        light_sample<float> ls = sampleLight(light, hitPos, ss.random);
+        LightSample ls = sampleLight(light, hitPos, ss.random);
 
         float3 brdf = evalMaterial(mat,
                                    onDevice.samplers,
@@ -76,7 +76,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    viewDir,
                                    ls.dir,
                                    ls.intensity);
-        shadedColor += brdf / ls.pdf / (ls.dist*ls.dist);
+        shadedColor += brdf / ls.pdf / ls.dist2;
       }
 
       shadedColor +=
