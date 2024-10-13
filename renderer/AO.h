@@ -8,7 +8,7 @@ namespace visionaray {
 
 VSNRAY_FUNC
 inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    VisionarayGlobalState::DeviceObjectRegistry onDevice)
+    DeviceObjectRegistry onDevice)
 {
   auto hr = intersectSurfaces<1>(ss, ray, onDevice, worldID);
   auto hrv = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
@@ -17,7 +17,7 @@ inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
 
 VSNRAY_FUNC
 inline float computeAO(ScreenSample &ss, unsigned worldID,
-    VisionarayGlobalState::DeviceObjectRegistry onDevice,
+    DeviceObjectRegistry onDevice,
     vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
     float time, float eps, int AO_samples, float AO_radius)
 {

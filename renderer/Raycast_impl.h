@@ -2,6 +2,7 @@
 
 #include "renderer/common.h"
 #include "renderer/VolumeIntegration.h"
+#include "VisionarayGlobalState.h"
 
 namespace visionaray {
 
@@ -11,7 +12,7 @@ struct VisionarayRendererRaycast
                    const dco::Camera &cam,
                    uint2 size,
                    VisionarayGlobalState *state,
-                   const VisionarayGlobalState::DeviceObjectRegistry &DD,
+                   const DeviceObjectRegistry &DD,
                    const RendererState &rendererState,
                    unsigned worldID, int frameID);
 

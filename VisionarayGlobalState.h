@@ -7,8 +7,7 @@
 // visionaray
 #include "visionaray/detail/thread_pool.h"
 // ours
-#include "DeviceCopyableObjects.h"
-#include "DeviceArray.h"
+#include "DeviceObjectRegistry.h"
 #include "RenderingSemaphore.h"
 
 namespace visionaray {
@@ -45,38 +44,8 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
     helium::TimeStamp lastTLSReconstructSceneRequest{0};
   } objectUpdates;
 
-  struct DeviceCopyableObjects
-  {
-    // One TLS per world
-    DeviceObjectArray<dco::TLS> TLSs;
-    DeviceObjectArray<dco::World> worlds; // TODO: move TLSs and EPS in here!
-    DeviceObjectArray<dco::Group> groups;
-    DeviceObjectArray<dco::Surface> surfaces;
-    DeviceObjectArray<dco::Instance> instances;
-    DeviceObjectArray<dco::Geometry> geometries;
-    DeviceObjectArray<dco::Material> materials;
-    DeviceObjectArray<dco::Sampler> samplers;
-    DeviceObjectArray<dco::Volume> volumes;
-    DeviceObjectArray<dco::SpatialField> spatialFields;
-    DeviceObjectArray<dco::Light> lights;
-    DeviceObjectArray<dco::Frame> frames;
-  } dcos;
-
-  struct DeviceObjectRegistry
-  {
-    dco::TLS *TLSs{nullptr};
-    dco::World *worlds{nullptr};
-    dco::Group *groups{nullptr};
-    dco::Surface *surfaces{nullptr};
-    dco::Instance *instances{nullptr};
-    dco::Geometry *geometries{nullptr};
-    dco::Material *materials{nullptr};
-    dco::Sampler *samplers{nullptr};
-    dco::Volume *volumes{nullptr};
-    dco::SpatialField *spatialFields{nullptr};
-    dco::Light *lights{nullptr};
-    dco::Frame *frames{nullptr};
-  } onDevice;
+  DeviceCopyableObjects dcos;
+  DeviceObjectRegistry onDevice;
 
 #ifdef WITH_CUDA
   cudaStream_t stream;

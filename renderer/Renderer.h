@@ -20,7 +20,7 @@ struct VisionarayRenderer
                    const dco::Camera &cam,
                    uint2 size,
                    VisionarayGlobalState *state,
-                   const VisionarayGlobalState::DeviceObjectRegistry &DD,
+                   const DeviceObjectRegistry &DD,
                    unsigned worldID, int frameID)
   {
     if (type == Raycast) {

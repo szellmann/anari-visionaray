@@ -5,7 +5,7 @@
 // ours
 #include "common.h"
 #include "DeviceCopyableObjects.h"
-#include "VisionarayGlobalState.h"
+#include "DeviceObjectRegistry.h"
 
 namespace visionaray {
 
@@ -821,7 +821,7 @@ template <bool EvalOpacity>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     ScreenSample &ss, Ray ray,
-    const VisionarayGlobalState::DeviceObjectRegistry &onDevice,
+    const DeviceObjectRegistry &onDevice,
     unsigned worldID)
 {
   auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
@@ -855,7 +855,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
 VSNRAY_FUNC
 inline dco::HitRecordVolume sampleFreeFlightDistanceAllVolumes(
     ScreenSample &ss, Ray ray, unsigned worldID,
-    VisionarayGlobalState::DeviceObjectRegistry onDevice) {
+    DeviceObjectRegistry onDevice) {
 
   ray.prd = &ss.random;
   return intersectVolumes(ray, onDevice.TLSs[worldID]);
@@ -863,7 +863,7 @@ inline dco::HitRecordVolume sampleFreeFlightDistanceAllVolumes(
 
 VSNRAY_FUNC
 inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
+    const DeviceObjectRegistry &onDevice)
 {
   HitRecLight hr;
   dco::World world = onDevice.worlds[worldID];
@@ -883,7 +883,7 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
 
 VSNRAY_FUNC
 inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
+    const DeviceObjectRegistry &onDevice)
 {
   HitRec hr;
   hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID);
