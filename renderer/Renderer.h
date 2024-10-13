@@ -24,10 +24,10 @@ struct VisionarayRenderer
                    unsigned worldID, int frameID)
   {
     if (type == Raycast) {
-      asRaycast.renderer.renderFrame(
+      asRaycast.renderFrame(
           frame, cam, size, state, DD, rendererState, worldID, frameID);
     } else if (type == DirectLight) {
-      asDirectLight.renderer.renderFrame(
+      asDirectLight.renderFrame(
           frame, cam, size, state, DD, rendererState, worldID, frameID);
     }
   }
@@ -35,9 +35,9 @@ struct VisionarayRenderer
   VSNRAY_FUNC
   constexpr bool stochasticRendering() const {
     if (type == Raycast) {
-      return asRaycast.renderer.stochasticRendering;
+      return asRaycast.stochasticRendering;
     } else if (type == DirectLight) {
-      return asDirectLight.renderer.stochasticRendering;
+      return asDirectLight.stochasticRendering;
     }
     return type != Raycast;
   }
@@ -47,13 +47,10 @@ struct VisionarayRenderer
     return type == DirectLight && rendererState.taaEnabled;
   }
 
-  struct {
-    VisionarayRendererRaycast renderer;
-  } asRaycast;
-
-  struct {
-    VisionarayRendererDirectLight renderer;
-  } asDirectLight;
+  union {
+    VisionarayRendererRaycast     asRaycast;
+    VisionarayRendererDirectLight asDirectLight;
+  };
 
   RendererState rendererState;
 };

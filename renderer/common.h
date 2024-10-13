@@ -741,6 +741,30 @@ inline vec3 evalMaterial(const dco::Material &mat,
   return shadedColor;
 }
 
+typedef light_sample<float> LightSample;
+
+VSNRAY_FUNC
+inline LightSample sampleLight(const dco::Light &light, vec3f hitPos, Random &rnd)
+{
+  LightSample result;
+  if (light.type == dco::Light::Point) {
+    result = light.asPoint.sample(hitPos, rnd);
+    result.intensity = light.asPoint.intensity(hitPos);
+  } else if (light.type == dco::Light::Quad) {
+    result = light.asQuad.sample(hitPos, rnd);
+    result.intensity = light.asQuad.intensity(hitPos);
+  } else if (light.type == dco::Light::Directional) {
+    result = light.asDirectional.sample(hitPos, rnd);
+    result.intensity = light.asDirectional.intensity(hitPos);
+  } else if (light.type == dco::Light::HDRI) {
+    result = light.asHDRI.sample(hitPos, rnd);
+    result.intensity = light.asHDRI.intensity(result.dir);
+  }
+  float dist = result.dist;
+  result.dist = light.type == dco::Light::Directional||dco::Light::HDRI ? 1.f : dist;
+  return result;
+}
+
 VSNRAY_FUNC
 inline Ray clipRay(Ray ray, const float4 *clipPlanes, unsigned numClipPlanes)
 {
@@ -756,6 +780,23 @@ inline Ray clipRay(Ray ray, const float4 *clipPlanes, unsigned numClipPlanes)
   }
   return ray;
 }
+
+struct HitRecLight
+{
+  bool hit{false};
+  float t{FLT_MAX};
+  unsigned lightID{UINT_MAX};
+};
+
+struct HitRec
+{
+  hit_record<Ray, primitive<unsigned>> surface;
+  dco::HitRecordVolume volume;
+  HitRecLight light;
+  bool hit{false};
+  bool volumeHit{false};
+  bool lightHit{false};
+};
 
 template <bool EvalOpacity>
 VSNRAY_FUNC
@@ -791,6 +832,51 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
   }
   return hr;
 }
+
+VSNRAY_FUNC
+inline dco::HitRecordVolume sampleFreeFlightDistanceAllVolumes(
+    ScreenSample &ss, Ray ray, unsigned worldID,
+    VisionarayGlobalState::DeviceObjectRegistry onDevice) {
+
+  ray.prd = &ss.random;
+  return intersectVolumes(ray, onDevice.TLSs[worldID]);
+}
+
+VSNRAY_FUNC
+inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
+    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
+{
+  HitRecLight hr;
+  dco::World world = onDevice.worlds[worldID];
+  for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
+    const dco::Light &light = onDevice.lights[world.allLights[lightID]];
+    if (light.type == dco::Light::Quad && light.visible) {
+      auto hrl = intersect(ray, light.asQuad.geometry());
+      if (hrl.hit && hrl.t < hr.t) {
+        hr.hit = true;
+        hr.t = hrl.t;
+        hr.lightID = lightID;
+      }
+    }
+  }
+  return hr;
+}
+
+VSNRAY_FUNC
+inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
+    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
+{
+  HitRec hr;
+  hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID);
+  hr.light   = intersectLights(ss, ray, worldID, onDevice);
+  hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
+  hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
+  hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t < hr.surface.t);
+  hr.volumeHit = hr.volume.hit && (!hr.surface.hit || hr.volume.t < hr.surface.t)
+                               && (!hr.light.hit || hr.volume.t < hr.light.t);
+  return hr;
+}
+
 
 inline  VSNRAY_FUNC vec4f over(const vec4f &A, const vec4f &B)
 {

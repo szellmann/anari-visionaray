@@ -66,21 +66,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
         const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
-        light_sample<float> ls;
-        vec3f intensity(0.f);
-        float dist = 1.f;
-        ls.pdf = 0.f;
-
-        if (light.type == dco::Light::Point) {
-          ls = light.asPoint.sample(hitPos+1e-4f, ss.random);
-          intensity = light.asPoint.intensity(hitPos);
-        } else if (light.type == dco::Light::Directional) {
-          ls = light.asDirectional.sample(hitPos+1e-4f, ss.random);
-          intensity = light.asDirectional.intensity(hitPos);
-        } else if (light.type == dco::Light::HDRI) {
-          ls = light.asHDRI.sample(hitPos+1e-4f, ss.random);
-          intensity = light.asHDRI.intensity(ls.dir);
-        }
+        light_sample<float> ls = sampleLight(light, hitPos, ss.random);
 
         float3 brdf = evalMaterial(mat,
                                    onDevice.samplers,
@@ -89,8 +75,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    gn, sn,
                                    viewDir,
                                    ls.dir,
-                                   intensity);
-        shadedColor += brdf / ls.pdf / (dist*dist);
+                                   ls.intensity);
+        shadedColor += brdf / ls.pdf / (ls.dist*ls.dist);
       }
 
       shadedColor +=

@@ -4,58 +4,6 @@
 
 namespace visionaray {
 
-struct HitRecLight
-{
-  bool hit{false};
-  float t{FLT_MAX};
-  unsigned lightID{UINT_MAX};
-};
-
-struct HitRec
-{
-  hit_record<Ray, primitive<unsigned>> surface;
-  dco::HitRecordVolume volume;
-  HitRecLight light;
-  bool hit{false};
-  bool volumeHit{false};
-  bool lightHit{false};
-};
-
-VSNRAY_FUNC
-HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
-{
-  HitRecLight hr;
-  dco::World world = onDevice.worlds[worldID];
-  for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
-    const dco::Light &light = onDevice.lights[world.allLights[lightID]];
-    if (light.type == dco::Light::Quad && light.visible) {
-      auto hrl = intersect(ray, light.asQuad.geometry());
-      if (hrl.hit && hrl.t < hr.t) {
-        hr.hit = true;
-        hr.t = hrl.t;
-        hr.lightID = lightID;
-      }
-    }
-  }
-  return hr;
-}
-
-VSNRAY_FUNC
-HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const VisionarayGlobalState::DeviceObjectRegistry &onDevice)
-{
-  HitRec hr;
-  hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID);
-  hr.light   = intersectLights(ss, ray, worldID, onDevice);
-  hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
-  hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
-  hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t < hr.surface.t);
-  hr.volumeHit = hr.volume.hit && (!hr.surface.hit || hr.volume.t < hr.surface.t)
-                               && (!hr.light.hit || hr.volume.t < hr.light.t);
-  return hr;
-}
-
 struct ShadeRec
 {
   float3 throughput{1.f};
@@ -201,31 +149,13 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    light_sample<float> ls;
-    vec3f intensity(0.f);
-    float dist = 1.f;
-    ls.pdf = 0.f;
+    LightSample ls;
+    memset(&ls, 0, sizeof(ls));
 
     if (world.numLights > 0) {
       int lightID = uniformSampleOneLight(ss.random, world.numLights);
-
       const dco::Light &light = onDevice.lights[world.allLights[lightID]];
-
-      if (light.type == dco::Light::Point) {
-        ls = light.asPoint.sample(hitPos, ss.random);
-        intensity = light.asPoint.intensity(hitPos);
-      } else if (light.type == dco::Light::Quad) {
-        ls = light.asQuad.sample(hitPos, ss.random);
-        intensity = light.asQuad.intensity(hitPos);
-      } else if (light.type == dco::Light::Directional) {
-        ls = light.asDirectional.sample(hitPos, ss.random);
-        intensity = light.asDirectional.intensity(hitPos);
-      } else if (light.type == dco::Light::HDRI) {
-        ls = light.asHDRI.sample(hitPos, ss.random);
-        intensity = light.asHDRI.intensity(ls.dir);
-      }
-
-      dist = light.type == dco::Light::Directional||dco::Light::HDRI ? 1.f : ls.dist;
+      ls = sampleLight(light, hitPos, ss.random);
     }
 
     if (rendererState.renderMode == RenderMode::Default) {
@@ -243,11 +173,11 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                      gn, gn,
                                      viewDir,
                                      ls.dir,
-                                     intensity);
-          shadedColor = shadedColor * safe_rcp(ls.pdf) / (dist*dist);
+                                     ls.intensity);
+          shadedColor = shadedColor * safe_rcp(ls.pdf) / (ls.dist*ls.dist);
         }
         else
-          shadedColor = hrv.albedo * intensity * safe_rcp(ls.pdf) / (dist*dist);
+          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) / (ls.dist*ls.dist);
       } else {
         const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
@@ -259,8 +189,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                    gn, sn,
                                    viewDir,
                                    ls.dir,
-                                   intensity);
-        shadedColor = shadedColor * safe_rcp(ls.pdf) / (dist*dist);
+                                   ls.intensity);
+        shadedColor = shadedColor * safe_rcp(ls.pdf) / (ls.dist*ls.dist);
       }
     }
     else if (rendererState.renderMode == RenderMode::Ng)

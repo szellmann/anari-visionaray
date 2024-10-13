@@ -50,13 +50,4 @@ inline float rayMarchVolume(ScreenSample &ss,
   return t / dt_scale;
 }
 
-VSNRAY_FUNC
-inline dco::HitRecordVolume sampleFreeFlightDistanceAllVolumes(
-    ScreenSample &ss, Ray ray, unsigned worldID,
-    VisionarayGlobalState::DeviceObjectRegistry onDevice) {
-
-  ray.prd = &ss.random;
-  return intersectVolumes(ray, onDevice.TLSs[worldID]);
-}
-
 } // namespace visionaray
