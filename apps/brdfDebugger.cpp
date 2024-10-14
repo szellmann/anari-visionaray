@@ -10,6 +10,7 @@
 
 using namespace visionaray;
 
+static  float  g_groundPlaneOpacity = { 0.5f };
 static const char* g_selectedMaterial = "Matte";
 static  float3 g_lightDir = { 1.f, 1.f, 0.f };
 static  float  g_metallic = { 0.f };
@@ -61,9 +62,9 @@ static anari::Array2D makeTextureData(anari::Device d, int dim)
     for (int w = 0; w < dim; w++) {
       bool even = h & 1;
       if (even)
-        data[h * dim + w] = w & 1 ? makeTexel(200) : makeTexel(50);
+        data[h * dim + w] = w & 1 ? makeTexel(255) : makeTexel(0);
       else
-        data[h * dim + w] = w & 1 ? makeTexel(50) : makeTexel(200);
+        data[h * dim + w] = w & 1 ? makeTexel(0) : makeTexel(255);
     }
   }
 
@@ -74,11 +75,10 @@ static anari::Array2D makeTextureData(anari::Device d, int dim)
 static anari::Surface makePlane(anari::Device d, box3_t bounds)
 {
   anari::math::float3 vertices[4];
-  float f = length(bounds[1]-bounds[0]);
-  vertices[0] = { bounds[0][0] - f, bounds[0][1] - (0.1 * f), bounds[1][2] + f };
-  vertices[1] = { bounds[1][0] + f, bounds[0][1] - (0.1 * f), bounds[1][2] + f };
-  vertices[2] = { bounds[1][0] + f, bounds[0][1] - (0.1 * f), bounds[0][2] - f };
-  vertices[3] = { bounds[0][0] - f, bounds[0][1] - (0.1 * f), bounds[0][2] - f };
+  vertices[0] = { bounds[0][0], bounds[0][1], bounds[1][2] };
+  vertices[1] = { bounds[1][0], bounds[0][1], bounds[1][2] };
+  vertices[2] = { bounds[1][0], bounds[0][1], bounds[0][2] };
+  vertices[3] = { bounds[0][0], bounds[0][1], bounds[0][2] };
 
   anari::math::float2 texcoords[4] = {
       {0.f, 0.f},
@@ -112,6 +112,7 @@ static anari::Surface makePlane(anari::Device d, box3_t bounds)
   auto mat = anari::newObject<anari::Material>(d, "matte");
   anari::setAndReleaseParameter(d, mat, "color", tex);
   anari::setParameter(d, mat, "alphaMode", "blend");
+  anari::setParameter(d, mat, "opacity", g_groundPlaneOpacity);
   anari::commitParameters(d, mat);
   anari::setAndReleaseParameter(d, surface, "material", mat);
 
@@ -302,8 +303,8 @@ Renderer::Renderer()
   //anari.renderer = anari::newObject<anari::Renderer>(anari.device, "raycast");
 
   box3_t bounds;
-  bounds[0] = {0.f, 0.f, 0.f};
-  bounds[1] = {1.f, 1.f, 1.f};
+  bounds[0] = {-3.f, 0.f, -3.f};
+  bounds[1] = {3.f, 1.f, 3.f};
 
   anari.world = anari::newObject<anari::World>(anari.device);
 
@@ -315,7 +316,7 @@ Renderer::Renderer()
       anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
   anari::commitParameters(anari.device, anari.world);
 
-  anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+  //anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
 
   if (1) {
     auto planeInst = makePlaneInstance(anari.device, bounds);
