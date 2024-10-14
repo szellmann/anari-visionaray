@@ -8,6 +8,12 @@
 #include "renderer/common.h"
 #include "AnariCamera.h"
 
+using box3_t = std::array<anari::math::float3, 2>;
+namespace anari {
+ANARI_TYPEFOR_SPECIALIZATION(box3_t, ANARI_FLOAT32_BOX3);
+ANARI_TYPEFOR_DEFINITION(box3_t);
+} // namespace anari
+
 using namespace visionaray;
 
 static  float  g_groundPlaneOpacity = { 0.5f };
@@ -18,12 +24,8 @@ static  float  g_roughness = { 0.f };
 static  float  g_clearcoat = { 0.f };
 static  float  g_clearcoatRoughness = { 0.f };
 static  float  g_ior = { 1.f };
-
-using box3_t = std::array<anari::math::float3, 2>;
-namespace anari {
-ANARI_TYPEFOR_SPECIALIZATION(box3_t, ANARI_FLOAT32_BOX3);
-ANARI_TYPEFOR_DEFINITION(box3_t);
-} // namespace anari
+static box3_t  g_bounds = { anari::math::float3{-3.f, 0.f, -3.f},
+                            anari::math::float3{3.f, 1.f, 3.f} };
 
 void statusFunc(const void *userData,
     ANARIDevice device,
@@ -139,6 +141,73 @@ static anari::Instance makePlaneInstance(anari::Device d, const box3_t &bounds)
   return inst;
 }
 
+static anari::Instance makeArrowInstance(anari::Device d,
+                                         anari::math::float3 v1,
+                                         anari::math::float3 v2,
+                                         anari::math::float3 color)
+{
+  // Cylinder geometry:
+  anari::math::float3 cylPositions[] = { v1, v2 };
+  auto cylGeom = anari::newObject<anari::Geometry>(d, "cylinder");
+  anari::setAndReleaseParameter(d,
+      cylGeom,
+      "vertex.position",
+      anari::newArray1D(d, cylPositions, 2));
+  anari::setParameter(d, cylGeom, "radius", 0.02f);
+  anari::commitParameters(d, cylGeom);
+
+  // Cone geometry:
+  anari::math::float3 dir = v1 + v2;
+  anari::math::float3 conePositions[] = { v2, v2+normalize(dir)/6.f };
+  float coneRadii[] = { 0.05f, 0.0f };
+  auto coneGeom = anari::newObject<anari::Geometry>(d, "cone");
+  anari::setAndReleaseParameter(d,
+      coneGeom,
+      "vertex.position",
+      anari::newArray1D(d, conePositions, 2));
+  anari::setAndReleaseParameter(d,
+      coneGeom,
+      "vertex.radius",
+      anari::newArray1D(d, coneRadii, 2));
+  anari::commitParameters(d, coneGeom);
+
+  // Surfaces and material:
+
+  auto mat = anari::newObject<anari::Material>(d, "matte");
+  anari::setParameter(d, mat, "color", color);
+  anari::commitParameters(d, mat);
+
+  auto cylSurface = anari::newObject<anari::Surface>(d);
+  anari::setAndReleaseParameter(d, cylSurface, "geometry", cylGeom);
+  anari::setParameter(d, cylSurface, "material", mat);
+  anari::commitParameters(d, cylSurface);
+
+  auto coneSurface = anari::newObject<anari::Surface>(d);
+  anari::setAndReleaseParameter(d, coneSurface, "geometry", coneGeom);
+  anari::setParameter(d, coneSurface, "material", mat);
+  anari::commitParameters(d, coneSurface);
+
+  anari::release(d, mat);
+
+  anari::Surface surface[2];
+  surface[0] = cylSurface;
+  surface[1] = coneSurface;
+
+  auto group = anari::newObject<anari::Group>(d);
+  anari::setAndReleaseParameter(
+      d, group, "surface", anari::newArray1D(d, surface, 2));
+  anari::commitParameters(d, group);
+
+  anari::release(d, cylSurface);
+  anari::release(d, coneSurface);
+
+  auto inst = anari::newObject<anari::Instance>(d, "transform");
+  anari::setAndReleaseParameter(d, inst, "group", group);
+  anari::commitParameters(d, inst);
+
+  return inst;
+}
+
 static anari::Geometry generateSphereMesh(anari::Device device, dco::Material mat)
 {
   float3 viewDir{0.f,1.f,0.f};
@@ -223,6 +292,37 @@ static anari::Surface makeBRDFSurface(anari::Device device, dco::Material mat)
   return quadSurface;
 }
 
+static void addPlaneAndArrows(anari::Device device, anari::World world)
+{
+  std::vector<anari::Instance> instances;
+  if (1) {
+    auto planeInst = makePlaneInstance(device, g_bounds);
+    instances.push_back(planeInst);
+  }
+
+  if (1) {
+    auto ld = normalize(g_lightDir);
+    anari::math::float3 origin(0.f, 0.f, 0.f);
+    anari::math::float3 lightDir(ld.x, ld.y, ld.z);
+    auto lightDirInst = makeArrowInstance(device,
+                                          origin,
+                                          (lightDir-origin) * 1.2f,
+                                          anari::math::float3(1.f, 1.f, 0.f));
+    instances.push_back(lightDirInst);
+  }
+
+  if (!instances.empty()) {
+    anari::setAndReleaseParameter(
+        device, world, "instance",
+        anari::newArray1D(device, instances.data(), instances.size()));
+    for (auto &i : instances) {
+      anari::release(device, i);
+    }
+  }
+
+  anari::commitParameters(device, world);
+}
+
 dco::Material generateMaterial()
 {
   dco::Material::Type type;
@@ -302,10 +402,6 @@ Renderer::Renderer()
   anari.renderer = anari::newObject<anari::Renderer>(anari.device, "default");
   //anari.renderer = anari::newObject<anari::Renderer>(anari.device, "raycast");
 
-  box3_t bounds;
-  bounds[0] = {-3.f, 0.f, -3.f};
-  bounds[1] = {3.f, 1.f, 3.f};
-
   anari.world = anari::newObject<anari::World>(anari.device);
 
   auto surf = makeBRDFSurface(anari.device, generateMaterial());
@@ -316,14 +412,7 @@ Renderer::Renderer()
       anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
   anari::commitParameters(anari.device, anari.world);
 
-  //anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
-
-  if (1) {
-    auto planeInst = makePlaneInstance(anari.device, bounds);
-    anari::setAndReleaseParameter(
-        anari.device, anari.world, "instance", anari::newArray1D(anari.device, &planeInst));
-    anari::release(anari.device, planeInst);
-  }
+  addPlaneAndArrows(anari.device, anari.world);
 
   anari.light = anari::newObject<anari::Light>(anari.device, "directional");
   anari::setParameter(anari.device, anari.light, "direction",
@@ -344,7 +433,7 @@ Renderer::Renderer()
   cam->perspective(60.0f * constants::degrees_to_radians<float>(), aspect, 0.001f, 1000.0f);
   cam->set_viewport(0, 0, width(), height());
 
-  cam->viewAll(bounds);
+  cam->viewAll(g_bounds);
   cam->commit();
 
   anari::setParameter(anari.device, anari.renderer, "background",
@@ -388,7 +477,10 @@ void Renderer::on_display()
 
   ImGui::Begin("Parameters");
   bool updated = false;
-  updated |= ImGui::DragFloat3("Light dir", (float *)g_lightDir.data());
+  if (ImGui::DragFloat3("Light dir", (float *)g_lightDir.data())) {
+    addPlaneAndArrows(anari.device, anari.world);
+    updated = true;
+  }
 
   const char *selected = g_selectedMaterial;
   if (ImGui::BeginCombo("Material Type", g_selectedMaterial)) {
