@@ -24,6 +24,9 @@ static  float  g_roughness = { 0.f };
 static  float  g_clearcoat = { 0.f };
 static  float  g_clearcoatRoughness = { 0.f };
 static  float  g_ior = { 1.f };
+static  bool   g_showGroundPlane = { true };
+static  bool   g_showLightDir = { true };
+static  bool   g_showAxes = { true };
 static box3_t  g_bounds = { anari::math::float3{-3.f, 0.f, -3.f},
                             anari::math::float3{3.f, 1.f, 3.f} };
 
@@ -295,20 +298,44 @@ static anari::Surface makeBRDFSurface(anari::Device device, dco::Material mat)
 static void addPlaneAndArrows(anari::Device device, anari::World world)
 {
   std::vector<anari::Instance> instances;
-  if (1) {
+
+  // ground plane
+  if (g_showGroundPlane) {
     auto planeInst = makePlaneInstance(device, g_bounds);
     instances.push_back(planeInst);
   }
 
-  if (1) {
-    auto ld = normalize(g_lightDir);
-    anari::math::float3 origin(0.f, 0.f, 0.f);
-    anari::math::float3 lightDir(ld.x, ld.y, ld.z);
-    auto lightDirInst = makeArrowInstance(device,
-                                          origin,
-                                          (lightDir-origin) * 1.2f,
-                                          anari::math::float3(1.f, 1.f, 0.f));
-    instances.push_back(lightDirInst);
+  // light dir:
+  if (g_showLightDir) {
+    if (length(g_lightDir) > 0.f) {
+      auto ld = normalize(g_lightDir);
+      anari::math::float3 origin(0.f, 0.f, 0.f);
+      anari::math::float3 lightDir(ld.x, ld.y, ld.z);
+      auto lightDirInst = makeArrowInstance(device,
+                                            origin,
+                                            (lightDir-origin) * 1.2f,
+                                            anari::math::float3(1.f, 1.f, 0.f));
+      instances.push_back(lightDirInst);
+    }
+  }
+
+  // basis vectors:
+  if (g_showAxes) {
+    auto xInst = makeArrowInstance(device,
+                                   anari::math::float3(0.f, 0.f, 0.f),
+                                   anari::math::float3(1.2f, 0.f, 0.f),
+                                   anari::math::float3(1.f, 0.f, 0.f));
+    auto yInst = makeArrowInstance(device,
+                                   anari::math::float3(0.f, 0.f, 0.f),
+                                   anari::math::float3(0.f, 1.2f, 0.f),
+                                   anari::math::float3(0.f, 1.f, 0.f));
+    auto zInst = makeArrowInstance(device,
+                                   anari::math::float3(0.f, 0.f, 0.f),
+                                   anari::math::float3(0.f, 0.f, 1.2f),
+                                   anari::math::float3(0.f, 0.f, 1.f));
+    instances.push_back(xInst);
+    instances.push_back(yInst);
+    instances.push_back(zInst);
   }
 
   if (!instances.empty()) {
@@ -506,6 +533,20 @@ void Renderer::on_display()
     updated |= ImGui::DragFloat("IOR", &g_ior, g_ior, 0.f, 10.f);
   }
 
+  if (ImGui::Checkbox("Show axes", &g_showAxes)) {
+    addPlaneAndArrows(anari.device, anari.world);
+  }
+
+  ImGui::SameLine();
+  if (ImGui::Checkbox("Show light dir", &g_showLightDir)) {
+    addPlaneAndArrows(anari.device, anari.world);
+  }
+
+  ImGui::SameLine();
+  if (ImGui::Checkbox("Show ground plane", &g_showGroundPlane)) {
+    addPlaneAndArrows(anari.device, anari.world);
+  }
+
   ImGui::End();
 
   if (updated) {
@@ -537,19 +578,19 @@ void Renderer::on_key_press(const visionaray::key_event &event)
 {
   viewer_glut::on_key_press(event);
 
-  static float D = 0.4f;
+  // static float D = 0.4f;
 
-  if (event.key() == 'a')
-    D -= .1f;
-  else if (event.key() == 'b')
-    D += .1f;
+  // if (event.key() == 'a')
+  //   D -= .1f;
+  // else if (event.key() == 'b')
+  //   D += .1f;
 
-  anari::math::float4 clipPlane[] = {{ 0.707f, 0.f, -0.707f, D }};
-  anari::setAndReleaseParameter(
-      anari.device, anari.renderer, "clipPlane",
-      anari::newArray1D(anari.device, clipPlane, 1));
+  // anari::math::float4 clipPlane[] = {{ 0.707f, 0.f, -0.707f, D }};
+  // anari::setAndReleaseParameter(
+  //     anari.device, anari.renderer, "clipPlane",
+  //     anari::newArray1D(anari.device, clipPlane, 1));
 
-  anari::commitParameters(anari.device, anari.renderer);
+  // anari::commitParameters(anari.device, anari.renderer);
 }
 
 void Renderer::on_resize(int w, int h)
