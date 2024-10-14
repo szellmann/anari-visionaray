@@ -338,12 +338,16 @@ static void addPlaneAndArrows(anari::Device device, anari::World world)
     instances.push_back(zInst);
   }
 
-  anari::setAndReleaseParameter(
-      device, world, "instance",
-      anari::newArray1D(device, instances.data(), instances.size()));
+  if (!instances.empty()) {
+    anari::setAndReleaseParameter(
+        device, world, "instance",
+        anari::newArray1D(device, instances.data(), instances.size()));
 
-  for (auto &i : instances) {
-    anari::release(device, i);
+    for (auto &i : instances) {
+      anari::release(device, i);
+    }
+  } else {
+    anari::unsetParameter(device, world, "instance");
   }
 
   anari::commitParameters(device, world);
