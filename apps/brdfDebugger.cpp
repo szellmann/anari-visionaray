@@ -4,10 +4,19 @@
 #include <common/manip/pan_manipulator.h>
 #include <common/manip/zoom_manipulator.h>
 #include <common/viewer_glut.h>
+#include <common/imgui/imgui.h>
 #include "renderer/common.h"
 #include "AnariCamera.h"
 
 using namespace visionaray;
+
+static const char* g_selectedMaterial = "Matte";
+static  float3 g_lightDir = { 1.f, 1.f, 0.f };
+static  float  g_metallic = { 0.f };
+static  float  g_roughness = { 0.f };
+static  float  g_clearcoat = { 0.f };
+static  float  g_clearcoatRoughness = { 0.f };
+static  float  g_ior = { 1.f };
 
 using box3_t = std::array<anari::math::float3, 2>;
 namespace anari {
@@ -129,51 +138,10 @@ static anari::Instance makePlaneInstance(anari::Device d, const box3_t &bounds)
   return inst;
 }
 
-static anari::Geometry generateSphereMesh(anari::Device device)
+static anari::Geometry generateSphereMesh(anari::Device device, dco::Material mat)
 {
-#if 0
-  dco::Material mat = dco::makeDefaultMaterial();
-  mat.asMatte.color.rgb = {1.f,1.f,1.f};
-
-#else
-  dco::Material mat;
-  mat.type = dco::Material::PhysicallyBased;
-  mat.asPhysicallyBased.baseColor.rgb = {1.f,1.f,1.f};
-  mat.asPhysicallyBased.baseColor.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.baseColor.attribute = dco::Attribute::None;
-
-  mat.asPhysicallyBased.opacity.f = 1.f;
-  mat.asPhysicallyBased.opacity.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.opacity.attribute = dco::Attribute::None;
-
-  mat.asPhysicallyBased.metallic.f = 0.5;
-  mat.asPhysicallyBased.metallic.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.metallic.attribute = dco::Attribute::None;
-
-  mat.asPhysicallyBased.roughness.f = 0.2f;
-  mat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.roughness.attribute = dco::Attribute::None;
-
-  mat.asPhysicallyBased.normal.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.normal.samplerID = UINT_MAX;
-
-  mat.asPhysicallyBased.alphaMode = dco::AlphaMode::Opaque;
-  mat.asPhysicallyBased.alphaCutoff = 0.f;
-
-  mat.asPhysicallyBased.clearcoat.f = 0.f;
-  mat.asPhysicallyBased.clearcoat.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.clearcoat.attribute = dco::Attribute::None;
-
-  mat.asPhysicallyBased.clearcoatRoughness.f = 0.f;
-  mat.asPhysicallyBased.clearcoatRoughness.samplerID = UINT_MAX;
-  mat.asPhysicallyBased.clearcoatRoughness.attribute = dco::Attribute::None;
-
-  mat.asPhysicallyBased.ior = 1.0f;
-#endif
-
   float3 viewDir{0.f,1.f,0.f};
-  float3 lightDir{10.f,10.f,0.f};
-  lightDir = normalize(lightDir);
+  float3 lightDir = normalize(g_lightDir);
   float3 lightIntensity{1.f};
   float3 Ng{0.f,1.f,0.f}, Ns{0.f,1.f,0.f};
   int primID{0};
@@ -239,9 +207,9 @@ static anari::Geometry generateSphereMesh(anari::Device device)
   return geometry;
 }
 
-static anari::Surface makeBRDFSurface(anari::Device device)
+static anari::Surface makeBRDFSurface(anari::Device device, dco::Material mat)
 {
-  auto geometry = generateSphereMesh(device);
+  auto geometry = generateSphereMesh(device, mat);
   anari::commitParameters(device, geometry);
 
   auto material = anari::newObject<anari::Material>(device, "matte");
@@ -252,6 +220,56 @@ static anari::Surface makeBRDFSurface(anari::Device device)
   anari::setAndReleaseParameter(device, quadSurface, "material", material);
   anari::commitParameters(device, quadSurface);
   return quadSurface;
+}
+
+dco::Material generateMaterial()
+{
+  dco::Material::Type type;
+  if (std::string(g_selectedMaterial) == "Matte")
+    type = dco::Material::Matte;
+  else if (std::string(g_selectedMaterial) == "PBM")
+    type = dco::Material::PhysicallyBased;
+
+  dco::Material mat;
+  mat.type = type;
+
+  if (type == dco::Material::Matte) {
+    mat = dco::makeDefaultMaterial();
+    mat.asMatte.color.rgb = {1.f,1.f,1.f};
+  }
+  else if (type == dco::Material::PhysicallyBased) {
+    mat.asPhysicallyBased.baseColor.rgb = {1.f,1.f,1.f};
+    mat.asPhysicallyBased.baseColor.samplerID = UINT_MAX;
+    mat.asPhysicallyBased.baseColor.attribute = dco::Attribute::None;
+
+    mat.asPhysicallyBased.opacity.f = 1.f;
+    mat.asPhysicallyBased.opacity.samplerID = UINT_MAX;
+    mat.asPhysicallyBased.opacity.attribute = dco::Attribute::None;
+
+    mat.asPhysicallyBased.metallic.f = g_metallic;
+    mat.asPhysicallyBased.metallic.samplerID = UINT_MAX;
+    mat.asPhysicallyBased.metallic.attribute = dco::Attribute::None;
+
+    mat.asPhysicallyBased.roughness.f = g_roughness;
+    mat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
+    mat.asPhysicallyBased.roughness.attribute = dco::Attribute::None;
+
+    mat.asPhysicallyBased.normal.samplerID = UINT_MAX;
+
+    mat.asPhysicallyBased.alphaMode = dco::AlphaMode::Opaque;
+    mat.asPhysicallyBased.alphaCutoff = 0.f;
+
+    mat.asPhysicallyBased.clearcoat.f = g_clearcoat;
+    mat.asPhysicallyBased.clearcoat.samplerID = UINT_MAX;
+    mat.asPhysicallyBased.clearcoat.attribute = dco::Attribute::None;
+
+    mat.asPhysicallyBased.clearcoatRoughness.f = g_clearcoatRoughness;
+    mat.asPhysicallyBased.clearcoatRoughness.samplerID = UINT_MAX;
+    mat.asPhysicallyBased.clearcoatRoughness.attribute = dco::Attribute::None;
+
+    mat.asPhysicallyBased.ior = g_ior;
+  }
+  return mat;
 }
 
 struct Renderer : viewer_glut
@@ -289,7 +307,7 @@ Renderer::Renderer()
 
   anari.world = anari::newObject<anari::World>(anari.device);
 
-  auto surf = makeBRDFSurface(anari.device);
+  auto surf = makeBRDFSurface(anari.device, generateMaterial());
   //auto surf = makeCylinders(anari.device);
   //auto surf = makeCurves(anari.device);
   //auto surf = makeBezierCurves(anari.device);
@@ -367,6 +385,40 @@ void Renderer::on_display()
 
   anari::unmap(anari.device, anari.frame, "channel.color");
 
+  ImGui::Begin("Parameters");
+  bool updated = false;
+  updated |= ImGui::DragFloat3("Light dir", (float *)g_lightDir.data());
+
+  if (ImGui::BeginCombo("Material Type", g_selectedMaterial)) {
+    if (ImGui::Selectable("Matte", std::string(g_selectedMaterial)=="Matte")) {
+      g_selectedMaterial = "Matte";
+    }
+    else if (ImGui::Selectable("PBM", std::string(g_selectedMaterial)=="PBM")) {
+      g_selectedMaterial = "PBM";
+    }
+    updated = true;
+    ImGui::EndCombo();
+  }
+
+  if (std::string(g_selectedMaterial)=="PBM") {
+    updated |= ImGui::DragFloat("Metallic", &g_metallic, g_metallic, 0.f, 1.f);
+    updated |= ImGui::DragFloat("Roughness", &g_roughness, g_roughness, 0.f, 1.f);
+    updated |= ImGui::DragFloat("Clearcoat", &g_clearcoat, g_clearcoat, 0.f, 1.f);
+    updated |= ImGui::DragFloat("Clearcoat roughness",
+        &g_clearcoatRoughness, g_clearcoatRoughness, 0.f, 1.f);
+    updated |= ImGui::DragFloat("IOR", &g_ior, g_ior, 0.f, 10.f);
+  }
+
+  ImGui::End();
+
+  if (updated) {
+    dco::Material mat = generateMaterial();
+
+    auto surf = makeBRDFSurface(anari.device, mat);
+    anari::setAndReleaseParameter(
+        anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
+    anari::commitParameters(anari.device, anari.world);
+  }
   viewer_glut::on_display();
 }
 
