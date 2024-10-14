@@ -389,14 +389,18 @@ void Renderer::on_display()
   bool updated = false;
   updated |= ImGui::DragFloat3("Light dir", (float *)g_lightDir.data());
 
+  const char *selected = g_selectedMaterial;
   if (ImGui::BeginCombo("Material Type", g_selectedMaterial)) {
     if (ImGui::Selectable("Matte", std::string(g_selectedMaterial)=="Matte")) {
-      g_selectedMaterial = "Matte";
+      selected = "Matte";
     }
     else if (ImGui::Selectable("PBM", std::string(g_selectedMaterial)=="PBM")) {
-      g_selectedMaterial = "PBM";
+      selected = "PBM";
     }
-    updated = true;
+    if (std::string(selected) != std::string(g_selectedMaterial)) {
+      g_selectedMaterial = selected;
+      updated = true;
+    }
     ImGui::EndCombo();
   }
 
