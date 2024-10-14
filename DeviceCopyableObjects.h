@@ -1661,7 +1661,11 @@ inline Material makeDefaultMaterial()
   Material mat;
   mat.type = Material::Matte;
   mat.asMatte.color.rgb = vec3(0,1,0);
+  mat.asMatte.color.samplerID = UINT_MAX;
+  mat.asMatte.color.attribute = dco::Attribute::None;
   mat.asMatte.opacity.f = 1.f;
+  mat.asMatte.opacity.samplerID = UINT_MAX;
+  mat.asMatte.opacity.attribute = dco::Attribute::None;
   mat.asMatte.alphaMode = AlphaMode::Opaque;
   mat.asMatte.alphaCutoff = 0.5f;
   return mat;
