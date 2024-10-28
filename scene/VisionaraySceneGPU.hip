@@ -116,12 +116,14 @@ void VisionaraySceneGPU::commit()
     }
 
     // Build TLS
-    binned_sah_builder tlsBuilder;
-    typedef index_bvh<dco::Instance> WorldTLS;
-    auto h_worldTLS = tlsBuilder.build(
-        WorldTLS{}, m_impl->parent->m_worldBLSs.devicePtr(),
-        m_impl->parent->m_worldBLSs.size());
-    m_impl->m_worldTLS = GPU::WorldTLS(h_worldTLS);
+    if (!m_impl->parent->m_worldBLSs.empty()) {
+      binned_sah_builder tlsBuilder;
+      typedef index_bvh<dco::Instance> WorldTLS;
+      auto h_worldTLS = tlsBuilder.build(
+          WorldTLS{}, m_impl->parent->m_worldBLSs.devicePtr(),
+          m_impl->parent->m_worldBLSs.size());
+      m_impl->m_worldTLS = GPU::WorldTLS(h_worldTLS);
+    }
 
     // Build flat list of lights
     m_impl->parent->m_allLights.clear();
@@ -369,12 +371,14 @@ void VisionaraySceneGPU::commit()
     }
 
     // Build TLS
-    binned_sah_builder tlsBuilder;
-    typedef index_bvh<dco::BLS> TLS;
-    auto h_TLS = tlsBuilder.build(
-        TLS{}, m_impl->parent->m_BLSs.devicePtr(),
-        m_impl->parent->m_BLSs.size());
-    m_impl->m_TLS = GPU::TLS(h_TLS);
+    if (!m_impl->parent->m_BLSs.empty()) {
+      binned_sah_builder tlsBuilder;
+      typedef index_bvh<dco::BLS> TLS;
+      auto h_TLS = tlsBuilder.build(
+          TLS{}, m_impl->parent->m_BLSs.devicePtr(),
+          m_impl->parent->m_BLSs.size());
+      m_impl->m_TLS = GPU::TLS(h_TLS);
+    }
   }
 }
 

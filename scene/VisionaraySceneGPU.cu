@@ -103,10 +103,12 @@ void VisionaraySceneGPU::commit()
     }
 
     // Build TLS
-    lbvh_builder tlsBuilder;
-    m_impl->m_worldTLS = tlsBuilder.build(
-        GPU::WorldTLS{}, m_impl->parent->m_worldBLSs.devicePtr(),
-        m_impl->parent->m_worldBLSs.size());
+    if (!m_impl->parent->m_worldBLSs.empty()) {
+      lbvh_builder tlsBuilder;
+      m_impl->m_worldTLS = tlsBuilder.build(
+          GPU::WorldTLS{}, m_impl->parent->m_worldBLSs.devicePtr(),
+          m_impl->parent->m_worldBLSs.size());
+    }
 
     // Build flat list of lights
     m_impl->parent->m_allLights.clear();
@@ -354,10 +356,12 @@ void VisionaraySceneGPU::commit()
     }
 
     // Build TLS
-    lbvh_builder tlsBuilder;
-    m_impl->m_TLS = tlsBuilder.build(
-        GPU::TLS{}, m_impl->parent->m_BLSs.devicePtr(),
-        m_impl->parent->m_BLSs.size());
+    if (!m_impl->parent->m_BLSs.empty()) {
+      lbvh_builder tlsBuilder;
+      m_impl->m_TLS = tlsBuilder.build(
+          GPU::TLS{}, m_impl->parent->m_BLSs.devicePtr(),
+          m_impl->parent->m_BLSs.size());
+    }
   }
 }
 

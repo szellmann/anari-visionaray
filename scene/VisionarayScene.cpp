@@ -46,9 +46,11 @@ void VisionaraySceneImpl::commit()
     }
 
     // Build TLS
-    lbvh_builder tlsBuilder;
-    m_worldTLS = tlsBuilder.build(
-        WorldTLS{}, m_worldBLSs.hostPtr(), m_worldBLSs.size());
+    if (!m_worldBLSs.empty()) {
+      lbvh_builder tlsBuilder;
+      m_worldTLS = tlsBuilder.build(
+          WorldTLS{}, m_worldBLSs.hostPtr(), m_worldBLSs.size());
+    }
 
     // Build flat list of lights
     m_allLights.clear();
@@ -247,8 +249,10 @@ void VisionaraySceneImpl::commit()
     }
 
     // Build TLS
-    lbvh_builder tlsBuilder;
-    m_TLS = tlsBuilder.build(TLS{}, m_BLSs.hostPtr(), m_BLSs.size());
+    if (!m_BLSs.empty()) {
+      lbvh_builder tlsBuilder;
+      m_TLS = tlsBuilder.build(TLS{}, m_BLSs.hostPtr(), m_BLSs.size());
+    }
   }
 #endif
 
