@@ -134,6 +134,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
             mat, onDevice.samplers, attribs, hr.prim_id, tng, btng, sn);
       }
       color = getColor(mat, onDevice.samplers, attribs, hr.prim_id);
+
     }
 
     result.Ng = gn;
@@ -173,10 +174,10 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                      viewDir,
                                      ls.dir,
                                      ls.intensity);
-          shadedColor = shadedColor * safe_rcp(ls.pdf) / ls.dist2;
+          shadedColor = shadedColor * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
         }
         else
-          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) / ls.dist2;
+          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
       } else {
         const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
@@ -189,7 +190,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                    viewDir,
                                    ls.dir,
                                    ls.intensity);
-        shadedColor = shadedColor * safe_rcp(ls.pdf) / ls.dist2;
+        shadedColor = shadedColor * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
       }
     }
     else if (rendererState.renderMode == RenderMode::Ng)
