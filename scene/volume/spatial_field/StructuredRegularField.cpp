@@ -97,7 +97,12 @@ void StructuredRegularField::buildGrid()
 #endif
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
-  m_gridAccel.init(gridDims, worldBounds);
+  // grid bounds are in "voxel space" (which for structured
+  // volumes is just the [0:1] texture coordinate system:
+  box3f gridBounds = worldBounds;
+  gridBounds.min = vfield.pointToVoxelSpace(gridBounds.min);
+  gridBounds.max = vfield.pointToVoxelSpace(gridBounds.max);
+  m_gridAccel.init(gridDims, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
