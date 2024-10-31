@@ -41,6 +41,7 @@ void VisionaraySceneImpl::commit()
       if (!dco::validHandle(instID)) continue;
 
       const dco::Instance &inst = deviceState()->dcos.instances[instID];
+      if (inst.theBVH.num_nodes() == 0) continue;
 
       m_worldBLSs.alloc(inst);
     }

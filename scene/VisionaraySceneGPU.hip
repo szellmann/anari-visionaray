@@ -111,6 +111,7 @@ void VisionaraySceneGPU::commit()
       dco::Instance inst;
       HIP_SAFE_CALL(hipMemcpy(&inst, deviceState()->onDevice.instances+instID,
                               sizeof(inst), hipMemcpyDefault));
+      if (inst.theBVH.num_nodes() == 0) continue;
 
       m_impl->parent->m_worldBLSs.alloc(inst);
     }

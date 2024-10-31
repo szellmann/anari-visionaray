@@ -98,6 +98,7 @@ void VisionaraySceneGPU::commit()
       dco::Instance inst;
       CUDA_SAFE_CALL(cudaMemcpy(&inst, deviceState()->onDevice.instances+instID,
                                 sizeof(inst), cudaMemcpyDefault));
+      if (inst.theBVH.num_nodes() == 0) continue;
 
       m_impl->parent->m_worldBLSs.alloc(inst);
     }
