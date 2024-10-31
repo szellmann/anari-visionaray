@@ -42,6 +42,7 @@ struct UnstructuredField : public SpatialField
     helium::IntrusivePtr<Array1D> vertexData;
     helium::IntrusivePtr<Array1D> index;
     helium::IntrusivePtr<Array1D> cellIndex;
+    helium::IntrusivePtr<Array1D> cellType;
     // "stitcher" extensions
     helium::IntrusivePtr<ObjectArray> gridData;
     helium::IntrusivePtr<Array1D> gridDomains;
