@@ -25,8 +25,6 @@ struct Geometry : public Object
   void commit() override;
   void markCommitted() override;
 
-  helium::TimeStamp lastUpdateRequest{0};
-  helium::TimeStamp lastUpdate{0};
  protected:
 
   dco::Geometry vgeom;

@@ -173,40 +173,6 @@ void Group::visionaraySceneCommit()
   reportMessage(
       ANARI_SEVERITY_DEBUG, "visionaray::Group committing visionaray scene");
 
-  // Give geometry types such as iso-surfaces the change to update themselves
-  if (m_surfaceData) {
-    std::for_each(m_surfaceData->handlesBegin(),
-        m_surfaceData->handlesEnd(),
-        [&](auto *o) {
-          auto *s = (Surface *)o;
-          if (s && s->isValid()) {
-            if (s->geometry()->lastUpdateRequest > s->geometry()->lastUpdate) {
-              vscene->updateGeometry(s->geometry()->visionarayGeometry());
-              s->geometry()->lastUpdate = helium::newTimeStamp();
-            }
-          }
-        });
-  }
-
-  // Same if transfer functions changed:
-  if (m_volumeData) {
-    std::for_each(m_volumeData->handlesBegin(),
-        m_volumeData->handlesEnd(),
-        [&](auto *o) {
-          auto *v = (Volume *)o;
-          if (v && v->isValid()) {
-            if (v->lastUpdateRequest > v->lastUpdate) {
-              vscene->updateVolume(v->visionarayVolume());
-              v->lastUpdate = helium::newTimeStamp();
-            }
-          }
-        });
-  }
-
-  // TODO:
-  // Same for lights? especiall for visible area light sources that move outside
-  // the scene bounds?!
-
   vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
 }

@@ -122,7 +122,7 @@ void TransferFunction1D::commit()
 #endif
 
   // Trigger a BVH rebuild:
-  lastUpdateRequest = helium::newTimeStamp();
+  deviceState()->objectUpdates.lastBLSReconstructSceneRequest = helium::newTimeStamp();
 
   dispatch();
 
