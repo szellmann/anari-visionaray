@@ -93,6 +93,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
         gn = uniform_sample_sphere(ss.random(), ss.random());
 
+      sn = gn;
+
       color.xyz() = hrv.albedo;
 
       result.depth = hrv.t;
