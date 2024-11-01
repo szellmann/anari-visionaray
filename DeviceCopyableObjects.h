@@ -452,7 +452,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
 }
 
 VSNRAY_FUNC
-inline bool sampleGradient(SpatialField sf, vec3 P, float3 &value) {
+inline bool sampleGradient(const SpatialField &sf, vec3 P, float3 &value) {
   float x0=0, x1=0, y0=0, y1=0, z0=0, z1=0;
   bool b0 = sampleField(sf, P+float3{sf.baseDT, 0.f, 0.f}, x1);
   bool b1 = sampleField(sf, P-float3{sf.baseDT, 0.f, 0.f}, x0);
