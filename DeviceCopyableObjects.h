@@ -685,13 +685,15 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   if (!boxHit.hit)
     return result;
 
-  float dt = iso.field.baseDT;
+  const auto &sf = iso.field;
+
+  float dt = sf.baseDT;
 
   auto isectFunc = [&](const int leafID, float t0, float t1) {
     bool empty = (leafID != -1);
 
-    if (leafID >= 0 && iso.field.gridAccel.valueRanges) {
-      box1 valueRange = iso.field.gridAccel.valueRanges[leafID];
+    if (leafID >= 0 && sf.gridAccel.valueRanges) {
+      box1 valueRange = sf.gridAccel.valueRanges[leafID];
       for (unsigned i=0;i<iso.numValues;i++) {
         float isoValue = iso.values[i];
         if (valueRange.min <= isoValue && isoValue < valueRange.max) {
@@ -706,7 +708,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
     float t0_old = t0;
     float t1_old = t1;
-    t0 = t1 = boxHit.tnear-dt/2.f;
+    t0 = t1 = ray.tmin-dt/2.f;
     while (t0 < t0_old) t0 += dt;
     while (t1 < t1_old) t1 += dt;
 
@@ -714,8 +716,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
       float3 P1 = ray.ori+ray.dir*t;
       float3 P2 = ray.ori+ray.dir*(t+dt);
       float v1 = 0.f, v2 = 0.f;
-      if (sampleField(iso.field,P1,v1)
-       && sampleField(iso.field,P2,v2)) {
+      if (sampleField(sf,P1,v1) && sampleField(sf,P2,v2)) {
         unsigned numISOs = iso.numValues;
         bool hit=false;
         for (unsigned i=0;i<numISOs;i++) {
@@ -738,13 +739,28 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
     return true; // cont. traversal to the next spat. partition
   };
 
-  ray.tmin = boxHit.tnear;
-  ray.tmax = boxHit.tfar;
-  if (iso.field.type == dco::SpatialField::Unstructured ||
-      iso.field.type == dco::SpatialField::StructuredRegular)
-    dda3(ray, iso.field.gridAccel.dims, iso.field.gridAccel.worldBounds, isectFunc);
+  ray.tmin = max(ray.tmin, boxHit.tnear);
+  ray.tmax = min(ray.tmax, boxHit.tfar);
+
+  // transform ray to voxel space
+  ray.ori = sf.pointToVoxelSpace(ray.ori);
+  ray.dir = sf.vectorToVoxelSpace(ray.dir);
+
+  const float dt_scale = length(ray.dir);
+  ray.dir = normalize(ray.dir);
+
+  ray.tmin = ray.tmin * dt_scale;
+  ray.tmax = ray.tmax * dt_scale;
+  dt = dt * dt_scale;
+
+  if (sf.gridAccel.isValid())
+    dda3(ray, sf.gridAccel.dims, sf.gridAccel.worldBounds, isectFunc);
   else
     isectFunc(-1, boxHit.tnear, boxHit.tfar);
+
+  if (result.hit) {
+    result.t /= dt_scale;
+  }
 
   return result;
 }
