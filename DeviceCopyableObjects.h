@@ -1342,6 +1342,9 @@ struct Array
   const void *data{nullptr};
   size_t len{0};
   TypeInfo typeInfo;
+
+  VSNRAY_FUNC bool empty() const
+  { return len==0; }
 };
 
 enum class Attribute
@@ -1565,7 +1568,7 @@ struct Geometry
   inline bool isValid() const
   {
     if (type == ISOSurface) {
-      return as<dco::ISOSurface>(0).numValues > 0;
+      return !primitives.empty() && as<dco::ISOSurface>(0).numValues > 0;
     }
     // TODO..
     return true;

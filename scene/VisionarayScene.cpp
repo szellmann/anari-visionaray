@@ -321,6 +321,9 @@ void VisionaraySceneImpl::attachInstance(
 void VisionaraySceneImpl::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
+  if (!geom.isValid())
+    return;
+
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
