@@ -39,25 +39,21 @@ anari_generate_queries(
   JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-if (cuda)
-  anari_generate_queries(
-    NAME visionaray_cuda
-    PREFIX VisionarayCUDADevice
-    CPP_NAMESPACE visionaray
-    JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_cuda_device.json
-    JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
-  )
-endif()
+anari_generate_queries(
+  NAME visionaray_cuda
+  PREFIX VisionarayCUDADevice
+  CPP_NAMESPACE visionaray
+  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_cuda_device.json
+  JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
-if (hip)
-  anari_generate_queries(
-    NAME visionaray_hip
-    PREFIX VisionarayHIPDevice
-    CPP_NAMESPACE visionaray
-    JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_hip_device.json
-    JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
-  )
-endif()
+anari_generate_queries(
+  NAME visionaray_hip
+  PREFIX VisionarayHIPDevice
+  CPP_NAMESPACE visionaray
+  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_hip_device.json
+  JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 add_library(${PROJECT_NAME} SHARED)
 if (cuda)
