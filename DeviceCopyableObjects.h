@@ -746,7 +746,9 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
         for (unsigned i=0;i<numISOs;i++) {
           float isoValue = iso.values[i];
           if (ival.contains(isoValue)) {
-            float tHit = t+dt/2.f;
+            //float tHit = t+dt/2.f;
+            float f = (isoValue-v1) / (v2-v1);
+            float tHit = t+dt*f;
             if (tHit < result.t) {
               result.hit = true;
               result.prim_id = i;
