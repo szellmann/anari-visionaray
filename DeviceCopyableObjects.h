@@ -745,8 +745,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
         }
         if (hit) return false; // stop traversal
       }
-      P2 = P1;
-      v2 = v1;
+      P1 = P2;
+      v1 = v2;
       sample1 = sample2;
     }
 
