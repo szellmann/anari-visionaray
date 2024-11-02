@@ -719,11 +719,15 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
     while (t0 < t0_old) t0 += dt;
     while (t1 < t1_old) t1 += dt;
 
+    float3 P1 = ray.ori+ray.dir*t0;
+    float v1 = 0.f;
+    bool sample1 = sampleField(sf,P1,v1);
+
     for (float t=t0;t<t1;t+=dt) {
-      float3 P1 = ray.ori+ray.dir*t;
       float3 P2 = ray.ori+ray.dir*(t+dt);
-      float v1 = 0.f, v2 = 0.f;
-      if (sampleField(sf,P1,v1) && sampleField(sf,P2,v2)) {
+      float v2 = 0.f;
+      bool sample2 = sampleField(sf,P2,v2);
+      if (sample1 && sample2) {
         unsigned numISOs = iso.numValues;
         bool hit=false;
         for (unsigned i=0;i<numISOs;i++) {
@@ -741,6 +745,9 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
         }
         if (hit) return false; // stop traversal
       }
+      P2 = P1;
+      v2 = v1;
+      sample1 = sample2;
     }
 
     return true; // cont. traversal to the next spat. partition
