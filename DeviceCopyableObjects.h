@@ -703,7 +703,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
       }
       for (unsigned i=0;i<iso.numValues;i++) {
         float isoValue = iso.values[i];
-        if (valueRange.min <= isoValue && isoValue < valueRange.max) {
+        if (valueRange.contains(isoValue)) {
           empty = false;
           break;
         }
