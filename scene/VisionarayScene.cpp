@@ -86,7 +86,6 @@ void VisionaraySceneImpl::commit()
       if (!dco::validHandle(geomID)) continue;
 
       const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
-      if (!geom.isValid()) continue;
 
       switch (geom.type) {
         case dco::Geometry::Triangle:
@@ -136,7 +135,6 @@ void VisionaraySceneImpl::commit()
       if (!dco::validHandle(geomID)) continue;
 
       const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
-      if (!geom.isValid()) continue;
 
       binned_sah_builder builder;
 
@@ -199,7 +197,6 @@ void VisionaraySceneImpl::commit()
       if (!dco::validHandle(geomID)) continue;
 
       const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
-      if (!geom.isValid()) continue;
 
       dco::BLS bls;
       bls.blsID = m_BLSs.alloc(bls);
@@ -321,12 +318,13 @@ void VisionaraySceneImpl::attachInstance(
 void VisionaraySceneImpl::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
-  if (!geom.isValid())
-    return;
-
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
+
+  if (geom.primitives.len == 0)
+    return;
+
   m_geometries.set(geomID, geom.geomID);
   m_objIds.set(geomID, userID);
 
