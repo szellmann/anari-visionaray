@@ -57,14 +57,9 @@ void SpatialField::buildGrid()
       "buildGrid() not implemented for field type");
 }
 
-float SpatialField::stepSize() const
+void SpatialField::setGradientDelta(float delta)
 {
-  return vfield.baseDT;
-}
-
-void SpatialField::setStepSize(float size)
-{
-  vfield.baseDT = size;
+  vfield.delta = delta;
 }
 
 void SpatialField::dispatch()

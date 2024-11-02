@@ -24,14 +24,12 @@ struct SpatialField : public Object
 
   virtual void buildGrid();
 
-  float stepSize() const;
-
  protected:
   dco::SpatialField vfield;
 
   GridAccel m_gridAccel;
 
-  void setStepSize(float size);
+  void setGradientDelta(float delta);
   void dispatch();
 };
 

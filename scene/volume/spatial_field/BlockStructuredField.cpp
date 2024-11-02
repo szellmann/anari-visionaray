@@ -116,7 +116,7 @@ void BlockStructuredField::commit()
   vec3 T = voxelBounds.min-m_bounds.min;
   vfield.voxelSpaceTransform = mat4x3(S,T);
 
-  setStepSize(1.f); // used for (gradient) shading ISO's
+  setGradientDelta(1.f);
 
   buildGrid();
 
