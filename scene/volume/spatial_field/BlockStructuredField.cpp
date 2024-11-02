@@ -186,8 +186,8 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
 void BlockStructuredField::buildGrid()
 {
 #ifdef WITH_CUDA
-  int3 dims{128, 128, 128};
   box3f worldBounds = {bounds().min,bounds().max};
+  int3 dims{(worldBounds.max-worldBounds.min)/float3(8.f)};
   m_gridAccel.init(dims, worldBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
@@ -197,8 +197,8 @@ void BlockStructuredField::buildGrid()
   BlockStructuredField_buildGridGPU<<<div_up(numBlocks, numThreads), numThreads>>>(
     vaccel, m_blocks.devicePtr(), numBlocks, m_params.gridOrigin, m_params.gridSpacing);
 #else
-  int3 dims{128, 128, 128};
   box3f worldBounds = {bounds().min,bounds().max};
+  int3 dims{(worldBounds.max-worldBounds.min)/float3(8.f)};
   m_gridAccel.init(dims, worldBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
