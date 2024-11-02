@@ -422,75 +422,76 @@ void VisionaraySceneGPU::dispatch()
 void VisionaraySceneGPU::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
+  if (geom.primitives.len == 0)
+    return;
+
   m_impl->parent->m_geometries.set(geomID, geom.geomID);
   m_impl->parent->m_objIds.set(geomID, userID);
 
   // Patch geomID into scene primitives
   // (first copy to CPU, patch there, then copy back...)
-  if (geom.primitives.len > 0) {
-    if (geom.type == dco::Geometry::Triangle) {
-      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.primitives.len;++i) {
-        hostData[i].geom_id = geomID;
-      }
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-          hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::Quad) {
-      std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.primitives.len;++i) {
-        hostData[i].geom_id = geomID;
-      }
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-          hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::Sphere) {
-      std::vector<basic_sphere<float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.primitives.len;++i) {
-        hostData[i].geom_id = geomID;
-      }
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-          hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::Cone) {
-      std::vector<dco::Cone> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.primitives.len;++i) {
-        hostData[i].geom_id = geomID;
-      }
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-          hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::Cylinder) {
-      std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.primitives.len;++i) {
-        hostData[i].geom_id = geomID;
-      }
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-          hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::BezierCurve) {
-      std::vector<dco::BezierCurve> hostData(geom.primitives.len);
-      HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-          hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-      for (size_t i=0;i<geom.primitives.len;++i) {
-        hostData[i].geom_id = geomID;
-      }
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-          hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-    } else if (geom.type == dco::Geometry::ISOSurface) {
-      dco::ISOSurface iso;
-      HIP_SAFE_CALL(hipMemcpy(&iso, geom.primitives.data,
-                              sizeof(iso), hipMemcpyDeviceToHost));
-      iso.isoID = geomID;
-      iso.geomID = geomID;
-      HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, &iso,
-                              sizeof(iso), hipMemcpyHostToDevice));
+  if (geom.type == dco::Geometry::Triangle) {
+    std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      hostData[i].geom_id = geomID;
     }
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
+        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
+  } else if (geom.type == dco::Geometry::Quad) {
+    std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
+    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      hostData[i].geom_id = geomID;
+    }
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
+        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
+  } else if (geom.type == dco::Geometry::Sphere) {
+    std::vector<basic_sphere<float>> hostData(geom.primitives.len);
+    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      hostData[i].geom_id = geomID;
+    }
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
+        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
+  } else if (geom.type == dco::Geometry::Cone) {
+    std::vector<dco::Cone> hostData(geom.primitives.len);
+    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      hostData[i].geom_id = geomID;
+    }
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
+        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
+  } else if (geom.type == dco::Geometry::Cylinder) {
+    std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
+    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      hostData[i].geom_id = geomID;
+    }
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
+        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
+  } else if (geom.type == dco::Geometry::BezierCurve) {
+    std::vector<dco::BezierCurve> hostData(geom.primitives.len);
+    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
+        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      hostData[i].geom_id = geomID;
+    }
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
+        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
+  } else if (geom.type == dco::Geometry::ISOSurface) {
+    dco::ISOSurface iso;
+    HIP_SAFE_CALL(hipMemcpy(&iso, geom.primitives.data,
+                            sizeof(iso), hipMemcpyDeviceToHost));
+    iso.isoID = geomID;
+    iso.geomID = geomID;
+    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, &iso,
+                            sizeof(iso), hipMemcpyHostToDevice));
   }
 
 
