@@ -728,11 +728,12 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
       float v2 = 0.f;
       bool sample2 = sampleField(sf,P2,v2);
       if (sample1 && sample2) {
+        box1f ival(fminf(v1,v2), fmaxf(v1,v2));
         unsigned numISOs = iso.numValues;
         bool hit=false;
         for (unsigned i=0;i<numISOs;i++) {
           float isoValue = iso.values[i];
-          if ((v1 <= isoValue && v2 > isoValue) || (v2 <= isoValue && v1 > isoValue)) {
+          if (ival.contains(isoValue)) {
             float tHit = t+dt/2.f;
             if (tHit < result.t) {
               result.hit = true;
