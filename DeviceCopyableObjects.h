@@ -348,6 +348,24 @@ struct GridAccel
   {
     return dims != int3(0) && valueRanges && maxOpacities;
   }
+
+  VSNRAY_FUNC
+  inline box1 valueRange(int leafID) const
+  {
+    if (leafID >= 0 && valueRanges)
+      return valueRanges[leafID];
+    else
+      return box1(-FLT_MAX, FLT_MAX);
+  }
+
+  VSNRAY_FUNC
+  inline float stepSize(int leafID) const
+  {
+    if (leafID >= 0 && stepSizes)
+      return stepSizes[leafID];
+    else
+      return 1.f;
+  }
 };
 
 // Spatial Field //
@@ -693,20 +711,14 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   auto isectFunc = [&](const int leafID, float t0, float t1) {
     bool empty = (leafID != -1);
 
-    float dt = unitDistance;
+    float dt = unitDistance * sf.gridAccel.stepSize(leafID);
+    box1 valueRange = sf.gridAccel.valueRange(leafID);
 
-    if (leafID >= 0 && sf.gridAccel.valueRanges) {
-      box1 valueRange = sf.gridAccel.valueRanges[leafID];
-      if (sf.gridAccel.stepSizes) {
-        float stepSize = sf.gridAccel.stepSizes[leafID];
-        dt = stepSize * unitDistance;
-      }
-      for (unsigned i=0;i<iso.numValues;i++) {
-        float isoValue = iso.values[i];
-        if (valueRange.contains(isoValue)) {
-          empty = false;
-          break;
-        }
+    for (unsigned i=0;i<iso.numValues;i++) {
+      float isoValue = iso.values[i];
+      if (valueRange.contains(isoValue)) {
+        empty = false;
+        break;
       }
     }
 
