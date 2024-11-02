@@ -15,7 +15,7 @@ jobs:
         config: [Release, Debug]
         cuda: [ON, OFF]
 
-    name: config: ${{ matrix.config }} - CUDA: ${{ matrix.cuda }}
+    name: config ${{ matrix.config }} - CUDA ${{ matrix.cuda }}
 
     steps:
     - uses: actions/checkout@v3
