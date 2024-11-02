@@ -66,6 +66,18 @@ struct LCG
 
 typedef LCG<4> Random;
 
+VSNRAY_FUNC
+inline vec4 randomColor(unsigned idx)
+{
+  unsigned int r = (unsigned int)(idx*13*17 + 0x234235);
+  unsigned int g = (unsigned int)(idx*7*3*5 + 0x773477);
+  unsigned int b = (unsigned int)(idx*11*19 + 0x223766);
+  return vec4{(r&255)/255.f,
+              (g&255)/255.f,
+              (b&255)/255.f,
+              1.f};
+}
+
 struct TypeInfo
 {
   ANARIDataType dataType;
