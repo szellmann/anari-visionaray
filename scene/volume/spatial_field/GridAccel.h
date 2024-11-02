@@ -32,6 +32,17 @@ inline void updateMC(const vec3i  mcID,
       = max(valueRanges[linearIndex(mcID,gridDims)].max, valueRange.max);
 }
 
+VSNRAY_FUNC
+inline void updateMCStepSize(const vec3i  mcID,
+                             const vec3i  gridDims,
+                             const float  stepSize,
+                             float       *stepSizes)
+{
+  // TODO: atomic or locked..
+  stepSizes[linearIndex(mcID,gridDims)]
+      = min(stepSizes[linearIndex(mcID,gridDims)], stepSize);
+}
+
 struct GridAccel
 {
   GridAccel(VisionarayGlobalState *s);
@@ -50,6 +61,9 @@ private:
   dco::GridAccel vaccel;
 
   VisionarayGlobalState *m_state{nullptr};
+
+  // step size to take per cell (e.g., for implicit ISOs)
+  HostDeviceArray<float> m_stepSizes;
 
   // min/max ranges
   HostDeviceArray<box1> m_valueRanges;

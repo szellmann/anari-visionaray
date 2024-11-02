@@ -12,15 +12,18 @@ void GridAccel::init(int3 dims, box3 worldBounds)
 
   size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
 
+  m_stepSizes.resize(numMCs);
   m_valueRanges.resize(numMCs);
   m_maxOpacities.resize(numMCs);
 
   for (size_t i=0; i<numMCs; ++i) {
+    m_stepSizes[i] = 1e30f;
     m_valueRanges[i] = {FLT_MAX, -FLT_MAX};
   }
 
   vaccel.dims = m_dims;
   vaccel.worldBounds = m_worldBounds;
+  vaccel.stepSizes = m_stepSizes.devicePtr();
   vaccel.valueRanges = m_valueRanges.devicePtr();
   vaccel.maxOpacities = m_maxOpacities.devicePtr();
 }

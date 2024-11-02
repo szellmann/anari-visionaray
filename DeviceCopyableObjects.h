@@ -339,6 +339,7 @@ struct GridAccel
   unsigned fieldID{UINT_MAX}; // the field this grid belongs to
   int3 dims;
   box3 worldBounds;
+  float *stepSizes; // step size to take
   box1 *valueRanges; // min/max ranges
   float *maxOpacities; // used as majorants
 
@@ -687,13 +688,19 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
   const auto &sf = iso.field;
 
-  float dt = sf.baseDT;
+  float unitDistance = 1.f;
 
   auto isectFunc = [&](const int leafID, float t0, float t1) {
     bool empty = (leafID != -1);
 
+    float dt = unitDistance;
+
     if (leafID >= 0 && sf.gridAccel.valueRanges) {
       box1 valueRange = sf.gridAccel.valueRanges[leafID];
+      if (sf.gridAccel.stepSizes) {
+        float stepSize = sf.gridAccel.stepSizes[leafID];
+        dt = stepSize * unitDistance;
+      }
       for (unsigned i=0;i<iso.numValues;i++) {
         float isoValue = iso.values[i];
         if (valueRange.min <= isoValue && isoValue < valueRange.max) {
@@ -751,7 +758,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
   ray.tmin = ray.tmin * dt_scale;
   ray.tmax = ray.tmax * dt_scale;
-  dt = dt * dt_scale;
+  unitDistance = unitDistance * dt_scale;
 
   if (sf.gridAccel.isValid())
     dda3(ray, sf.gridAccel.dims, sf.gridAccel.worldBounds, isectFunc);

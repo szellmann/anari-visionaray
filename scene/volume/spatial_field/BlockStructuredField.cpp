@@ -116,7 +116,7 @@ void BlockStructuredField::commit()
   vec3 T = voxelBounds.min-m_bounds.min;
   vfield.voxelSpaceTransform = mat4x3(S,T);
 
-  setStepSize(length(bounds().max-bounds().min)/50.f);
+  setStepSize(1.f); // used for (gradient) shading ISO's
 
   buildGrid();
 
@@ -173,6 +173,7 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
             for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
               const vec3i mcID(mcx,mcy,mcz);
               updateMC(mcID,vaccel.dims,scalar,vaccel.valueRanges);
+              updateMCStepSize(mcID,vaccel.dims,cellSize,vaccel.stepSizes);
             }
           }
         }
@@ -229,7 +230,8 @@ void BlockStructuredField::buildGrid()
               for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
                 for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
                   const vec3i mcID(mcx,mcy,mcz);
-                  updateMC(mcID,dims,scalar,vaccel.valueRanges);
+                  updateMC(mcID,vaccel.dims,scalar,vaccel.valueRanges);
+                  updateMCStepSize(mcID,vaccel.dims,cellSize,vaccel.stepSizes);
                 }
               }
             }

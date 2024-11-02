@@ -110,6 +110,7 @@ void UnstructuredField::commit()
   }
 
   uint64_t currentIndex=0;
+  float minCellDiagonal=FLT_MAX;
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
     uint64_t firstIndex, lastIndex;
 
@@ -131,6 +132,15 @@ void UnstructuredField::commit()
     m_elements[cellID].elemID = cellID;
     m_elements[cellID].vertexBuffer = m_vertices.devicePtr();
     m_elements[cellID].indexBuffer = m_indices.devicePtr();
+
+    // compute cellBounds; the minimum size will determine the
+    // step size used for (ISO) gradient shading:
+    box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
+    for (uint64_t i=firstIndex; i<lastIndex; ++i) {
+      const vec4f V = m_vertices.hostPtr()[m_indices.hostPtr()[i]];
+      cellBounds.extend(V.xyz());
+    }
+    minCellDiagonal = fminf(minCellDiagonal,length(cellBounds.max-cellBounds.min));
   }
 
   // voxel grid extensions for AMR "stitching"
@@ -201,7 +211,7 @@ void UnstructuredField::commit()
 #endif
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),vec3f(0.f));
-  setStepSize(length(bounds().max-bounds().min)/50.f);
+  setStepSize(minCellDiagonal);
 
   buildGrid();
 
@@ -237,7 +247,8 @@ aabb UnstructuredField::bounds() const
 __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
                                                const vec4f      *vertices,
                                                const dco::UElem *elements,
-                                               size_t            numElems)
+                                               size_t            numElems,
+                                               float             baseDT)
 {
   size_t cellID = blockIdx.x * size_t(blockDim.x) + threadIdx.x;
 
@@ -267,6 +278,11 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
       for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
         const vec3i mcID(mcx,mcy,mcz);
         updateMC(mcID,vaccel.dims,valueRange,vaccel.valueRanges);
+        // TODO: this causes artifacts, should probably do this in
+        // a macrocell neighborhood:
+        //updateMCStepSize(
+        //    mcID,vaccel.dims,length(cellBounds.max-cellBounds.min),vaccel.stepSizes);
+        updateMCStepSize(mcID,vaccel.dims,baseDT,vaccel.stepSizes);
       }
     }
   }
@@ -285,7 +301,7 @@ void UnstructuredField::buildGrid()
   size_t numThreads = 1024;
   size_t numElems = m_elements.size();
   UnstructuredField_buildGridGPU<<<div_up(numElems, numThreads), numThreads>>>(
-    vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems);
+    vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems, vfield.baseDT);
 #else
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
@@ -330,6 +346,12 @@ void UnstructuredField::buildGrid()
         for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
           const vec3i mcID(mcx,mcy,mcz);
           updateMC(mcID,vaccel.dims,valueRange,vaccel.valueRanges);
+          // TODO: this causes artifacts, should probably do this in
+          // a macrocell neighborhood:
+          //updateMCStepSize(
+          //    mcID,vaccel.dims,length(cellBounds.max-cellBounds.min),vaccel.stepSizes);
+          updateMCStepSize(
+              mcID,vaccel.dims,vfield.baseDT,vaccel.stepSizes);
         }
       }
     }

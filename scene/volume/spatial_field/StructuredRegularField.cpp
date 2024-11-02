@@ -126,6 +126,8 @@ void StructuredRegularField::buildGrid()
             for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
               const vec3i mcID(mcx,mcy,mcz);
               updateMC(mcID,gridDims,value,vaccel.valueRanges);
+              updateMCStepSize(
+                  mcID,gridDims,min_element(m_spacing / 2.f),vaccel.stepSizes);
             }
           }
         }
