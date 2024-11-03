@@ -12,7 +12,7 @@ namespace visionaray {
 
 Light::Light(VisionarayGlobalState *s) : Object(ANARI_LIGHT, s)
 {
-  memset(&vlight,0,sizeof(vlight));
+  vlight = dco::createLight();
   vlight.lightID = deviceState()->dcos.lights.alloc(vlight);
   s->objectCounts.lights++;
 }

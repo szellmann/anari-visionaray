@@ -9,8 +9,7 @@ namespace visionaray {
 
 Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
 {
-  memset(&vinstance,0,sizeof(vinstance));
-
+  vinstance = dco::createInstance();
   vinstance.type = dco::Instance::Transform;
   vinstance.instID
       = deviceState()->dcos.instances.alloc(vinstance);

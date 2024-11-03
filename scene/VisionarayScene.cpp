@@ -15,9 +15,9 @@ VisionaraySceneImpl::VisionaraySceneImpl(
 
   if (type == World) {
     m_worldID = deviceState()->dcos.TLSs.alloc({});
-    deviceState()->dcos.worlds.alloc(dco::World{});
+    deviceState()->dcos.worlds.alloc(dco::createWorld());
   }
-  m_groupID = deviceState()->dcos.groups.alloc(dco::Group{});
+  m_groupID = deviceState()->dcos.groups.alloc(dco::createGroup());
 }
 
 VisionaraySceneImpl::~VisionaraySceneImpl()
@@ -432,7 +432,7 @@ void VisionaraySceneImpl::dispatch()
   if (type == World) {
     m_state->dcos.TLSs.update(m_worldID, m_worldTLS.ref());
 
-    dco::World world; // TODO: move TLS and EPS in here!
+    dco::World world = dco::createWorld(); // TODO: move TLS and EPS in here!
     world.numLights = m_allLights.size();
     world.allLights = m_allLights.devicePtr();
     m_state->dcos.worlds.update(m_worldID, world);
@@ -440,7 +440,7 @@ void VisionaraySceneImpl::dispatch()
 
   // Dispatch group
   if (type == Group) {
-    dco::Group group;
+    dco::Group group = dco::createGroup();
     group.groupID = m_groupID;
     group.numBLSs = m_BLSs.size();
     group.BLSs = m_BLSs.devicePtr();

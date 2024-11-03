@@ -3,7 +3,10 @@
 
 namespace visionaray {
 
-GridAccel::GridAccel(VisionarayGlobalState *s) : m_state(s) {}
+GridAccel::GridAccel(VisionarayGlobalState *s) : m_state(s)
+{
+  vaccel = dco::createGridAccel();
+}
 
 void GridAccel::init(int3 dims, box3 worldBounds)
 {

@@ -10,6 +10,7 @@ namespace visionaray {
 
 Material::Material(VisionarayGlobalState *s) : Object(ANARI_MATERIAL, s)
 {
+  vmat = dco::createMaterial();
   vmat.matID = deviceState()->dcos.materials.alloc(vmat);
   s->objectCounts.materials++;
 }

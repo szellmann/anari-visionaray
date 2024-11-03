@@ -14,7 +14,7 @@ namespace visionaray {
 
 Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s)
 {
-  memset(&vvol,0,sizeof(vvol));
+  vvol = dco::createVolume();
   vvol.volID = deviceState()->dcos.volumes.alloc(vvol);
   s->objectCounts.volumes++;
 }

@@ -14,11 +14,8 @@ SpatialField::SpatialField(VisionarayGlobalState *s)
     , m_gridAccel(s)
 {
   s->objectCounts.spatialFields++;
+  vfield = dco::createSpatialField();
   vfield.fieldID = deviceState()->dcos.spatialFields.alloc(vfield);
-  m_gridAccel.visionarayAccel().fieldID = vfield.fieldID;
-  m_gridAccel.visionarayAccel().dims = int3(0);
-  m_gridAccel.visionarayAccel().valueRanges = nullptr;
-  m_gridAccel.visionarayAccel().maxOpacities = nullptr;
 }
 
 SpatialField::~SpatialField()

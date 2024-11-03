@@ -13,7 +13,7 @@ namespace visionaray {
 
 Sampler::Sampler(VisionarayGlobalState *s) : Object(ANARI_SAMPLER, s)
 {
-  memset(&vsampler,0,sizeof(vsampler));
+  vsampler = dco::createSampler();
   vsampler.samplerID = deviceState()->dcos.samplers.alloc(vsampler);
   s->objectCounts.samplers++;
 }

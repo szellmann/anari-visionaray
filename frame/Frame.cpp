@@ -32,6 +32,7 @@ static bool is_ready(const std::future<R> &f)
 
 Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
 {
+  vframe = dco::createFrame();
   vframe.frameID = deviceState()->dcos.frames.alloc(vframe);
   s->objectCounts.frames++;
 #ifdef WITH_CUDA

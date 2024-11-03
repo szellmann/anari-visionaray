@@ -336,7 +336,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
 struct GridAccel
 {
-  unsigned fieldID{UINT_MAX}; // the field this grid belongs to
   int3 dims;
   box3 worldBounds;
   float *stepSizes; // step size to take
@@ -368,14 +367,26 @@ struct GridAccel
   }
 };
 
+inline GridAccel createGridAccel()
+{
+  GridAccel accel;
+  memset(&accel,0,sizeof(accel));
+  accel.dims = int3(0);
+  accel.worldBounds = box3f(float3(FLT_MAX),float3(-FLT_MAX));
+  accel.stepSizes = nullptr;
+  accel.valueRanges = nullptr;
+  accel.maxOpacities = nullptr;
+  return accel;
+}
+
 // Spatial Field //
 
 struct SpatialField
 {
   enum Type { StructuredRegular, Unstructured, BlockStructured, Unknown, };
-  Type type{Unknown};
-  unsigned fieldID{UINT_MAX};
-  float delta{0.5f};
+  Type type;
+  unsigned fieldID;
+  float delta;
   GridAccel gridAccel;
   mat4x3 voxelSpaceTransform;
 
@@ -429,6 +440,15 @@ struct SpatialField
     } asBlockStructured;
   };
 };
+
+inline SpatialField createSpatialField()
+{
+  SpatialField field;
+  memset(&field,0,sizeof(field));
+  field.fieldID = UINT_MAX;
+  field.delta = 0.5f;
+  return field;
+}
 
 VSNRAY_FUNC
 inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
@@ -527,6 +547,15 @@ struct Volume
 
   aabb bounds;
 };
+
+inline Volume createVolume()
+{
+  Volume vol;
+  memset(&vol,0,sizeof(vol));
+  vol.volID  = UINT_MAX;
+  vol.bounds.invalidate();
+  return vol;
+}
 
 VSNRAY_FUNC
 inline aabb get_bounds(const Volume &vol)
@@ -1402,6 +1431,16 @@ struct Instance
   box1 time;
 };
 
+inline Instance createInstance()
+{
+  Instance inst;
+  memset(&inst,0,sizeof(inst));
+  inst.instID  = UINT_MAX;
+  inst.userID  = UINT_MAX;
+  inst.groupID = UINT_MAX;
+  return inst;
+}
+
 VSNRAY_FUNC
 inline aabb get_bounds(const Instance &bls)
 {
@@ -1540,10 +1579,19 @@ inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
 
 struct Surface
 {
-  unsigned surfID{UINT_MAX};
-  unsigned geomID{UINT_MAX};
-  unsigned matID{UINT_MAX};
+  unsigned surfID;
+  unsigned geomID;
+  unsigned matID;
 };
+
+inline Surface createSurface()
+{
+  Surface surf;
+  surf.surfID = UINT_MAX;
+  surf.geomID = UINT_MAX;
+  surf.matID = UINT_MAX;
+  return surf;
+}
 
 // Geometry types (for dispatch) //
 
@@ -1566,8 +1614,8 @@ struct Geometry
     ISOSurface,
     Unknown,
   };
-  Type type{Unknown};
-  unsigned geomID{UINT_MAX};
+  Type type;
+  unsigned geomID;
 
   template <typename Primitive>
   VSNRAY_FUNC
@@ -1591,18 +1639,27 @@ struct Geometry
   Array tangent;
 };
 
+inline Geometry createGeometry()
+{
+  Geometry geom;
+  memset(&geom,0,sizeof(geom));
+  geom.type = Geometry::Unknown;
+  geom.geomID = UINT_MAX;
+  return geom;
+}
+
 // Sampler //
 
 struct Sampler
 {
   enum Type { Image1D, Image2D, Image3D, Transform, Primitive, Unknown, };
-  Type type{Unknown};
-  unsigned samplerID{UINT_MAX};
-  Attribute inAttribute{Attribute::_0};
-  mat4 inTransform{mat4::identity()};
-  float4 inOffset{0.f};
-  mat4 outTransform{mat4::identity()};
-  float4 outOffset{0.f};
+  Type type;
+  unsigned samplerID;
+  Attribute inAttribute;
+  mat4 inTransform;
+  float4 inOffset;
+  mat4 outTransform;
+  float4 outOffset;
   union {
 #ifdef WITH_CUDA
     cuda_texture_ref<vector<4, unorm<8>>, 1> asImage1D;
@@ -1638,6 +1695,20 @@ struct Sampler
   }
 };
 
+inline Sampler createSampler()
+{
+  Sampler samp;
+  memset(&samp,0,sizeof(samp));
+  samp.type = Sampler::Unknown;
+  samp.samplerID = UINT_MAX;
+  samp.inAttribute = Attribute::_0;
+  samp.inTransform = mat4::identity();
+  samp.inOffset = float4(0.f);
+  samp.outTransform = mat4::identity();
+  samp.outOffset = float4(0.f);
+  return samp;
+}
+
 // Params used by materials //
 
 struct MaterialParamRGB
@@ -1664,8 +1735,8 @@ enum class AlphaMode
 struct Material
 {
   enum Type { Matte, PhysicallyBased, Unknown, };
-  Type type{Unknown};
-  unsigned matID{UINT_MAX};
+  Type type;
+  unsigned matID;
   union {
     struct {
       MaterialParamRGB color;
@@ -1688,6 +1759,15 @@ struct Material
       float ior;
     } asPhysicallyBased;
   };
+};
+
+inline Material createMaterial()
+{
+  Material mat;
+  memset(&mat,0,sizeof(mat));
+  mat.type = Material::Unknown;
+  mat.matID = UINT_MAX;
+  return mat;
 };
 
 VSNRAY_FUNC
@@ -1803,9 +1883,9 @@ inline vec3 sample_surface(const Quad &q, const vec3 reference_point, RNG &rng)
 struct Light
 {
   enum Type { Directional, Point, Quad, Spot, HDRI, Unknown, };
-  Type type{Unknown};
-  unsigned lightID{UINT_MAX};
-  bool visible{true};
+  Type type;
+  unsigned lightID;
+  bool visible;
   union {
     directional_light<float> asDirectional;
     point_light<float> asPoint;
@@ -1851,45 +1931,72 @@ struct Light
   };
 };
 
+inline Light createLight()
+{
+  Light light;
+  memset(&light,0,sizeof(light));
+  light.type = Light::Unknown;
+  light.lightID = UINT_MAX;
+  light.visible = true;
+  return light;
+}
+
 // Group //
 
 struct Group
 {
-  unsigned groupID{UINT_MAX};
+  unsigned groupID;
 
-  unsigned numBLSs{0};
-  dco::BLS *BLSs{nullptr};
-  unsigned numGeoms{0};
-  Handle *geoms{nullptr};
-  unsigned numMaterials{0};
-  Handle *materials{nullptr};
-  unsigned numVolumes{0};
-  Handle *volumes{nullptr};
-  unsigned numLights{0};
-  Handle *lights{nullptr};
-  uint32_t *objIds{nullptr}; // surface IDs, volume IDs, etc.
-  unsigned numObjIds{0};
+  unsigned numBLSs;
+  dco::BLS *BLSs;
+  unsigned numGeoms;
+  Handle *geoms;
+  unsigned numMaterials;
+  Handle *materials;
+  unsigned numVolumes;
+  Handle *volumes;
+  unsigned numLights;
+  Handle *lights;
+  uint32_t *objIds; // surface IDs, volume IDs, etc.
+  unsigned numObjIds;
 };
+
+inline Group createGroup()
+{
+  Group group;
+  memset(&group,0,sizeof(group));
+  group.groupID = UINT_MAX;
+  return group;
+}
 
 // World //
 
 struct World
 {
-  unsigned worldID{UINT_MAX};
+  unsigned worldID;
 
-  unsigned numLights{0};
+  unsigned numLights;
   // flat list of lights active in all groups:
-  Handle *allLights{nullptr};
+  Handle *allLights;
 };
+
+inline World createWorld()
+{
+  World world;
+  world.worldID = UINT_MAX;
+  world.numLights = 0;
+  world.allLights = nullptr;
+  return world;
+}
 
 // Camera //
 
 struct Camera
 {
   enum Type { Matrix, Pinhole, Ortho, Unknown, };
-  Type type{Unknown};
-  unsigned camID{UINT_MAX};
-  box1 shutter{0.5f, 0.5f};
+  Type type;
+  unsigned camID;
+  box1 shutter;
   thin_lens_camera asPinholeCam;
   union {
     matrix_camera asMatrixCam;
@@ -1947,42 +2054,52 @@ struct Camera
   }
 };
 
+inline Camera createCamera()
+{
+  Camera cam;
+  memset(&cam,0,sizeof(cam));
+  cam.type = Camera::Unknown;
+  cam.camID = UINT_MAX;
+  cam.shutter = {0.5f, 0.5f};
+  return cam;
+}
+
 // Frame //
 
 struct Frame
 {
-  unsigned frameID{UINT_MAX};
-  unsigned frameCounter{0};
+  unsigned frameID;
+  unsigned frameCounter;
   uint2 size;
   float2 invSize;
-  int perPixelBytes{1};
-  bool stochasticRendering{false};
+  int perPixelBytes;
+  bool stochasticRendering;
 
-  anari::DataType colorType{ANARI_UNKNOWN};
-  anari::DataType depthType{ANARI_UNKNOWN};
-  anari::DataType normalType{ANARI_UNKNOWN};
-  anari::DataType albedoType{ANARI_UNKNOWN};
-  anari::DataType primIdType{ANARI_UNKNOWN};
-  anari::DataType objIdType{ANARI_UNKNOWN};
-  anari::DataType instIdType{ANARI_UNKNOWN};
+  anari::DataType colorType;
+  anari::DataType depthType;
+  anari::DataType normalType;
+  anari::DataType albedoType;
+  anari::DataType primIdType;
+  anari::DataType objIdType;
+  anari::DataType instIdType;
 
-  uint8_t *pixelBuffer{nullptr};
-  float *depthBuffer{nullptr};
-  float3 *normalBuffer{nullptr};
-  float3 *albedoBuffer{nullptr};
-  float4 *motionVecBuffer{nullptr};
-  uint32_t *primIdBuffer{nullptr};
-  uint32_t *objIdBuffer{nullptr};
-  uint32_t *instIdBuffer{nullptr};
-  float4 *accumBuffer{nullptr};
+  uint8_t *pixelBuffer;
+  float *depthBuffer;
+  float3 *normalBuffer;
+  float3 *albedoBuffer;
+  float4 *motionVecBuffer;
+  uint32_t *primIdBuffer;
+  uint32_t *objIdBuffer;
+  uint32_t *instIdBuffer;
+  float4 *accumBuffer;
 
   struct {
-    bool enabled{false};
-    float alpha{0.3f};
-    float4 *currBuffer{nullptr};
-    float4 *prevBuffer{nullptr};
-    float3 *currAlbedoBuffer{nullptr};
-    float3 *prevAlbedoBuffer{nullptr};
+    bool enabled;
+    float alpha;
+    float4 *currBuffer;
+    float4 *prevBuffer;
+    float3 *currAlbedoBuffer;
+    float3 *prevAlbedoBuffer;
 #ifdef WITH_CUDA
     cuda_texture_ref<float4, 2> history;
 #elif defined(WITH_HIP)
@@ -2121,5 +2238,22 @@ struct Frame
     toneMap(x, y, accumSample(x, y, accumID, s));
   }
 };
+
+inline Frame createFrame()
+{
+  Frame frame;
+  memset(&frame,0,sizeof(frame));
+  frame.frameID = UINT_MAX;
+  frame.perPixelBytes = 1;
+  frame.colorType = ANARI_UNKNOWN;
+  frame.depthType = ANARI_UNKNOWN;
+  frame.normalType = ANARI_UNKNOWN;
+  frame.albedoType = ANARI_UNKNOWN;
+  frame.primIdType = ANARI_UNKNOWN;
+  frame.objIdType = ANARI_UNKNOWN;
+  frame.instIdType = ANARI_UNKNOWN;
+  frame.taa.alpha = 0.3f;
+  return frame;
+}
 
 } // namespace visionaray::dco

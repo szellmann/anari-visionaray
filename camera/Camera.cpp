@@ -9,6 +9,7 @@ namespace visionaray {
 
 Camera::Camera(VisionarayGlobalState *s) : Object(ANARI_CAMERA, s)
 {
+  vcam = dco::createCamera();
   s->objectCounts.cameras++;
 }
 

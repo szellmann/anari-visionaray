@@ -19,7 +19,7 @@ namespace visionaray {
 
 Geometry::Geometry(VisionarayGlobalState *s) : Object(ANARI_GEOMETRY, s)
 {
-  memset(&vgeom,0,sizeof(vgeom));
+  vgeom = dco::createGeometry();
   vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
   s->objectCounts.geometries++;
 }
