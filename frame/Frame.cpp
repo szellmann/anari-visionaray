@@ -189,7 +189,9 @@ bool Frame::getProperty(
 
 void Frame::renderFrame()
 {
+#if !defined(WITH_CUDA) && !defined(WITH_HIP)
   this->refInc(helium::RefType::INTERNAL);
+#endif
 
   auto *state = deviceState();
   state->waitOnCurrentFrame();
