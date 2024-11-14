@@ -1397,8 +1397,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
 
 struct Array
 {
-  const void *data{nullptr};
-  size_t len{0};
+  const void *data;
+  size_t len;
   TypeInfo typeInfo;
 };
 
@@ -1412,10 +1412,10 @@ enum class Attribute
 struct Instance
 {
   enum Type { Transform, MotionTransform, Unknown, };
-  Type type{Unknown};
-  unsigned instID{UINT_MAX};
-  unsigned userID{UINT_MAX};
-  unsigned groupID{UINT_MAX};
+  Type type;
+  unsigned instID;
+  unsigned userID;
+  unsigned groupID;
 #ifdef WITH_CUDA
   cuda_index_bvh<BLS>::bvh_ref theBVH;
 #elif defined(WITH_HIP)
@@ -1435,6 +1435,7 @@ inline Instance createInstance()
 {
   Instance inst;
   memset(&inst,0,sizeof(inst));
+  inst.type    = Instance::Unknown;
   inst.instID  = UINT_MAX;
   inst.userID  = UINT_MAX;
   inst.groupID = UINT_MAX;
