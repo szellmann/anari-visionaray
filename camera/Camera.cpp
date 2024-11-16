@@ -4,6 +4,7 @@
 #include "Matrix.h"
 #include "Orthographic.h"
 #include "Perspective.h"
+#include "Realistic.h"
 
 namespace visionaray {
 
@@ -19,7 +20,10 @@ Camera *Camera::createInstance(std::string_view type, VisionarayGlobalState *s)
   else if (type == "orthographic")
     return new Orthographic(s);
   else if (type == "perspective")
-    return new Perspective(s);
+    //return new Perspective(s);
+    return new Realistic(s);
+  else if (type == "realistic")
+    return new Realistic(s);
   else
     return (Camera *)new UnknownObject(ANARI_CAMERA, s);
 }

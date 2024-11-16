@@ -230,8 +230,9 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
 
         for (int sampleID=0; sampleID<spp; ++sampleID) {
 
-          ray = cam.primary_ray(
-              ss.random, float(x), float(y), float(size.x), float(size.y));
+          if (!cam.primary_ray(
+              ray, ss.random, float(x), float(y), float(size.x), float(size.y)))
+            continue;
 #if 1
           ray.dbg = ss.debug();
 #endif

@@ -1994,7 +1994,7 @@ inline World createWorld()
 
 struct Camera
 {
-  enum Type { Matrix, Pinhole, Ortho, Unknown, };
+  enum Type { Matrix, Pinhole, Ortho, Realistic, Unknown, };
   Type type;
   unsigned camID;
   box1 shutter;
@@ -2035,23 +2035,137 @@ struct Camera
       float3 U, V, W;
       box2f image_region;
     } asOrthoCam;
+
+    struct {
+      VSNRAY_FUNC
+      inline bool primary_ray(Ray &ray, Random &rng, float x, float y, float width,
+                              float height) const
+      {
+        float2 screen((x + 0.5f) / width, (y + 0.5f) / height);
+        //screen = (float2(1.0) - screen) * float2(image_region.min)
+        //                       + screen * float2(image_region.max);
+
+        float2 film(apertureRadius[numSegments-1]*2.f);
+        Ray filmRay;
+        //filmRay.ori = float3((screen.x - 0.5f) * film.x, (screen.y - 0.5f) * film.y, 0.f);
+        filmRay.ori = float3(0.f);
+        filmRay.tmin = 0.f;
+        filmRay.tmax = FLT_MAX;
+        filmRay.dbg = int(x)==int(width*0.5f) && int(y)==int(height*0.5f);
+
+        // TODO: next best approx. woudl be "sampleDisc" here:
+        int i=numSegments-1;
+        filmRay.dir = float3((rng()-0.5f)*apertureRadius[i],
+                             (rng()-0.5f)*apertureRadius[i],
+                             -thickness[i]);
+        //filmRay.dir = float3(0.f, 0.f, -1.f); // !!!!
+        if (filmRay.debug()) {
+          std::cout << "BEGIN debug:\n";
+        }
+
+        float z = 0.f; // pos we're at, advancing in negative z direction
+        for (; i>=0; --i) {
+          if (curvatureRadius[i] == 0.f) {
+
+          } else {
+            z -= thickness[i];
+            float zPos = z + curvatureRadius[i];
+            float radius = curvatureRadius[i];
+            float hitT;
+            float3 hitN;
+            if (!intersectSegment(filmRay, zPos, radius, hitT, hitN))
+              return false;
+
+            // TODO: clip against segment boundary!
+
+            float etaI = ior[i];
+            float etaT = i > 0 ? ior[i-1] : 1.f;
+            if (etaT == 0.f) etaT = 1.f;
+            float3 dir = refract(normalize(-filmRay.dir), -hitN, etaI/etaT);
+
+            if (filmRay.debug()) {
+              std::cout << filmRay.ori << " " << hitT << "  " << hitN << "   " << dir << '\n';
+            }
+
+            if (length(dir) < 1e-3f)
+              return false;
+
+            filmRay.ori = filmRay.ori + filmRay.dir * hitT;
+            filmRay.dir = dir;
+          }
+        }
+
+        ray = filmRay; //ray.dir.z = -ray.dir.z;
+        return true;
+      }
+
+      VSNRAY_FUNC
+      inline bool intersectSegment(
+          const Ray &ray, float zPos, float radius, float &hitT, float3 &hitN) const
+      {
+        Ray r = ray;
+        r.ori -= float3(0.f, 0.f, zPos);
+        r.tmin = 0.f;
+
+        float A = dot(r.dir, r.dir);
+        float B = dot(r.dir, r.ori) * 2.f;
+        float C = dot(r.ori, r.ori) - radius*radius;
+
+        // solve Ax**2 + Bx + C
+        float disc = B * B - 4.f * A * C;
+        if (disc < 0.f)
+          return false;
+
+        float root_disc = sqrtf(disc);
+
+        float q = B < 0.f ? -0.5f * (B-root_disc) : -0.5f * (B+root_disc);
+
+        float t1 = q / A;
+        float t2 = C / q;
+
+        if ((r.dir.z > 0.f) ^ (radius < 0.f))
+          hitT = fmin(t1,t2);
+        else
+          hitT = fmax(t1,t2);
+
+        if (hitT < 0.f)
+          return false;
+
+        hitN = normalize(float3(r.ori + hitT * r.dir));
+        hitN = faceforward(hitN, r.dir, hitN);
+
+        return true;
+      }
+
+      float *curvatureRadius;
+      float *apertureRadius;
+      float *thickness;
+      float *ior;
+      int numSegments;
+    } asRealisticCam;
   };
 
   template <typename RNG>
   VSNRAY_FUNC
-  inline Ray primary_ray(RNG &rng, float x, float y, float width, float height) const
+  inline bool primary_ray(
+      Ray &ray, RNG &rng, float x, float y, float width, float height) const
   {
-    Ray ray;
+    // realistic camera model's lens system may block rays
+    // that will then become invalid
+    bool result{true};
+
     if (type == Pinhole)
       ray = asPinholeCam.primary_ray(Ray{}, rng, x, y, width, height);
     else if (type == Ortho)
       ray = asOrthoCam.primary_ray(Ray{}, x, y, width, height);
     else if (type == Matrix)
       ray = asMatrixCam.primary_ray(Ray{}, x, y, width, height);
+    else if (type == Realistic)
+      result = asRealisticCam.primary_ray(ray, rng, x, y, width, height);
 
     ray.time = lerp(shutter.min, shutter.max, rng());
 
-    return ray;
+    return result;
   }
 };
 

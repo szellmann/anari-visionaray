@@ -325,7 +325,8 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
           xf += jitter.x;
           yf += jitter.y;
 
-          ray = cam.primary_ray(ss.random, xf, yf, float(size.x), float(size.y));
+          if (!cam.primary_ray(ray, ss.random, xf, yf, float(size.x), float(size.y)))
+            continue;
 
 #if 1
           ray.dbg = ss.debug();
