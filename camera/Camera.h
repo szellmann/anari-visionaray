@@ -11,7 +11,7 @@ namespace visionaray {
 struct Camera : public Object
 {
   Camera(VisionarayGlobalState *s);
-  ~Camera() override;
+  virtual ~Camera() = default;
 
   virtual void commit() override;
 

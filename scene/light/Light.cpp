@@ -14,13 +14,11 @@ Light::Light(VisionarayGlobalState *s) : Object(ANARI_LIGHT, s)
 {
   vlight = dco::createLight();
   vlight.lightID = deviceState()->dcos.lights.alloc(vlight);
-  s->objectCounts.lights++;
 }
 
 Light::~Light()
 {
   deviceState()->dcos.lights.free(vlight.lightID);
-  deviceState()->objectCounts.lights--;
 }
 
 void Light::commit()

@@ -15,13 +15,11 @@ Sampler::Sampler(VisionarayGlobalState *s) : Object(ANARI_SAMPLER, s)
 {
   vsampler = dco::createSampler();
   vsampler.samplerID = deviceState()->dcos.samplers.alloc(vsampler);
-  s->objectCounts.samplers++;
 }
 
 Sampler::~Sampler()
 {
   deviceState()->dcos.samplers.free(vsampler.samplerID);
-  deviceState()->objectCounts.samplers--;
 }
 
 Sampler *Sampler::createInstance(std::string_view subtype, VisionarayGlobalState *s)

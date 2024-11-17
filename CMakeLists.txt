@@ -64,10 +64,6 @@ if (hip)
 endif()
 
 set(SOURCES
-    array/Array1D.cpp
-    array/Array2D.cpp
-    array/Array3D.cpp
-    array/ObjectArray.cpp
     camera/Camera.cpp
     camera/Matrix.cpp
     camera/Orthographic.cpp

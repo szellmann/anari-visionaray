@@ -16,14 +16,11 @@ Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s)
 {
   vvol = dco::createVolume();
   vvol.volID = deviceState()->dcos.volumes.alloc(vvol);
-  s->objectCounts.volumes++;
 }
 
 Volume::~Volume()
 {
   deviceState()->dcos.volumes.free(vvol.volID);
-
-  deviceState()->objectCounts.volumes--;
 }
 
 void Volume::commit()

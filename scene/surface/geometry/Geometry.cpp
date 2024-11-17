@@ -21,14 +21,11 @@ Geometry::Geometry(VisionarayGlobalState *s) : Object(ANARI_GEOMETRY, s)
 {
   vgeom = dco::createGeometry();
   vgeom.geomID = deviceState()->dcos.geometries.alloc(vgeom);
-  s->objectCounts.geometries++;
 }
 
 Geometry::~Geometry()
 {
   deviceState()->dcos.geometries.free(vgeom.geomID);
-
-  deviceState()->objectCounts.geometries--;
 }
 
 Geometry *Geometry::createInstance(

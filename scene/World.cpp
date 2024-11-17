@@ -12,8 +12,6 @@ World::World(VisionarayGlobalState *s)
   , m_zeroLightData(this)
   , m_instanceData(this)
 {
-  s->objectCounts.worlds++;
-
   m_zeroGroup = new Group(s);
   m_zeroInstance = new Instance(s);
   m_zeroInstance->setParamDirect("group", m_zeroGroup.ptr);
@@ -26,7 +24,6 @@ World::World(VisionarayGlobalState *s)
 World::~World()
 {
   cleanup();
-  deviceState()->objectCounts.worlds--;
 }
 
 bool World::getProperty(

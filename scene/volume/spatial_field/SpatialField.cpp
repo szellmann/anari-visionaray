@@ -13,7 +13,6 @@ SpatialField::SpatialField(VisionarayGlobalState *s)
     : Object(ANARI_SPATIAL_FIELD, s)
     , m_gridAccel(s)
 {
-  s->objectCounts.spatialFields++;
   vfield = dco::createSpatialField();
   vfield.fieldID = deviceState()->dcos.spatialFields.alloc(vfield);
 }
@@ -21,8 +20,6 @@ SpatialField::SpatialField(VisionarayGlobalState *s)
 SpatialField::~SpatialField()
 {
   deviceState()->dcos.spatialFields.free(vfield.fieldID);
-
-  deviceState()->objectCounts.spatialFields--;
 }
 
 SpatialField *SpatialField::createInstance(

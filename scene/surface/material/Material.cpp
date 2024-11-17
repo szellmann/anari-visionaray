@@ -12,13 +12,11 @@ Material::Material(VisionarayGlobalState *s) : Object(ANARI_MATERIAL, s)
 {
   vmat = dco::createMaterial();
   vmat.matID = deviceState()->dcos.materials.alloc(vmat);
-  s->objectCounts.materials++;
 }
 
 Material::~Material()
 {
   deviceState()->dcos.materials.free(vmat.matID);
-  deviceState()->objectCounts.materials--;
 }
 
 Material *Material::createInstance(

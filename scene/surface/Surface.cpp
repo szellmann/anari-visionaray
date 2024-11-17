@@ -9,14 +9,11 @@ Surface::Surface(VisionarayGlobalState *s) : Object(ANARI_SURFACE, s)
 {
   vsurf = dco::createSurface();
   vsurf.surfID = deviceState()->dcos.surfaces.alloc(vsurf);
-  s->objectCounts.surfaces++;
 }
 
 Surface::~Surface()
 {
   deviceState()->dcos.surfaces.free(vsurf.surfID);
-
-  deviceState()->objectCounts.surfaces--;
 }
 
 void Surface::commit()

@@ -48,12 +48,6 @@ VisionarayGlobalState *Object::deviceState() const
 UnknownObject::UnknownObject(ANARIDataType type, VisionarayGlobalState *s)
     : Object(type, s)
 {
-  s->objectCounts.unknown++;
-}
-
-UnknownObject::~UnknownObject()
-{
-  deviceState()->objectCounts.unknown--;
 }
 
 bool UnknownObject::isValid() const

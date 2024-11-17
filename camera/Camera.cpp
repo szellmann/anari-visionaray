@@ -10,12 +10,6 @@ namespace visionaray {
 Camera::Camera(VisionarayGlobalState *s) : Object(ANARI_CAMERA, s)
 {
   vcam = dco::createCamera();
-  s->objectCounts.cameras++;
-}
-
-Camera::~Camera()
-{
-  deviceState()->objectCounts.cameras--;
 }
 
 Camera *Camera::createInstance(std::string_view type, VisionarayGlobalState *s)

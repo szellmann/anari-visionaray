@@ -13,13 +13,11 @@ Group::Group(VisionarayGlobalState *s)
   , m_volumeData(this)
   , m_lightData(this)
 {
-  s->objectCounts.groups++;
 }
 
 Group::~Group()
 {
   cleanup();
-  deviceState()->objectCounts.groups--;
 }
 
 bool Group::getProperty(

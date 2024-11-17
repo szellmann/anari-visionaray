@@ -13,16 +13,6 @@ Renderer::Renderer(VisionarayGlobalState *s)
   : Object(ANARI_RENDERER, s)
   , m_clipPlanes(this)
 {
-  s->objectCounts.renderers++;
-
-  Array1DMemoryDescriptor md;
-  md.elementType = ANARI_FLOAT32_VEC3;
-  md.numItems = 4;
-}
-
-Renderer::~Renderer()
-{
-  deviceState()->objectCounts.renderers--;
 }
 
 void Renderer::commit()

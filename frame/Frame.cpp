@@ -34,7 +34,6 @@ Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
 {
   vframe = dco::createFrame();
   vframe.frameID = deviceState()->dcos.frames.alloc(vframe);
-  s->objectCounts.frames++;
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStart));
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStop));
@@ -64,7 +63,6 @@ Frame::~Frame()
   HIP_SAFE_CALL(hipEventDestroy(m_eventStop));
 #endif
   deviceState()->dcos.frames.free(vframe.frameID);
-  deviceState()->objectCounts.frames--;
 }
 
 bool Frame::isValid() const

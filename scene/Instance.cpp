@@ -13,14 +13,11 @@ Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
   vinstance.type = dco::Instance::Transform;
   vinstance.instID
       = deviceState()->dcos.instances.alloc(vinstance);
-  s->objectCounts.instances++;
 }
 
 Instance::~Instance()
 {
   deviceState()->dcos.instances.free(vinstance.instID);
-
-  deviceState()->objectCounts.instances--;
 }
 
 Instance *Instance::createInstance(

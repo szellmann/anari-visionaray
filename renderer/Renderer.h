@@ -58,7 +58,7 @@ struct VisionarayRenderer
 struct Renderer : public Object
 {
   Renderer(VisionarayGlobalState *s);
-  ~Renderer() override;
+  virtual ~Renderer() = default;
 
   virtual void commit() override;
 
