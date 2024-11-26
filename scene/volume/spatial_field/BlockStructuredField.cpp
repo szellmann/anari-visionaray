@@ -187,8 +187,11 @@ void BlockStructuredField::buildGrid()
 {
 #ifdef WITH_CUDA
   box3f worldBounds = {bounds().min,bounds().max};
-  int3 dims{(worldBounds.max-worldBounds.min)/float3(8.f)};
-  dims = max(int3(1),dims);
+  int3 dims{
+    div_up(int(worldBounds.max.x-worldBounds.min.x),8),
+    div_up(int(worldBounds.max.y-worldBounds.min.y),8),
+    div_up(int(worldBounds.max.z-worldBounds.min.z),8)
+  };
   m_gridAccel.init(dims, worldBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
@@ -199,8 +202,11 @@ void BlockStructuredField::buildGrid()
     vaccel, m_blocks.devicePtr(), numBlocks, m_params.gridOrigin, m_params.gridSpacing);
 #else
   box3f worldBounds = {bounds().min,bounds().max};
-  int3 dims{(worldBounds.max-worldBounds.min)/float3(8.f)};
-  dims = max(int3(1),dims);
+  int3 dims{
+    div_up(int(worldBounds.max.x-worldBounds.min.x),8),
+    div_up(int(worldBounds.max.y-worldBounds.min.y),8),
+    div_up(int(worldBounds.max.z-worldBounds.min.z),8)
+  };
   m_gridAccel.init(dims, worldBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
