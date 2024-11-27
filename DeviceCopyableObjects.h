@@ -636,7 +636,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       if (majorant <= 0.f)
         break;
 
-      t -= (logf(1.f - rnd()) / majorant) * unitDistance;
+      t -= (logf(1.f - rnd()) / (majorant * unitDistance));
 
       if (t >= t1)
         break;
