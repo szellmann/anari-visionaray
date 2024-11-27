@@ -85,8 +85,8 @@ void BlockStructuredField::commit()
   for (size_t i = 0; i < levelBounds.size(); ++i) {
     voxelBounds.insert(levelBounds[i]);
   }
-  m_bounds.min = m_params.gridOrigin;
-  m_bounds.max = m_params.gridOrigin + (voxelBounds.max-voxelBounds.min) * m_params.gridSpacing;
+  m_bounds.min = m_params.gridOrigin + voxelBounds.min * m_params.gridSpacing;
+  m_bounds.max = m_params.gridOrigin + voxelBounds.max * m_params.gridSpacing;
 
   // do this now that m_scalars doesn't change anymore:
   for (size_t i=0; i<numBlocks; ++i) {
