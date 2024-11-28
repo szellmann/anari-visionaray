@@ -2037,6 +2037,21 @@ struct Camera
     } asOrthoCam;
 
     struct {
+      void init(float3 pos, float3 dir, float3 up,// float aspect, float height,
+                box2f image_region)
+      {
+        this->pos = pos;
+        this->dir = dir;
+        this->up  = up;
+        this->image_region = image_region;
+
+        //float2 imgPlaneSize(height * aspect, height);
+
+        U = normalize(cross(dir, up));// * imgPlaneSize.x;
+        V = normalize(cross(U, dir));// * imgPlaneSize.y;
+        W = pos - 0.5f * U - 0.5f * V;
+      }
+
       VSNRAY_FUNC
       inline bool primary_ray(Ray &ray, Random &rng, float x, float y, float width,
                               float height) const
@@ -2045,63 +2060,101 @@ struct Camera
         //screen = (float2(1.0) - screen) * float2(image_region.min)
         //                       + screen * float2(image_region.max);
 
-        float2 film(apertureRadius[numSegments-1]*2.f);
+        float2 film(2.f,2.f);//apertureRadius[numSegments-1]*2.f);
         Ray filmRay;
-        //filmRay.ori = float3((screen.x - 0.5f) * film.x, (screen.y - 0.5f) * film.y, 0.f);
-        filmRay.ori = float3(0.f);
+        filmRay.ori = float3((screen.x - 0.5f) * film.x, (screen.y - 0.5f) * film.y, 0.f);
         filmRay.tmin = 0.f;
         filmRay.tmax = FLT_MAX;
         filmRay.dbg = int(x)==int(width*0.5f) && int(y)==int(height*0.5f);
+
+        std::stringstream SVG;
+        box3 SVG_bounds{float3(1e30f),float3(-1e30f)};
+
+//for (float yy=-3.f;yy<=3.f; yy+=0.1f) {
+//        filmRay.ori = float3(0.f, yy, 0.f);
 
         // TODO: next best approx. woudl be "sampleDisc" here:
         int i=numSegments-1;
         filmRay.dir = float3((rng()-0.5f)*apertureRadius[i],
                              (rng()-0.5f)*apertureRadius[i],
                              -thickness[i]);
-        //filmRay.dir = float3(0.f, 0.f, -1.f); // !!!!
+        filmRay.dir = float3(0.f, 0.f, -1.f); // !!!!
         if (filmRay.debug()) {
-          std::cout << "BEGIN debug:\n";
+          //std::cout << "BEGIN debug:\n";
         }
 
         float z = 0.f; // pos we're at, advancing in negative z direction
         for (; i>=0; --i) {
-          if (curvatureRadius[i] == 0.f) {
+          if (curvatureRadius[i] == 0.f)
+            continue;
 
-          } else {
-            z -= thickness[i];
-            float zPos = z + curvatureRadius[i];
-            float radius = curvatureRadius[i];
-            float hitT;
-            float3 hitN;
-            if (!intersectSegment(filmRay, zPos, radius, hitT, hitN))
-              return false;
+          z -= thickness[i];
+          float hitT;
 
-            // TODO: clip against segment boundary!
+          float zPos = z + curvatureRadius[i];
+          float3 hitN;
+          if (!intersectSegment(filmRay, zPos, curvatureRadius[i], apertureRadius[i], hitT, hitN))
+            return false;
 
-            float etaI = ior[i];
-            float etaT = i > 0 ? ior[i-1] : 1.f;
-            if (etaT == 0.f) etaT = 1.f;
-            float3 dir = refract(normalize(-filmRay.dir), -hitN, etaI/etaT);
+          // Refract ray
 
-            if (filmRay.debug()) {
-              std::cout << filmRay.ori << " " << hitT << "  " << hitN << "   " << dir << '\n';
-            }
+          float etaI = ior[i];
+          float etaT = i > 0 ? ior[i-1] : 1.f;
+          if (etaT == 0.f) etaT = 1.f;
+          float3 dir = refract(normalize(-filmRay.dir), -hitN, etaI/etaT);
 
-            if (length(dir) < 1e-3f)
-              return false;
+          if (length(dir) < 1e-3f) // TIR
+            return false;
 
-            filmRay.ori = filmRay.ori + filmRay.dir * hitT;
-            filmRay.dir = dir;
+          //if (filmRay.debug()) {
+          //  std::cout << filmRay.ori << '\n';
+          //}
+
+          if (filmRay.debug()) {
+            auto ori = filmRay.ori * float3(1,1,-1) + float3(0,10,10);
+            auto ori2 = (filmRay.ori + filmRay.dir * hitT) * float3(1,1,-1) + float3(0,10,10);
+            SVG << "<line x1=\"" << int(ori.z) << "\" y1=\"" << int(ori.y)
+                << "\" x2=\"" << int(ori2.z) << "\" y2=\"" << int(ori2.y)
+                << "\" style=\"stroke:red;stroke-width:0.1\" />\n";
+            SVG_bounds.extend(ori);
+            SVG_bounds.extend(ori2);
           }
+          filmRay.ori = filmRay.ori + filmRay.dir * hitT;
+          filmRay.dir = dir;
+        }
+//} // FOR
+
+        if (filmRay.debug()) {
+          int w = SVG_bounds.max.z-SVG_bounds.min.z + 20;
+          int h = SVG_bounds.max.y-SVG_bounds.min.y + 20;
+          std::cout << SVG_bounds.min << ',' << SVG_bounds.max << '\n';
+          std::cout << "<svg height=\"" << h << "\" width=\"" << w
+            << "\" xmlns=\"http://www.w3.org/2000/svg\">\n";
+          std::cout << SVG.str();
+          std::cout << "</svg>\n";
         }
 
-        ray = filmRay; //ray.dir.z = -ray.dir.z;
+        ray = filmRay; ray.dir.z = -ray.dir.z;
+        mat4 M(float4(-U,0.f),
+               float4(-V,0.f),
+               float4(dir,0.f),
+               float4(pos,1.f));;
+        float4 ori(ray.ori,1.f);
+        float4 dir(ray.dir,0.f);
+        ori = M*ori;
+        dir = M*dir;
+        ray.ori = ori.xyz();
+        ray.dir = dir.xyz();
         return true;
       }
 
       VSNRAY_FUNC
-      inline bool intersectSegment(
-          const Ray &ray, float zPos, float radius, float &hitT, float3 &hitN) const
+      inline bool intersectSegment(const Ray &ray,
+                                   float zPos,
+                                   float radius,
+                                   float apertureRadius,
+                                   float &hitT,
+                                   float3 &hitN) const
       {
         Ray r = ray;
         r.ori -= float3(0.f, 0.f, zPos);
@@ -2131,11 +2184,22 @@ struct Camera
         if (hitT < 0.f)
           return false;
 
+        // test against aperture:
+        float3 hitPos = r.ori + r.dir * hitT;
+        float r2 = hitPos.x * hitPos.x + hitPos.y * hitPos.y;
+        if (r2 > apertureRadius*apertureRadius)
+          return false;
+
         hitN = normalize(float3(r.ori + hitT * r.dir));
         hitN = faceforward(hitN, r.dir, hitN);
 
         return true;
       }
+
+      // TODO: move to base?!
+      float3 dir,pos,up;
+      float3 U, V, W;
+      box2f image_region;
 
       float *curvatureRadius;
       float *apertureRadius;
