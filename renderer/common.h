@@ -890,7 +890,8 @@ inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
   hr.light   = intersectLights(ss, ray, worldID, onDevice);
   hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
   hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
-  hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t < hr.surface.t);
+  hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t < hr.surface.t)
+                             && (!hr.volume.hit || hr.light.t < hr.volume.t);
   hr.volumeHit = hr.volume.hit && (!hr.surface.hit || hr.volume.t < hr.surface.t)
                                && (!hr.light.hit || hr.volume.t < hr.light.t);
   return hr;
