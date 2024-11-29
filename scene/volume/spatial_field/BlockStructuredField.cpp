@@ -138,9 +138,7 @@ aabb BlockStructuredField::bounds() const
 #ifdef WITH_CUDA
 __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
                                                   const dco::Block *blocks,
-                                                  size_t            numBlocks,
-                                                  float3            gridOrigin,
-                                                  float3            gridSpacing)
+                                                  size_t            numBlocks)
 {
   size_t blockID = blockIdx.x * size_t(blockDim.x) + threadIdx.x;
 
@@ -158,11 +156,6 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
         vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
         aabb cellBounds(vec3f(cell_lower)-vec3f(cellSize*0.5f),
                         vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
-        // transform to world space (..TODO: untested!)
-        cellBounds.min *= gridSpacing;
-        cellBounds.max *= gridSpacing;
-        cellBounds.min += gridOrigin;
-        cellBounds.max += gridOrigin;
         float scalar = block.getScalar(x,y,z);
 
         const vec3i loMC = projectOnGrid(cellBounds.min,vaccel.dims,vaccel.worldBounds);
@@ -187,6 +180,8 @@ void BlockStructuredField::buildGrid()
 {
 #ifdef WITH_CUDA
   box3f worldBounds = {bounds().min,bounds().max};
+  worldBounds.min = vfield.pointToVoxelSpace(worldBounds.min);
+  worldBounds.max = vfield.pointToVoxelSpace(worldBounds.max);
   int3 dims{
     div_up(int(worldBounds.max.x-worldBounds.min.x),8),
     div_up(int(worldBounds.max.y-worldBounds.min.y),8),
@@ -199,9 +194,11 @@ void BlockStructuredField::buildGrid()
   size_t numThreads = 1024;
   size_t numBlocks = m_blocks.size();
   BlockStructuredField_buildGridGPU<<<div_up(numBlocks, numThreads), numThreads>>>(
-    vaccel, m_blocks.devicePtr(), numBlocks, m_params.gridOrigin, m_params.gridSpacing);
+    vaccel, m_blocks.devicePtr(), numBlocks);
 #else
   box3f worldBounds = {bounds().min,bounds().max};
+  worldBounds.min = vfield.pointToVoxelSpace(worldBounds.min);
+  worldBounds.max = vfield.pointToVoxelSpace(worldBounds.max);
   int3 dims{
     div_up(int(worldBounds.max.x-worldBounds.min.x),8),
     div_up(int(worldBounds.max.y-worldBounds.min.y),8),
@@ -222,13 +219,8 @@ void BlockStructuredField::buildGrid()
             vec3i cellID(x,y,z);
             vec3i cell_lower = (block.bounds.min+cellID)*cellSize;
             vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
-            aabb cellBounds(vec3f(cell_lower)-vec3f(cellSize*0.5f),
-                            vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
-            // transform to world space (..TODO: untested!)
-            cellBounds.min *= m_params.gridSpacing;
-            cellBounds.max *= m_params.gridSpacing;
-            cellBounds.min += m_params.gridOrigin;
-            cellBounds.max += m_params.gridOrigin;
+            aabb cellBounds(vec3f(cell_lower)+m_params.gridOrigin-vec3f(cellSize*0.5f),
+                            vec3f(cell_upper)+m_params.gridOrigin+vec3f(cellSize*0.5f)); // +/- filterDomain
             float scalar = block.getScalar(x,y,z);
 
             const vec3i loMC = projectOnGrid(cellBounds.min,dims,worldBounds);
