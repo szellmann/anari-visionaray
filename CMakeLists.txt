@@ -31,6 +31,12 @@ if (hip)
   find_package(hip)
 endif()
 
+option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" OFF)
+set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
+if (nanovdb)
+  find_package(OpenVDB COMPONENTS nanovdb REQUIRED)
+endif()
+
 anari_generate_queries(
   NAME visionaray
   PREFIX VisionarayDevice
@@ -121,6 +127,11 @@ target_sources(${PROJECT_NAME} PRIVATE
   VisionarayDeviceQueries.cpp
 )
 
+if (nanovdb)
+  target_sources(${PROJECT_NAME} PRIVATE scene/volume/spatial_field/NanoVDBField.cpp)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_NANOVDB=1)
+endif()
+
 include(GenerateExportHeader)
 generate_export_header(${PROJECT_NAME}
   EXPORT_MACRO_NAME "VISIONARAY_DEVICE_INTERFACE"
@@ -160,6 +171,11 @@ if (cuda)
     PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
   )
   target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_CUDA=1)
+  if (nanovdb)
+    target_sources(${PROJECT_NAME}_cuda PRIVATE
+        scene/volume/spatial_field/NanoVDBField.cpp)
+    target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_NANOVDB=1)
+  endif()
 
   generate_export_header(${PROJECT_NAME}_cuda
     EXPORT_MACRO_NAME "VISIONARAY_DEVICE_INTERFACE"
@@ -188,6 +204,11 @@ if (hip)
     VisionarayHIPDeviceQueries.cpp
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
+  if (nanovdb)
+    target_sources(${PROJECT_NAME}_hip PRIVATE
+        scene/volume/spatial_field/NanoVDBField.cpp)
+    target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_NANOVDB=1)
+  endif()
 
   target_link_libraries(${PROJECT_NAME}_hip
       visionaray::visionaray anari::anari anari::helium)

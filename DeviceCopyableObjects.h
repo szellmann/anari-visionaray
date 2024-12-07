@@ -47,6 +47,10 @@ using hip_index_bvh     = index_bvh_t<hip::device_vector<P>, hip::device_vector<
 } // namespace visionaray
 #endif
 
+#ifdef WITH_NANOVDB
+#include <nanovdb/NanoVDB.h>
+#endif
+
 namespace visionaray {
 
 namespace dco {
@@ -383,7 +387,7 @@ inline GridAccel createGridAccel()
 
 struct SpatialField
 {
-  enum Type { StructuredRegular, Unstructured, BlockStructured, Unknown, };
+  enum Type { StructuredRegular, Unstructured, BlockStructured, NanoVDB, Unknown, };
   Type type;
   unsigned fieldID;
   float delta;
@@ -438,6 +442,11 @@ struct SpatialField
       index_bvh<Block>::bvh_ref samplingBVH;
 #endif
     } asBlockStructured;
+#ifdef WITH_NANOVDB
+    struct {
+      nanovdb::NanoGrid<float> *grid;
+    } asNanoVDB;
+#endif
   };
 };
 
@@ -486,6 +495,13 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     value = basisPRD[0]/basisPRD[1];
     return true;
   }
+#ifdef WITH_NANOVDB
+  else if (sf.type == SpatialField::NanoVDB) {
+    auto acc = sf.asNanoVDB.grid->getAccessor();
+    value = acc.getValue(nanovdb::Coord(P.x,P.y,P.z));
+    return true;
+  }
+#endif
 
   return false;
 }

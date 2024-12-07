@@ -6,6 +6,9 @@
 #include "BlockStructuredField.h"
 #include "StructuredRegularField.h"
 #include "UnstructuredField.h"
+#ifdef WITH_NANOVDB
+#include "NanoVDBField.h"
+#endif
 
 namespace visionaray {
 
@@ -30,7 +33,11 @@ SpatialField *SpatialField::createInstance(
   else if (subtype == "unstructured")
     return new UnstructuredField(s);
   else if (subtype == "amr" || subtype == "blockStructured")
-     return new BlockStructuredField(s);
+    return new BlockStructuredField(s);
+#ifdef WITH_NANOVDB
+  else if (subtype == "nanovdb" || subtype == "vdb")
+    return new NanoVDBField(s);
+#endif
   else
     return (SpatialField *)new UnknownObject(ANARI_SPATIAL_FIELD, s);
 }
