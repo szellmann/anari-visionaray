@@ -6,7 +6,7 @@
 #include <nanovdb/GridHandle.h>
 #include <nanovdb/HostBuffer.h>
 #ifdef WITH_CUDA
-#include <nanovdb/util/cuda/CudaDeviceBuffer.h>
+#include <nanovdb/cuda/DeviceBuffer.h>
 #endif
 // ours
 #include "SpatialField.h"
@@ -27,7 +27,11 @@ struct NanoVDBField : public SpatialField
 
   helium::IntrusivePtr<Array1D> m_gridData;
 
+#ifdef WITH_CUDA
+  nanovdb::GridHandle<nanovdb::cuda::DeviceBuffer> m_gridHandle;
+#else
   nanovdb::GridHandle<nanovdb::HostBuffer> m_gridHandle;
+#endif
 };
 
 } // namespace visionaray
