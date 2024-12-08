@@ -12,6 +12,10 @@ project(anari_library_visionaray LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
+# build external libraries
+
+add_subdirectory(external)
+
 # note: we're often tracking the most recent changes from ANARI-SDK
 # (on branch "next_release")
 find_package(anari 0.10.0 REQUIRED)
@@ -33,9 +37,6 @@ endif()
 
 option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" OFF)
 set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
-if (nanovdb)
-  find_package(OpenVDB COMPONENTS nanovdb REQUIRED)
-endif()
 
 anari_generate_queries(
   NAME visionaray
@@ -130,6 +131,8 @@ target_sources(${PROJECT_NAME} PRIVATE
 if (nanovdb)
   target_sources(${PROJECT_NAME} PRIVATE scene/volume/spatial_field/NanoVDBField.cpp)
   target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_NANOVDB=1)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    $<BUILD_INTERFACE:vsnray_nanovdb>)
 endif()
 
 include(GenerateExportHeader)
@@ -137,7 +140,7 @@ generate_export_header(${PROJECT_NAME}
   EXPORT_MACRO_NAME "VISIONARAY_DEVICE_INTERFACE"
 )
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PUBLIC
     visionaray::visionaray anari::anari anari::helium)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -173,7 +176,13 @@ if (cuda)
   target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_CUDA=1)
   if (nanovdb)
     target_sources(${PROJECT_NAME}_cuda PRIVATE
-        scene/volume/spatial_field/NanoVDBField.cpp)
+        scene/volume/spatial_field/NanoVDBField.cu)
+    set_source_files_properties(
+      scene/volume/spatial_field/NanoVDBField.cu
+      PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
+    )
+    target_link_libraries(${PROJECT_NAME}_cuda PRIVATE
+      $<BUILD_INTERFACE:vsnray_nanovdb>)
     target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_NANOVDB=1)
   endif()
 
@@ -181,11 +190,11 @@ if (cuda)
     EXPORT_MACRO_NAME "VISIONARAY_DEVICE_INTERFACE"
   )
 
-  target_link_libraries(${PROJECT_NAME}_cuda
+  target_link_libraries(${PROJECT_NAME}_cuda PUBLIC
       visionaray::visionaray anari::anari anari::helium)
 
   if (TARGET CUDA::cudart)
-    target_link_libraries(${PROJECT_NAME}_cuda CUDA::cudart)
+    target_link_libraries(${PROJECT_NAME}_cuda PUBLIC CUDA::cudart)
   endif()
 
   target_include_directories(${PROJECT_NAME}_cuda PUBLIC
@@ -205,9 +214,7 @@ if (hip)
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
   if (nanovdb)
-    target_sources(${PROJECT_NAME}_hip PRIVATE
-        scene/volume/spatial_field/NanoVDBField.cpp)
-    target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_NANOVDB=1)
+    message(WARNING "No VDB support with HIP")
   endif()
 
   target_link_libraries(${PROJECT_NAME}_hip
