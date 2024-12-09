@@ -2,7 +2,7 @@
 #include <cuda_runtime.h>
 #endif
 // nanovdb
-#include <nanovdb/util/IO.h>
+#include <nanovdb/io/IO.h>
 // ours
 #include "NanoVDBField.h"
 
