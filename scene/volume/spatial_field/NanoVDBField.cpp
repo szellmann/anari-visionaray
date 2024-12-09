@@ -77,7 +77,7 @@ void NanoVDBField::buildGrid()
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   return;
 #endif
-  int3 gridDims{64, 64, 64};
+  int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(gridDims, worldBounds);
 
