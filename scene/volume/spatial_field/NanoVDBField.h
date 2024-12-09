@@ -23,6 +23,8 @@ struct NanoVDBField : public SpatialField
   bool isValid() const override;
 
   aabb bounds() const override;
+
+  void buildGrid() override;
  private:
 
   helium::IntrusivePtr<Array1D> m_gridData;
