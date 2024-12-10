@@ -49,6 +49,7 @@ using hip_index_bvh     = index_bvh_t<hip::device_vector<P>, hip::device_vector<
 
 #ifdef WITH_NANOVDB
 #include <nanovdb/NanoVDB.h>
+#include <nanovdb/math/SampleFromVoxels.h>
 #endif
 
 namespace visionaray {
@@ -445,6 +446,7 @@ struct SpatialField
 #ifdef WITH_NANOVDB
     struct {
       nanovdb::NanoGrid<float> *grid;
+      tex_filter_mode filterMode;
     } asNanoVDB;
 #endif
   };
@@ -498,8 +500,15 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
 #ifdef WITH_NANOVDB
   else if (sf.type == SpatialField::NanoVDB) {
     auto acc = sf.asNanoVDB.grid->getAccessor();
-    value = acc.getValue(nanovdb::Coord(P.x,P.y,P.z));
-    return true;
+    if (sf.asNanoVDB.filterMode == Nearest) {
+      auto smp = nanovdb::math::createSampler<0>(acc);
+      value = smp(nanovdb::math::Vec3<float>(P.x,P.y,P.z));
+      return true;
+    } else if (sf.asNanoVDB.filterMode == Linear) {
+      auto smp = nanovdb::math::createSampler<1>(acc);
+      value = smp(nanovdb::math::Vec3<float>(P.x,P.y,P.z));
+      return true;
+    }
   }
 #endif
 

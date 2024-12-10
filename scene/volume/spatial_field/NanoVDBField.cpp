@@ -46,6 +46,8 @@ void NanoVDBField::commit()
   vfield.asNanoVDB.grid = m_gridHandle.grid<float>();
 #endif
 
+  vfield.asNanoVDB.filterMode = Linear;
+
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),float3{0.f,0.f,0.f});
 
   buildGrid();
