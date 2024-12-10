@@ -160,6 +160,15 @@ bool Frame::getProperty(
   if (type == ANARI_FLOAT32 && name == "duration") {
     if (flags & ANARI_WAIT)
       wait();
+#ifdef WITH_CUDA
+    CUDA_SAFE_CALL(cudaEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
+    m_duration /= 1000.f;
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
+    m_duration /= 1000.f;
+#else
+    m_duration = std::chrono::duration<float>(m_eventStop - m_eventStart).count();
+#endif
     helium::writeToVoidP(ptr, m_duration);
     return true;
   }
@@ -338,17 +347,12 @@ void Frame::renderFrame()
     }
 
 #ifdef WITH_CUDA
-    CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
-    CUDA_SAFE_CALL(cudaEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
-    m_duration /= 1000.f;
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
 #elif defined(WITH_HIP)
-    HIP_SAFE_CALL(hipEventRecord(m_eventStop));
-    HIP_SAFE_CALL(hipEventElapsedTime(&m_duration, m_eventStart, m_eventStop));
-    m_duration /= 1000.f;
+  HIP_SAFE_CALL(hipEventRecord(m_eventStop));
 #else
     state->renderingSemaphore.frameEnd();
     m_eventStop = std::chrono::steady_clock::now();
-    m_duration = std::chrono::duration<float>(m_eventStop - m_eventStart).count();
   });
 #endif
 }
