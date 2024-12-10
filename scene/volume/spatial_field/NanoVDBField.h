@@ -27,6 +27,8 @@ struct NanoVDBField : public SpatialField
   void buildGrid() override;
  private:
 
+  std::string m_filter;
+
   helium::IntrusivePtr<Array1D> m_gridData;
 
 #ifdef WITH_CUDA

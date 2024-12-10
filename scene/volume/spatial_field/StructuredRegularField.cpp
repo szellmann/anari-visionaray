@@ -30,6 +30,7 @@ void StructuredRegularField::commit()
 
   m_origin = getParam<float3>("origin", float3(0.f));
   m_spacing = getParam<float3>("spacing", float3(1.f));
+  m_filter = getParamString("filter", "linear");
 
   mat3 S = mat3::scaling(1.f/bounds().size());
   vec3 T = -bounds().min;
@@ -60,7 +61,7 @@ void StructuredRegularField::commit()
   } else if (m_type == ANARI_FLOAT32)
     tex.reset((float *)m_dataArray->data());
 
-  tex.set_filter_mode(Linear);
+  tex.set_filter_mode(m_filter == "nearest" ? Nearest : Linear);
   tex.set_address_mode(Clamp);
 
 #ifdef WITH_CUDA

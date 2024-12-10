@@ -25,6 +25,8 @@ void NanoVDBField::commit()
     return;
   }
 
+  m_filter = getParamString("filter", "linear");
+
 #ifdef WITH_CUDA
   cudaStream_t stream; // TODO: move to global state/use the one there?!
   cudaStreamCreate(&stream);
@@ -46,7 +48,7 @@ void NanoVDBField::commit()
   vfield.asNanoVDB.grid = m_gridHandle.grid<float>();
 #endif
 
-  vfield.asNanoVDB.filterMode = Linear;
+  vfield.asNanoVDB.filterMode = m_filter == "nearest" ? Nearest : Linear;
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),float3{0.f,0.f,0.f});
 

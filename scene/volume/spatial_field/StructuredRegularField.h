@@ -30,6 +30,7 @@ struct StructuredRegularField : public SpatialField
   uint3 m_dims{0u};
   float3 m_origin;
   float3 m_spacing;
+  std::string m_filter;
 
   helium::IntrusivePtr<Array3D> m_dataArray;
 
