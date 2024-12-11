@@ -35,7 +35,7 @@ if (hip)
   find_package(hip)
 endif()
 
-option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" OFF)
+option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" ON)
 set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
 
 anari_generate_queries(
