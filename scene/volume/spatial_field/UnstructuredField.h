@@ -33,7 +33,7 @@ struct UnstructuredField : public SpatialField
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::UElem> m_samplingBVH;
 #else
-  index_bvh<dco::UElem> m_samplingBVH;
+  index_bvh4<dco::UElem> m_samplingBVH;
 #endif
 
   struct Parameters

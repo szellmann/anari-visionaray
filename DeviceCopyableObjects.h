@@ -431,7 +431,7 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
-      index_bvh<UElem>::bvh_ref samplingBVH;
+      index_bvh4<UElem>::bvh_ref samplingBVH;
 #endif
     } asUnstructured;
     struct {
@@ -440,7 +440,7 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<Block>::bvh_ref samplingBVH;
 #else
-      index_bvh<Block>::bvh_ref samplingBVH;
+      index_bvh4<Block>::bvh_ref samplingBVH;
 #endif
     } asBlockStructured;
 #ifdef WITH_NANOVDB
@@ -472,7 +472,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     ray.ori = P;
     ray.dir = float3(1.f);
     ray.tmin = ray.tmax = 0.f;
-    auto hr = intersect(ray, sf.asUnstructured.samplingBVH);
+    auto hr = intersect_ray1_bvh4(ray, sf.asUnstructured.samplingBVH);
 
     if (!hr.hit)
       return false;
@@ -489,7 +489,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     float basisPRD[2] = {0.f,0.f};
     ray.prd = &basisPRD;
 
-    auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
+    auto hr = intersect_ray1_bvh4(ray, sf.asBlockStructured.samplingBVH);
 
     if (basisPRD[1] == 0.f)
       return false;
@@ -1326,14 +1326,14 @@ struct BLS
   };
 #else
   union {
-    index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    index_bvh<dco::Cone>::bvh_ref asCone;
-    index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    index_bvh<dco::Volume>::bvh_ref asVolume;
+    index_bvh4<basic_triangle<3,float>>::bvh_ref asTriangle;
+    index_bvh4<basic_triangle<3,float>>::bvh_ref asQuad;
+    index_bvh4<basic_sphere<float>>::bvh_ref asSphere;
+    index_bvh4<dco::Cone>::bvh_ref asCone;
+    index_bvh4<basic_cylinder<float>>::bvh_ref asCylinder;
+    index_bvh4<dco::BezierCurve>::bvh_ref asBezierCurve;
+    index_bvh4<dco::ISOSurface>::bvh_ref asISOSurface;
+    index_bvh4<dco::Volume>::bvh_ref asVolume;
   };
 #endif
 };
@@ -1397,23 +1397,23 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS &bls)
 {
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    return intersect(ray,bls.asTriangle);
+    return intersect_ray1_bvh4(ray,bls.asTriangle);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    return intersect(ray,bls.asQuad);
+    return intersect_ray1_bvh4(ray,bls.asQuad);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    return intersect(ray,bls.asSphere);
+    return intersect_ray1_bvh4(ray,bls.asSphere);
   else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    return intersect(ray,bls.asCone);
+    return intersect_ray1_bvh4(ray,bls.asCone);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    return intersect(ray,bls.asCylinder);
+    return intersect_ray1_bvh4(ray,bls.asCylinder);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    return intersect(ray,bls.asBezierCurve);
+    return intersect_ray1_bvh4(ray,bls.asBezierCurve);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    return intersect(ray,bls.asISOSurface);
+    return intersect_ray1_bvh4(ray,bls.asISOSurface);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    return intersect(ray,bls.asVolume);
+    return intersect_ray1_bvh4(ray,bls.asVolume);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
-    return intersect(ray,bls.asVolume);
+    return intersect_ray1_bvh4(ray,bls.asVolume);
 
   return {};
 }

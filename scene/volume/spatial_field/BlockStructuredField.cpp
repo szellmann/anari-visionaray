@@ -106,8 +106,12 @@ void BlockStructuredField::commit()
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 #else
-  m_samplingBVH = builder.build(
+  auto samplingBVH2 = builder.build(
     index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
+
+  bvh_collapser collapser;
+  thread_pool pool(std::thread::hardware_concurrency());
+  collapser.collapse(samplingBVH2, m_samplingBVH, pool);
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 #endif

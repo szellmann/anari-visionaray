@@ -204,8 +204,12 @@ void UnstructuredField::commit()
   binned_sah_builder builder;
   builder.enable_spatial_splits(false);
 
-  m_samplingBVH = builder.build(
+  auto samplingBVH2 = builder.build(
     index_bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
+
+  bvh_collapser collapser;
+  thread_pool pool(std::thread::hardware_concurrency());
+  collapser.collapse(samplingBVH2, m_samplingBVH, pool);
 
   vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
 #endif
