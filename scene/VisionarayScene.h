@@ -22,6 +22,16 @@ struct VisionaraySceneImpl
   friend struct VisionaraySceneGPU;
 #endif
 
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  typedef index_bvh<basic_triangle<3,float>>  TriangleBVH;
+  typedef index_bvh<basic_triangle<3,float>>  QuadBVH;
+  typedef index_bvh<basic_sphere<float>>      SphereBVH;
+  typedef index_bvh<dco::Cone>                ConeBVH;
+  typedef index_bvh<basic_cylinder<float>>    CylinderBVH;
+  typedef index_bvh<dco::BezierCurve>         BezierCurveBVH;
+  typedef index_bvh<dco::ISOSurface>          ISOSurfaceBVH;
+  typedef index_bvh<dco::Volume>              VolumeBVH;
+#else
   typedef index_bvh4<basic_triangle<3,float>> TriangleBVH;
   typedef index_bvh4<basic_triangle<3,float>> QuadBVH;
   typedef index_bvh4<basic_sphere<float>>     SphereBVH;
@@ -30,6 +40,7 @@ struct VisionaraySceneImpl
   typedef index_bvh4<dco::BezierCurve>        BezierCurveBVH;
   typedef index_bvh4<dco::ISOSurface>         ISOSurfaceBVH;
   typedef index_bvh4<dco::Volume>             VolumeBVH;
+#endif
 
   typedef index_bvh<dco::BLS> TLS;
   typedef index_bvh<dco::Instance> WorldTLS;
