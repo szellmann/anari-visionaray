@@ -472,7 +472,11 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     ray.ori = P;
     ray.dir = float3(1.f);
     ray.tmin = ray.tmax = 0.f;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+    auto hr = intersect(ray, sf.asUnstructured.samplingBVH);
+#else
     auto hr = intersect_ray1_bvh4(ray, sf.asUnstructured.samplingBVH);
+#endif
 
     if (!hr.hit)
       return false;
@@ -489,7 +493,11 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     float basisPRD[2] = {0.f,0.f};
     ray.prd = &basisPRD;
 
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+    auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
+#else
     auto hr = intersect_ray1_bvh4(ray, sf.asBlockStructured.samplingBVH);
+#endif
 
     if (basisPRD[1] == 0.f)
       return false;
@@ -1396,6 +1404,26 @@ inline aabb get_bounds(const BLS &bls)
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS &bls)
 {
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
+    return intersect(ray,bls.asTriangle);
+  else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
+    return intersect(ray,bls.asQuad);
+  else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
+    return intersect(ray,bls.asSphere);
+  else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
+    return intersect(ray,bls.asCone);
+  else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
+    return intersect(ray,bls.asCylinder);
+  else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
+    return intersect(ray,bls.asBezierCurve);
+  else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
+    return intersect(ray,bls.asISOSurface);
+  else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
+    return intersect(ray,bls.asVolume);
+  else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
+    return intersect(ray,bls.asVolume);
+#else
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
     return intersect_ray1_bvh4(ray,bls.asTriangle);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
@@ -1414,6 +1442,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
     return intersect_ray1_bvh4(ray,bls.asVolume);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
     return intersect_ray1_bvh4(ray,bls.asVolume);
+#endif
 
   return {};
 }
