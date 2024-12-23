@@ -110,8 +110,7 @@ void BlockStructuredField::commit()
     index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
 
   bvh_collapser collapser;
-  thread_pool pool(std::thread::hardware_concurrency());
-  collapser.collapse(samplingBVH2, m_samplingBVH, pool);
+  collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->threadPool);
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 #endif
