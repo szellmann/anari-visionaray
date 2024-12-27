@@ -17,6 +17,7 @@ namespace visionaray {
 struct NanoVDBField : public SpatialField
 {
   NanoVDBField(VisionarayGlobalState *d);
+  ~NanoVDBField();
 
   void commit() override;
 
@@ -35,6 +36,11 @@ struct NanoVDBField : public SpatialField
   nanovdb::GridHandle<nanovdb::cuda::DeviceBuffer> m_gridHandle;
 #else
   nanovdb::GridHandle<nanovdb::HostBuffer> m_gridHandle;
+  // Need to store an aligned copy of the data b/c helium
+  // arrays aren't aligned
+  // TODO: might move that functionality into HostArray
+  // or similar
+  float *m_gridDataAligned{nullptr};
 #endif
 };
 

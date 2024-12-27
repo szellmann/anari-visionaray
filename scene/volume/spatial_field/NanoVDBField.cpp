@@ -14,6 +14,13 @@ NanoVDBField::NanoVDBField(VisionarayGlobalState *d)
   vfield.type = dco::SpatialField::NanoVDB;
 }
 
+NanoVDBField::~NanoVDBField()
+{
+#ifndef WITH_CUDA
+  std::free(m_gridDataAligned);
+#endif
+}
+
 void NanoVDBField::commit()
 {
   m_gridData = getParamObject<helium::Array1D>("gridData");
@@ -42,8 +49,12 @@ void NanoVDBField::commit()
 
   cudaStreamDestroy(stream);
 #else
-  auto buffer = nanovdb::HostBuffer::createFull(m_gridData->totalSize(),
-                                                (void *)m_gridData->data());
+  std::free(m_gridDataAligned);
+  m_gridDataAligned
+      = (float *)std::malloc(m_gridData->totalSize() + NANOVDB_DATA_ALIGNMENT);
+  void *dataPtr = nanovdb::alignPtr(m_gridDataAligned);
+  std::memcpy(dataPtr, m_gridData->data(), m_gridData->totalSize());
+  auto buffer = nanovdb::HostBuffer::createFull(m_gridData->totalSize(), dataPtr);
   m_gridHandle = std::move(buffer);
   vfield.asNanoVDB.grid = m_gridHandle.grid<float>();
 #endif
