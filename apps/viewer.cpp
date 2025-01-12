@@ -110,63 +110,65 @@ anari::Sampler loadTexture(anari::Device device, std::string filepath)
 anari::Geometry generateSphereMesh(anari::Device device, float3 pos)
 {
 #if 0
+  float3 Ng{0.f,1.f,0.f}, Ns{0.f,1.f,0.f};
 
-  int segments = 40;
-  int vertexCount = segments * 2 * segments * 2;
+  int segments = 100;
+  int vertexCount = (segments - 1) * segments;
+  int indexCount = ((segments - 2) * segments) * 2;
 
   auto positionArray =
       anari::newArray1D(device, ANARI_FLOAT32_VEC3, vertexCount);
-  auto texCoordArray = anari::newArray1D(device, ANARI_FLOAT32_VEC2, vertexCount);
+  auto *position = anari::map<anari::math::float3>(device, positionArray);
 
-  auto *position = anari::map<float3>(device, positionArray);
-  auto *texCoord = anari::map<float2>(device, texCoordArray);
+  auto indexArray =
+      anari::newArray1D(device, ANARI_UINT32_VEC3, indexCount);
+  auto *index = anari::map<anari::math::uint3>(device, indexArray);
+
+  auto texCoordArray = anari::newArray1D(device, ANARI_FLOAT32_VEC2, vertexCount);
+  auto *texCoord = anari::map<anari::math::float2>(device, texCoordArray);
 
   int cnt = 0;
-  for (int y = 0; y < segments; ++y) {
-    for (int x = 0; x < segments; ++x) {
-      float3 corners[4];
-      float2 uvs[4];
-      for (int yy = 0; yy < 2; ++yy) {
-        for (int xx = 0; xx < 2; ++xx) {
-          int segX = x+xx;
-          int segY = y+yy;
+  for (int i = 0; i < segments-1; ++i) {
+    for (int j = 0; j < segments; ++j) {
+      float phi = M_PI * (i+1) / float(segments);
+      float theta = 2.f * M_PI * j / float(segments);
 
-          float2 uv(segX/float(segments-1.f), segY/float(segments-1.f));
+      anari::math::float3 v(
+        sinf(phi) * cosf(theta),
+        cosf(phi),
+        sinf(phi) * sinf(theta));
 
-          float phi = 2.f * M_PI * uv.x;
-          float theta = M_PI * uv.y;
-          float3 p;
-          p.x = sinf(M_PI * uv.y) * cosf(2.f * M_PI * uv.x);
-          p.y = sinf(M_PI * uv.y) * sinf(2.f * M_PI * uv.x);
-          p.z = cosf(M_PI * uv.y);
+      float scale = 1.f;
+      position[cnt++] = pos + v * scale;
+      auto p = pos+v*scale;
+    }
+  }
 
-          corners[xx+2*yy] = p+pos;
-          uvs[xx+2*yy] = uv;
-        }
-      }
-
-      position[cnt] = corners[0];
-      position[cnt+1] = corners[1];
-      position[cnt+2] = corners[2];
-      position[cnt+3] = corners[3];
-
-      texCoord[cnt] = uvs[0];
-      texCoord[cnt+1] = uvs[1];
-      texCoord[cnt+2] = uvs[2];
-      texCoord[cnt+3] = uvs[3];
-
-      cnt += 4;
+  cnt = 0;
+  for (int j = 0; j < segments-2; ++j) {
+    for (int i = 0; i < segments; ++i) {
+      int j0 = j * segments + 1;
+      int j1 = (j+1) * segments + 1;
+      unsigned idx0 = (j0 + i) % vertexCount;
+      unsigned idx1 = (j0 + (i+1) % segments) % vertexCount;
+      unsigned idx2 = (j1 + (i+1) % segments) % vertexCount;
+      unsigned idx3 = (j1 + i) % vertexCount;
+      index[cnt++] = anari::math::uint3(idx0,idx1,idx2);
+      index[cnt++] = anari::math::uint3(idx0,idx2,idx3);
     }
   }
 
   anari::unmap(device, positionArray);
-  anari::unmap(device, texCoordArray);
+  anari::unmap(device, indexArray);
 
-  auto geometry = anari::newObject<anari::Geometry>(device, "quad");
+  //auto geometry = anari::newObject<anari::Geometry>(device, "quad");
+  auto geometry = anari::newObject<anari::Geometry>(device, "triangle");
   anari::setAndReleaseParameter(
       device, geometry, "vertex.position", positionArray);
   anari::setAndReleaseParameter(
-      device, geometry, "vertex.attribute0", texCoordArray);
+      device, geometry, "primitive.index", indexArray);
+  //anari::setAndReleaseParameter(
+  //    device, geometry, "vertex.attribute0", texCoordArray);
   anari::commitParameters(device, geometry);
 
   return geometry;
