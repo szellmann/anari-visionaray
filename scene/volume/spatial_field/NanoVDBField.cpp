@@ -87,11 +87,61 @@ aabb NanoVDBField::bounds() const
               {(float)upper[0], (float)upper[1], (float)upper[2]}};
 }
 
+#ifdef WITH_CUDA
+__global__ void NanoVDBField_buildGridGPU(dco::GridAccel vaccel,
+                                         nanovdb::NanoGrid<float> *grid)
+{
+  int3 mcID(threadIdx.x + blockIdx.x * blockDim.x,
+            threadIdx.y + blockIdx.y * blockDim.y,
+            threadIdx.z + blockIdx.z * blockDim.z);
+
+  if (mcID.x >= vaccel.dims.x) return;
+  if (mcID.y >= vaccel.dims.y) return;
+  if (mcID.z >= vaccel.dims.z) return;
+
+  float3 gridOrigin = vaccel.worldBounds.min;
+  float3 gridSpacing = (vaccel.worldBounds.max-vaccel.worldBounds.min)
+                                /float3(vaccel.dims);
+
+  const box3f mcBounds(gridOrigin+vec3f(mcID)*gridSpacing,
+                       gridOrigin+vec3f(mcID+1)*gridSpacing);
+
+  nanovdb::CoordBBox bbox(
+      {(int)mcBounds.min.x,(int)mcBounds.min.y,(int)mcBounds.min.z},
+      {(int)mcBounds.max.x+1,(int)mcBounds.max.y+1,(int)mcBounds.max.z+1});
+
+  auto acc = grid->getAccessor();
+
+  box1f scalarRange{FLT_MAX,-FLT_MAX};
+  for (nanovdb::CoordBBox::Iterator iter = bbox.begin(); iter; ++iter) {
+    float value = acc.getValue(*iter);
+    scalarRange.extend(value);
+  }
+
+  updateMC(mcID,vaccel.dims,scalarRange,vaccel.valueRanges);
+  // updateMCStepSize(mcID,vaccel.dims,0.5f,vaccel.stepSizes); // TODO!?
+}
+#endif
+
 void NanoVDBField::buildGrid()
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA)
+  int3 gridDims{16, 16, 16};
+  box3f worldBounds = {bounds().min,bounds().max};
+  m_gridAccel.init(gridDims, worldBounds);
+
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
+  dim3 numThreads(4, 4, 4);
+  dim3 numBlocks(div_up(int(gridDims.x),(int)numThreads.x),
+                 div_up(int(gridDims.y),(int)numThreads.y),
+                 div_up(int(gridDims.z),(int)numThreads.z));
+
+  NanoVDBField_buildGridGPU<<<numBlocks, numThreads>>>(
+    vaccel, vfield.asNanoVDB.grid);
+#elif defined(WITH_HIP)
   return;
-#endif
+#else
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
   m_gridAccel.init(gridDims, worldBounds);
@@ -120,6 +170,7 @@ void NanoVDBField::buildGrid()
       }
     }
   }
+#endif
 }
 
 } // namespace visionaray
