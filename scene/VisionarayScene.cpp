@@ -13,6 +13,9 @@ VisionaraySceneImpl::VisionaraySceneImpl(
 {
   this->type = type;
 
+  m_bounds[0].invalidate();
+  m_bounds[1].invalidate();
+
   if (type == World) {
     m_worldID = deviceState()->dcos.TLSs.alloc({});
     deviceState()->dcos.worlds.alloc(dco::createWorld());
@@ -31,6 +34,10 @@ VisionaraySceneImpl::~VisionaraySceneImpl()
 
 void VisionaraySceneImpl::commit()
 {
+  boundsID = !boundsID;
+  m_bounds[boundsID] = m_bounds[!boundsID];
+  m_bounds[!boundsID].invalidate();
+
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->commit();
 #else
@@ -302,19 +309,15 @@ bool VisionaraySceneImpl::isValid() const
 
 aabb VisionaraySceneImpl::getBounds() const
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
-  return m_gpuScene->getBounds();
-#else
-  if (type == World)
-    return m_worldTLS.node(0).get_bounds();
-  else
-    return m_TLS.node(0).get_bounds();
-#endif
+  // bounds that were valid when commit was called:
+  return m_bounds[boundsID];
 }
 
 void VisionaraySceneImpl::attachInstance(
     dco::Instance inst, unsigned instID, unsigned userID)
 {
+  m_bounds[boundsID].insert(get_bounds(inst));
+
   m_instances.set(instID, inst.instID);
   m_objIds.set(instID, userID); // TODO: separate inst/geom
 
@@ -328,6 +331,8 @@ void VisionaraySceneImpl::attachInstance(
 void VisionaraySceneImpl::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
+  m_bounds[boundsID].insert(get_bounds(geom));
+
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
@@ -387,6 +392,8 @@ void VisionaraySceneImpl::attachGeometry(
 void VisionaraySceneImpl::attachVolume(
     dco::Volume vol, unsigned volID, unsigned userID)
 {
+  m_bounds[boundsID].insert(get_bounds(vol));
+
   // Patch volID into scene primitives:
   vol.volID = volID;
 

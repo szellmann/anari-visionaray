@@ -1703,6 +1703,45 @@ inline Geometry createGeometry()
   return geom;
 }
 
+VSNRAY_FUNC
+inline aabb get_bounds(const Geometry &geom)
+{
+  aabb result;
+  result.invalidate();
+
+  if (geom.type == dco::Geometry::Triangle) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      result.insert(get_bounds(geom.as<dco::Triangle>(i)));
+    }
+  } else if (geom.type == dco::Geometry::Quad) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      result.insert(get_bounds(geom.as<dco::Triangle>(i)));
+    }
+  } else if (geom.type == dco::Geometry::Sphere) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      result.insert(get_bounds(geom.as<dco::Sphere>(i)));
+    }
+  } else if (geom.type == dco::Geometry::Cone) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      result.insert(get_bounds(geom.as<dco::Cone>(i)));
+    }
+  } else if (geom.type == dco::Geometry::Cylinder) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      result.insert(get_bounds(geom.as<dco::Cylinder>(i)));
+    }
+  } else if (geom.type == dco::Geometry::BezierCurve) {
+    for (size_t i=0;i<geom.primitives.len;++i) {
+      result.insert(get_bounds(geom.as<dco::BezierCurve>(i)));
+    }
+  } else if (geom.type == dco::Geometry::ISOSurface) {
+    if (geom.primitives.len) {
+      result.insert(get_bounds(geom.as<dco::ISOSurface>(0)));
+    }
+  }
+
+  return result;
+}
+
 // Sampler //
 
 struct Sampler

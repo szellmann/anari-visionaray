@@ -48,6 +48,11 @@ struct VisionaraySceneImpl
   enum Type { World, Group, };
   Type type;
 
+  // double-buffered bounds, attaching geoms, vols, etc. updates
+  // back-buffer, buffers get swapped on commit
+  aabb m_bounds[2];
+  int boundsID{0};
+
   // Surface data //
   DeviceHandleArray m_instances;
   DeviceHandleArray m_geometries;
