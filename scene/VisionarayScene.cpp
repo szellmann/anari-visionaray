@@ -316,6 +316,9 @@ aabb VisionaraySceneImpl::getBounds() const
 void VisionaraySceneImpl::attachInstance(
     dco::Instance inst, unsigned instID, unsigned userID)
 {
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  m_gpuScene->attachInstance(inst, instID, userID);
+#else
   m_bounds[boundsID].insert(get_bounds(inst));
 
   m_instances.set(instID, inst.instID);
@@ -326,19 +329,20 @@ void VisionaraySceneImpl::attachInstance(
 
   // Upload/set accessible pointers
   deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
+#endif
 }
 
 void VisionaraySceneImpl::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
-  m_bounds[boundsID].insert(get_bounds(geom));
-
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
 
   if (geom.primitives.len == 0)
     return;
+
+  m_bounds[boundsID].insert(get_bounds(geom));
 
   m_geometries.set(geomID, geom.geomID);
   m_objIds.set(geomID, userID);
@@ -392,7 +396,8 @@ void VisionaraySceneImpl::attachGeometry(
 void VisionaraySceneImpl::attachVolume(
     dco::Volume vol, unsigned volID, unsigned userID)
 {
-  m_bounds[boundsID].insert(get_bounds(vol));
+  // use bounds member, that way we don't need to reach for the GPU:
+  m_bounds[boundsID].insert(vol.bounds);
 
   // Patch volID into scene primitives:
   vol.volID = volID;

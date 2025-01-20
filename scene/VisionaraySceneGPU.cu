@@ -4,6 +4,15 @@
 
 namespace visionaray {
 
+template <typename Obj>
+__global__ static void getBoundsGPU(Obj obj, aabb *bounds)
+{
+  if (blockIdx.x != 0 || threadIdx.x != 0)
+    return;
+
+  *bounds = get_bounds(obj);
+}
+
 struct VisionaraySceneGPU::Impl
 {
   typedef cuda_index_bvh<basic_triangle<3,float>> TriangleBVH;
@@ -402,11 +411,42 @@ void VisionaraySceneGPU::dispatch()
   }
 }
 
+void VisionaraySceneGPU::attachInstance(
+    dco::Instance inst, unsigned instID, unsigned userID)
+{
+  aabb *bounds;
+  CUDA_SAFE_CALL(cudaMalloc(&bounds, sizeof(aabb)));
+  getBoundsGPU<<<1,1>>>(inst, bounds);
+  aabb hostBounds;
+  CUDA_SAFE_CALL(
+      cudaMemcpy(&hostBounds, bounds, sizeof(aabb), cudaMemcpyDeviceToHost));
+  m_impl->parent->m_bounds[m_impl->parent->boundsID].insert(hostBounds);
+  CUDA_SAFE_CALL(cudaFree(bounds));
+
+  m_impl->parent->m_instances.set(instID, inst.instID);
+  m_impl->parent->m_objIds.set(instID, userID); // TODO: separate inst/geom
+
+  m_impl->parent->m_instances.set(instID, inst.instID);
+  deviceState()->dcos.instances.update(inst.instID, inst);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
+}
+
 void VisionaraySceneGPU::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
   if (geom.primitives.len == 0)
     return;
+
+  aabb *bounds;
+  CUDA_SAFE_CALL(cudaMalloc(&bounds, sizeof(aabb)));
+  getBoundsGPU<<<1,1>>>(geom, bounds);
+  aabb hostBounds;
+  CUDA_SAFE_CALL(
+      cudaMemcpy(&hostBounds, bounds, sizeof(aabb), cudaMemcpyDeviceToHost));
+  m_impl->parent->m_bounds[m_impl->parent->boundsID].insert(hostBounds);
+  CUDA_SAFE_CALL(cudaFree(bounds));
 
   m_impl->parent->m_geometries.set(geomID, geom.geomID);
   m_impl->parent->m_objIds.set(geomID, userID);

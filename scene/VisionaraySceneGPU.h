@@ -17,6 +17,7 @@ struct VisionaraySceneGPU
   aabb getBounds() const;
   void commit();
   void dispatch();
+  void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
   void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
 
 #ifdef WITH_CUDA
