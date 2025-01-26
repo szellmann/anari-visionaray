@@ -319,7 +319,7 @@ void VisionaraySceneImpl::attachInstance(
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   m_gpuScene->attachInstance(inst, instID, userID);
 #else
-  m_bounds[boundsID].insert(get_bounds(inst));
+  m_bounds[boundsID].insert(get_prim_bounds(inst));
 
   m_instances.set(instID, inst.instID);
   m_objIds.set(instID, userID); // TODO: separate inst/geom

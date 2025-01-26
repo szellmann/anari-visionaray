@@ -13,6 +13,15 @@ __global__ static void getBoundsGPU(Obj obj, aabb *bounds)
   *bounds = get_bounds(obj);
 }
 
+template <typename Obj>
+__global__ static void getPrimBoundsGPU(Obj obj, aabb *bounds)
+{
+  if (blockIdx.x != 0 || threadIdx.x != 0)
+    return;
+
+  *bounds = get_prim_bounds(obj);
+}
+
 struct VisionaraySceneGPU::Impl
 {
   typedef cuda_index_bvh<basic_triangle<3,float>> TriangleBVH;
@@ -416,7 +425,7 @@ void VisionaraySceneGPU::attachInstance(
 {
   aabb *bounds;
   CUDA_SAFE_CALL(cudaMalloc(&bounds, sizeof(aabb)));
-  getBoundsGPU<<<1,1>>>(inst, bounds);
+  getPrimBoundsGPU<<<1,1>>>(inst, bounds);
   aabb hostBounds;
   CUDA_SAFE_CALL(
       cudaMemcpy(&hostBounds, bounds, sizeof(aabb), cudaMemcpyDeviceToHost));
