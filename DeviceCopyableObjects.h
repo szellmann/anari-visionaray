@@ -1497,13 +1497,13 @@ inline Instance createInstance()
 }
 
 VSNRAY_FUNC
-inline aabb get_bounds(const Instance &bls)
+inline aabb get_bounds(const Instance &inst)
 {
-  if (bls.type == Instance::Transform && bls.theBVH.num_nodes()) {
+  if (inst.type == Instance::Transform && inst.theBVH.num_nodes()) {
 
-    aabb bound = bls.theBVH.node(0).get_bounds();
-    mat3f rot = inverse(bls.affineInv[0]);
-    vec3f trans = -bls.transInv[0];
+    aabb bound = inst.theBVH.node(0).get_bounds();
+    mat3f rot = inverse(inst.affineInv[0]);
+    vec3f trans = -inst.transInv[0];
     auto verts = compute_vertices(bound);
     aabb result;
     result.invalidate();
@@ -1512,13 +1512,13 @@ inline aabb get_bounds(const Instance &bls)
       result.insert(v);
     }
     return result;
-  } else if (bls.type == Instance::MotionTransform && bls.len) {
+  } else if (inst.type == Instance::MotionTransform && inst.len) {
     aabb result;
     result.invalidate();
-    for (unsigned i = 0; i < bls.len; ++i) {
-      aabb bound = bls.theBVH.node(0).get_bounds();
-      mat3f rot = inverse(bls.affineInv[i]);
-      vec3f trans = -bls.transInv[i];
+    for (unsigned i = 0; i < inst.len; ++i) {
+      aabb bound = inst.theBVH.node(0).get_bounds();
+      mat3f rot = inverse(inst.affineInv[i]);
+      vec3f trans = -inst.transInv[i];
       auto verts = compute_vertices(bound);
       for (vec3 v : verts) {
         v = rot * v + trans;
@@ -1533,30 +1533,30 @@ inline aabb get_bounds(const Instance &bls)
 
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const Instance &bls)
+    const Ray &ray, const Instance &inst)
 {
   mat3 affineInv;
   vec3 transInv;
 
-  if (bls.type == Instance::Transform) {
-    affineInv = bls.affineInv[0];
-    transInv = bls.transInv[0];
-  } else if (bls.type == Instance::MotionTransform) {
-    float rayTime = clamp(ray.time, bls.time.min, bls.time.max);
+  if (inst.type == Instance::Transform) {
+    affineInv = inst.affineInv[0];
+    transInv = inst.transInv[0];
+  } else if (inst.type == Instance::MotionTransform) {
+    float rayTime = clamp(ray.time, inst.time.min, inst.time.max);
 
-    float time01 = rayTime - bls.time.min / (bls.time.max - bls.time.min);
+    float time01 = rayTime - inst.time.min / (inst.time.max - inst.time.min);
 
-    unsigned ID1 = unsigned(float(bls.len-1) * time01);
-    unsigned ID2 = min(bls.len-1, ID1+1);
+    unsigned ID1 = unsigned(float(inst.len-1) * time01);
+    unsigned ID2 = min(inst.len-1, ID1+1);
 
-    float frac = time01 * (bls.len-1) - ID1;
+    float frac = time01 * (inst.len-1) - ID1;
 
-    affineInv = lerp(bls.affineInv[ID1],
-                     bls.affineInv[ID2],
+    affineInv = lerp(inst.affineInv[ID1],
+                     inst.affineInv[ID2],
                      frac);
 
-    transInv = lerp(bls.transInv[ID1],
-                    bls.transInv[ID2],
+    transInv = lerp(inst.transInv[ID1],
+                    inst.transInv[ID2],
                     frac);
   }
 
@@ -1564,10 +1564,10 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   xfmRay.ori = affineInv * (xfmRay.ori + transInv);
   xfmRay.dir = affineInv * xfmRay.dir;
 
-  auto hr = intersect(xfmRay,bls.theBVH);
+  auto hr = intersect(xfmRay,inst.theBVH);
   if (hr.hit) {
     hr.isect_pos = xfmRay.ori + hr.t * xfmRay.dir;
-    hr.inst_id = bls.instID;
+    hr.inst_id = inst.instID;
   } else {
     hr.inst_id = ~0u;
   }
