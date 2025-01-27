@@ -38,36 +38,32 @@ endif()
 option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" ON)
 set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
 
+add_library(${PROJECT_NAME} SHARED)
 anari_generate_queries(
-  NAME visionaray
-  PREFIX VisionarayDevice
+  DEVICE_TARGET ${PROJECT_NAME}
   CPP_NAMESPACE visionaray
   JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_device.json
   JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-anari_generate_queries(
-  NAME visionaray_cuda
-  PREFIX VisionarayCUDADevice
-  CPP_NAMESPACE visionaray
-  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_cuda_device.json
-  JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-anari_generate_queries(
-  NAME visionaray_hip
-  PREFIX VisionarayHIPDevice
-  CPP_NAMESPACE visionaray
-  JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_hip_device.json
-  JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-add_library(${PROJECT_NAME} SHARED)
 if (cuda)
   add_library(${PROJECT_NAME}_cuda SHARED)
+  anari_generate_queries(
+    DEVICE_TARGET ${PROJECT_NAME}_cuda
+    CPP_NAMESPACE visionaray
+    JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_cuda_device.json
+    JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
+  )
 endif()
+
 if (hip)
   add_library(${PROJECT_NAME}_hip SHARED)
+  anari_generate_queries(
+    DEVICE_TARGET ${PROJECT_NAME}_hip
+    CPP_NAMESPACE visionaray
+    JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_hip_device.json
+    JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
+  )
 endif()
 
 set(SOURCES
@@ -125,7 +121,6 @@ target_sources(${PROJECT_NAME} PRIVATE
   scene/volume/spatial_field/BlockStructuredField.cpp
   scene/volume/spatial_field/GridAccel.cpp
   scene/volume/spatial_field/UnstructuredField.cpp
-  VisionarayDeviceQueries.cpp
 )
 
 if (nanovdb)
@@ -145,7 +140,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
 if (cuda)
@@ -161,7 +155,6 @@ if (cuda)
     scene/volume/spatial_field/GridAccel.cu
     scene/volume/spatial_field/UnstructuredField.cu
     scene/VisionaraySceneGPU.cu
-    VisionarayCUDADeviceQueries.cpp
   )
   set_source_files_properties(
     frame/Frame.cu
@@ -199,7 +192,6 @@ if (cuda)
 
   target_include_directories(${PROJECT_NAME}_cuda PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )
 endif()
 
@@ -210,7 +202,6 @@ if (hip)
     renderer/DirectLight_impl.hip
     renderer/Raycast_impl.hip
     scene/VisionaraySceneGPU.hip
-    VisionarayHIPDeviceQueries.cpp
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
   if (nanovdb)
@@ -230,7 +221,6 @@ if (hip)
 
   target_include_directories(${PROJECT_NAME}_hip PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )
 endif()
 
