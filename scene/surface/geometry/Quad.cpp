@@ -35,44 +35,55 @@ void Quad::commit()
     return;
   }
 
+  unsigned nextID = 0;
+  auto addTriangles = [&](basic_triangle<3, float> &tri1,
+                          basic_triangle<3, float> &tri2) {
+    if (length(tri1.e1) > 0.f && length(tri1.e2) > 0.f &&
+        length(tri2.e1) > 0.f && length(tri2.e2) > 0.f) {
+      unsigned primID = nextID++;
+      tri1.prim_id = primID;
+      tri2.prim_id = primID;
+      m_triangles.push_back(tri1);
+      m_triangles.push_back(tri2);
+    }
+  };
+
   if (m_index) {
-    m_triangles.resize(m_index->size() * 2);
     for (size_t i=0; i<m_index->size(); ++i) {
       const uint4 idx = m_index->beginAs<uint4>()[i];
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
       const vec3f v3 = m_vertexPosition->beginAs<vec3f>()[idx.z];
       const vec3f v4 = m_vertexPosition->beginAs<vec3f>()[idx.w];
-      m_triangles[i*2].prim_id = i;
-      m_triangles[i*2].geom_id = -1;
-      m_triangles[i*2].v1 = v1;
-      m_triangles[i*2].e1 = v2-v1;
-      m_triangles[i*2].e2 = v4-v1;
-      m_triangles[i*2+1].prim_id = i;
-      m_triangles[i*2+1].geom_id = -1;
-      m_triangles[i*2+1].v1 = v3;
-      m_triangles[i*2+1].e1 = v4-v3;
-      m_triangles[i*2+1].e2 = v2-v3;
+      basic_triangle<3, float> tri1, tri2;
+      tri1.geom_id = -1;
+      tri1.v1 = v1;
+      tri1.e1 = v2-v1;
+      tri1.e2 = v4-v1;
+      tri2.geom_id = -1;
+      tri2.v1 = v3;
+      tri2.e1 = v4-v3;
+      tri2.e2 = v2-v3;
+      addTriangles(tri1, tri2);
     }
   } else {
     size_t numQuads = m_vertexPosition->size() / 4;
-    m_triangles.resize(numQuads * 2);
     for (size_t i=0; i<numQuads; ++i) {
       const uint4 idx(i*4, i*4+1, i*4+2, i*4+3);
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
       const vec3f v3 = m_vertexPosition->beginAs<vec3f>()[idx.z];
       const vec3f v4 = m_vertexPosition->beginAs<vec3f>()[idx.w];
-      m_triangles[i*2].prim_id = i;
-      m_triangles[i*2].geom_id = -1;
-      m_triangles[i*2].v1 = v1;
-      m_triangles[i*2].e1 = v2-v1;
-      m_triangles[i*2].e2 = v4-v1;
-      m_triangles[i*2+1].prim_id = i;
-      m_triangles[i*2+1].geom_id = -1;
-      m_triangles[i*2+1].v1 = v3;
-      m_triangles[i*2+1].e1 = v4-v3;
-      m_triangles[i*2+1].e2 = v2-v3;
+      basic_triangle<3, float> tri1, tri2;
+      tri1.geom_id = -1;
+      tri1.v1 = v1;
+      tri1.e1 = v2-v1;
+      tri1.e2 = v4-v1;
+      tri2.geom_id = -1;
+      tri2.v1 = v3;
+      tri2.e1 = v4-v3;
+      tri2.e2 = v2-v3;
+      addTriangles(tri1, tri2);
     }
   }
 

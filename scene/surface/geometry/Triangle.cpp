@@ -37,31 +37,39 @@ void Triangle::commit()
     return;
   }
 
+  unsigned nextID = 0;
+  auto addTriangle = [&](basic_triangle<3, float> &tri) {
+    if (length(tri.e1) > 0.f && length(tri.e2) > 0.f) {
+      tri.prim_id = nextID++;
+      m_triangles.push_back(tri);
+    }
+  };
+
   if (m_index) {
-    m_triangles.resize(m_index->size());
     for (size_t i=0; i<m_index->size(); ++i) {
       const uint3 idx = m_index->beginAs<uint3>()[i];
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
       const vec3f v3 = m_vertexPosition->beginAs<vec3f>()[idx.z];
-      m_triangles[i].prim_id = i;
-      m_triangles[i].geom_id = -1;
-      m_triangles[i].v1 = v1;
-      m_triangles[i].e1 = v2-v1;
-      m_triangles[i].e2 = v3-v1;
+      basic_triangle<3, float> triangle;
+      triangle.geom_id = -1;
+      triangle.v1 = v1;
+      triangle.e1 = v2-v1;
+      triangle.e2 = v3-v1;
+      addTriangle(triangle);
     }
   } else {
-    m_triangles.resize(m_vertexPosition->size() / 3);
-    for (size_t i=0; i<m_triangles.size(); ++i) {
+    for (size_t i=0; i<m_vertexPosition->size() / 3; ++i) {
       const uint3 idx(i*3, i*3+1, i*3+2);
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
       const vec3f v3 = m_vertexPosition->beginAs<vec3f>()[idx.z];
-      m_triangles[i].prim_id = i;
-      m_triangles[i].geom_id = -1;
-      m_triangles[i].v1 = v1;
-      m_triangles[i].e1 = v2-v1;
-      m_triangles[i].e2 = v3-v1;
+      basic_triangle<3, float> triangle;
+      triangle.geom_id = -1;
+      triangle.v1 = v1;
+      triangle.e1 = v2-v1;
+      triangle.e2 = v3-v1;
+      addTriangle(triangle);
     }
   }
 
