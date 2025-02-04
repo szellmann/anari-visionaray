@@ -144,6 +144,7 @@ void VisionaraySceneImpl::commit()
       const dco::Geometry &geom = deviceState()->dcos.geometries[geomID];
 
       binned_sah_builder builder;
+      bvh_optimizer optimizer;
       bvh_collapser collapser;
 
       if (geom.type == dco::Geometry::Triangle) {
@@ -151,6 +152,15 @@ void VisionaraySceneImpl::commit()
         builder.enable_spatial_splits(true);
         auto triangleBVH2 = builder.build(
           index_bvh<basic_triangle<3,float>>{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
+#if 0 // unintuitively this doesn't make traversal faster, need to investigate:
+        for (;;) {
+          int rotations = optimizer.optimize_tree_rotations(triangleBVH2, deviceState()->threadPool);
+          // float costs = sah_cost(triangleBVH2);
+          // std::cout << "SAH costs of new tree: " << costs << '\n';
+          if (rotations == 0)
+            break;
+        }
+#endif
         collapser.collapse(triangleBVH2, m_accelStorage.triangleBLSs[index], deviceState()->threadPool);
       } else if (geom.type == dco::Geometry::Quad) {
         unsigned index = quadCount++;
