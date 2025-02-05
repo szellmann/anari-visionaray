@@ -45,13 +45,6 @@ void Group::commit()
   m_surfaceData = getParamObject<ObjectArray>("surface");
   m_volumeData = getParamObject<ObjectArray>("volume");
   m_lightData = getParamObject<ObjectArray>("light");
-
-  if (m_volumeData) {
-    std::transform(m_volumeData->handlesBegin(),
-        m_volumeData->handlesEnd(),
-        std::back_inserter(m_volumes),
-        [](auto *o) { return (Volume *)o; });
-  }
 }
 
 const std::vector<Surface *> &Group::surfaces() const
