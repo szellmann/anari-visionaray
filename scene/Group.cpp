@@ -117,6 +117,7 @@ void Group::visionaraySceneConstruct()
         });
   }
 
+  uint32_t volID = 0;
   if (m_volumeData) {
     std::for_each(m_volumeData->handlesBegin(),
         m_volumeData->handlesEnd(),
@@ -124,7 +125,7 @@ void Group::visionaraySceneConstruct()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
-            vscene->attachVolume(v->visionarayVolume(), id++, v->id());
+            vscene->attachVolume(v->visionarayVolume(), volID++, v->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid volume(%p) in building BLS",
