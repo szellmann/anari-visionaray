@@ -127,6 +127,7 @@ struct DeviceArray
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
+      CUDA_SAFE_CALL(cudaFree(temp));
     }
 
     len = n;
@@ -244,6 +245,7 @@ struct DeviceArray
       HIP_SAFE_CALL(hipMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
                               hipMemcpyDeviceToDevice));
       HIP_SAFE_CALL(hipDeviceSynchronize());
+      HIP_SAFE_CALL(hipFree(temp));
     }
 
     len = n;
