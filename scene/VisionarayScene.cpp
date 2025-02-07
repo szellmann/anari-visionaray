@@ -151,7 +151,7 @@ void VisionaraySceneImpl::commit()
         unsigned index = triangleCount++;
         builder.enable_spatial_splits(true);
         auto triangleBVH2 = builder.build(
-          index_bvh<basic_triangle<3,float>>{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
+          bvh<basic_triangle<3,float>>{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
 #if 0 // unintuitively this doesn't make traversal faster, need to investigate:
         for (;;) {
           int rotations = optimizer.optimize_tree_rotations(triangleBVH2, deviceState()->threadPool);
@@ -166,38 +166,38 @@ void VisionaraySceneImpl::commit()
         unsigned index = quadCount++;
         builder.enable_spatial_splits(true);
         auto quadBVH2 = builder.build(
-          index_bvh<basic_triangle<3,float>>{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
+          bvh<basic_triangle<3,float>>{}, (const dco::Triangle *)geom.primitives.data, geom.primitives.len);
         collapser.collapse(quadBVH2, m_accelStorage.quadBLSs[index], deviceState()->threadPool);
       } else if (geom.type == dco::Geometry::Sphere) {
         unsigned index = sphereCount++;
         builder.enable_spatial_splits(true);
         auto sphereBVH2 = builder.build(
-          index_bvh<basic_sphere<float>>{}, (const dco::Sphere *)geom.primitives.data, geom.primitives.len);
+          bvh<basic_sphere<float>>{}, (const dco::Sphere *)geom.primitives.data, geom.primitives.len);
         collapser.collapse(sphereBVH2, m_accelStorage.sphereBLSs[index], deviceState()->threadPool);
       } else if (geom.type == dco::Geometry::Cone) {
         unsigned index = coneCount++;
         builder.enable_spatial_splits(false); // no spatial splits for cones yet!
         auto coneBVH2 = builder.build(
-          index_bvh<dco::Cone>{}, (const dco::Cone *)geom.primitives.data, geom.primitives.len);
+          bvh<dco::Cone>{}, (const dco::Cone *)geom.primitives.data, geom.primitives.len);
         collapser.collapse(coneBVH2, m_accelStorage.coneBLSs[index], deviceState()->threadPool);
       } else if (geom.type == dco::Geometry::Cylinder) {
         unsigned index = cylinderCount++;
         builder.enable_spatial_splits(false); // no spatial splits for cyls yet!
         auto cylinderBVH2 = builder.build(
-          index_bvh<basic_cylinder<float>>{}, (const dco::Cylinder *)geom.primitives.data, geom.primitives.len);
+          bvh<basic_cylinder<float>>{}, (const dco::Cylinder *)geom.primitives.data, geom.primitives.len);
         collapser.collapse(cylinderBVH2, m_accelStorage.cylinderBLSs[index], deviceState()->threadPool);
       } else if (geom.type == dco::Geometry::BezierCurve) {
         unsigned index = bezierCurveCount++;
         builder.enable_spatial_splits(false); // no spatial splits for bez. curves yet!
         auto bezierCurveBVH2 = builder.build(
-          index_bvh<dco::BezierCurve>{},
+          bvh<dco::BezierCurve>{},
           (const dco::BezierCurve *)geom.primitives.data, geom.primitives.len);
         collapser.collapse(bezierCurveBVH2, m_accelStorage.bezierCurveBLSs[index], deviceState()->threadPool);
       } else if (geom.type == dco::Geometry::ISOSurface) {
         unsigned index = isoCount++;
         builder.enable_spatial_splits(false); // no spatial splits for ISOs
         auto isoSurfaceBVH2 = builder.build(
-          index_bvh<dco::ISOSurface>{}, (const dco::ISOSurface *)geom.primitives.data, 1);
+          bvh<dco::ISOSurface>{}, (const dco::ISOSurface *)geom.primitives.data, 1);
         collapser.collapse(isoSurfaceBVH2, m_accelStorage.isoSurfaceBLSs[index], deviceState()->threadPool);
       }
     }
@@ -211,7 +211,7 @@ void VisionaraySceneImpl::commit()
       bvh_collapser collapser;
       unsigned index = volumeCount++;
       builder.enable_spatial_splits(false); // no spatial splits for volumes/aabbs
-      auto volumeBVH2 = builder.build(index_bvh<dco::Volume>{}, &vol, 1);
+      auto volumeBVH2 = builder.build(bvh<dco::Volume>{}, &vol, 1);
       collapser.collapse(volumeBVH2, m_accelStorage.volumeBLSs[index], deviceState()->threadPool);
     }
 

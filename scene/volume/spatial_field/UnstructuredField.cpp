@@ -205,7 +205,7 @@ void UnstructuredField::commit()
   builder.enable_spatial_splits(false);
 
   auto samplingBVH2 = builder.build(
-    index_bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
+    bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
 
   bvh_collapser collapser;
   collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->threadPool);

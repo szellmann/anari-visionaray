@@ -32,14 +32,14 @@ struct VisionaraySceneImpl
   typedef index_bvh<dco::ISOSurface>          ISOSurfaceBVH;
   typedef index_bvh<dco::Volume>              VolumeBVH;
 #else
-  typedef index_bvh4<basic_triangle<3,float>> TriangleBVH;
-  typedef index_bvh4<basic_triangle<3,float>> QuadBVH;
-  typedef index_bvh4<basic_sphere<float>>     SphereBVH;
-  typedef index_bvh4<dco::Cone>               ConeBVH;
-  typedef index_bvh4<basic_cylinder<float>>   CylinderBVH;
-  typedef index_bvh4<dco::BezierCurve>        BezierCurveBVH;
-  typedef index_bvh4<dco::ISOSurface>         ISOSurfaceBVH;
-  typedef index_bvh4<dco::Volume>             VolumeBVH;
+  typedef bvh4<basic_triangle<3,float>> TriangleBVH;
+  typedef bvh4<basic_triangle<3,float>> QuadBVH;
+  typedef bvh4<basic_sphere<float>>     SphereBVH;
+  typedef bvh4<dco::Cone>               ConeBVH;
+  typedef bvh4<basic_cylinder<float>>   CylinderBVH;
+  typedef bvh4<dco::BezierCurve>        BezierCurveBVH;
+  typedef bvh4<dco::ISOSurface>         ISOSurfaceBVH;
+  typedef bvh4<dco::Volume>             VolumeBVH;
 #endif
 
   typedef index_bvh<dco::BLS> TLS;
