@@ -11,7 +11,8 @@ struct BlockStructuredField : public SpatialField
 {
   BlockStructuredField(VisionarayGlobalState *d);
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
   bool isValid() const override;
 

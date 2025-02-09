@@ -9,7 +9,8 @@ struct Directional : public Light
   Directional(VisionarayGlobalState *d);
   ~Directional() override;
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   vec3 m_direction{0.f, 0.f, -1.f};

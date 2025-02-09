@@ -16,12 +16,15 @@ Surface::~Surface()
   deviceState()->dcos.surfaces.free(vsurf.surfID);
 }
 
-void Surface::commit()
+void Surface::commitParameters()
 {
   m_id = getParam<uint32_t>("id", ~0u);
   m_geometry = getParamObject<Geometry>("geometry");
   m_material = getParamObject<Material>("material");
+}
 
+void Surface::finalize()
+{
   if (!m_material) {
     reportMessage(ANARI_SEVERITY_WARNING, "missing 'material' on ANARISurface");
     return;
@@ -36,6 +39,25 @@ void Surface::commit()
   vsurf.matID = m_material->visionarayMaterial().matID;
 
   dispatch();
+}
+
+void Surface::markFinalized()
+{
+  Object::markFinalized();
+  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
+      helium::newTimeStamp();
+}
+
+bool Surface::isValid() const
+{
+  // bool allowInvalidMaterial = deviceState()->allowInvalidSurfaceMaterials;
+
+  // if (allowInvalidMaterial) {
+  //   return m_geometry && m_geometry->isValid();
+  // } else {
+    return m_geometry && m_material && m_geometry->isValid()
+        && m_material->isValid();
+  // }
 }
 
 uint32_t Surface::id() const
@@ -64,25 +86,6 @@ void Surface::dispatch()
 
   // Upload/set accessible pointers
   deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.devicePtr();
-}
-
-void Surface::markCommitted()
-{
-  Object::markCommitted();
-  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
-      helium::newTimeStamp();
-}
-
-bool Surface::isValid() const
-{
-  // bool allowInvalidMaterial = deviceState()->allowInvalidSurfaceMaterials;
-
-  // if (allowInvalidMaterial) {
-  //   return m_geometry && m_geometry->isValid();
-  // } else {
-    return m_geometry && m_material && m_geometry->isValid()
-        && m_material->isValid();
-  // }
 }
 
 } // namespace visionaray

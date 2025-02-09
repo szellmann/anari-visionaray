@@ -29,7 +29,8 @@ struct Frame : public helium::BaseFrame
       void *ptr,
       uint32_t flags) override;
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
   void renderFrame() override;
 
@@ -57,6 +58,21 @@ struct Frame : public helium::BaseFrame
   //// Data ////
 
   bool m_valid{false};
+
+  struct FrameData
+  {
+    int frameID{0};
+    uint2 size;
+    float2 invSize;
+  } m_frameData;
+
+  anari::DataType m_colorType{ANARI_UNKNOWN};
+  anari::DataType m_depthType{ANARI_UNKNOWN};
+  anari::DataType m_normalType{ANARI_UNKNOWN};
+  anari::DataType m_albedoType{ANARI_UNKNOWN};
+  anari::DataType m_primIdType{ANARI_UNKNOWN};
+  anari::DataType m_objIdType{ANARI_UNKNOWN};
+  anari::DataType m_instIdType{ANARI_UNKNOWN};
 
   dco::Frame vframe;
 

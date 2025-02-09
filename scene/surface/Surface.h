@@ -13,20 +13,15 @@ struct Surface : public Object
   Surface(VisionarayGlobalState *s);
   ~Surface() override;
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
+  void markFinalized() override;
+  bool isValid() const override;
 
   uint32_t id() const;
   Geometry *geometry();
   const Geometry *geometry() const;
   const Material *material() const;
-
-  // float4 getSurfaceColor(const Ray &ray) const;
-  // float getSurfaceOpacity(const Ray &ray) const;
-
-  // float adjustedAlpha(float a) const;
-
-  void markCommitted() override;
-  bool isValid() const override;
 
   dco::Surface visionaraySurface() const { return vsurf; }
 

@@ -9,13 +9,15 @@ MotionTransform::MotionTransform(VisionarayGlobalState *s)
   vinstance.type = dco::Instance::MotionTransform;
 }
 
-void MotionTransform::commit()
+void MotionTransform::commitParameters()
 {
-  Instance::commit();
-
+  Instance::commitParameters();
   m_motionTransform = getParamObject<Array1D>("motion.transform");
   m_time = getParam<box1>("time", box1(0.f, 1.f));
+}
 
+void MotionTransform::finalize()
+{
   if (!m_motionTransform) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "missing required parameter 'motion.transform' on motion transform instance");

@@ -11,9 +11,8 @@ struct Image3D : public Sampler
   Image3D(VisionarayGlobalState *d);
 
   bool isValid() const override;
-  void commit() override;
-
-  // float4 getSample(const Geometry &g, const Ray &r) const override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   void updateImageData();

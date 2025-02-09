@@ -10,7 +10,8 @@ struct Cone : public Geometry
 {
   Cone(VisionarayGlobalState *s);
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
 

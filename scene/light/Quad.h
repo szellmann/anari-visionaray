@@ -9,7 +9,8 @@ struct QuadLight : public Light
   QuadLight(VisionarayGlobalState *s);
   ~QuadLight() override;
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   vec3 m_position{0.f, 0.f, 0.f};

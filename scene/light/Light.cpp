@@ -21,11 +21,14 @@ Light::~Light()
   deviceState()->dcos.lights.free(vlight.lightID);
 }
 
-void Light::commit()
+void Light::commitParameters()
 {
   m_color = getParam<vec3>("color", vec3(1.f, 1.f, 1.f));
   m_visible = getParam<bool>("visible", true);
+}
 
+void Light::finalize()
+{
   vlight.visible = m_visible;
 }
 

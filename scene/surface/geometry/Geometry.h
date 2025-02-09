@@ -22,8 +22,9 @@ struct Geometry : public Object
 
   dco::Geometry visionarayGeometry() const;
 
-  void commit() override;
-  void markCommitted() override;
+  void commitParameters() override;
+  void finalize() override;
+  void markFinalized() override;
 
  protected:
 

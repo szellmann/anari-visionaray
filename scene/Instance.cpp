@@ -7,12 +7,20 @@
 
 namespace visionaray {
 
-Instance::Instance(VisionarayGlobalState *s) : Object(ANARI_INSTANCE, s)
+Instance::Instance(VisionarayGlobalState *s)
+  : Object(ANARI_INSTANCE, s)
+  , m_xfmArray(this)
+  , m_idArray(this)
 {
   vinstance = dco::createInstance();
   vinstance.type = dco::Instance::Transform;
   vinstance.instID
       = deviceState()->dcos.instances.alloc(vinstance);
+
+  m_xfms.resize(1);
+  m_normalXfms.resize(1);
+  m_affineInv.resize(1);
+  m_transInv.resize(1);
 }
 
 Instance::~Instance()
@@ -31,26 +39,66 @@ Instance *Instance::createInstance(
     return new Instance(s); // base type implements transform!
 }
 
-void Instance::commit()
+void Instance::commitParameters()
 {
+  m_idArray = getParamObject<Array1D>("id");
   m_id = getParam<uint32_t>("id", ~0u);
+  m_xfmArray = getParamObject<Array1D>("transform");
+  m_xfm = getParam<mat4>("transform", mat4::identity());
   m_group = getParamObject<Group>("group");
-  mat4 xfm = getParam<mat4>("transform", mat4::identity());
+}
 
+void Instance::finalize()
+{
+  if (m_idArray && m_idArray->elementType() != ANARI_UINT32) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "'id' array elements are %s, but need to be %s",
+        anari::toString(m_idArray->elementType()),
+        anari::toString(ANARI_UINT32));
+    m_idArray = {};
+  }
+  if (m_xfmArray && m_xfmArray->elementType() != ANARI_FLOAT32_MAT4) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "'transform' array elements are %s, but need to be %s",
+        anari::toString(m_idArray->elementType()),
+        anari::toString(ANARI_FLOAT32_MAT4));
+    m_xfmArray = {};
+  }
   if (!m_group)
     reportMessage(ANARI_SEVERITY_WARNING, "missing 'group' on ANARIInstance");
 
-  m_xfms.resize(1);
-  m_normalXfms.resize(1);
-  m_affineInv.resize(1);
-  m_transInv.resize(1);
+  if (m_xfmArray) {
+    m_xfms.clear();
+    std::transform(m_xfmArray->beginAs<mat4>(),
+        m_xfmArray->endAs<mat4>(),
+        std::back_inserter(m_xfms),
+        [](const mat4 &xfm) { return xfm; });
+  } else {
+    m_xfms[0] = m_xfm;
+  }
 
-  m_xfms[0] = xfm;
-  m_affineInv[0] = inverse(top_left(m_xfms[0]));
-  m_transInv[0] = -m_xfms[0](3).xyz();
-  m_normalXfms[0] = transpose(m_affineInv[0]);
+  m_affineInv.clear();
+  m_transInv.clear();
+  m_normalXfms.clear();
+  for (size_t i=0; i<m_xfms.size(); ++i) {
+    m_affineInv.push_back(inverse(top_left(m_xfms[i])));
+    m_transInv.push_back(-m_xfms[i](3).xyz());
+    m_normalXfms.push_back(transpose(m_affineInv[i]));
+  }
 
   dispatch();
+}
+
+void Instance::markFinalized()
+{
+  Object::markFinalized();
+  deviceState()->objectUpdates.lastTLSReconstructSceneRequest =
+      helium::newTimeStamp();
+}
+
+bool Instance::isValid() const
+{
+  return m_group;
 }
 
 uint32_t Instance::id() const
@@ -86,18 +134,6 @@ void Instance::visionarayInstanceUpdate()
   vinstance.len = m_xfms.size();
 
   dispatch();
-}
-
-void Instance::markCommitted()
-{
-  Object::markCommitted();
-  deviceState()->objectUpdates.lastTLSReconstructSceneRequest =
-      helium::newTimeStamp();
-}
-
-bool Instance::isValid() const
-{
-  return m_group;
 }
 
 void Instance::dispatch()

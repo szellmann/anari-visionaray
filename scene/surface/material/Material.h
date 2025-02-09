@@ -18,7 +18,7 @@ struct Material : public Object
   static Material *createInstance(
       std::string_view subtype, VisionarayGlobalState *s);
 
-  void commit() override;
+  void commitParameters() override;
 
   dco::Material visionarayMaterial() const { return vmat; }
 

@@ -291,7 +291,7 @@ VisionarayDevice::~VisionarayDevice()
 {
   auto &state = *deviceState();
 
-  state.commitBufferClear();
+  state.commitBuffer.clear();
 
   reportMessage(ANARI_SEVERITY_DEBUG, "destroying visionaray device (%p)", this);
 

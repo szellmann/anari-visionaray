@@ -10,14 +10,17 @@ UnstructuredField::UnstructuredField(VisionarayGlobalState *d)
   vfield.type = dco::SpatialField::Unstructured;
 }
 
-void UnstructuredField::commit()
+void UnstructuredField::commitParameters()
 {
   m_params.vertexPosition = getParamObject<Array1D>("vertex.position");
   m_params.vertexData = getParamObject<Array1D>("vertex.data");
   m_params.index = getParamObject<Array1D>("index");
   m_params.cellIndex = getParamObject<Array1D>("cell.index");
   m_params.cellType = getParamObject<Array1D>("cell.type");
+}
 
+void UnstructuredField::finalize()
+{
   if (!m_params.vertexPosition) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "missing required parameter 'vertex.position' on unstructured spatial field");

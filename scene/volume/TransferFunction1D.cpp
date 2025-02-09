@@ -25,17 +25,30 @@ TransferFunction1D::~TransferFunction1D()
 {
 }
 
-void TransferFunction1D::commit()
+void TransferFunction1D::commitParameters()
 {
-  Volume::commit();
+  Volume::commitParameters();
 
   m_field = getParamObject<SpatialField>("value");
-
   if (!m_field) {
     // Some apps might still use "field" (from the provisional specs)
     m_field = getParamObject<SpatialField>("field");
   }
 
+  m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
+
+  m_colorData = getParamObject<Array1D>("color");
+  m_opacityData = getParamObject<Array1D>("opacity");
+
+  float densityScale = 1.f; // old, some apps may still use this!
+  if (getParam("densityScale", ANARI_FLOAT32, &densityScale))
+    m_unitDistance = densityScale;
+  else
+    m_unitDistance = getParam<float>("unitDistance", 1.f);
+}
+
+void TransferFunction1D::finalize()
+{
   if (!m_field) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "no spatial field provided to transferFunction1D volume");
@@ -49,16 +62,6 @@ void TransferFunction1D::commit()
   }
 
   m_bounds = m_field->bounds();
-
-  m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
-
-  m_colorData = getParamObject<Array1D>("color");
-  m_opacityData = getParamObject<Array1D>("opacity");
-  float densityScale = 1.f; // old, some apps may still use this!
-  if (getParam("densityScale", ANARI_FLOAT32, &densityScale))
-    m_unitDistance = densityScale;
-  else
-    m_unitDistance = getParam<float>("unitDistance", 1.f);
 
   if (!m_colorData) {
     reportMessage(ANARI_SEVERITY_WARNING,
@@ -130,9 +133,9 @@ void TransferFunction1D::commit()
     m_field->gridAccel().computeMaxOpacities(vvol.asTransferFunction1D);
 }
 
-void TransferFunction1D::markCommitted()
+void TransferFunction1D::markFinalized()
 {
-  Object::markCommitted();
+  Object::markFinalized();
   deviceState()->objectUpdates.lastBLSCommitSceneRequest =
       helium::newTimeStamp();
 }

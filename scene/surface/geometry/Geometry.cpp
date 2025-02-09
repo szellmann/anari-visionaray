@@ -56,14 +56,17 @@ dco::Geometry Geometry::visionarayGeometry() const
   return vgeom;
 }
 
-void Geometry::commit()
+void Geometry::commitParameters()
 {
   m_attributes[0] = getParamObject<Array1D>("primitive.attribute0");
   m_attributes[1] = getParamObject<Array1D>("primitive.attribute1");
   m_attributes[2] = getParamObject<Array1D>("primitive.attribute2");
   m_attributes[3] = getParamObject<Array1D>("primitive.attribute3");
   m_attributes[4] = getParamObject<Array1D>("primitive.color");
+}
 
+void Geometry::finalize()
+{
   for (int i = 0; i < 5; ++i) {
     if (m_attributes[i]) {
       size_t sizeInBytes
@@ -79,9 +82,9 @@ void Geometry::commit()
   }
 }
 
-void Geometry::markCommitted()
+void Geometry::markFinalized()
 {
-  Object::markCommitted();
+  Object::markFinalized();
   deviceState()->objectUpdates.lastBLSCommitSceneRequest =
       helium::newTimeStamp();
 }

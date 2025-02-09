@@ -11,10 +11,9 @@ BezierCurve::BezierCurve(VisionarayGlobalState *s)
   vgeom.type = dco::Geometry::BezierCurve;
 }
 
-void BezierCurve::commit()
+void BezierCurve::commitParameters()
 {
-  Geometry::commit();
-
+  Geometry::commitParameters();
   m_index = getParamObject<Array1D>("primitive.index");
   m_radius = getParamObject<Array1D>("primitive.radius");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
@@ -23,6 +22,11 @@ void BezierCurve::commit()
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
   m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
   m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+}
+
+void BezierCurve::finalize()
+{
+  Geometry::finalize();
 
   if (!m_vertexPosition) {
     reportMessage(ANARI_SEVERITY_WARNING,

@@ -17,8 +17,9 @@ struct TransferFunction1D : public Volume
   TransferFunction1D(VisionarayGlobalState *d);
   ~TransferFunction1D() override;
 
-  void commit() override;
-  void markCommitted() override;
+  void commitParameters() override;
+  void finalize() override;
+  void markFinalized() override;
 
   bool isValid() const override;
 

@@ -13,10 +13,16 @@ StructuredRegularField::StructuredRegularField(VisionarayGlobalState *d)
   vfield.type = dco::SpatialField::StructuredRegular;
 }
 
-void StructuredRegularField::commit()
+void StructuredRegularField::commitParameters()
 {
   m_dataArray = getParamObject<Array3D>("data");
+  m_origin = getParam<float3>("origin", float3(0.f));
+  m_spacing = getParam<float3>("spacing", float3(1.f));
+  m_filter = getParamString("filter", "linear");
+}
 
+void StructuredRegularField::finalize()
+{
   if (!m_dataArray) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "missing required parameter 'data' on 'structuredRegular' field");
@@ -27,10 +33,6 @@ void StructuredRegularField::commit()
   m_type = m_dataArray->elementType();
   m_dims = uint3(
       m_dataArray->size().x, m_dataArray->size().y, m_dataArray->size().z);
-
-  m_origin = getParam<float3>("origin", float3(0.f));
-  m_spacing = getParam<float3>("spacing", float3(1.f));
-  m_filter = getParamString("filter", "linear");
 
   mat3 S = mat3::scaling(1.f/bounds().size());
   vec3 T = -bounds().min;

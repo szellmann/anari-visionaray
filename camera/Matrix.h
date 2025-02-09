@@ -9,7 +9,8 @@ struct Matrix : public Camera
 {
   Matrix(VisionarayGlobalState *s);
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   mat4 m_proj;

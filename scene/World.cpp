@@ -43,13 +43,16 @@ bool World::getProperty(
   return Object::getProperty(name, type, ptr, flags);
 }
 
-void World::commit()
+void World::commitParameters()
 {
-  cleanup();
-
   m_zeroSurfaceData = getParamObject<ObjectArray>("surface");
   m_zeroVolumeData = getParamObject<ObjectArray>("volume");
   m_zeroLightData = getParamObject<ObjectArray>("light");
+}
+
+void World::finalize()
+{
+  cleanup();
 
   const bool addZeroInstance = m_zeroSurfaceData || m_zeroVolumeData || m_zeroLightData;
   if (addZeroInstance)
@@ -80,8 +83,10 @@ void World::commit()
   } else
     m_zeroGroup->removeParam("light");
 
-  m_zeroGroup->commit();
-  m_zeroInstance->commit();
+  m_zeroGroup->commitParameters();
+  m_zeroInstance->commitParameters();
+  m_zeroGroup->finalize();
+  m_zeroInstance->finalize();
 
   m_instanceData = getParamObject<ObjectArray>("instance");
 
@@ -109,12 +114,6 @@ const std::vector<Instance *> &World::instances() const
 {
   return m_instances;
 }
-
-// void World::intersectVolumes(VolumeRay &ray) const
-//{
-//   for (auto *i : instances())
-//     i->group()->intersectVolumes(ray);
-// }
 
 VisionarayScene World::visionarayScene() const
 {

@@ -11,14 +11,19 @@ Directional::~Directional()
 {
 }
 
-void Directional::commit()
+void Directional::commitParameters()
 {
-  Light::commit();
+  Light::commitParameters();
   m_direction =
       normalize(getParam<vec3>("direction", vec3(0.f, 0.f, -1.f)));
   m_irradiance = std::clamp(getParam<float>("irradiance", 1.f),
       0.f,
       std::numeric_limits<float>::max());
+}
+
+void Directional::finalize()
+{
+  Light::finalize();
 
   vlight.asDirectional.set_direction(-m_direction);
   vlight.asDirectional.set_cl(m_color);
