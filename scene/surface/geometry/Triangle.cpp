@@ -39,7 +39,11 @@ void Triangle::commit()
 
   unsigned nextID = 0;
   auto addTriangle = [&](basic_triangle<3, float> &tri) {
-    if (length(tri.e1) > 0.f && length(tri.e2) > 0.f) {
+    //if (length(tri.e1) > 0.f && length(tri.e2) > 0.f) {
+    // TODO: we can discard invalid primitives here, but
+    // then also have to make sure to also discard vertex
+    // attributes (at least, iff we don't have indices!)
+    if (true) {
       tri.prim_id = nextID++;
       m_triangles.push_back(tri);
     }

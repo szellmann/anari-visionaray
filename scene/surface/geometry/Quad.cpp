@@ -38,8 +38,13 @@ void Quad::commit()
   unsigned nextID = 0;
   auto addTriangles = [&](basic_triangle<3, float> &tri1,
                           basic_triangle<3, float> &tri2) {
-    if (length(tri1.e1) > 0.f && length(tri1.e2) > 0.f &&
-        length(tri2.e1) > 0.f && length(tri2.e2) > 0.f) {
+    //if (length(tri1.e1) > 0.f && length(tri1.e2) > 0.f &&
+    //    length(tri2.e1) > 0.f && length(tri2.e2) > 0.f) {
+    //if (length(tri.e1) > 0.f && length(tri.e2) > 0.f) {
+    // TODO: we can discard invalid primitives here, but
+    // then also have to make sure to also discard vertex
+    // attributes (at least, iff we don't have indices!)
+    if (true) {
       unsigned primID = nextID++;
       tri1.prim_id = primID;
       tri2.prim_id = primID;
