@@ -14,7 +14,8 @@ struct HDRI : public Light
   HDRI(VisionarayGlobalState *s);
   ~HDRI() override;
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
   // -1 indicates that neither HDRI is
   // used to retrieve background colors

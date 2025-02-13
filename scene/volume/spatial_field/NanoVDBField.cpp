@@ -21,18 +21,20 @@ NanoVDBField::~NanoVDBField()
 #endif
 }
 
-void NanoVDBField::commit()
+void NanoVDBField::commitParameters()
 {
   m_gridData = getParamObject<helium::Array1D>("gridData");
+  m_filter = getParamString("filter", "linear");
+}
 
+void NanoVDBField::finalize()
+{
   if (!m_gridData) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "missing required parameter 'gridHandle' on nanovdb spatial field");
 
     return;
   }
-
-  m_filter = getParamString("filter", "linear");
 
 #ifdef WITH_CUDA
   cudaStream_t stream; // TODO: move to global state/use the one there?!

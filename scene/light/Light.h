@@ -12,7 +12,8 @@ struct Light : public Object
   Light(VisionarayGlobalState *d);
   virtual ~Light();
 
-  virtual void commit() override;
+  virtual void commitParameters() override;
+  virtual void finalize() override;
 
   static Light *createInstance(std::string_view subtype, VisionarayGlobalState *d);
 

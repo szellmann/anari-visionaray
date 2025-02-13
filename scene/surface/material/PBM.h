@@ -8,7 +8,8 @@ namespace visionaray {
 struct PBM : public Material
 {
   PBM(VisionarayGlobalState *s);
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   struct {

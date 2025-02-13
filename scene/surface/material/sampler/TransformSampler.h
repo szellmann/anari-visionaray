@@ -10,7 +10,8 @@ struct TransformSampler : public Sampler
   TransformSampler(VisionarayGlobalState *d);
 
   bool isValid() const override;
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   dco::Attribute m_inAttribute{dco::Attribute::None};

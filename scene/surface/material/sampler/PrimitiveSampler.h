@@ -12,7 +12,8 @@ struct PrimitiveSampler : public Sampler
   PrimitiveSampler(VisionarayGlobalState *d);
 
   bool isValid() const override;
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   helium::IntrusivePtr<Array1D> m_array;

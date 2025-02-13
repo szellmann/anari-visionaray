@@ -14,10 +14,9 @@ Sphere::Sphere(VisionarayGlobalState *s)
   vgeom.type = dco::Geometry::Sphere;
 }
 
-void Sphere::commit()
+void Sphere::commitParameters()
 {
-  Geometry::commit();
-
+  Geometry::commitParameters();
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
   m_vertexRadius = getParamObject<Array1D>("vertex.radius");
@@ -26,6 +25,11 @@ void Sphere::commit()
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
   m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
   m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+}
+
+void Sphere::finalize()
+{
+  Geometry::finalize();
 
   if (!m_vertexPosition) {
     reportMessage(ANARI_SEVERITY_WARNING,

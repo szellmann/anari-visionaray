@@ -11,7 +11,7 @@ BlockStructuredField::BlockStructuredField(VisionarayGlobalState *d)
   vfield.type = dco::SpatialField::BlockStructured;
 }
 
-void BlockStructuredField::commit()
+void BlockStructuredField::commitParameters()
 {
   m_params.cellWidth = getParamObject<helium::Array1D>("cellWidth");
   m_params.blockBounds = getParamObject<helium::Array1D>("block.bounds");
@@ -19,7 +19,10 @@ void BlockStructuredField::commit()
   m_params.blockData = getParamObject<helium::ObjectArray>("block.data");
   m_params.gridOrigin = getParam<float3>("gridOrigin", float3(0.f));
   m_params.gridSpacing = getParam<float3>("gridSpacing", float3(1.f));
+}
 
+void BlockStructuredField::finalize()
+{
   if (!m_params.blockBounds) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "missing required parameter 'block.bounds' on amr spatial field");

@@ -98,14 +98,19 @@ HDRI::~HDRI()
     backgroundID = -1; // reset!
 }
 
-void HDRI::commit()
+void HDRI::commitParameters()
 {
-  Light::commit();
+  Light::commitParameters();
   m_up = getParam<vec3>("up", vec3(1.f, 0.f, 0.f));
   m_direction = getParam<vec3>("direction", vec3(0.f, 0.f, 1.f));
   m_scale = getParam<float>("scale", 1.f);
 
   m_radiance = getParamObject<Array2D>("radiance");
+}
+
+void HDRI::finalize()
+{
+  Light::finalize();
 
   if (!m_radiance) {
     reportMessage(ANARI_SEVERITY_WARNING,

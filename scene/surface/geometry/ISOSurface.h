@@ -13,7 +13,8 @@ struct ISOSurface : public Geometry
   ISOSurface(VisionarayGlobalState *d);
   ~ISOSurface() override;
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
   bool isValid() const override;
 

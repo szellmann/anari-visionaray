@@ -10,7 +10,8 @@ namespace visionaray {
 struct Matte : public Material
 {
   Matte(VisionarayGlobalState *s);
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   float4 m_color{1.f, 1.f, 1.f, 1.f};

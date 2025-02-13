@@ -13,11 +13,16 @@ namespace visionaray {
 Object::Object(ANARIDataType type, VisionarayGlobalState *s)
     : helium::BaseObject(type, s)
 {
-  helium::BaseObject::markUpdated();
-  s->commitBufferAddObject(this);
+  helium::BaseObject::markParameterChanged();
+  s->commitBuffer.addObjectToCommit(this);
 }
 
-void Object::commit()
+void Object::commitParameters()
+{
+  // no-op
+}
+
+void Object::finalize()
 {
   // no-op
 }
@@ -47,8 +52,7 @@ VisionarayGlobalState *Object::deviceState() const
 
 UnknownObject::UnknownObject(ANARIDataType type, VisionarayGlobalState *s)
     : Object(type, s)
-{
-}
+{}
 
 bool UnknownObject::isValid() const
 {

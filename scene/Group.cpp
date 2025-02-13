@@ -38,13 +38,23 @@ bool Group::getProperty(
   return Object::getProperty(name, type, ptr, flags);
 }
 
-void Group::commit()
+void Group::commitParameters()
 {
-  cleanup();
-
   m_surfaceData = getParamObject<ObjectArray>("surface");
   m_volumeData = getParamObject<ObjectArray>("volume");
   m_lightData = getParamObject<ObjectArray>("light");
+}
+
+void Group::finalize()
+{
+  cleanup();
+}
+
+void Group::markFinalized()
+{
+  Object::markFinalized();
+  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
+      helium::newTimeStamp();
 }
 
 const std::vector<Surface *> &Group::surfaces() const
@@ -60,13 +70,6 @@ const std::vector<Volume *> &Group::volumes() const
 const std::vector<Light *> &Group::lights() const
 {
   return m_lights;
-}
-
-void Group::markCommitted()
-{
-  Object::markCommitted();
-  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
-      helium::newTimeStamp();
 }
 
 VisionarayScene Group::visionarayScene() const

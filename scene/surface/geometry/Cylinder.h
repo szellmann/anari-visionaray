@@ -12,10 +12,8 @@ struct Cylinder : public Geometry
 {
   Cylinder(VisionarayGlobalState *s);
 
-  void commit() override;
-
-  //float4 getAttributeValue(
-  //    const Attribute &attr, const Ray &ray) const override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
 

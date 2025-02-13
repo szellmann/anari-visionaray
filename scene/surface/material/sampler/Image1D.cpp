@@ -16,9 +16,9 @@ bool Image1D::isValid() const
   return Sampler::isValid() && m_image;
 }
 
-void Image1D::commit()
+void Image1D::commitParameters()
 {
-  Sampler::commit();
+  Sampler::commitParameters();
   m_image = getParamObject<Array1D>("image");
   m_inAttribute =
       toAttribute(getParamString("inAttribute", "attribute0"));
@@ -28,7 +28,10 @@ void Image1D::commit()
   m_inOffset = getParam<float4>("inOffset", float4(0.f, 0.f, 0.f, 0.f));
   m_outTransform = getParam<mat4>("outTransform", mat4::identity());
   m_outOffset = getParam<float4>("outOffset", float4(0.f, 0.f, 0.f, 0.f));
+}
 
+void Image1D::finalize()
+{
   updateImageData();
   vsampler.inAttribute = m_inAttribute;
   vsampler.inTransform = m_inTransform;

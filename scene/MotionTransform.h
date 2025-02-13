@@ -11,7 +11,8 @@ struct MotionTransform : public Instance
 {
   MotionTransform(VisionarayGlobalState *s);
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
   void visionarayInstanceUpdate() override;
 

@@ -15,18 +15,20 @@ ISOSurface::~ISOSurface()
 {
 }
 
-void ISOSurface::commit()
+void ISOSurface::commitParameters()
 {
-  Geometry::commit();
-
+  Geometry::commitParameters();
   m_field = getParamObject<SpatialField>("field");
+  m_isoValue = getParamObject<Array1D>("isovalue");
+}
+
+void ISOSurface::finalize()
+{
   if (!m_field) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "no spatial field provided to implicitISOSurface volume");
     return;
   }
-
-  m_isoValue = getParamObject<Array1D>("isovalue");
 
   if (!m_isoValue || m_isoValue->size() == 0) {
     reportMessage(ANARI_SEVERITY_WARNING,

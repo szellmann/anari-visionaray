@@ -13,7 +13,8 @@ struct Camera : public Object
   Camera(VisionarayGlobalState *s);
   virtual ~Camera() = default;
 
-  virtual void commit() override;
+  virtual void commitParameters() override;
+  virtual void finalize() override;
 
   static Camera *createInstance(
       std::string_view type, VisionarayGlobalState *state);
@@ -26,6 +27,7 @@ struct Camera : public Object
   vec3f m_dir;
   vec3f m_up;
   box2f m_imageRegion;
+  box1f m_shutter;
 };
 
 } // namespace visionaray

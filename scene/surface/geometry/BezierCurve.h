@@ -10,7 +10,8 @@ struct BezierCurve : public Geometry
 {
   BezierCurve(VisionarayGlobalState *s);
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
 

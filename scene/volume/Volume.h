@@ -12,7 +12,7 @@ struct Volume : public Object
 {
   Volume(VisionarayGlobalState *d);
   virtual ~Volume();
-  virtual void commit() override;
+  virtual void commitParameters() override;
   uint32_t id() const;
   static Volume *createInstance(std::string_view subtype, VisionarayGlobalState *d);
   virtual aabb bounds() const = 0;

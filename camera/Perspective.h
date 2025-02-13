@@ -11,9 +11,14 @@ struct Perspective : public Camera
 {
   Perspective(VisionarayGlobalState *s);
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
+   float m_fovy{0.f};
+   float m_aspect{1.f};
+   float m_apertureRadius{0.f};
+   float m_focusDistance{1.f};
    float3 m_dir_du;
    float3 m_dir_dv;
    float3 m_dir_00;

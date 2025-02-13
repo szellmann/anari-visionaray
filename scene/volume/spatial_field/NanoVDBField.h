@@ -19,7 +19,8 @@ struct NanoVDBField : public SpatialField
   NanoVDBField(VisionarayGlobalState *d);
   ~NanoVDBField();
 
-  void commit() override;
+  void commitParameters() override;
+  void finalize() override;
 
   bool isValid() const override;
 

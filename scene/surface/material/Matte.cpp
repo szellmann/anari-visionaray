@@ -8,9 +8,9 @@ namespace visionaray {
 
 Matte::Matte(VisionarayGlobalState *s) : Material(s) {}
 
-void Matte::commit()
+void Matte::commitParameters()
 {
-  Material::commit();
+  Material::commitParameters();
 
   m_color = float4(1.f, 1.f, 1.f, 1.f);
   getParam("color", ANARI_FLOAT32_VEC3, &m_color);
@@ -25,7 +25,10 @@ void Matte::commit()
 
   m_alphaMode = toAlphaMode(getParamString("alphaMode", "opaque"));
   m_alphaCutoff = getParam<float>("alphaCutoff", 0.5f);
+}
 
+void Matte::finalize()
+{
   vmat.type = dco::Material::Matte;
   vmat.asMatte.color.rgb = m_color.xyz();
   vmat.asMatte.color.attribute = m_colorAttribute;

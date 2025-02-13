@@ -11,9 +11,8 @@ struct Image2D : public Sampler
   Image2D(VisionarayGlobalState *d);
 
   bool isValid() const override;
-  void commit() override;
-
-  // float4 getSample(const Geometry &g, const Ray &r) const override;
+  void commitParameters() override;
+  void finalize() override;
 
  private:
   void updateImageData();

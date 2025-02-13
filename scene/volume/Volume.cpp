@@ -23,7 +23,7 @@ Volume::~Volume()
   deviceState()->dcos.volumes.free(vvol.volID);
 }
 
-void Volume::commit()
+void Volume::commitParameters()
 {
    m_id = getParam<uint32_t>("id", ~0u);
 }

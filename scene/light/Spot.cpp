@@ -11,9 +11,9 @@ Spot::~Spot()
 {
 }
 
-void Spot::commit()
+void Spot::commitParameters()
 {
-  Light::commit();
+  Light::commitParameters();
   m_position = getParam<vec3>("position", vec3(0.f, 0.f, 0.f));
   m_direction = getParam<vec3>("direction", vec3(0.f, 0.f, -1.f));
   m_openingAngle = getParam<float>("openingAngle", M_PI);
@@ -21,6 +21,11 @@ void Spot::commit()
   m_intensity = std::clamp(getParam<float>("intensity", 1.f),
       0.f,
       std::numeric_limits<float>::max());
+}
+
+void Spot::finalize()
+{
+  Light::finalize();
 
   vlight.asSpot.set_position(m_position);
   vlight.asSpot.set_spot_direction(m_direction);

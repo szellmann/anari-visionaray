@@ -60,7 +60,8 @@ struct Renderer : public Object
   Renderer(VisionarayGlobalState *s);
   virtual ~Renderer() = default;
 
-  virtual void commit() override;
+  virtual void commitParameters() override;
+  virtual void finalize() override;
 
   static Renderer *createInstance(
       std::string_view subtype, VisionarayGlobalState *d);
@@ -74,6 +75,15 @@ struct Renderer : public Object
   helium::ChangeObserverPtr<Array1D> m_clipPlanes;
   HostDeviceArray<float4> m_clipPlanesOnDevice;
   VisionarayRenderer vrend;
+
+  float4 m_bgColor{float3{0.f}, 1.f};
+  float3 m_ambientColor{1.f, 1.f, 1.f};
+  float m_ambientRadiance{0.2f};
+  std::string m_renderMode{"default"};
+  bool m_heatMapEnabled{false};
+  float m_heatMapScale{0.1f};
+  bool m_taaEnabled{false};
+  float m_taaAlpha{0.3f};
 };
 
 } // namespace visionaray
