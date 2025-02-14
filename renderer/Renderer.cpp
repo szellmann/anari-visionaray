@@ -4,6 +4,7 @@
 #include "Raycast.h"
 #include "DirectLight.h"
 #include "Renderer.h"
+#include "scene/surface/material/sampler/common.h" // for imageSamplerUpdateData (TODO!)
 
 namespace visionaray {
 
@@ -18,6 +19,7 @@ Renderer::Renderer(VisionarayGlobalState *s)
 void Renderer::commitParameters()
 {
   m_clipPlanes = getParamObject<Array1D>("clipPlane");
+  m_bgImage = getParamObject<Array2D>("background");
   m_bgColor = getParam<float4>("background", float4(float3(0.f), 1.f));
   m_ambientColor = getParam<vec3>("ambientColor", vec3(1.f));
   m_ambientRadiance = getParam<float>("ambientRadiance", 0.2f);
@@ -41,6 +43,43 @@ void Renderer::finalize()
   } else {
     vrend.rendererState.clipPlanes = nullptr;
     vrend.rendererState.numClipPlanes = 0;
+  }
+
+  memset(&vrend.rendererState.bgImage, 0, sizeof(vrend.rendererState.bgImage));
+
+  if (m_bgImage) {
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+    texture<vector<4, unorm<8>>, 2> tex(m_bgImage->size().x, m_bgImage->size().y);
+#else
+    m_bgTexture
+        = texture<vector<4, unorm<8>>, 2>(m_bgImage->size().x, m_bgImage->size().y);
+    auto &tex = m_bgTexture;
+#endif
+
+    if (!imageSamplerUpdateData(tex, m_bgImage)) { // TODO: move this function upwards
+      reportMessage(ANARI_SEVERITY_WARNING,
+          "unsupported element type for background image: %s",
+          anari::toString(m_bgImage->elementType()));
+      return;
+    }
+
+    tex.set_filter_mode(Linear);
+    tex.set_address_mode(0, Clamp);
+    tex.set_address_mode(1, Clamp);
+
+#ifdef WITH_CUDA
+    m_bgTexture = cuda_texture<vector<4, unorm<8>>, 2>(tex);
+#elif defined(WITH_HIP)
+    m_bgTexture = hip_texture<vector<4, unorm<8>>, 2>(tex);
+#endif
+
+#ifdef WITH_CUDA
+  vrend.rendererState.bgImage = cuda_texture_ref<vector<4, unorm<8>>, 2>(m_bgTexture);
+#elif defined(WITH_HIP)
+  vrend.rendererState.bgImage = hip_texture_ref<vector<4, unorm<8>>, 2>(m_bgTexture);
+#else
+  vrend.rendererState.bgImage = texture_ref<vector<4, unorm<8>>, 2>(m_bgTexture);
+#endif
   }
 
   vrend.rendererState.bgColor = m_bgColor;

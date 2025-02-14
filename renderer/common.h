@@ -51,6 +51,13 @@ enum class RenderMode
 struct RendererState
 {
   float4 bgColor{float3(0.f), 1.f};
+#ifdef WITH_CUDA
+  cuda_texture_ref<vector<4, unorm<8>>, 2> bgImage;
+#elif defined(WITH_HIP)
+  hip_texture_ref<vector<4, unorm<8>>, 2> bgImage;
+#else
+  texture_ref<vector<4, unorm<8>>, 2> bgImage;
+#endif
   RenderMode renderMode{RenderMode::Default};
   float4 *clipPlanes{nullptr};
   unsigned numClipPlanes{0};

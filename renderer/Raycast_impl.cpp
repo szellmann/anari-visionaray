@@ -8,8 +8,13 @@ VSNRAY_FUNC
 inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     const DeviceObjectRegistry &onDevice, const RendererState &rendererState)
 {
+  float4 bgColor = rendererState.bgColor;
+  if (rendererState.bgImage.width())
+    bgColor = tex2D(rendererState.bgImage,
+                    float2(ss.x/float(ss.frameSize.x),ss.y/float(ss.frameSize.y)));
+
   PixelSample result;
-  result.color = rendererState.bgColor;
+  result.color = bgColor;
   result.depth = 1e31f;
 
   if (onDevice.TLSs[worldID].num_primitives() == 0)
@@ -134,7 +139,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     float2 uv = toUV(ray.dir);
     result.color = over(float4(surfaceColor, surfaceAlpha), tex2D(hdri.radiance, uv));
   } else {
-    result.color = over(float4(surfaceColor, surfaceAlpha), rendererState.bgColor);
+    result.color = over(float4(surfaceColor, surfaceAlpha), bgColor);
   }
 
   auto hrv = intersectVolumeBounds(ray, onDevice.TLSs[worldID]);

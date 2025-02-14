@@ -334,7 +334,10 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
           // if (ss.debug()) printf("Rendering frame ==== %u\n", rendererState.accumID);
 
           PixelSample ps;
-          ps.color = rendererState.bgColor;
+          if (rendererState.bgImage.width())
+            ps.color = tex2D(rendererState.bgImage,float2(xf/size.x,yf/size.y));
+          else
+            ps.color = rendererState.bgColor;
           ps.depth = 1e31f;
           ps.albedo = float3(0.f);
           ps.motionVec = float4(0,0,0,1);
