@@ -40,11 +40,7 @@ void TransferFunction1D::commitParameters()
   m_colorData = getParamObject<Array1D>("color");
   m_opacityData = getParamObject<Array1D>("opacity");
 
-  float densityScale = 1.f; // old, some apps may still use this!
-  if (getParam("densityScale", ANARI_FLOAT32, &densityScale))
-    m_unitDistance = densityScale;
-  else
-    m_unitDistance = getParam<float>("unitDistance", 1.f);
+  m_unitDistance = getParam<float>("unitDistance", 1.f);
 }
 
 void TransferFunction1D::finalize()

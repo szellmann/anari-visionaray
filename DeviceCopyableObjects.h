@@ -659,6 +659,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
   float Tr{1.f};
   float extinction{0.f};
   float unitDistance = vol.unitDistance;
+  float invUnitDistance{1.f};
 
   auto woodcockFunc = [&](const int leafID, float t0, float t1) {
 
@@ -669,7 +670,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       if (majorant <= 0.f)
         break;
 
-      t -= (logf(1.f - rnd()) / (majorant * unitDistance));
+      t -= (logf(1.f - rnd()) / (majorant * invUnitDistance));
 
       if (t >= t1)
         break;
@@ -707,6 +708,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
   ray.tmin = ray.tmin * dt_scale;
   ray.tmax = ray.tmax * dt_scale;
   unitDistance = unitDistance * dt_scale;
+  invUnitDistance = 1.f / unitDistance;
 
   hr.t = ray.tmax;
   if (sf.gridAccel.isValid())
