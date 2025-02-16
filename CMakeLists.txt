@@ -102,6 +102,7 @@ set(SOURCES
     scene/surface/Surface.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/spatial_field/StructuredRegularField.cpp
+    scene/volume/Blackbody.cpp
     scene/volume/TransferFunction1D.cpp
     scene/volume/Volume.cpp
     scene/Group.cpp

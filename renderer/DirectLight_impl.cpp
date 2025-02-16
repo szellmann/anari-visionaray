@@ -77,6 +77,13 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     const dco::Group &group = onDevice.groups[inst.groupID];
 
     if (hitRec.volumeHit) {
+      if (max_element(hrv.Le) > 0.f) {
+        // emissive volume hit:
+        throughput = float3(hrv.Le);
+        hdriMiss = true; // TODO?!
+        return false;
+      }
+
       hitPos = ray.ori + hrv.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
@@ -247,7 +254,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     float V = surfV * volV * hrv.Tr;
     throughput *= shadedColor * V
         + (baseColor * rendererState.ambientColor
-         * rendererState.ambientRadiance * aoV);
+         * rendererState.ambientRadiance * aoV)
+         + hrv.Le;;
   }
   return true;
 }

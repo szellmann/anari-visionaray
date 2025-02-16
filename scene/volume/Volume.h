@@ -19,6 +19,8 @@ struct Volume : public Object
   dco::Volume visionarayVolume() const;
 
  protected:
+  void dispatch();
+
   uint32_t m_id{~0u};
   dco::Volume vvol;
 };

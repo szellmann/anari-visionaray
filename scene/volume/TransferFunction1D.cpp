@@ -22,8 +22,7 @@ TransferFunction1D::TransferFunction1D(VisionarayGlobalState *d)
 }
 
 TransferFunction1D::~TransferFunction1D()
-{
-}
+{}
 
 void TransferFunction1D::commitParameters()
 {
@@ -166,14 +165,6 @@ bool TransferFunction1D::isValid() const
 aabb TransferFunction1D::bounds() const
 {
   return m_bounds;
-}
-
-void TransferFunction1D::dispatch()
-{
-  deviceState()->dcos.volumes.update(vvol.volID, vvol);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 } // namespace visionaray
