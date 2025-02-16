@@ -32,11 +32,11 @@ struct Blackbody : public Volume
   box1 m_temperatureRange{1500.f, 6000.f};
 
 #ifdef WITH_CUDA
-  cuda_texture<float3, 1> colorTexture;
+  cuda_texture<float4, 1> colorTexture;
 #elif defined(WITH_HIP)
-  hip_texture<float3, 1> colorTexture;
+  hip_texture<float4, 1> colorTexture;
 #else
-  texture<float3, 1> colorTexture;
+  texture<float4, 1> colorTexture;
 #endif
 };
 
