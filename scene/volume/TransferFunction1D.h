@@ -26,8 +26,6 @@ struct TransferFunction1D : public Volume
   aabb bounds() const override;
 
  private:
-  void dispatch();
-
   // Data //
 
   helium::ChangeObserverPtr<SpatialField> m_field;

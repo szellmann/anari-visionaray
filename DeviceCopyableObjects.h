@@ -556,6 +556,26 @@ struct TransferFunction1D
 #endif
 };
 
+struct Blackbody
+{
+  VSNRAY_FUNC
+  inline bool emission(float v, float3 &Le) const {
+    if (v > 0.1f) {
+      Le = tex1D(sampler, v);
+      return true;
+    }
+
+    return false;
+  }
+#ifdef WITH_CUDA
+  cuda_texture_ref<float3, 1> sampler;
+#elif defined(WITH_HIP)
+  hip_texture_ref<float3, 1> sampler;
+#else
+  texture_ref<float3, 1> sampler;
+#endif
+};
+
 VSNRAY_FUNC
 inline float4 postClassify(TransferFunction1D tf, float v) {
   box1 valueRange = tf.valueRange;
@@ -567,7 +587,7 @@ inline float4 postClassify(TransferFunction1D tf, float v) {
 
 struct Volume
 {
-  enum Type { TransferFunction1D, Unknown, };
+  enum Type { TransferFunction1D, Blackbody, Unknown, };
   Type type{Unknown};
 
   unsigned volID{UINT_MAX};
@@ -576,6 +596,7 @@ struct Volume
   SpatialField field;
   union {
     struct TransferFunction1D asTransferFunction1D;
+    struct Blackbody asBlackbody;
   };
 
   aabb bounds;
@@ -606,6 +627,7 @@ struct HitRecordVolume
   bool hit{false};
   float t{FLT_MAX};
   float3 albedo{0.f,0.f,0.f};
+  float3 Le{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
   int volID{-1};
@@ -656,6 +678,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
   dco::GridAccel grid = sf.gridAccel;
 
   float3 albedo;
+  float3 Le{0.f};
   float Tr{1.f};
   float extinction{0.f};
   float unitDistance = vol.unitDistance;
@@ -678,16 +701,25 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       float3 P = ray.ori+ray.dir*t;
       float v = 0.f;
       if (sampleField(sf,P,v)) {
-        float4 sample
-            = postClassify(vol.asTransferFunction1D,v);
-        albedo = sample.xyz();
-        extinction = sample.w;
-        float u = rnd();
-        if (extinction >= u * majorant) {
-          hr.hit = true;
-          Tr = 0.f;
-          hr.t = t;
-          return false; // stop traversal
+        if (vol.type == Volume::TransferFunction1D) {
+          float4 sample
+              = postClassify(vol.asTransferFunction1D,v);
+          albedo = sample.xyz();
+          extinction = sample.w;
+          float u = rnd();
+          if (extinction >= u * majorant) {
+            hr.hit = true;
+            Tr = 0.f;
+            hr.t = t;
+            return false; // stop traversal
+          }
+        }
+        else if (vol.type == Volume::Blackbody) {
+          if (vol.asBlackbody.emission(v,Le)) {
+            hr.hit = true;
+            hr.t = t;
+            return false; // stop traversal
+          }
         }
       }
     }
@@ -724,6 +756,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       hrv.t = hr.t;
       hrv.volID = hr.geom_id;
       hrv.albedo = albedo;
+      hrv.Le = Le;
       hrv.Tr = Tr;
       hrv.extinction = extinction;
     }

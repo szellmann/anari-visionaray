@@ -8,6 +8,7 @@
 // ours
 #include "Volume.h"
 // subtypes
+#include "Blackbody.h"
 #include "TransferFunction1D.h"
 
 namespace visionaray {
@@ -37,6 +38,8 @@ Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *
 {
   if (subtype == "transferFunction1D")
     return new TransferFunction1D(s);
+  else if (subtype == "blackbody")
+    return new Blackbody(s);
   else
     return (Volume *)new UnknownObject(ANARI_VOLUME, s);
 }
@@ -44,6 +47,14 @@ Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *
 dco::Volume Volume::visionarayVolume() const
 {
   return vvol;
+}
+
+void Volume::dispatch()
+{
+  deviceState()->dcos.volumes.update(vvol.volID, vvol);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 } // namespace visionaray
