@@ -566,18 +566,18 @@ struct Blackbody
   VSNRAY_FUNC
   inline bool emission(float v, float3 &Le) const {
     if (v > 0.1f) {
-      Le = tex1D(sampler, v);
+      Le = tex1D(sampler, v).xyz();
       return true;
     }
 
     return false;
   }
 #ifdef WITH_CUDA
-  cuda_texture_ref<float3, 1> sampler;
+  cuda_texture_ref<float4, 1> sampler;
 #elif defined(WITH_HIP)
-  hip_texture_ref<float3, 1> sampler;
+  hip_texture_ref<float4, 1> sampler;
 #else
-  texture_ref<float3, 1> sampler;
+  texture_ref<float4, 1> sampler;
 #endif
 };
 

@@ -51,29 +51,29 @@ void Blackbody::finalize()
   memset(&vvol.field.gridAccel,0,sizeof(vvol.field.gridAccel)); // NO grid accel!
   vvol.unitDistance = 1.f;//m_unitDistance;
 
-  std::vector<float3> colors;
+  std::vector<float4> colors;
   for (float f = m_temperatureRange.min; f <= m_temperatureRange.max; f += 10.f) {
     blackbody spd(f);
-    colors.push_back(spd_to_rgb(spd, 400.f, 700.f, 1.f, false));
+    colors.push_back(float4(spd_to_rgb(spd, 400.f, 700.f, 1.f, false), 1.f));
   }
 
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<float4, 1> tex(colors.size());
 #else
-  colorTexture = texture<float3, 1>(colors.size());
-#endif
+  colorTexture = texture<float4, 1>(colors.size());
   auto &tex = colorTexture;
+#endif
   tex.reset(colors.data());
   tex.set_filter_mode(Linear);
   tex.set_address_mode(Clamp);
 #ifdef WITH_CUDA
   colorTexture.reset(tex);
-  vvol.asBlackbody.sampler = cuda_texture_ref<float3, 1>(colorTexture);
+  vvol.asBlackbody.sampler = cuda_texture_ref<float4, 1>(colorTexture);
 #elif defined(WITH_HIP)
-  colorTexture = hip_texture<float3, 1>(tex);
-  vvol.asBlackbody.sampler = hip_texture_ref<float3, 1>(colorTexture);
+  colorTexture = hip_texture<float4, 1>(tex);
+  vvol.asBlackbody.sampler = hip_texture_ref<float4, 1>(colorTexture);
 #else
-  vvol.asBlackbody.sampler = texture_ref<float3, 1>(colorTexture);
+  vvol.asBlackbody.sampler = texture_ref<float4, 1>(colorTexture);
 #endif
 
   // Trigger a BVH rebuild:
