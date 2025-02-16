@@ -47,8 +47,6 @@ struct TransferFunction1D : public Volume
 #else
   texture<float4, 1> transFuncTexture;
 #endif
-
-  HostDeviceArray<dco::Volume> m_volume;
 };
 
 } // namespace visionaray
