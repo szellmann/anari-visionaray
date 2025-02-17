@@ -43,8 +43,9 @@ inline float rayMarchVolume(ScreenSample &ss,
     if (sampleField(sf,P,v)) {
       float4 sample
           = postClassify(vol.asTransferFunction1D,v);
-      color += dt * (1.f-alpha) * sample.w * sample.xyz();
-      alpha += dt * (1.f-alpha) * sample.w;
+      float scale = 1.0f - powf(1.0f - sample.w, 1.f/dt);
+      color += scale * (1.f-alpha) * sample.w * sample.xyz();
+      alpha += scale * (1.f-alpha) * sample.w;
     }
   }
   return t / dt_scale;
