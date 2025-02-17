@@ -6,12 +6,12 @@ namespace visionaray {
 
   typedef vec3i GridIterationState;
   
-  template <typename Func>
+  template <typename Ray, typename Func>
   VSNRAY_FUNC
-  inline void dda3(basic_ray<float> ray,
-                   const vec3i     &gridDims,
-                   const box3f     &modelBounds,
-                   const Func      &func)
+  inline void dda3(Ray          ray,
+                   const vec3i &gridDims,
+                   const box3f &modelBounds,
+                   const Func  &func)
   {
     // move ray so tmin becomes 0
     const float ray_tmin = ray.tmin;
@@ -19,15 +19,32 @@ namespace visionaray {
     ray.tmin = 0.f;
     ray.tmax -= ray_tmin;
 
-    const vec3 rcp_dir(ray.dir.x != 0.f ? 1.f / ray.dir.x : FLT_MAX,
-        ray.dir.y != 0.f ? 1.f / ray.dir.y : FLT_MAX,
-        ray.dir.z != 0.f ? 1.f / ray.dir.z : FLT_MAX);
+    const vec3 rcp_dir = 1.f / ray.dir;
 
     const vec3f lo = (modelBounds.min - ray.ori) * rcp_dir;
     const vec3f hi = (modelBounds.max - ray.ori) * rcp_dir;
 
-    const vec3f tnear = min(lo,hi);
-    const vec3f tfar  = max(lo,hi);
+    vec3f tnear = min(lo,hi);
+    vec3f tfar  = max(lo,hi);
+
+    if (ray.dir.x == 0.f) {
+      if (ray.ori.x < 0.f || ray.ori.x > gridDims.x)
+        // ray passes by the volume ...
+        return;
+      tnear.x = 1e30f;
+    }
+    if (ray.dir.y == 0.f) {
+      if (ray.ori.y < 0.f || ray.ori.y > gridDims.y)
+        // ray passes by the volume ...
+        return;
+      tnear.y = 1e30f;
+    }
+    if (ray.dir.z == 0.f) {
+      if (ray.ori.z < 0.f || ray.ori.z > gridDims.z)
+        // ray passes by the volume ...
+        return;
+      tnear.z = 1e30f;
+    }
 
     vec3i cellID = projectOnGrid(ray.ori,gridDims,modelBounds);
 
