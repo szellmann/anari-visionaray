@@ -25,31 +25,22 @@ namespace visionaray {
     const vec3f hi = (modelBounds.max - ray.ori) * rcp_dir;
 
     vec3f tnear = min(lo,hi);
-    vec3f tfar  = max(lo,hi);
+    const vec3f tfar = max(lo,hi);
 
     if (ray.dir.x == 0.f) {
-      if (ray.ori.x < 0.f || ray.ori.x > gridDims.x)
-        // ray passes by the volume ...
-        return;
-      tnear.x = 1e30f;
+      tnear.x = FLT_MAX;
     }
     if (ray.dir.y == 0.f) {
-      if (ray.ori.y < 0.f || ray.ori.y > gridDims.y)
-        // ray passes by the volume ...
-        return;
-      tnear.y = 1e30f;
+      tnear.y = FLT_MAX;
     }
     if (ray.dir.z == 0.f) {
-      if (ray.ori.z < 0.f || ray.ori.z > gridDims.z)
-        // ray passes by the volume ...
-        return;
-      tnear.z = 1e30f;
+      tnear.z = FLT_MAX;
     }
 
     vec3i cellID = projectOnGrid(ray.ori,gridDims,modelBounds);
 
     // Distance in world space to get from cell to cell
-    const vec3f dist((tfar-tnear)/vec3f(gridDims));
+    const vec3f dist(max(vec3f(0.f),(tfar-tnear)/vec3f(gridDims)));
 
     // Cell increment
     const vec3i step = {
