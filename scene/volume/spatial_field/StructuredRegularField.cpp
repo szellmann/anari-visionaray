@@ -38,8 +38,6 @@ void StructuredRegularField::finalize()
   vec3 T = -bounds().min;
   vfield.voxelSpaceTransform = mat4x3(S,T);
 
-  setGradientDelta(min_element(m_spacing / 2.f));
-
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<float, 3> tex(m_dims.x, m_dims.y, m_dims.z);
 #else
