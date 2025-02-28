@@ -6,6 +6,7 @@
 #include <common/manip/pan_manipulator.h>
 #include <common/manip/zoom_manipulator.h>
 #include <common/viewer_glut.h>
+#include <imgui.h>
 #include "AnariCamera.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -25,6 +26,8 @@ constexpr char path_sep = '\\';
 #else
 constexpr char path_sep = '/';
 #endif
+
+std::string g_scene = "1984";
 
 void statusFunc(const void *userData,
     ANARIDevice device,
@@ -743,6 +746,8 @@ struct Renderer : viewer_glut
   Renderer();
   ~Renderer();
 
+  box3_t initWorld();
+
   void on_display() override;
   void on_mouse_move(const visionaray::mouse_event &event) override;
   void on_key_press(const visionaray::key_event &event) override;
@@ -771,48 +776,7 @@ Renderer::Renderer()
   bounds[0] = {0.f, 0.f, 0.f};
   bounds[1] = {1.f, 1.f, 1.f};
 
-  if (0) {
-    anari.world = anari::newObject<anari::World>(anari.device);
-
-    auto surf = makeCones(anari.device);
-    //auto surf = makeCylinders(anari.device);
-    //auto surf = makeCurves(anari.device);
-    //auto surf = makeBezierCurves(anari.device);
-    anari::setAndReleaseParameter(
-        anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
-    anari::commitParameters(anari.device, anari.world);
-
-    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
-
-    if (1) {
-      auto planeInst = makePlaneInstance(anari.device, bounds);
-      anari::setAndReleaseParameter(
-          anari.device, anari.world, "instance", anari::newArray1D(anari.device, &planeInst));
-      anari::release(anari.device, planeInst);
-    }
-
-    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
-    anari::setParameter(anari.device, anari.light, "direction",
-        anari::math::float3(1.f, -1.f, -1.f));
-    anari::setParameter(anari.device, anari.light, "irradiance", 1.f);
-    anari::setParameter(anari.device, anari.light, "color",
-        anari::math::float3(1.f, 1.f, 1.f));
-    anari::setAndReleaseParameter(anari.device,
-        anari.world,
-        "light",
-        anari::newArray1D(anari.device, &anari.light, 1));
-
-    anari::commitParameters(anari.device, anari.world);
-  } else {
-    anari.world = make1984(anari.device);
-    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
-
-    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
-    anari::setParameterArray1D(anari.device, anari.world, "light", &anari.light, 1);
-    anari::release(anari.device, anari.light);
-
-    anari::commitParameters(anari.device, anari.world);
-  }
+  bounds = initWorld();
 
   cam = std::make_shared<AnariCamera>(anari.device);
 
@@ -851,6 +815,61 @@ Renderer::~Renderer()
   anari::unloadLibrary(anari.library);
 }
 
+box3_t Renderer::initWorld()
+{
+  box3_t bounds;
+  if (g_scene == "Cones" || g_scene == "Cylinders" || g_scene == "Curves" || g_scene == "BezierCurves") {
+    anari.world = anari::newObject<anari::World>(anari.device);
+
+    anari::Surface surf{nullptr};
+
+    if (g_scene == "Cones")
+      surf = makeCones(anari.device);
+    else if (g_scene == "Cylinders")
+      surf = makeCylinders(anari.device);
+    else if (g_scene == "Curves")
+      surf = makeCurves(anari.device);
+    else if (g_scene == "BezierCurves")
+      surf = makeBezierCurves(anari.device);
+
+    anari::setAndReleaseParameter(
+        anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
+    anari::commitParameters(anari.device, anari.world);
+
+    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+
+    if (1) {
+      auto planeInst = makePlaneInstance(anari.device, bounds);
+      anari::setAndReleaseParameter(
+          anari.device, anari.world, "instance", anari::newArray1D(anari.device, &planeInst));
+      anari::release(anari.device, planeInst);
+    }
+
+    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
+    anari::setParameter(anari.device, anari.light, "direction",
+        anari::math::float3(1.f, -1.f, -1.f));
+    anari::setParameter(anari.device, anari.light, "irradiance", 1.f);
+    anari::setParameter(anari.device, anari.light, "color",
+        anari::math::float3(1.f, 1.f, 1.f));
+    anari::setAndReleaseParameter(anari.device,
+        anari.world,
+        "light",
+        anari::newArray1D(anari.device, &anari.light, 1));
+
+    anari::commitParameters(anari.device, anari.world);
+  } else if (g_scene == "1984") {
+    anari.world = make1984(anari.device);
+    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+
+    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
+    anari::setParameterArray1D(anari.device, anari.world, "light", &anari.light, 1);
+    anari::release(anari.device, anari.light);
+
+    anari::commitParameters(anari.device, anari.world);
+  }
+  return bounds;
+}
+
 void Renderer::on_display()
 {
   anari::render(anari.device, anari.frame);
@@ -861,6 +880,36 @@ void Renderer::on_display()
   glDrawPixels(width(), height(), GL_RGBA, GL_UNSIGNED_BYTE, channelColor.data);
 
   anari::unmap(anari.device, anari.frame, "channel.color");
+
+  std::string prevScene = g_scene;
+  ImGui::Begin("Scene...");
+  if (ImGui::BeginCombo("##combo", g_scene.c_str())) {
+    if (ImGui::Selectable("1984", g_scene == "1984")) {
+      g_scene = "1984";
+    }
+    else if (ImGui::Selectable("Cones", g_scene == "Cones")) {
+      g_scene = "Cones";
+    }
+    else if (ImGui::Selectable("Cylinders", g_scene == "Cylinders")) {
+      g_scene = "Cylinders";
+    }
+    else if (ImGui::Selectable("Curves", g_scene == "Curves")) {
+      g_scene = "Curves";
+    }
+    else if (ImGui::Selectable("BezierCurves", g_scene == "BezierCurves")) {
+      g_scene = "BezierCurves";
+    }
+    ImGui::EndCombo();
+  }
+  ImGui::End();
+
+  if (prevScene != g_scene) {
+    box3_t bounds = initWorld();
+    anari::setParameter(anari.device, anari.frame, "world", anari.world);
+    anari::commitParameters(anari.device, anari.frame);
+    cam->viewAll(bounds);
+    cam->commit();
+  }
 
   viewer_glut::on_display();
 }
