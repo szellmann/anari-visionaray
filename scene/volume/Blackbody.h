@@ -31,6 +31,9 @@ struct Blackbody : public Volume
 
   box1 m_temperatureRange{1500.f, 6000.f};
 
+  // any values <= threshold are empty:
+  float m_threshold{0.1f};
+
 #ifdef WITH_CUDA
   cuda_texture<float4, 1> colorTexture;
 #elif defined(WITH_HIP)
