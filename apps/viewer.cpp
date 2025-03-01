@@ -6,6 +6,7 @@
 #include <common/manip/pan_manipulator.h>
 #include <common/manip/zoom_manipulator.h>
 #include <common/viewer_glut.h>
+#include <imgui.h>
 #include "AnariCamera.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -25,6 +26,8 @@ constexpr char path_sep = '\\';
 #else
 constexpr char path_sep = '/';
 #endif
+
+std::string g_scene = "1984";
 
 void statusFunc(const void *userData,
     ANARIDevice device,
@@ -336,6 +339,74 @@ anari::World make1984(anari::Device device)
         device, nullptr, float3(3.93f, 1.91f, 1.f), float3(4.03f, 2.51f, 1.f));
     anari::unmap(device, instanceArray);
     anari::setAndReleaseParameter(device, world, "instance", instanceArray);
+  }
+
+  anari::commitParameters(device, world);
+
+  return world;
+}
+
+anari::World makeMengerSponge(anari::Device device)
+{
+  int W=256, H=256, D=256;
+  std::vector<float> data(W*H*D);
+  for (int z=0; z<D; ++z) {
+    for (int y=0; y<H; ++y) {
+      for (int x=0; x<W; ++x) {
+        int index = x+W*y+W*H*z;
+        data[index] = 1.f;
+        float3 ppos((x+0.5f) / W, (y+0.5f) / H, (z+0.5f) / H);
+        for (unsigned i=0; i<3; ++i) {
+          ppos *= 3.f;
+          const int s = ((int)ppos.x & 1) + ((int)ppos.y & 1) + ((int)ppos.z & 1);
+          if (s >= 2) {
+            data[index] = 0.f;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  auto scalar = anariNewArray3D(device, data.data(), 0, 0, ANARI_FLOAT32, W, H, D);
+  auto field = anari::newObject<anari::SpatialField>(device, "structuredRegular");
+  anari::setAndReleaseParameter(device, field, "data", scalar);
+  anari::setParameter(device, field, "filter", ANARI_STRING, "linear");
+  anari::commitParameters(device, field);
+
+  auto volume = anari::newObject<anari::Volume>(device, "transferFunction1D");
+  anari::setParameter(device, volume, "value", field);
+
+  std::vector<float3> colors;
+  std::vector<float> opacities;
+
+  colors.emplace_back(0.1f, 0.1f, 0.1f);
+
+  opacities.emplace_back(0.0f);
+  opacities.emplace_back(0.5f);
+
+  float voxelRange[2] = { 0.f, 1.f };
+
+  anari::setAndReleaseParameter(device,
+      volume,
+      "color",
+      anari::newArray1D(device, colors.data(), colors.size()));
+  anari::setAndReleaseParameter(device,
+      volume,
+      "opacity",
+      anari::newArray1D(device, opacities.data(), opacities.size()));
+  anariSetParameter(
+      device, volume, "valueRange", ANARI_FLOAT32_BOX1, &voxelRange);
+
+  anari::commitParameters(device, volume);
+
+  auto world = anari::newObject<anari::World>(device);
+  {
+    auto volumeArray = anari::newArray1D(device, ANARI_VOLUME, 1);
+    auto *v = anari::map<anari::Volume>(device, volumeArray);
+    v[0] = volume;
+    anari::unmap(device, volumeArray);
+    anari::setAndReleaseParameter(device, world, "volume", volumeArray);
   }
 
   anari::commitParameters(device, world);
@@ -743,6 +814,8 @@ struct Renderer : viewer_glut
   Renderer();
   ~Renderer();
 
+  box3_t initWorld();
+
   void on_display() override;
   void on_mouse_move(const visionaray::mouse_event &event) override;
   void on_key_press(const visionaray::key_event &event) override;
@@ -771,48 +844,7 @@ Renderer::Renderer()
   bounds[0] = {0.f, 0.f, 0.f};
   bounds[1] = {1.f, 1.f, 1.f};
 
-  if (0) {
-    anari.world = anari::newObject<anari::World>(anari.device);
-
-    auto surf = makeCones(anari.device);
-    //auto surf = makeCylinders(anari.device);
-    //auto surf = makeCurves(anari.device);
-    //auto surf = makeBezierCurves(anari.device);
-    anari::setAndReleaseParameter(
-        anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
-    anari::commitParameters(anari.device, anari.world);
-
-    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
-
-    if (1) {
-      auto planeInst = makePlaneInstance(anari.device, bounds);
-      anari::setAndReleaseParameter(
-          anari.device, anari.world, "instance", anari::newArray1D(anari.device, &planeInst));
-      anari::release(anari.device, planeInst);
-    }
-
-    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
-    anari::setParameter(anari.device, anari.light, "direction",
-        anari::math::float3(1.f, -1.f, -1.f));
-    anari::setParameter(anari.device, anari.light, "irradiance", 1.f);
-    anari::setParameter(anari.device, anari.light, "color",
-        anari::math::float3(1.f, 1.f, 1.f));
-    anari::setAndReleaseParameter(anari.device,
-        anari.world,
-        "light",
-        anari::newArray1D(anari.device, &anari.light, 1));
-
-    anari::commitParameters(anari.device, anari.world);
-  } else {
-    anari.world = make1984(anari.device);
-    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
-
-    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
-    anari::setParameterArray1D(anari.device, anari.world, "light", &anari.light, 1);
-    anari::release(anari.device, anari.light);
-
-    anari::commitParameters(anari.device, anari.world);
-  }
+  bounds = initWorld();
 
   cam = std::make_shared<AnariCamera>(anari.device);
 
@@ -851,6 +883,65 @@ Renderer::~Renderer()
   anari::unloadLibrary(anari.library);
 }
 
+box3_t Renderer::initWorld()
+{
+  box3_t bounds;
+  if (g_scene == "Cones" || g_scene == "Cylinders" || g_scene == "Curves" || g_scene == "BezierCurves") {
+    anari.world = anari::newObject<anari::World>(anari.device);
+
+    anari::Surface surf{nullptr};
+
+    if (g_scene == "Cones")
+      surf = makeCones(anari.device);
+    else if (g_scene == "Cylinders")
+      surf = makeCylinders(anari.device);
+    else if (g_scene == "Curves")
+      surf = makeCurves(anari.device);
+    else if (g_scene == "BezierCurves")
+      surf = makeBezierCurves(anari.device);
+
+    anari::setAndReleaseParameter(
+        anari.device, anari.world, "surface", anari::newArray1D(anari.device, &surf));
+    anari::commitParameters(anari.device, anari.world);
+
+    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+
+    if (1) {
+      auto planeInst = makePlaneInstance(anari.device, bounds);
+      anari::setAndReleaseParameter(
+          anari.device, anari.world, "instance", anari::newArray1D(anari.device, &planeInst));
+      anari::release(anari.device, planeInst);
+    }
+
+    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
+    anari::setParameter(anari.device, anari.light, "direction",
+        anari::math::float3(1.f, -1.f, -1.f));
+    anari::setParameter(anari.device, anari.light, "irradiance", 1.f);
+    anari::setParameter(anari.device, anari.light, "color",
+        anari::math::float3(1.f, 1.f, 1.f));
+    anari::setAndReleaseParameter(anari.device,
+        anari.world,
+        "light",
+        anari::newArray1D(anari.device, &anari.light, 1));
+
+    anari::commitParameters(anari.device, anari.world);
+  } else if (g_scene == "Sponge") {
+    anari.world = makeMengerSponge(anari.device);
+    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+    anari::commitParameters(anari.device, anari.world);
+  } else if (g_scene == "1984") {
+    anari.world = make1984(anari.device);
+    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+
+    anari.light = anari::newObject<anari::Light>(anari.device, "directional");
+    anari::setParameterArray1D(anari.device, anari.world, "light", &anari.light, 1);
+    anari::release(anari.device, anari.light);
+
+    anari::commitParameters(anari.device, anari.world);
+  }
+  return bounds;
+}
+
 void Renderer::on_display()
 {
   anari::render(anari.device, anari.frame);
@@ -861,6 +952,47 @@ void Renderer::on_display()
   glDrawPixels(width(), height(), GL_RGBA, GL_UNSIGNED_BYTE, channelColor.data);
 
   anari::unmap(anari.device, anari.frame, "channel.color");
+
+  std::string prevScene = g_scene;
+  ImGui::Begin("Scene...");
+  if (ImGui::BeginCombo("##combo", g_scene.c_str())) {
+    if (ImGui::Selectable("1984", g_scene == "1984")) {
+      g_scene = "1984";
+    }
+    else if (ImGui::Selectable("Sponge", g_scene == "Sponge")) {
+      g_scene = "Sponge";
+    }
+    else if (ImGui::Selectable("Cones", g_scene == "Cones")) {
+      g_scene = "Cones";
+    }
+    else if (ImGui::Selectable("Cylinders", g_scene == "Cylinders")) {
+      g_scene = "Cylinders";
+    }
+    else if (ImGui::Selectable("Curves", g_scene == "Curves")) {
+      g_scene = "Curves";
+    }
+    else if (ImGui::Selectable("BezierCurves", g_scene == "BezierCurves")) {
+      g_scene = "BezierCurves";
+    }
+    ImGui::EndCombo();
+  }
+  ImGui::End();
+
+  if (prevScene != g_scene) {
+    box3_t bounds = initWorld();
+    anari::setParameter(anari.device, anari.frame, "world", anari.world);
+    anari::commitParameters(anari.device, anari.frame);
+    cam->viewAll(bounds);
+    cam->commit();
+
+    if (g_scene == "Sponge") {
+      anari::setParameter(anari.device, anari.renderer, "ambientRadiance", 1.f);
+      anari::commitParameters(anari.device, anari.renderer);
+    } else {
+      anari::setParameter(anari.device, anari.renderer, "ambientRadiance", 0.f);
+      anari::commitParameters(anari.device, anari.renderer);
+    }
+  }
 
   viewer_glut::on_display();
 }
