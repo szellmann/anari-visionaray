@@ -22,6 +22,7 @@ void Blackbody::commitParameters()
 
   m_field = getParamObject<SpatialField>("value");
   m_temperatureRange = getParam<box1>("temperatureRange", box1(1500.f, 6000.f));
+  m_threshold = getParam<float>("threshold", 0.1f);
 }
 
 void Blackbody::finalize()
@@ -75,6 +76,8 @@ void Blackbody::finalize()
 #else
   vvol.asBlackbody.sampler = texture_ref<float4, 1>(colorTexture);
 #endif
+
+  vvol.asBlackbody.threshold = m_threshold;
 
   // Trigger a BVH rebuild:
   deviceState()->objectUpdates.lastBLSReconstructSceneRequest = helium::newTimeStamp();

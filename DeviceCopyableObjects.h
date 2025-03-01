@@ -565,7 +565,7 @@ struct Blackbody
 {
   VSNRAY_FUNC
   inline bool emission(float v, float3 &Le) const {
-    if (v > 0.1f) {
+    if (v > threshold) {
       Le = tex1D(sampler, v).xyz();
       return true;
     }
@@ -579,6 +579,7 @@ struct Blackbody
 #else
   texture_ref<float4, 1> sampler;
 #endif
+  float threshold;
 };
 
 VSNRAY_FUNC
