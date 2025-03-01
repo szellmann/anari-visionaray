@@ -349,18 +349,20 @@ anari::World make1984(anari::Device device)
 anari::World makeMengerSponge(anari::Device device)
 {
   int W=256, H=256, D=256;
-  std::vector<float> data(W*H*D);
+  std::vector<float> dataTF1D(W*H*D, 0.f);
+  std::vector<float> dataBB(W*H*D, 0.f);
   for (int z=0; z<D; ++z) {
     for (int y=0; y<H; ++y) {
       for (int x=0; x<W; ++x) {
         int index = x+W*y+W*H*z;
-        data[index] = 1.f;
+        auto &theField = x>=170 && y>=170 && z>=170 ? dataBB : dataTF1D; 
+        theField[index] = 1.f;
         float3 ppos((x+0.5f) / W, (y+0.5f) / H, (z+0.5f) / H);
         for (unsigned i=0; i<3; ++i) {
           ppos *= 3.f;
           const int s = ((int)ppos.x & 1) + ((int)ppos.y & 1) + ((int)ppos.z & 1);
           if (s >= 2) {
-            data[index] = 0.f;
+            theField[index] = 0.f;
             break;
           }
         }
@@ -368,14 +370,16 @@ anari::World makeMengerSponge(anari::Device device)
     }
   }
 
-  auto scalar = anariNewArray3D(device, data.data(), 0, 0, ANARI_FLOAT32, W, H, D);
-  auto field = anari::newObject<anari::SpatialField>(device, "structuredRegular");
-  anari::setAndReleaseParameter(device, field, "data", scalar);
-  anari::setParameter(device, field, "filter", ANARI_STRING, "linear");
-  anari::commitParameters(device, field);
+  // TF1D volume //
 
-  auto volume = anari::newObject<anari::Volume>(device, "transferFunction1D");
-  anari::setParameter(device, volume, "value", field);
+  auto scalarTF1D = anariNewArray3D(device, dataTF1D.data(), 0, 0, ANARI_FLOAT32, W, H, D);
+  auto fieldTF1D = anari::newObject<anari::SpatialField>(device, "structuredRegular");
+  anari::setAndReleaseParameter(device, fieldTF1D, "data", scalarTF1D);
+  anari::setParameter(device, fieldTF1D, "filter", ANARI_STRING, "linear");
+  anari::commitParameters(device, fieldTF1D);
+
+  auto volumeTF1D = anari::newObject<anari::Volume>(device, "transferFunction1D");
+  anari::setParameter(device, volumeTF1D, "value", fieldTF1D);
 
   std::vector<float3> colors;
   std::vector<float> opacities;
@@ -388,23 +392,42 @@ anari::World makeMengerSponge(anari::Device device)
   float voxelRange[2] = { 0.f, 1.f };
 
   anari::setAndReleaseParameter(device,
-      volume,
+      volumeTF1D,
       "color",
       anari::newArray1D(device, colors.data(), colors.size()));
   anari::setAndReleaseParameter(device,
-      volume,
+      volumeTF1D,
       "opacity",
       anari::newArray1D(device, opacities.data(), opacities.size()));
   anariSetParameter(
-      device, volume, "valueRange", ANARI_FLOAT32_BOX1, &voxelRange);
+      device, volumeTF1D, "valueRange", ANARI_FLOAT32_BOX1, &voxelRange);
 
-  anari::commitParameters(device, volume);
+  anari::commitParameters(device, volumeTF1D);
+
+  // Blackbody volume //
+  
+  auto scalarBB = anariNewArray3D(device, dataBB.data(), 0, 0, ANARI_FLOAT32, W, H, D);
+  auto fieldBB = anari::newObject<anari::SpatialField>(device, "structuredRegular");
+  anari::setAndReleaseParameter(device, fieldBB, "data", scalarBB);
+  anari::setParameter(device, fieldBB, "filter", ANARI_STRING, "linear");
+  anari::commitParameters(device, fieldBB);
+
+  auto volumeBB = anari::newObject<anari::Volume>(device, "blackbody");
+  anari::setParameter(device, volumeBB, "value", fieldBB);
+
+  float temperatureRange[2] = { 600.f, 1200.f };
+
+  anariSetParameter(
+      device, volumeBB, "temperatureRange", ANARI_FLOAT32_BOX1, &temperatureRange);
+
+  anari::commitParameters(device, volumeBB);
 
   auto world = anari::newObject<anari::World>(device);
   {
-    auto volumeArray = anari::newArray1D(device, ANARI_VOLUME, 1);
+    auto volumeArray = anari::newArray1D(device, ANARI_VOLUME, 2);
     auto *v = anari::map<anari::Volume>(device, volumeArray);
-    v[0] = volume;
+    v[0] = volumeTF1D;
+    v[1] = volumeBB;
     anari::unmap(device, volumeArray);
     anari::setAndReleaseParameter(device, world, "volume", volumeArray);
   }
