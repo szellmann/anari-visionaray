@@ -70,7 +70,7 @@ jobs:
 
     - name: Build and install ANARI-SDK
       run: >
-        cmake --build ${{ github.workspace }}/ANARI-SDK_build --target install
+        cmake --build ${{ github.workspace }}/ANARI-SDK_build --config ${{ matrix.config }} --target install
 
     - name: Checkout Visionaray
       uses: actions/checkout@v3
@@ -92,7 +92,7 @@ jobs:
 
     - name: Build and install Visionaray
       run: >
-        cmake --build ${{ github.workspace }}/visionaray_build --target install
+        cmake --build ${{ github.workspace }}/visionaray_build --config ${{ matrix.config }} --target install
 
     - name: Configure
       env:
