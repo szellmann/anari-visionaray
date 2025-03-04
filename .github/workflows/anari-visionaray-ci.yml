@@ -57,16 +57,19 @@ jobs:
         path: ${{github.workspace}}/ANARI-SDK
         ref: next_release
 
-    - name: Build ANARI-SDK
-      run: |
-        cmake ${{github.workspace}}/ANARI-SDK -B ${{github.workspace}}/ANARI-SDK_build \
-         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deps \
-         -DCMAKE_BUILD_TYPE=Release \
-         -DBUILD_EXAMPLES:BOOL=OFF \
-         -DBUILD_VIEWER:BOOL=OFF \
-         -DBUILD_HELIDE_DEVICE:BOOL=OFF \
-         -DINSTALL_VIEWER_LIBRARY:BOOL=OFF \
+    - name: Configure ANARI-SDK
+      run: >
+        cmake ${{github.workspace}}/ANARI-SDK -B ${{github.workspace}}/ANARI-SDK_build
+         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deps
+         -DCMAKE_BUILD_TYPE=Release
+         -DBUILD_EXAMPLES:BOOL=OFF
+         -DBUILD_VIEWER:BOOL=OFF
+         -DBUILD_HELIDE_DEVICE:BOOL=OFF
+         -DINSTALL_VIEWER_LIBRARY:BOOL=OFF
          -DBUILD_TESTING:BOOL=OFF
+
+    - name: Build and install ANARI-SDK
+      run: >
         cmake --build ${{github.workspace}}/ANARI-SDK_build --target install
 
     - name: Checkout Visionaray
@@ -76,16 +79,19 @@ jobs:
         path: ${{github.workspace}}/visionaray
         ref: master
 
-    - name: Build Visionaray
-      run: |
-        cmake ${{github.workspace}}/visionaray -B ${{github.workspace}}/visionaray_build \
-         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deps \
-         -DCMAKE_BUILD_TYPE=Release \
-         -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF \
-         -DVSNRAY_ENABLE_VIEWER:BOOL=OFF \
-         -DVSNRAY_ENABLE_COMMON:BOOL=OFF \
-         -DVSNRAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }} \
+    - name: Configure Visionaray
+      run: >
+        cmake ${{github.workspace}}/visionaray -B ${{github.workspace}}/visionaray_build
+         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/deps
+         -DCMAKE_BUILD_TYPE=Release
+         -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF
+         -DVSNRAY_ENABLE_VIEWER:BOOL=OFF
+         -DVSNRAY_ENABLE_COMMON:BOOL=OFF
+         -DVSNRAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }}
          -DVSNRAY_ENABLE_TBB:BOOL=OFF
+
+    - name: Build and install Visionaray
+      run: >
         cmake --build ${{github.workspace}}/visionaray_build --target install
 
     - name: Configure CMake
