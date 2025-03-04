@@ -63,7 +63,7 @@ jobs:
 
     - name: Setup CUDA (Windows)
       if: >-
-        matrix.os == 'ubuntu-24.04' &&
+        matrix.os == 'windows-2022' &&
         matrix.cuda == 'ON'
       run: |
         set PATH=%PATH%;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin
