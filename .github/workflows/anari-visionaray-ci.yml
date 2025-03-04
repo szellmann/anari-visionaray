@@ -17,8 +17,6 @@ jobs:
         exclude:
           - os: macos-15
             cuda: ON
-          - os: windows-2022
-            cuda: ON
 
     name: OS ${{ matrix.os }} - config ${{ matrix.config }} - CUDA ${{ matrix.cuda }}
 
@@ -101,7 +99,7 @@ jobs:
 
     - name: Configure Visionaray
       env:
-        CMAKE_PREFIX_PATH: ${{ github.workspace }}/opt
+        CMAKE_PREFIX_PATH: ${{ github.workspace }}/opt:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin"
       run: >
         cmake ${{ github.workspace }}/visionaray -B ${{ github.workspace }}/visionaray_build
         -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/opt
