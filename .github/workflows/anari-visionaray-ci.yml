@@ -66,8 +66,8 @@ jobs:
         matrix.os == 'windows-2022' &&
         matrix.cuda == 'ON'
       run: |
-        set PATH=%PATH%;"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin"
-        set PATH=%PATH%;"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\libnvvp"
+        set PATH=%PATH%;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin
+        set PATH=%PATH%;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\libnvvp
 
     - name: Checkout ANARI-SDK
       uses: actions/checkout@v3
