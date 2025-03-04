@@ -79,7 +79,7 @@ struct Ray : basic_ray<float>
     Volume = 0x100,
     VolumeBounds = 0x200,
   };
-  unsigned intersectionMask = All;
+  unsigned intersectionMask = (unsigned)All;
   float time{0.f};
   void *prd{nullptr};
 

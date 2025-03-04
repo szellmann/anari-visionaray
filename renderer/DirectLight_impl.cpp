@@ -309,8 +309,11 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
         Random rng(pixelID, rendererState.accumID);
         ScreenSample ss{x, y, frameID, size, rng};
         Ray ray;
-
+#ifdef _MSC_VER
+        uint64_t clock_begin = clock();
+#else
         uint64_t clock_begin = clock64();
+#endif
 
         float4 accumColor{0.f};
         PixelSample closestSample;
@@ -378,7 +381,11 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
           }
         }
 
+#ifdef _MSC_VER
+        uint64_t clock_end = clock();
+#else
         uint64_t clock_end = clock64();
+#endif
         if (rendererState.heatMapEnabled > 0.f) {
             float t = (clock_end - clock_begin)
                 * (rendererState.heatMapScale / spp);

@@ -15,6 +15,9 @@
 #ifdef max
 #undef max
 #endif
+#ifdef OPAQUE
+#undef OPAQUE
+#endif
 #endif
 #ifdef __GNUC__
 #include <execinfo.h>

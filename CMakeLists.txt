@@ -122,6 +122,9 @@ target_sources(${PROJECT_NAME} PRIVATE
   scene/volume/spatial_field/GridAccel.cpp
   scene/volume/spatial_field/UnstructuredField.cpp
 )
+if(WIN32)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
+endif()
 
 if (nanovdb)
   target_sources(${PROJECT_NAME} PRIVATE scene/volume/spatial_field/NanoVDBField.cpp)
@@ -167,6 +170,9 @@ if (cuda)
     PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
   )
   target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_CUDA=1)
+  if(WIN32)
+    target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE _USE_MATH_DEFINES)
+  endif()
   if (nanovdb)
     target_sources(${PROJECT_NAME}_cuda PRIVATE
         scene/volume/spatial_field/NanoVDBField.cu)
@@ -204,6 +210,9 @@ if (hip)
     scene/VisionaraySceneGPU.hip
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
+  if(WIN32)
+    target_compile_definitions(${PROJECT_NAME}_hip PRIVATE _USE_MATH_DEFINES)
+  endif()
   if (nanovdb)
     message(WARNING "No VDB support with HIP")
   endif()
