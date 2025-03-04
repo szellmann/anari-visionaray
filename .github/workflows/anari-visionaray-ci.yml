@@ -60,13 +60,13 @@ jobs:
     - name: Configure ANARI-SDK
       run: >
         cmake ${{ github.workspace }}/ANARI-SDK -B ${{ github.workspace }}/ANARI-SDK_build
-         -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps
-         -DCMAKE_BUILD_TYPE=Release
-         -DBUILD_EXAMPLES:BOOL=OFF
-         -DBUILD_VIEWER:BOOL=OFF
-         -DBUILD_HELIDE_DEVICE:BOOL=OFF
-         -DINSTALL_VIEWER_LIBRARY:BOOL=OFF
-         -DBUILD_TESTING:BOOL=OFF
+        -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/opt
+        -DCMAKE_BUILD_TYPE=Release
+        -DBUILD_EXAMPLES:BOOL=OFF
+        -DBUILD_VIEWER:BOOL=OFF
+        -DBUILD_HELIDE_DEVICE:BOOL=OFF
+        -DINSTALL_VIEWER_LIBRARY:BOOL=OFF
+        -DBUILD_TESTING:BOOL=OFF
 
     - name: Build and install ANARI-SDK
       run: >
@@ -82,13 +82,13 @@ jobs:
     - name: Configure Visionaray
       run: >
         cmake ${{ github.workspace }}/visionaray -B ${{ github.workspace }}/visionaray_build
-         -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/deps
-         -DCMAKE_BUILD_TYPE=Release
-         -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF
-         -DVSNRAY_ENABLE_VIEWER:BOOL=OFF
-         -DVSNRAY_ENABLE_COMMON:BOOL=OFF
-         -DVSNRAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }}
-         -DVSNRAY_ENABLE_TBB:BOOL=OFF
+        -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/opt
+        -DCMAKE_BUILD_TYPE=Release
+        -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF
+        -DVSNRAY_ENABLE_VIEWER:BOOL=OFF
+        -DVSNRAY_ENABLE_COMMON:BOOL=OFF
+        -DVSNRAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }}
+        -DVSNRAY_ENABLE_TBB:BOOL=OFF
 
     - name: Build and install Visionaray
       run: >
@@ -96,7 +96,7 @@ jobs:
 
     - name: Configure
       env:
-        CMAKE_PREFIX_PATH: ${{ github.workspace }}/deps
+        CMAKE_PREFIX_PATH: ${{ github.workspace }}/opt
       run: >
         cmake -LA -B ${{ github.workspace }}/build
         -DCMAKE_BUILD_TYPE=${{ matrix.config }}
