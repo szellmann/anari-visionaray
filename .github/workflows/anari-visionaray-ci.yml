@@ -39,7 +39,7 @@ jobs:
         matrix.os == 'windows-2022' &&
         matrix.cuda == 'ON'
       run: |
-        curl -L "https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_561.17_windows.exe" -o ${{ github.workspace}}/downloads/cuda_12.6.3_561.17_windows.exe
+        curl -L "https://developer.download.nvidia.com/compute/cuda/12.6.3/local_installers/cuda_12.6.3_561.17_windows.exe" -o ${{ github.workspace}}/cuda_12.6.3_561.17_windows.exe
 
     - name: Install CUDA (Linux)
       if: >-
@@ -51,7 +51,7 @@ jobs:
       if: >-
         matrix.os == 'windows-2022' &&
         matrix.cuda == 'ON'
-      run: ${{ github.workspace}}/downloads/cuda_12.6.3_561.17_windows.exe -s
+      run: ${{ github.workspace}}/cuda_12.6.3_561.17_windows.exe -s
 
     - name: Setup CUDA (Linux)
       if: >-
