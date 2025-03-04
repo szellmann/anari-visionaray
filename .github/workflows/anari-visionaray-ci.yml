@@ -59,7 +59,7 @@ jobs:
 
     - name: Build ANARI-SDK
       run: |
-        cmake ANARI-SDK -B ANARI-SDK/build \
+        cmake ANARI-SDK -B ${{github.workspace}}/ANARI-SDK_build \
          -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/opt \
          -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_EXAMPLES:BOOL=OFF \
@@ -67,7 +67,7 @@ jobs:
          -DBUILD_HELIDE_DEVICE:BOOL=OFF \
          -DINSTALL_VIEWER_LIBRARY:BOOL=OFF \
          -DBUILD_TESTING:BOOL=OFF
-        cmake --build ANARI-SDK/build --target install
+        cmake --build ${{github.workspace}}/ANARI-SDK_build --target install
 
     - name: Checkout Visionaray
       uses: actions/checkout@v3
@@ -78,7 +78,7 @@ jobs:
 
     - name: Build Visionaray
       run: |
-        cmake visionaray -B visionaray/build \
+        cmake visionaray -B ${{github.workspace}}/visionaray_build \
          -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/opt \
          -DCMAKE_BUILD_TYPE=Release \
          -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF \
@@ -86,7 +86,7 @@ jobs:
          -DVSNRAY_ENABLE_COMMON:BOOL=OFF \
          -DVSNRAY_ENABLE_CUDA:BOOL=${{ matrix.cuda }} \
          -DVSNRAY_ENABLE_TBB:BOOL=OFF
-        cmake --build visionaray/build --target install
+        cmake --build ${{github.workspace}}/visionaray_build --target install
 
     - name: Configure CMake
       env:
