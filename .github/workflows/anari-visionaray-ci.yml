@@ -59,9 +59,8 @@ jobs:
 
     - name: Build ANARI-SDK
       run: |
-        mkdir -p opt
         cmake ANARI-SDK -B ANARI-SDK/build \
-         -DCMAKE_INSTALL_PREFIX=opt \
+         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/opt \
          -DCMAKE_BUILD_TYPE=Release \
          -DBUILD_EXAMPLES:BOOL=OFF \
          -DBUILD_VIEWER:BOOL=OFF \
@@ -80,7 +79,7 @@ jobs:
     - name: Build Visionaray
       run: |
         cmake visionaray -B visionaray/build \
-         -DCMAKE_INSTALL_PREFIX=opt \
+         -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/opt \
          -DCMAKE_BUILD_TYPE=Release \
          -DVSNRAY_ENABLE_EXAMPLES:BOOL=OFF \
          -DVSNRAY_ENABLE_VIEWER:BOOL=OFF \
@@ -91,7 +90,7 @@ jobs:
 
     - name: Configure CMake
       env:
-        CMAKE_PREFIX_PATH: opt
+        CMAKE_PREFIX_PATH: ${{github.workspace}}/opt
       run: >
         cmake -LA -B ${{github.workspace}}/build
         -DCMAKE_BUILD_TYPE=${{ matrix.config }}
