@@ -23,7 +23,7 @@ NanoVDBField::~NanoVDBField()
 
 void NanoVDBField::commitParameters()
 {
-  m_gridData = getParamObject<helium::Array1D>("gridData");
+  m_gridData = getParamObject<helium::Array1D>("data");
   m_filter = getParamString("filter", "linear");
 }
 
