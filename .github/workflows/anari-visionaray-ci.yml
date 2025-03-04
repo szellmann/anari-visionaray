@@ -98,8 +98,6 @@ jobs:
         ref: master
 
     - name: Configure Visionaray
-      env:
-        CMAKE_PREFIX_PATH: ${{ github.workspace }}/opt:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin"
       run: >
         cmake ${{ github.workspace }}/visionaray -B ${{ github.workspace }}/visionaray_build
         -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/opt
@@ -116,7 +114,7 @@ jobs:
 
     - name: Configure
       env:
-        CMAKE_PREFIX_PATH: ${{ github.workspace }}/opt:"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6\bin"
+        CMAKE_PREFIX_PATH: ${{ github.workspace }}/opt
       run: >
         cmake -LA -B ${{ github.workspace }}/build
         -DCMAKE_BUILD_TYPE=${{ matrix.config }}
