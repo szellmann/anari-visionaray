@@ -143,6 +143,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
 if (cuda)
@@ -198,6 +199,7 @@ if (cuda)
 
   target_include_directories(${PROJECT_NAME}_cuda PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )
 endif()
 
@@ -230,6 +232,7 @@ if (hip)
 
   target_include_directories(${PROJECT_NAME}_hip PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )
 endif()
 
