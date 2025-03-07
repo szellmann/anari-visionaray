@@ -231,7 +231,7 @@ void Frame::renderFrame()
     }
 
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
-    if (state->commitBuffer.lastFlush() <= m_frameLastRendered) {
+    if (state->commitBuffer.lastObjectFinalization() <= m_frameLastRendered) {
       if (!m_renderer->stochasticRendering()) {
         state->renderingSemaphore.frameEnd();
         return;
@@ -477,12 +477,12 @@ void Frame::checkAccumulationReset()
     return;
 
   auto &state = *deviceState();
-  if (m_lastCommitOccured < state.commitBuffer.lastFlush()) {
-    m_lastCommitOccured = state.commitBuffer.lastFlush();
+  if (m_lastCommitOccured < state.commitBuffer.lastObjectFinalization()) {
+    m_lastCommitOccured = state.commitBuffer.lastObjectFinalization();
     m_nextFrameReset = true;
   }
-  // if (m_lastUploadOccured < state.uploadBuffer.lastFlush()) {
-  //   m_lastUploadOccured = state.uploadBuffer.lastFlush();
+  // if (m_lastUploadOccured < state.uploadBuffer.lastObjectFinalization()) {
+  //   m_lastUploadOccured = state.uploadBuffer.lastObjectFinalization();
   //   m_nextFrameReset = true;
   // }
 }
