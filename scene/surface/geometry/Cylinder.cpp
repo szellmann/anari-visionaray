@@ -27,6 +27,7 @@ void Cylinder::commitParameters()
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
   m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
   m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+  m_globalRadius = getParam<float>("radius", 1.f);
 }
 
 void Cylinder::finalize()
@@ -40,7 +41,6 @@ void Cylinder::finalize()
   }
 
   const float *radius = m_radius ? m_radius->beginAs<float>() : nullptr;
-  m_globalRadius = getParam<float>("radius", 1.f);
 
   const auto numCylinders =
       m_index ? m_index->size() : m_vertexPosition->size() / 2;

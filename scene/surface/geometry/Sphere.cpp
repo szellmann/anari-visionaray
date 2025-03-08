@@ -25,6 +25,7 @@ void Sphere::commitParameters()
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
   m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
   m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+  m_globalRadius = getParam<float>("radius", 0.01f);
 }
 
 void Sphere::finalize()
@@ -36,8 +37,6 @@ void Sphere::finalize()
         "missing required parameter 'vertex.position' on sphere geometry");
     return;
   }
-
-  m_globalRadius = getParam<float>("radius", 0.01f);
 
   const float *radius = nullptr;
   if (m_vertexRadius)
