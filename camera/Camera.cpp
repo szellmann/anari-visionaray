@@ -2,6 +2,7 @@
 #include "Camera.h"
 // specific types
 #include "Matrix.h"
+#include "Omnidirectional.h"
 #include "Orthographic.h"
 #include "Perspective.h"
 
@@ -16,6 +17,8 @@ Camera *Camera::createInstance(std::string_view type, VisionarayGlobalState *s)
 {
   if (type == "matrix")
     return new Matrix(s);
+  if (type == "omnidirectional")
+    return new Omnidirectional(s);
   else if (type == "orthographic")
     return new Orthographic(s);
   else if (type == "perspective")

@@ -69,6 +69,7 @@ endif()
 set(SOURCES
     camera/Camera.cpp
     camera/Matrix.cpp
+    camera/Omnidirectional.cpp
     camera/Orthographic.cpp
     camera/Perspective.cpp
     renderer/DirectLight.cpp
