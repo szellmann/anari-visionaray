@@ -923,6 +923,7 @@ box3_t Renderer::initWorld()
     anari::setParameter(anari.device, anari.light, "irradiance", 1.f);
     anari::setParameter(anari.device, anari.light, "color",
         anari::math::float3(1.f, 1.f, 1.f));
+    anari::commitParameters(anari.device, anari.light);
     anari::setAndReleaseParameter(anari.device,
         anari.world,
         "light",
