@@ -835,7 +835,11 @@ struct Renderer : viewer_glut
 
 Renderer::Renderer()
 {
-  anari.library = anari::loadLibrary("visionaray", statusFunc);
+  anari.library = anari::loadLibrary("environment", statusFunc);
+  if (!anari.library) {
+    fprintf(stderr, "%s\n", "Defaulting to ANARI library 'visionaray'");
+    anari.library = anari::loadLibrary("visionaray", statusFunc);
+  }
   anari.device = anariNewDevice(anari.library, "default");
   anari.renderer = anari::newObject<anari::Renderer>(anari.device, "default");
   //anari.renderer = anari::newObject<anari::Renderer>(anari.device, "raycast");
