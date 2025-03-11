@@ -92,6 +92,7 @@ struct VisionaraySceneImpl
   void commit();
   void release();
   bool isValid() const;
+
   void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
   void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
   void attachGeometry(

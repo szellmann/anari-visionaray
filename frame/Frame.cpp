@@ -210,7 +210,7 @@ void Frame::renderFrame()
 #elif defined(WITH_HIP)
   HIP_SAFE_CALL(hipEventRecord(m_eventStart));
 #else
-  m_future = async<void>([&, state, this]() {
+  m_future = async<void>([&, state]() {
     m_eventStart = std::chrono::steady_clock::now();
     state->renderingSemaphore.frameStart();
 #endif

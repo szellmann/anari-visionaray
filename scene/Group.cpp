@@ -168,6 +168,7 @@ void Group::visionaraySceneCommit()
   reportMessage(
       ANARI_SEVERITY_DEBUG, "visionaray::Group committing visionaray scene");
 
+  auto lock = scopeLockObject();
   vscene->commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
 }
