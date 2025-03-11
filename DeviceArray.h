@@ -2,6 +2,7 @@
 #pragma once
 
 // std
+#include <mutex>
 #include <vector>
 // ours
 #include "DeviceCopyableObjects.h"
@@ -289,42 +290,49 @@ struct HostDeviceArray : public std::vector<T>
     if (index >= Base::size())
       resize(index+1);
 
+    std::unique_lock<std::mutex> l(mtx);
     updated = true;
     Base::operator[](index) = value;
   }
 
   void resize(size_t n)
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::resize(n);
     updated = true;
   }
 
   void push_back(const T &value)
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::push_back(value);
     updated = true;
   }
 
   void push_back(T &&value)
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::push_back(value);
     updated = true;
   }
 
   void resize(size_t n, const T &value)
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::resize(n, value);
     updated = true;
   }
 
   void reset(const void *data)
   {
+    std::unique_lock<std::mutex> l(mtx);
     memcpy(Base::data(), data, Base::size() * sizeof(T));
     updated = true;
   }
 
   T &operator[](size_t i)
   {
+    std::unique_lock<std::mutex> l(mtx);
     updated = true;
     return Base::operator[](i);
   }
@@ -355,6 +363,7 @@ struct HostDeviceArray : public std::vector<T>
     if (!updated)
       return;
 
+    std::unique_lock<std::mutex> l(mtx);
     deviceData.resize(Base::size());
 #ifdef WITH_CUDA
     CUDA_SAFE_CALL(cudaMemcpy(deviceData.data(),
@@ -374,6 +383,7 @@ struct HostDeviceArray : public std::vector<T>
 
   void updateOnHost()
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::resize(deviceData.size());
 #ifdef WITH_CUDA
     CUDA_SAFE_CALL(cudaMemcpy(Base::data(),
@@ -390,6 +400,8 @@ struct HostDeviceArray : public std::vector<T>
 #endif
     updated = false; // !
   }
+
+  std::mutex mtx;
 };
 
 // ==================================================================
@@ -415,6 +427,7 @@ struct DeviceObjectArray : private std::vector<T>
 
   DeviceObjectHandle alloc(const T &obj)
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::push_back(obj);
     updated = true;
     return (DeviceObjectHandle)(Base::size()-1);
@@ -427,6 +440,7 @@ struct DeviceObjectArray : private std::vector<T>
 
   void update(DeviceObjectHandle handle, const T &obj)
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::data()[handle] = obj;
     updated = true;
   }
@@ -443,6 +457,7 @@ struct DeviceObjectArray : private std::vector<T>
 
   void clear()
   {
+    std::unique_lock<std::mutex> l(mtx);
     Base::clear();
     freeHandles.clear();
     updated = true;
@@ -461,6 +476,7 @@ struct DeviceObjectArray : private std::vector<T>
   T *devicePtr()
   {
     if (updated) {
+      std::unique_lock<std::mutex> l(mtx);
       deviceData.resize(Base::size());
 #ifdef WITH_CUDA
       CUDA_SAFE_CALL(cudaMemcpy(deviceData.data(),
@@ -488,6 +504,8 @@ struct DeviceObjectArray : private std::vector<T>
   Base deviceData;
 #endif
   bool updated = true;
+
+  std::mutex mtx;
 };
 
 } // namespace visionaray
