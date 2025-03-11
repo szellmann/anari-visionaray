@@ -247,6 +247,7 @@ void Frame::renderFrame()
     if (checkTAAReset())
       dispatch();
 
+    auto worldLock = m_world->scopeLockObject();
     m_world->visionaraySceneUpdate();
 
     mapBuffersOnDevice();

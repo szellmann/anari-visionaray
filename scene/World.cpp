@@ -223,7 +223,6 @@ void World::rebuildTLS()
     id++;
   });
 
-  auto lock = scopeLockObject();
   vscene->commit();
   m_objectUpdates.lastTLSBuild = helium::newTimeStamp();
 }
