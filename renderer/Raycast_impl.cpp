@@ -42,7 +42,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
     float4 attribs[5];
     for (int i=0; i<5; ++i) {
-      attribs[i] = getAttribute(geom, (dco::Attribute)i, hr.prim_id, uv);
+      attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
     }
 
     getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);

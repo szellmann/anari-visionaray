@@ -1502,6 +1502,14 @@ inline aabb get_prim_bounds(const BLS &bls)
   return result;
 }
 
+// Uniform //
+
+struct Uniform
+{
+  float4 value;
+  bool isSet;
+};
+
 // Array //
 
 struct Array
@@ -1525,6 +1533,7 @@ struct Instance
   unsigned instID;
   unsigned userID;
   unsigned groupID;
+  Uniform uniformAttributes[5];
 #ifdef WITH_CUDA
   cuda_index_bvh<BLS>::bvh_ref theBVH;
 #elif defined(WITH_HIP)
@@ -1783,6 +1792,7 @@ struct Geometry
   }
 
   Array primitives;
+  Uniform uniformAttributes[5];
   Array primitiveAttributes[5];
   Array vertexAttributes[5];
   Array index;

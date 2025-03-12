@@ -317,8 +317,11 @@ inline vec4 getTangent(
 }
 
 VSNRAY_FUNC
-inline vec4 getAttribute(
-    const dco::Geometry &geom, dco::Attribute attrib, unsigned primID, const vec2 uv)
+inline vec4 getAttribute(const dco::Geometry &geom,
+                         const dco::Instance &inst,
+                         dco::Attribute attrib,
+                         unsigned primID,
+                         const vec2 uv)
 {
   vec4f color{0.f, 0.f, 0.f, 1.f};
 
@@ -327,6 +330,8 @@ inline vec4 getAttribute(
 
   dco::Array vertexColors = geom.vertexAttributes[(int)attrib];
   dco::Array primitiveColors = geom.primitiveAttributes[(int)attrib];
+  dco::Uniform geometryColor = geom.uniformAttributes[(int)attrib];
+  dco::Uniform instanceColor = inst.uniformAttributes[(int)attrib];
 
   const TypeInfo &vertexColorInfo = vertexColors.typeInfo;
   const TypeInfo &primitiveColorInfo = primitiveColors.typeInfo;
@@ -408,6 +413,10 @@ inline vec4 getAttribute(
         = (const uint8_t *)primitiveColors.data
             + primID * primitiveColorInfo.sizeInBytes;
     color = toRGBA(source, primitiveColorInfo);
+  } else if (geometryColor.isSet) {
+    color = geometryColor.value;
+  } else if (instanceColor.isSet) {
+    color = instanceColor.value;
   }
 
   return color;
@@ -843,7 +852,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
 
     float4 attribs[5];
     for (int i=0; i<5; ++i) {
-      attribs[i] = getAttribute(geom, (dco::Attribute)i, hr.prim_id, uv);
+      attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
     }
 
     float opacity = getOpacity(mat, onDevice.samplers, attribs, hr.prim_id);

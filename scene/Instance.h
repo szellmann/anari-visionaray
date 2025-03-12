@@ -3,6 +3,9 @@
 
 #pragma once
 
+// std
+#include <optional>
+// ours
 #include "Group.h"
 
 namespace visionaray {
@@ -35,6 +38,8 @@ struct Instance : public Object
 
   uint32_t m_id{~0u};
   helium::ChangeObserverPtr<Array1D> m_idArray;
+
+  std::optional<float4> m_uniformAttributes[5];
 
   helium::IntrusivePtr<Group> m_group;
 

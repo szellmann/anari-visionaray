@@ -58,6 +58,17 @@ dco::Geometry Geometry::visionarayGeometry() const
 
 void Geometry::commitParameters()
 {
+  float4 attrV(0.f, 0.f, 0.f, 1.f);
+  if (getParam("attribute0", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[0] = attrV;
+  if (getParam("attribute1", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[1] = attrV;
+  if (getParam("attribute2", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[2] = attrV;
+  if (getParam("attribute3", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[3] = attrV;
+  if (getParam("color", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[4] = attrV;
   m_attributes[0] = getParamObject<Array1D>("primitive.attribute0");
   m_attributes[1] = getParamObject<Array1D>("primitive.attribute1");
   m_attributes[2] = getParamObject<Array1D>("primitive.attribute2");
@@ -68,6 +79,13 @@ void Geometry::commitParameters()
 void Geometry::finalize()
 {
   for (int i = 0; i < 5; ++i) {
+    // uniform.attribute
+    if (m_uniformAttributes[i]) {
+      vgeom.uniformAttributes[i].value = *m_uniformAttributes[i];
+      vgeom.uniformAttributes[i].isSet = true;
+    }
+
+    // primitive.attribute
     if (m_attributes[i]) {
       size_t sizeInBytes
           = m_attributes[i]->size() * anari::sizeOf(m_attributes[i]->elementType());

@@ -114,7 +114,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
 
       for (int i=0; i<5; ++i) {
-        attribs[i] = getAttribute(geom, (dco::Attribute)i, hr.prim_id, uv);
+        attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
       }
 
       viewDir = -ray.dir;

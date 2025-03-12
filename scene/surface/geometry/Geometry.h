@@ -5,6 +5,7 @@
 
 // std
 #include <array>
+#include <optional>
 // ours
 #include "array/Array1D.h"
 #include "DeviceCopyableObjects.h"
@@ -30,6 +31,7 @@ struct Geometry : public Object
 
   dco::Geometry vgeom;
 
+  std::optional<float4> m_uniformAttributes[5];
   std::array<helium::IntrusivePtr<Array1D>, 5> m_attributes;
 
   HostDeviceArray<uint8_t> vattributes[5];

@@ -46,6 +46,18 @@ void Instance::commitParameters()
   m_xfmArray = getParamObject<Array1D>("transform");
   m_xfm = getParam<mat4>("transform", mat4::identity());
   m_group = getParamObject<Group>("group");
+
+  float4 attrV(0.f, 0.f, 0.f, 1.f);
+  if (getParam("attribute0", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[0] = attrV;
+  if (getParam("attribute1", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[1] = attrV;
+  if (getParam("attribute2", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[2] = attrV;
+  if (getParam("attribute3", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[3] = attrV;
+  if (getParam("color", ANARI_FLOAT32_VEC4, &attrV))
+    m_uniformAttributes[4] = attrV;
 }
 
 void Instance::finalize()
@@ -84,6 +96,13 @@ void Instance::finalize()
     m_affineInv.push_back(inverse(top_left(m_xfms[i])));
     m_transInv.push_back(-m_xfms[i](3).xyz());
     m_normalXfms.push_back(transpose(m_affineInv[i]));
+  }
+
+  for (int i=0; i<5; ++i) {
+    if (m_uniformAttributes[i]) {
+      vinstance.uniformAttributes[i].value = *m_uniformAttributes[i];
+      vinstance.uniformAttributes[i].isSet = true;
+    }
   }
 
   dispatch();
@@ -125,6 +144,13 @@ void Instance::visionarayInstanceUpdate()
 {
   vinstance.userID = m_id;
   vinstance.groupID = group()->visionarayScene()->m_groupID;
+
+  for (int i=0; i<5; ++i) {
+    if (m_uniformAttributes[i]) {
+      vinstance.uniformAttributes[i].value = *m_uniformAttributes[i];
+      vinstance.uniformAttributes[i].isSet = true;
+    }
+  }
 
   vinstance.theBVH = group()->visionarayScene()->refBVH();
   vinstance.xfms = m_xfms.devicePtr();
