@@ -7,10 +7,10 @@ Disclaimer (read this first)
 ----------------------------
 
 This is an experimental implementation of the [ANARI
-Spec](https://github.com/KhronosGroup/ANARI-Docs). At the time of writing this
-(March 2025) I do spent a fair amount of time keeping this project up-to-date,
-so chances are it builds and works for you on Linux, Mac, or Windows with the
-typical ANARI apps out there.
+Spec](https://registry.khronos.org/ANARI/specs/1.0/ANARI-1.0.html). At the time
+of writing this (March 2025) I do spend a fair amount of time keeping this
+project up-to-date, so chances are it builds and works for you on Linux, Mac,
+or Windows with the typical ANARI apps out there.
 
 That said, this project is mostly meant as a playground for me, so its future
 is totally unclear at this point. For any "serious" ANARI users I would rather
@@ -35,7 +35,7 @@ follow. You need to install
 Visionaray installs as header-only if you deactivate all the features as in the
 CI script (you don't even need CUDA).
 
-`anari-visionaray` into compiles separate devices for CPU, CUDA, and an
+`anari-visionaray` compiles into separate devices for CPU, CUDA, and an
 experimental but seldom tested HIP version. The latter two must be enabled with
 CMake for them to compile.
 
