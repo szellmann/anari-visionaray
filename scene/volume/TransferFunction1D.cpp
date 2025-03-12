@@ -83,14 +83,14 @@ void TransferFunction1D::finalize()
 
     vec3f color0 = colorData[int(floorf(colorPos))];
     vec3f color1 = colorData[int(ceilf(colorPos))];
-    vec3f color = lerp(color0, color1, colorFrac);
+    vec3f color = lerp_r(color0, color1, colorFrac);
 
     float alphaPos = tfSize > 1 ? (float(i)/(tfSize-1))*(m_opacityData->size()-1) : 0.f;
     float alphaFrac = alphaPos-floorf(alphaPos);
 
     float alpha0 = opacityData[int(floorf(alphaPos))];
     float alpha1 = opacityData[int(ceilf(alphaPos))];
-    float alpha = lerp(alpha0, alpha1, alphaFrac);
+    float alpha = lerp_r(alpha0, alpha1, alphaFrac);
 
     tf[i] = vec4(color, alpha);
   }

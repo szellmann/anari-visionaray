@@ -41,15 +41,15 @@ namespace visionaray {
 
     float3 frac = objPos-float3(imin);
 
-    float f12 = lerp(f1,f2,frac.x);
-    float f56 = lerp(f5,f6,frac.x);
-    float f34 = lerp(f3,f4,frac.x);
-    float f78 = lerp(f7,f8,frac.x);
+    float f12 = lerp_r(f1,f2,frac.x);
+    float f56 = lerp_r(f5,f6,frac.x);
+    float f34 = lerp_r(f3,f4,frac.x);
+    float f78 = lerp_r(f7,f8,frac.x);
 
-    float f1234 = lerp(f12,f34,frac.y);
-    float f5678 = lerp(f56,f78,frac.y);
+    float f1234 = lerp_r(f12,f34,frac.y);
+    float f5678 = lerp_r(f56,f78,frac.y);
 
-    retVal = lerp(f1234,f5678,frac.z);
+    retVal = lerp_r(f1234,f5678,frac.z);
 
     return true;
   }

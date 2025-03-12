@@ -1656,13 +1656,13 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
     float frac = time01 * (inst.len-1) - ID1;
 
-    affineInv = lerp(inst.affineInv[ID1],
-                     inst.affineInv[ID2],
-                     frac);
+    affineInv = lerp_r(inst.affineInv[ID1],
+                       inst.affineInv[ID2],
+                       frac);
 
-    transInv = lerp(inst.transInv[ID1],
-                    inst.transInv[ID2],
-                    frac);
+    transInv = lerp_r(inst.transInv[ID1],
+                      inst.transInv[ID2],
+                      frac);
   }
 
   Ray xfmRay(ray);
@@ -2291,7 +2291,7 @@ struct Camera
     else if (type == Matrix)
       ray = asMatrixCam.primary_ray(Ray{}, x, y, width, height);
 
-    ray.time = lerp(shutter.min, shutter.max, rng());
+    ray.time = lerp_r(shutter.min, shutter.max, rng());
 
     return ray;
   }

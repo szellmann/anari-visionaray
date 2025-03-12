@@ -19,7 +19,7 @@ add_subdirectory(external)
 # note: we're often tracking the most recent changes from ANARI-SDK
 # (on branch "next_release")
 find_package(anari 0.13.0 REQUIRED)
-find_package(visionaray 0.4.2 REQUIRED)
+find_package(visionaray 0.5.0 REQUIRED)
 
 option(ANARI_VISIONARAY_ENABLE_CUDA "Compile the CUDA device" OFF)
 set(cuda ${ANARI_VISIONARAY_ENABLE_CUDA})

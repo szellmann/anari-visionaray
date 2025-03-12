@@ -678,8 +678,8 @@ static anari::Surface makeCurves(anari::Device d)
       q.z = (radius - 0.05f) * std::cos((d + 10) * M_PI / 180.f);
       endRadius = 0.015f * std::sin(f * (d + 10) * M_PI / 180) + 0.02f;
       if (d == dStart) {
-        const auto rim = lerp(q, p, 1.f + endRadius / length(q - p));
-        const auto cap = lerp(p, rim, 1.f + startRadius / length(rim - p));
+        const auto rim = lerp_r(q, p, 1.f + endRadius / length(q - p));
+        const auto cap = lerp_r(p, rim, 1.f + startRadius / length(rim - p));
         addPoint(anari::math::float4(cap, 0.f));
         addPoint(anari::math::float4(rim, 0.f));
         addPoint(anari::math::float4(p, startRadius));
@@ -688,8 +688,8 @@ static anari::Surface makeCurves(anari::Device d)
         colors.push_back(c);
         colors.push_back(c);
       } else if (d + 10 < dStart + dEnd && d + 20 > dStart + dEnd) {
-        const auto rim = lerp(p, q, 1.f + startRadius / length(p - q));
-        const auto cap = lerp(q, rim, 1.f + endRadius / length(rim - q));
+        const auto rim = lerp_r(p, q, 1.f + startRadius / length(p - q));
+        const auto cap = lerp_r(q, rim, 1.f + endRadius / length(rim - q));
         addPoint(anari::math::float4(p, startRadius));
         addPoint(anari::math::float4(q, endRadius));
         addPoint(anari::math::float4(rim, 0.f));
