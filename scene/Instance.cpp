@@ -158,8 +158,6 @@ void Instance::visionarayInstanceUpdate()
   vinstance.affineInv = m_affineInv.devicePtr();
   vinstance.transInv = m_transInv.devicePtr();
   vinstance.len = m_xfms.size();
-
-  dispatch();
 }
 
 void Instance::dispatch()
