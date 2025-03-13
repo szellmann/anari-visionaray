@@ -115,15 +115,6 @@ void Geometry::dispatch()
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
-// float4 Geometry::getAttributeValue(const Attribute &attr, const Ray &ray) const
-// {
-//   if (attr == Attribute::NONE)
-//     return DEFAULT_ATTRIBUTE_VALUE;
-// 
-//   auto attrIdx = static_cast<int>(attr);
-//   return readAttributeValue(m_attributes[attrIdx].ptr, ray.primID);
-// }
-
 } // namespace visionaray
 
 VISIONARAY_ANARI_TYPEFOR_DEFINITION(visionaray::Geometry *);
