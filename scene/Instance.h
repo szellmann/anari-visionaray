@@ -49,8 +49,6 @@ struct Instance : public Object
   HostDeviceArray<mat3> m_normalXfms;
   HostDeviceArray<mat3> m_affineInv;
   HostDeviceArray<vec3> m_transInv;
-
-  void dispatch();
 };
 
 } // namespace visionaray

@@ -104,8 +104,6 @@ void Instance::finalize()
       vinstance.uniformAttributes[i].isSet = true;
     }
   }
-
-  dispatch();
 }
 
 void Instance::markFinalized()
@@ -158,14 +156,6 @@ void Instance::visionarayInstanceUpdate()
   vinstance.affineInv = m_affineInv.devicePtr();
   vinstance.transInv = m_transInv.devicePtr();
   vinstance.len = m_xfms.size();
-}
-
-void Instance::dispatch()
-{
-  deviceState()->dcos.instances.update(vinstance.instID, vinstance);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
 } // namespace visionaray
