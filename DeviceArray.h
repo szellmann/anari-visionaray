@@ -256,6 +256,113 @@ struct DeviceArray
   T *devicePtr{nullptr};
   size_t len{0};
 };
+
+#else
+
+// ==================================================================
+// dynamic array for device data, emulated on the host
+// ==================================================================
+
+template <typename T>
+struct DeviceArray
+{
+ public:
+  typedef T value_type;
+
+  DeviceArray() = default;
+
+  ~DeviceArray()
+  {
+    std::free(devicePtr);
+    devicePtr = nullptr;
+    len = 0;
+  }
+
+  DeviceArray(size_t n)
+  {
+    devicePtr = (T *)std::malloc(n*sizeof(T));
+    len = n;
+  }
+
+  DeviceArray(const DeviceArray &rhs)
+  {
+    if (&rhs != this) {
+      devicePtr = (T *)std::malloc(rhs.len*sizeof(T));
+      std::memcpy(devicePtr, rhs.devicePtr, len*sizeof(T));
+      len = rhs.len;
+    }
+  }
+
+  DeviceArray(DeviceArray &&rhs)
+  {
+    if (&rhs != this) {
+      devicePtr = (T *)std::malloc(rhs.len*sizeof(T));
+      std::memcpy(devicePtr, rhs.devicePtr, len*sizeof(T));
+      std::free(rhs.devicePtr);
+      len = rhs.len;
+      rhs.devicePtr = nullptr;
+      rhs.len = 0;
+    }
+  }
+
+  DeviceArray &operator=(const DeviceArray &rhs)
+  {
+    if (&rhs != this) {
+      devicePtr = (T *)std::malloc(rhs.len*sizeof(T));
+      std::memcpy(devicePtr, rhs.devicePtr, len*sizeof(T));
+      len = rhs.len;
+    }
+    return *this;
+  }
+
+  DeviceArray &operator=(DeviceArray &&rhs)
+  {
+    if (&rhs != this) {
+      devicePtr = (T *)std::malloc(rhs.len*sizeof(T));
+      std::memcpy(devicePtr, rhs.devicePtr, len*sizeof(T));
+      std::free(rhs.devicePtr);
+      rhs.devicePtr = nullptr;
+      rhs.len = 0;
+    }
+    return *this;
+  }
+
+  T *data()
+  { return devicePtr; }
+
+  const T *data() const
+  { return devicePtr; }
+
+  size_t size() const
+  { return len; }
+
+  void resize(size_t n)
+  {
+    if (n == len)
+      return;
+
+    T *temp{nullptr};
+    if (devicePtr && len > 0) {
+      temp = (T *)std::malloc(len*sizeof(T));
+      std::memcpy(temp, devicePtr, len*sizeof(T));
+      std::free(devicePtr);
+    }
+
+    devicePtr = (T *)std::malloc(n*sizeof(T));
+
+    if (temp) {
+      std::memcpy(devicePtr, temp, std::min(n, len)*sizeof(T));
+      std::free(temp);
+    }
+
+    len = n;
+  }
+
+ private:
+  T *devicePtr{nullptr};
+  size_t len{0};
+};
+
 #endif
 
 // ==================================================================
@@ -498,11 +605,7 @@ struct DeviceObjectArray : private std::vector<T>
   }
 
   std::vector<DeviceObjectHandle> freeHandles;
-#if defined(WITH_CUDA) || defined(WITH_HIP)
   DeviceArray<T> deviceData;
-#else
-  Base deviceData;
-#endif
   bool updated = true;
 
   std::mutex mtx;
