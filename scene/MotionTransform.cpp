@@ -34,6 +34,8 @@ void MotionTransform::finalize()
     m_transInv[i] = -m_xfms[i](3).xyz();
     m_normalXfms[i] = transpose(m_affineInv[i]);
   }
+
+  Instance::dispatch();
 }
 
 void MotionTransform::visionarayInstanceUpdate()
@@ -48,6 +50,8 @@ void MotionTransform::visionarayInstanceUpdate()
   vinstance.transInv = m_transInv.devicePtr();
   vinstance.len = m_xfms.size();
   vinstance.time = m_time;
+
+  dispatch();
 }
 
 } // namespace visionaray
