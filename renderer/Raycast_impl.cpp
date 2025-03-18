@@ -136,8 +136,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
   // Background
   if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
     auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-    float2 uv = toUV(ray.dir);
-    result.color = over(float4(surfaceColor, surfaceAlpha), tex2D(hdri.radiance, uv));
+    result.color = over(float4(surfaceColor, surfaceAlpha),
+                        float4(hdri.intensity(ray.dir), 1.0f));
   } else {
     result.color = over(float4(surfaceColor, surfaceAlpha), bgColor);
   }

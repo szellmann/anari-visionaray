@@ -52,9 +52,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     if (!hitRec.hit) {
       if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
         auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-        float2 uv = toUV(ray.dir);
-        // TODO: type not supported with cuda?!
-        throughput = tex2D(hdri.radiance, uv).xyz();
+        throughput = hdri.intensity(ray.dir);
         hdriMiss = true;
       } else {
         throughput = float3{0.f};

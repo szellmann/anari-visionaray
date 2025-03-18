@@ -2100,6 +2100,8 @@ struct Light
       texture_ref<float4, 2> radiance;
 #endif
       float scale;
+      mat3 toWorld;
+      mat3 toLocal;
       struct CDF {
         float *rows;
         float *lastCol;
@@ -2115,7 +2117,7 @@ struct Light
         float invjacobian = cdf.width*cdf.height/float(4*M_PI);
         float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
         light_sample<float> ls;
-        ls.dir = L;
+        ls.dir = toWorld*L;
         ls.dist = FLT_MAX;
         ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
         return ls;
@@ -2124,7 +2126,7 @@ struct Light
       VSNRAY_FUNC
       inline float3 intensity(const float3 dir) const
       {
-        return tex2D(radiance, toUV(dir)).xyz()*scale;
+        return tex2D(radiance, toUV(toLocal*dir)).xyz()*scale;
       }
 
     } asHDRI;

@@ -149,6 +149,11 @@ void HDRI::finalize()
   vlight.asHDRI.radiance = texture_ref<float4, 2>(m_radianceTexture);
 #endif
   vlight.asHDRI.scale = m_scale;
+  vlight.asHDRI.toWorld.col1 = -normalize(m_up);
+  vlight.asHDRI.toWorld.col0 =  normalize(cross(vlight.asHDRI.toWorld.col1,m_direction));
+  vlight.asHDRI.toWorld.col2 =  normalize(cross(vlight.asHDRI.toWorld.col0,
+                                                vlight.asHDRI.toWorld.col1));
+  vlight.asHDRI.toLocal = inverse(vlight.asHDRI.toWorld);
   vlight.asHDRI.cdf.lastCol = m_cdfRows.devicePtr();
   vlight.asHDRI.cdf.rows = m_cdfLastCol.devicePtr();
   vlight.asHDRI.cdf.width = width;
