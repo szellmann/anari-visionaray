@@ -124,7 +124,8 @@ void Frame::finalize()
 
   const auto numPixels = vframe.size.x * vframe.size.y;
 
-  vframe.stochasticRendering = m_renderer->stochasticRendering();
+  if (m_renderer)
+    vframe.stochasticRendering = m_renderer->stochasticRendering();
 
   vframe.perPixelBytes = 4 * (vframe.colorType == ANARI_FLOAT32_VEC4 ? 4 : 1);
   m_pixelBuffer.resize(numPixels * vframe.perPixelBytes);
