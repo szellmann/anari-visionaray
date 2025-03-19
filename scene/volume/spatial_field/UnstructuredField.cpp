@@ -217,7 +217,7 @@ void UnstructuredField::finalize()
 #endif
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),vec3f(0.f));
-  setGradientDelta(minCellDiagonal);
+  setCellSize(minCellDiagonal);
 
   buildGrid();
 
@@ -254,7 +254,7 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
                                                const vec4f      *vertices,
                                                const dco::UElem *elements,
                                                size_t            numElems,
-                                               float             delta)
+                                               float             cellSize)
 {
   size_t cellID = blockIdx.x * size_t(blockDim.x) + threadIdx.x;
 
@@ -288,7 +288,7 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
         // a macrocell neighborhood:
         //updateMCStepSize(
         //    mcID,vaccel.dims,length(cellBounds.max-cellBounds.min),vaccel.stepSizes);
-        updateMCStepSize(mcID,vaccel.dims,delta,vaccel.stepSizes);
+        updateMCStepSize(mcID,vaccel.dims,cellSize,vaccel.stepSizes);
       }
     }
   }
@@ -307,7 +307,7 @@ void UnstructuredField::buildGrid()
   size_t numThreads = 1024;
   size_t numElems = m_elements.size();
   UnstructuredField_buildGridGPU<<<div_up(numElems, numThreads), numThreads>>>(
-    vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems, vfield.delta);
+    vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems, vfield.cellSize);
 #else
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
@@ -357,7 +357,7 @@ void UnstructuredField::buildGrid()
           //updateMCStepSize(
           //    mcID,vaccel.dims,length(cellBounds.max-cellBounds.min),vaccel.stepSizes);
           updateMCStepSize(
-              mcID,vaccel.dims,vfield.delta,vaccel.stepSizes);
+              mcID,vaccel.dims,vfield.cellSize,vaccel.stepSizes);
         }
       }
     }

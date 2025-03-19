@@ -37,6 +37,7 @@ void StructuredRegularField::finalize()
   mat3 S = mat3::scaling(1.f/bounds().size());
   vec3 T = -bounds().min;
   vfield.voxelSpaceTransform = mat4x3(S,T);
+  setCellSize(min_element(m_spacing));
 
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   texture<float, 3> tex(m_dims.x, m_dims.y, m_dims.z);

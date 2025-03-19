@@ -391,7 +391,7 @@ struct SpatialField
   enum Type { StructuredRegular, Unstructured, BlockStructured, NanoVDB, Unknown, };
   Type type;
   unsigned fieldID;
-  float delta;
+  float cellSize;
   GridAccel gridAccel;
   mat4x3 voxelSpaceTransform;
 
@@ -457,7 +457,7 @@ inline SpatialField createSpatialField()
   SpatialField field;
   memset(&field,0,sizeof(field));
   field.fieldID = UINT_MAX;
-  field.delta = 0.5f;
+  field.cellSize = 1.0f;
   return field;
 }
 
@@ -526,12 +526,12 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
 VSNRAY_FUNC
 inline bool sampleGradient(const SpatialField &sf, vec3 P, float3 &value) {
   float x0=0, x1=0, y0=0, y1=0, z0=0, z1=0;
-  bool b0 = sampleField(sf, sf.pointToVoxelSpace(P+float3{sf.delta, 0.f, 0.f}), x1);
-  bool b1 = sampleField(sf, sf.pointToVoxelSpace(P-float3{sf.delta, 0.f, 0.f}), x0);
-  bool b2 = sampleField(sf, sf.pointToVoxelSpace(P+float3{0.f, sf.delta, 0.f}), y1);
-  bool b3 = sampleField(sf, sf.pointToVoxelSpace(P-float3{0.f, sf.delta, 0.f}), y0);
-  bool b4 = sampleField(sf, sf.pointToVoxelSpace(P+float3{0.f, 0.f, sf.delta}), z1);
-  bool b5 = sampleField(sf, sf.pointToVoxelSpace(P-float3{0.f, 0.f, sf.delta}), z0);
+  bool b0 = sampleField(sf, sf.pointToVoxelSpace(P+float3{sf.cellSize, 0.f, 0.f}), x1);
+  bool b1 = sampleField(sf, sf.pointToVoxelSpace(P-float3{sf.cellSize, 0.f, 0.f}), x0);
+  bool b2 = sampleField(sf, sf.pointToVoxelSpace(P+float3{0.f, sf.cellSize, 0.f}), y1);
+  bool b3 = sampleField(sf, sf.pointToVoxelSpace(P-float3{0.f, sf.cellSize, 0.f}), y0);
+  bool b4 = sampleField(sf, sf.pointToVoxelSpace(P+float3{0.f, 0.f, sf.cellSize}), z1);
+  bool b5 = sampleField(sf, sf.pointToVoxelSpace(P-float3{0.f, 0.f, sf.cellSize}), z0);
   if (b0 && b1 && b2 && b3 && b4 && b5) {
     value = float3{x1,y1,z1}-float3{x0,y0,z0};
     return true; // TODO

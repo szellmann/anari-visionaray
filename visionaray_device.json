@@ -281,6 +281,15 @@
           "tags": [],
           "default": 0.2,
           "description": "ambient light intensity"
+        },
+        {
+          "name": "volumeSamplingRate",
+          "types": ["ANARI_FLOAT32"],
+          "tags": [],
+          "default": 0.5,
+          "minimum": 0.001,
+          "maximum": 10.0,
+          "description": "sampling rate of volumes when ray marching"
         }
       ]
     }

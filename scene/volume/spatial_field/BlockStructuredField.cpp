@@ -122,7 +122,7 @@ void BlockStructuredField::finalize()
   vec3 T = voxelBounds.min-m_bounds.min;
   vfield.voxelSpaceTransform = mat4x3(S,T);
 
-  setGradientDelta(1.f);
+  setCellSize(1.f);
 
   buildGrid();
 

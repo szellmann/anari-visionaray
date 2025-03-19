@@ -246,6 +246,37 @@
           "tags": [],
           "default": 0.1,
           "description": "heat map scaling factor"
+        },
+        {
+          "name": "ambientColor",
+          "types": [
+            "ANARI_FLOAT32_VEC3"
+          ],
+          "tags": [],
+          "default": [
+            1.0,
+            1.0,
+            1.0
+          ],
+          "description": "ambient light color (RGB)"
+        },
+        {
+          "name": "ambientRadiance",
+          "types": [
+            "ANARI_FLOAT32"
+          ],
+          "tags": [],
+          "default": 0.2,
+          "description": "ambient light intensity"
+        },
+        {
+          "name": "volumeSamplingRate",
+          "types": ["ANARI_FLOAT32"],
+          "tags": [],
+          "default": 0.5,
+          "minimum": 0.001,
+          "maximum": 10.0,
+          "description": "sampling rate of volumes when ray marching"
         }
       ]
     }

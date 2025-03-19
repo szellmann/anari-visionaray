@@ -65,6 +65,8 @@ void NanoVDBField::finalize()
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),float3{0.f,0.f,0.f});
 
+  setCellSize(1.f);
+
   buildGrid();
 
   vfield.gridAccel = m_gridAccel.visionarayAccel();

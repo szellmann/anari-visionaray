@@ -29,7 +29,7 @@ struct SpatialField : public Object
 
   GridAccel m_gridAccel;
 
-  void setGradientDelta(float delta);
+  void setCellSize(float cellSize);
   void dispatch();
 };
 

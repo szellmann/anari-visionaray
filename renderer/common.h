@@ -73,6 +73,7 @@ struct RendererState
   mat4 currPR{mat4::identity()};
   // Volume
   bool gradientShading{false};
+  float volumeSamplingRateInv{2.0f};
   // AO
   float3 ambientColor{1.f, 1.f, 1.f};
   float ambientRadiance{0.2f};
