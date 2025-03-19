@@ -77,8 +77,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    attribs,
                                    hr.prim_id,
                                    gn, sn,
-                                   viewDir,
-                                   ls.dir,
+                                   normalize(viewDir),
+                                   normalize(ls.dir),
                                    ls.intensity);
         shadedColor += brdf / ls.pdf / ls.dist2;
       }

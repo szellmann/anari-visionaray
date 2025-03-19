@@ -171,8 +171,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                      nullptr, // attribs, not used..
                                      UINT_MAX, // primID, not used..
                                      gn, gn,
-                                     viewDir,
-                                     ls.dir,
+                                     normalize(viewDir),
+                                     normalize(ls.dir),
                                      ls.intensity);
           shadedColor = shadedColor * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
         }
@@ -187,8 +187,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                    attribs,
                                    hr.prim_id,
                                    gn, sn,
-                                   viewDir,
-                                   ls.dir,
+                                   normalize(viewDir),
+                                   normalize(ls.dir),
                                    ls.intensity);
         shadedColor = shadedColor * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
       }
