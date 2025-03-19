@@ -491,6 +491,9 @@ void Frame::checkAccumulationReset()
 
 bool Frame::checkTAAReset()
 {
+  if (!isValid())
+    return false;
+
   const auto numPixels = vframe.size.x * vframe.size.y;
   const float alpha = m_renderer->visionarayRenderer().rendererState.taaAlpha;
 
