@@ -173,8 +173,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                      gn, gn,
                                      normalize(viewDir),
                                      normalize(ls.dir),
-                                     ls.intensity);
-          shadedColor = shadedColor * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
+                                     ls.intensity * safe_rcp(ls.dist2));
+          shadedColor = shadedColor * safe_rcp(ls.pdf);
         }
         else
           shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
@@ -189,8 +189,8 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                    gn, sn,
                                    normalize(viewDir),
                                    normalize(ls.dir),
-                                   ls.intensity);
-        shadedColor = shadedColor * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
+                                   ls.intensity * safe_rcp(ls.dist2));
+        shadedColor = shadedColor * safe_rcp(ls.pdf);
       }
     }
     else if (rendererState.renderMode == RenderMode::Ng)

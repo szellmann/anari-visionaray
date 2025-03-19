@@ -67,6 +67,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
     if (rendererState.renderMode == RenderMode::Default) {
       float3 viewDir = -ray.dir;
+      auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
       for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
         const dco::Light &light = onDevice.lights[world.allLights[lightID]];
 
@@ -79,8 +80,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    gn, sn,
                                    normalize(viewDir),
                                    normalize(ls.dir),
-                                   ls.intensity);
-        shadedColor += brdf / ls.pdf / ls.dist2;
+                                   ls.intensity * safe_rcp(ls.dist2));
+        shadedColor += brdf * safe_rcp(ls.pdf);
       }
 
       shadedColor +=
