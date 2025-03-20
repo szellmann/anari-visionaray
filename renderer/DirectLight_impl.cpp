@@ -177,7 +177,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
           shadedColor = shadedColor * safe_rcp(ls.pdf);
         }
         else
-          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(1.f/ls.dist2);
+          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(ls.dist2);
       } else {
         const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
