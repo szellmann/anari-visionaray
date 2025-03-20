@@ -126,7 +126,9 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     hit = true;
 
     if (surfaceAlpha < 0.999f) {
-      ray.tmin = hr.t + 1e-4f;
+      hitPos = ray.ori + hr.t * ray.dir;
+      const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
+      ray.tmin = hr.t + eps;
       hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
     } else {
       ray.tmax = hr.t;
