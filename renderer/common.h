@@ -784,7 +784,7 @@ inline LightSample sampleLight(const dco::Light &light, vec3f hitPos, Random &rn
     ls.intensity = light.asDirectional.intensity(hitPos);
   } else if (light.type == dco::Light::Spot) {
     ls = light.asSpot.sample(hitPos, rnd);
-    ls.intensity = light.asSpot.intensity(hitPos);
+    ls.intensity = light.asSpot.intensity(ls.dir);
   } else if (light.type == dco::Light::HDRI) {
     ls = light.asHDRI.sample(hitPos, rnd);
     ls.intensity = light.asHDRI.intensity(ls.dir);

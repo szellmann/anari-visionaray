@@ -27,15 +27,19 @@ void Spot::finalize()
 {
   Light::finalize();
 
-  vlight.asSpot.set_position(m_position);
-  vlight.asSpot.set_spot_direction(m_direction);
-  vlight.asSpot.set_spot_cutoff(m_openingAngle);
-  vlight.asSpot.set_spot_exponent(0.f); // TODO: compute from falloff angle
-  vlight.asSpot.set_cl(m_color);
-  vlight.asSpot.set_kl(m_intensity);
-  vlight.asSpot.set_constant_attenuation(1.f);
-  vlight.asSpot.set_linear_attenuation(0.f);
-  vlight.asSpot.set_quadratic_attenuation(0.f);
+  float innerAngle = m_openingAngle - 2.f * m_falloffAngle;
+  if (innerAngle < 0.f) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "falloffAngle should be smaller than half of openingAngle");
+  }
+
+  vlight.asSpot.position = m_position;
+  vlight.asSpot.direction = m_direction;
+  vlight.asSpot.color = m_color;
+  vlight.asSpot.lightIntensity = m_intensity;
+
+  vlight.asSpot.cosOuterAngle = cosf(m_openingAngle);
+  vlight.asSpot.cosInnerAngle = cosf(innerAngle);
 
   dispatch();
 }

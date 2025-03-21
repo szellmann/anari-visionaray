@@ -2089,7 +2089,41 @@ struct Light
   union {
     directional_light<float> asDirectional;
     point_light<float> asPoint;
-    spot_light<float> asSpot;
+    struct {
+      float3 position;
+      float3 direction;
+      float cosOuterAngle;
+      float cosInnerAngle;
+      float3 color;
+      float lightIntensity;
+
+      template <typename RNG>
+      VSNRAY_FUNC
+      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      {
+        light_sample<float> result;
+        result.dir = position-refPoint;
+        result.dist = length(result.dir);
+        result.normal = normalize(
+            float3(rng() * 2.f - 1.f, rng() * 2.f - 1.f, rng() * 2.f - 1.f));
+        result.area = 1.f;
+        result.delta_light = true;
+        result.pdf = 1.f;
+        return result;
+      }
+
+      VSNRAY_FUNC
+      inline float3 intensity(const float3 lightDir) const
+      {
+        // compute intensity
+        float spot = dot(normalize(direction), normalize(-lightDir));
+        if (spot < cosOuterAngle) return float3(0.f);
+        if (spot > cosInnerAngle) return color * lightIntensity;
+        spot = (spot - cosOuterAngle) / (cosInnerAngle - cosOuterAngle);
+        spot = spot * spot * (3.f - 2.f * spot);
+        return color * lightIntensity * spot;
+      }
+    } asSpot;
     area_light<float,dco::Quad> asQuad;
     struct {
 #ifdef WITH_CUDA
