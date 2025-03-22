@@ -69,7 +69,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       float3 viewDir = -ray.dir;
       auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
       for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
-        const dco::Light &light = onDevice.lights[world.allLights[lightID]];
+        const dco::Light &light = getLight(world.allLights, lightID, onDevice);
 
         LightSample ls = sampleLight(light, hitPos, ss.random);
 

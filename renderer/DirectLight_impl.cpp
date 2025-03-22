@@ -65,7 +65,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
     if (hitRec.lightHit) {
       hitPos = ray.ori + hrl.t * ray.dir;
-      const dco::Light &light = onDevice.lights[world.allLights[hrl.lightID]];
+      const dco::Light &light = getLight(world.allLights, hrl.lightID, onDevice);
       if (light.type == dco::Light::Quad)
         throughput = light.asQuad.intensity(hitPos);
       hdriMiss = true; // TODO?!
@@ -154,7 +154,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
     if (world.numLights > 0) {
       int lightID = uniformSampleOneLight(ss.random, world.numLights);
-      const dco::Light &light = onDevice.lights[world.allLights[lightID]];
+      const dco::Light &light = getLight(world.allLights, lightID, onDevice);
       ls = sampleLight(light, hitPos, ss.random);
     }
 

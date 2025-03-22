@@ -60,8 +60,9 @@ struct VisionaraySceneImpl
   DeviceHandleArray m_volumes;
   DeviceHandleArray m_lights;
   HostDeviceArray<uint32_t> m_objIds;
+
   // flat list of lights (only used if type is World!)
-  DeviceHandleArray m_allLights;
+  DeviceObjectArray<dco::LightRef> m_allLights;
 
   // Accels //
   TLS m_TLS;

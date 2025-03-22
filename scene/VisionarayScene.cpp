@@ -65,7 +65,7 @@ void VisionaraySceneImpl::commit()
 
     // world lights
     for (unsigned i=0; i<m_lights.size(); ++i)
-      m_allLights.push_back(m_lights[i]);
+      m_allLights.alloc({m_lights[i], ~0u});
 
     // instanced lights
     for (const dco::Handle &instID : m_instances) {
@@ -77,7 +77,7 @@ void VisionaraySceneImpl::commit()
       dco::Group group = m_state->dcos.groups[inst.groupID];
 
       for (unsigned i=0; i<group.numLights; ++i)
-        m_allLights.push_back(group.lights[i]);
+        m_allLights.alloc({group.lights[i], inst.instID});
     }
   } else {
     unsigned triangleCount = 0;

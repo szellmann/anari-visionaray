@@ -2167,6 +2167,42 @@ struct Light
   };
 };
 
+VSNRAY_FUNC
+inline Light xfmLight(const Light &light, const mat4 &xfm)
+{
+  Light result = light;
+  if (light.type == Light::Point) {
+    float4 pos(light.asPoint.position(),1.f);
+    pos = xfm * pos;
+    result.asPoint.set_position(pos.xyz());
+  } else if (light.type == Light::Directional) {
+    float3 dir = light.asDirectional.direction();
+    mat3 LU = top_left(xfm);
+    result.asDirectional.set_direction(LU * dir);
+  } else if (light.type == Light::Spot) {
+    float4 pos(light.asSpot.position, 1.f);
+    float3 dir = light.asSpot.direction;
+    pos = xfm * pos;
+    mat3 LU = top_left(xfm);
+    result.asSpot.position = pos.xyz();
+    result.asSpot.direction = LU * dir;
+  } else if (light.type == Light::Quad) {
+    float4 v1(light.asQuad.geometry().v1, 1.f);
+    float3 e1 = light.asQuad.geometry().e1;
+    float3 e2 = light.asQuad.geometry().e2;
+    v1 = xfm * v1;
+    mat3 LU = top_left(xfm);
+    e1 = LU * e1;
+    e2 = LU * e2;
+    result.asQuad.geometry().v1 = v1.xyz();
+    result.asQuad.geometry().e1 = e1;
+    result.asQuad.geometry().e2 = e2;
+  } else {
+    // TODO!
+  }
+  return result;
+}
+
 inline Light createLight()
 {
   Light light;
@@ -2176,6 +2212,13 @@ inline Light createLight()
   light.visible = true;
   return light;
 }
+
+// LightRef associates a light with an instance
+struct LightRef
+{
+  unsigned lightID;
+  unsigned instID;
+};
 
 // Group //
 
@@ -2212,8 +2255,8 @@ struct World
   unsigned worldID;
 
   unsigned numLights;
-  // flat list of lights active in all groups:
-  Handle *allLights;
+  // flat list of lights with instances associated
+  LightRef *allLights;
 };
 
 inline World createWorld()

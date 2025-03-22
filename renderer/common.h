@@ -884,6 +884,17 @@ inline dco::HitRecordVolume sampleFreeFlightDistanceAllVolumes(
   return intersectVolumes(ray, onDevice.TLSs[worldID]);
 }
 
+
+VSNRAY_FUNC
+inline dco::Light getLight(const dco::LightRef *lightRefs, unsigned lightID,
+    const DeviceObjectRegistry &onDevice)
+{
+  mat4 xfm = mat4::identity();
+  if (dco::validHandle(lightRefs[lightID].instID))
+    xfm = onDevice.instances[lightRefs[lightID].instID].xfms[0];
+  return xfmLight(onDevice.lights[lightRefs[lightID].lightID], xfm);
+}
+
 VSNRAY_FUNC
 inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
     const DeviceObjectRegistry &onDevice)
@@ -891,7 +902,7 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
   HitRecLight hr;
   dco::World world = onDevice.worlds[worldID];
   for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
-    const dco::Light &light = onDevice.lights[world.allLights[lightID]];
+    const dco::Light &light = getLight(world.allLights, lightID, onDevice);
     if (light.type == dco::Light::Quad && light.visible) {
       auto hrl = intersect(ray, light.asQuad.geometry());
       if (hrl.hit && hrl.t < hr.t) {

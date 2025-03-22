@@ -134,7 +134,7 @@ void VisionaraySceneGPU::commit()
 
     // world lights
     for (unsigned i=0; i<m_impl->parent->m_lights.size(); ++i)
-      m_impl->parent->m_allLights.push_back(m_impl->parent->m_lights[i]);
+      m_impl->parent->m_allLights.alloc({m_impl->parent->m_lights[i], ~0u});
 
     // instanced lights
     for (const dco::Handle &instID : m_impl->parent->m_instances) {
@@ -152,7 +152,7 @@ void VisionaraySceneGPU::commit()
                                 group.numLights*sizeof(dco::Handle),
                                 cudaMemcpyDefault));
       for (unsigned i=0; i<group.numLights; ++i)
-        m_impl->parent->m_allLights.push_back(groupLights[i]);
+        m_impl->parent->m_allLights.alloc({groupLights[i], inst.instID});
     }
   } else {
     // create refs (on device!):
