@@ -80,15 +80,17 @@ void TransferFunction1D::finalize()
     float colorFrac = colorPos-floorf(colorPos);
 
     float4 color0 = constantColor, color1 = constantColor;
-    if (numColorChannels == 3) {
-      float3 *colors = (float3 *)colorData;
-      color0 = float4(colors[int(floorf(colorPos))], constantOpacity);
-      color1 = float4(colors[int(ceilf(colorPos))], constantOpacity);
-    }
-    else if (numColorChannels == 4) {
-      float4 *colors = (float4 *)colorData;
-      color0 = colors[int(floorf(colorPos))];
-      color1 = colors[int(ceilf(colorPos))];
+    if (colorData) {
+      if (numColorChannels == 3) {
+        float3 *colors = (float3 *)colorData;
+        color0 = float4(colors[int(floorf(colorPos))], constantOpacity);
+        color1 = float4(colors[int(ceilf(colorPos))], constantOpacity);
+      }
+      else if (numColorChannels == 4) {
+        float4 *colors = (float4 *)colorData;
+        color0 = colors[int(floorf(colorPos))];
+        color1 = colors[int(ceilf(colorPos))];
+      }
     }
 
     float4 color = lerp_r(color0, color1, colorFrac);
