@@ -38,7 +38,12 @@ void TransferFunction1D::commitParameters()
   m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
 
   m_colorData = getParamObject<Array1D>("color");
+  m_uniformColor = float4(1.f);
+  getParam("color", ANARI_FLOAT32_VEC3, &m_uniformColor);
+  getParam("color", ANARI_FLOAT32_VEC4, &m_uniformColor);
+
   m_opacityData = getParamObject<Array1D>("opacity");
+  m_uniformOpacity = getParam<float>("opacity", 1.f) * m_uniformColor.w;
 
   m_unitDistance = getParam<float>("unitDistance", 1.f);
 }
@@ -59,8 +64,6 @@ void TransferFunction1D::finalize()
 
   m_bounds = m_field->bounds();
 
-  float4 constantColor{1.f};
-  float constantOpacity{1.f};
   size_t numColorChannels{4};
   if (m_colorData) { // TODO: more types
     if (m_colorData->elementType() == ANARI_FLOAT32_VEC3)
@@ -79,12 +82,13 @@ void TransferFunction1D::finalize()
     float colorPos = tfSize > 1 ? (float(i)/(tfSize-1))*(numColors-1) : 0.f;
     float colorFrac = colorPos-floorf(colorPos);
 
-    float4 color0 = constantColor, color1 = constantColor;
+    float4 color0(m_uniformColor.xyz(), m_uniformOpacity);
+    float4 color1(m_uniformColor.xyz(), m_uniformOpacity);
     if (colorData) {
       if (numColorChannels == 3) {
         float3 *colors = (float3 *)colorData;
-        color0 = float4(colors[int(floorf(colorPos))], constantOpacity);
-        color1 = float4(colors[int(ceilf(colorPos))], constantOpacity);
+        color0 = float4(colors[int(floorf(colorPos))], m_uniformOpacity);
+        color1 = float4(colors[int(ceilf(colorPos))], m_uniformOpacity);
       }
       else if (numColorChannels == 4) {
         float4 *colors = (float4 *)colorData;
