@@ -81,7 +81,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
       viewDir = -ray.dir;
 
-      const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.volID]];
+      const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.localID]];
 
       if (rendererState.gradientShading) {
         if (sampleGradient(vol.field,hitPos,gn))
@@ -96,7 +96,7 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       color.xyz() = hrv.albedo;
 
       result.depth = hrv.t;
-      result.objId = group.objIds[hrv.volID];
+      result.objId = group.objIds[hrv.localID];
       result.instId = inst.userID;
     } else {
       result.depth = hr.t;

@@ -409,6 +409,10 @@ void VisionaraySceneImpl::attachVolume(
   // use bounds member, that way we don't need to reach for the GPU:
   m_bounds[boundsID].insert(vol.bounds);
 
+  // That's the ID local to the group the volume is in
+  // (this object):
+  vol.localID = volID;
+
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
 

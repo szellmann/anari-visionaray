@@ -570,7 +570,10 @@ struct Volume
   enum Type { TransferFunction1D, Unknown, };
   Type type{Unknown};
 
+  // ID in the device's global volume array
   unsigned volID{UINT_MAX};
+  // ID local to the group the volume is in
+  unsigned localID;
   float unitDistance;
 
   SpatialField field;
@@ -608,8 +611,9 @@ struct HitRecordVolume
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
-  int volID{-1};
+  int volID{-1}; // global to the device
   int instID{-1};
+  int localID{-1}; // local to the group
 };
 
 struct VolumePRD
@@ -639,18 +643,19 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     // themselves to compute [t0,t1]
     hr.hit = boxHit.hit && (boxHit.tfar >= ray.tmin);
     hr.t = max(ray.tmin,boxHit.tnear);
-    hr.geom_id = vol.volID;
+    hr.geom_id = vol.localID;
     if (hr.t < hrv.t) {
       hrv.hit = true;
       hrv.t = hr.t;
-      hrv.volID = hr.geom_id;
+      hrv.volID = vol.volID;
+      hrv.localID = hr.geom_id;
     }
     return hr;
   }
 
   Random &rnd = *prd.rnd;
 
-  hr.geom_id = vol.volID;
+  hr.geom_id = vol.localID;
   
   const auto &sf = vol.field;
   dco::GridAccel grid = sf.gridAccel;
@@ -722,7 +727,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     if (hr.t < hrv.t) {
       hrv.hit = true;
       hrv.t = hr.t;
-      hrv.volID = hr.geom_id;
+      hrv.volID = vol.volID;
+      hrv.localID = hr.geom_id;
       hrv.albedo = albedo;
       hrv.Tr = Tr;
       hrv.extinction = extinction;
@@ -1713,6 +1719,7 @@ inline HitRecordVolume intersectVolumeBounds(Ray ray, const TLS &tls)
   auto hr = intersect(ray, tls);
 
   result.instID = hr.inst_id;
+  result.localID = hr.geom_id;
 
   return result;
 }
