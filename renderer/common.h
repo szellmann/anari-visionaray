@@ -984,7 +984,7 @@ inline void print(const aabb &box)
 VSNRAY_FUNC
 inline void print(const Ray &ray)
 {
-  printf("ray: [ori: (%f,%f,%f), dir: (%f,%f,%f), tmin: %f, %f, mask: %u]\n",
+  printf("ray: [ori: (%f,%f,%f), dir: (%f,%f,%f), tmin: %f, tmax: %f, mask: %u]\n",
       ray.ori.x, ray.ori.y, ray.ori.z, ray.dir.x, ray.dir.y, ray.dir.z,
       ray.tmin, ray.tmax, ray.intersectionMask);
 }
