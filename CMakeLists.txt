@@ -95,6 +95,7 @@ set(SOURCES
     scene/surface/material/sampler/PrimitiveSampler.cpp
     scene/surface/material/sampler/Sampler.cpp
     scene/surface/material/sampler/TransformSampler.cpp
+    scene/surface/material/sampler/VolumeSampler.cpp
     scene/surface/material/Material.cpp
     scene/surface/material/Matte.cpp
     scene/surface/material/PBM.cpp

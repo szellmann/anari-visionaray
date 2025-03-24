@@ -58,9 +58,9 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       tng = tng4.xyz();
       btng = cross(sn, tng) * tng4.w;
       sn = getPerturbedNormal(
-          mat, onDevice.samplers, attribs, hr.prim_id, tng, btng, sn);
+          mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
     }
-    vec4f color = getColor(mat, onDevice.samplers, attribs, hr.prim_id);
+    vec4f color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
 
     // That doesn't work for instances..
     float3 shadedColor{0.f};
@@ -74,8 +74,9 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         LightSample ls = sampleLight(light, hitPos, ss.random);
 
         float3 brdf = evalMaterial(mat,
-                                   onDevice.samplers,
+                                   onDevice,
                                    attribs,
+                                   localHitPos,
                                    hr.prim_id,
                                    gn, sn,
                                    normalize(viewDir),
@@ -109,7 +110,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       shadedColor = attribs[(int)dco::Attribute::Color].xyz();
 
 
-    float a = getOpacity(mat, onDevice.samplers, attribs, hr.prim_id);
+    float a = getOpacity(mat, onDevice, attribs, localHitPos, hr.prim_id);
     surfaceColor += (1.f-surfaceAlpha) * a * shadedColor;
     surfaceAlpha += (1.f-surfaceAlpha) * a;
 

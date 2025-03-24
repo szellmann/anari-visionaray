@@ -424,8 +424,11 @@ inline vec4 getAttribute(const dco::Geometry &geom,
 }
 
 VSNRAY_FUNC
-inline vec4 getSample(
-    const dco::Sampler &samp, const float4 *attribs, unsigned primID)
+inline vec4 getSample(const dco::Sampler &samp,
+                      const DeviceObjectRegistry &onDevice,
+                      const float4 *attribs,
+                      float3 objPos,
+                      unsigned primID)
 {
   if (samp.type == dco::Sampler::Primitive) {
     const TypeInfo &info = samp.asPrimitive.typeInfo;
@@ -435,6 +438,20 @@ inline vec4 getSample(
   } else if (samp.type == dco::Sampler::Transform) {
     vec4f inAttr = attribs[(int)samp.inAttribute];
     return samp.outTransform * inAttr + samp.outOffset;
+  } else if (samp.type == dco::Sampler::Volume) {
+    vec4f inPos(objPos,1.f);
+    inPos = samp.inTransform * inPos + samp.inOffset;
+    //std::cout << inPos << '\n';
+    const auto &vol = onDevice.volumes[samp.asVolume.volID];
+    const auto &sf  = vol.field;
+    const auto &P = sf.pointToVoxelSpace(inPos.xyz());
+    float v = 0.f;
+    vec4f s{0.f, 0.f, 0.f, 1.f};
+    if (sampleField(sf,P,v)) {
+      // TODO: support other volume types:
+      s = postClassify(vol.asTransferFunction1D,v);
+    }
+    return samp.outTransform * s + samp.outOffset;
   } else {
     vec4f inAttr = attribs[(int)samp.inAttribute];
 
@@ -455,12 +472,14 @@ inline vec4 getSample(
 
 VSNRAY_FUNC
 inline vec4 getRGBA(const dco::MaterialParamRGB &param,
-                    const dco::Sampler *samplers,
+                    const DeviceObjectRegistry &onDevice,
                     const float4 *attribs,
+                    float3 objPos,
                     unsigned primID)
 {
   if (param.samplerID < UINT_MAX)
-    return getSample(samplers[param.samplerID], attribs, primID);
+    return getSample(
+        onDevice.samplers[param.samplerID], onDevice, attribs, objPos, primID);
   else if (param.attribute != dco::Attribute::None)
     return attribs[(int)param.attribute];
   else
@@ -469,12 +488,14 @@ inline vec4 getRGBA(const dco::MaterialParamRGB &param,
 
 VSNRAY_FUNC
 inline float getF(const dco::MaterialParamF &param,
-                  const dco::Sampler *samplers,
+                  const DeviceObjectRegistry &onDevice,
                   const float4 *attribs,
+                  float3 objPos,
                   unsigned primID)
 {
   if (param.samplerID < UINT_MAX)
-    return getSample(samplers[param.samplerID], attribs, primID).x;
+    return getSample(
+        onDevice.samplers[param.samplerID], onDevice, attribs, objPos, primID).x;
   else if (param.attribute != dco::Attribute::None)
     return attribs[(int)param.attribute].x;
   else
@@ -483,44 +504,49 @@ inline float getF(const dco::MaterialParamF &param,
 
 VSNRAY_FUNC
 inline vec4 getColorMatte(const dco::Material &mat,
-                          const dco::Sampler *samplers,
+                          const DeviceObjectRegistry &onDevice,
                           const float4 *attribs,
+                          float3 objPos,
                           unsigned primID)
 {
-  return getRGBA(mat.asMatte.color, samplers, attribs, primID);
+  return getRGBA(mat.asMatte.color, onDevice, attribs, objPos, primID);
 }
 
 VSNRAY_FUNC
 inline vec4 getColorPBM(const dco::Material &mat,
-                        const dco::Sampler *samplers,
+                        const DeviceObjectRegistry &onDevice,
                         const float4 *attribs,
+                        float3 objPos,
                         unsigned primID)
 {
   const float metallic = getF(
-      mat.asPhysicallyBased.metallic, samplers, attribs, primID);
-  vec4f color = getRGBA(mat.asPhysicallyBased.baseColor, samplers, attribs, primID);
+      mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
+  vec4f color = getRGBA(
+      mat.asPhysicallyBased.baseColor, onDevice, attribs, objPos, primID);
   return lerp_r(color, vec4f(0.f, 0.f, 0.f, color.w), metallic);
 }
 
 VSNRAY_FUNC
 inline vec4 getColor(const dco::Material &mat,
-                     const dco::Sampler *samplers,
+                     const DeviceObjectRegistry &onDevice,
                      const float4 *attribs,
+                     float3 objPos,
                      unsigned primID)
 {
   vec4f color{0.f, 0.f, 0.f, 1.f};
   if (mat.type == dco::Material::Matte)
-    color = getColorMatte(mat, samplers, attribs, primID);
+    color = getColorMatte(mat, onDevice, attribs, objPos, primID);
   else if (mat.type == dco::Material::PhysicallyBased) {
-    color = getColorPBM(mat, samplers, attribs, primID);
+    color = getColorPBM(mat, onDevice, attribs, objPos, primID);
   }
   return color;
 }
 
 VSNRAY_FUNC
 inline float getOpacity(const dco::Material &mat,
-                        const dco::Sampler *samplers,
+                        const DeviceObjectRegistry &onDevice,
                         const float4 *attribs,
+                        float3 objPos,
                         unsigned primID)
 {
   float opacity = 1.f;
@@ -528,13 +554,14 @@ inline float getOpacity(const dco::Material &mat,
   float cutoff = 0.5f;
 
   if (mat.type == dco::Material::Matte) {
-    vec4f color = getColorMatte(mat, samplers, attribs, primID);
-    opacity = color.w * getF(mat.asMatte.opacity, samplers, attribs, primID);
+    vec4f color = getColorMatte(mat, onDevice, attribs, objPos, primID);
+    opacity = color.w * getF(mat.asMatte.opacity, onDevice, attribs, objPos, primID);
     mode = mat.asMatte.alphaMode;
     cutoff = mat.asMatte.alphaCutoff;
   } else if (mat.type == dco::Material::PhysicallyBased) {
-    vec4f color = getColorPBM(mat, samplers, attribs, primID);
-    opacity = color.w * getF(mat.asPhysicallyBased.opacity, samplers, attribs, primID);
+    vec4f color = getColorPBM(mat, onDevice, attribs, objPos, primID);
+    opacity = color.w *
+        getF(mat.asPhysicallyBased.opacity, onDevice, attribs, objPos, primID);
     mode = mat.asPhysicallyBased.alphaMode;
     cutoff = mat.asPhysicallyBased.alphaCutoff;
   }
@@ -549,8 +576,9 @@ inline float getOpacity(const dco::Material &mat,
 
 VSNRAY_FUNC
 inline vec3 getPerturbedNormal(const dco::Material &mat,
-                               const dco::Sampler *samplers,
+                               const DeviceObjectRegistry &onDevice,
                                const float4 *attribs,
+                               float3 objPos,
                                unsigned primID,
                                const vec3 T, const vec3 B, const vec3 N)
 {
@@ -558,8 +586,8 @@ inline vec3 getPerturbedNormal(const dco::Material &mat,
 
   mat3 TBN(T,B,N);
   if (mat.type == dco::Material::PhysicallyBased) {
-    const auto &samp = samplers[mat.asPhysicallyBased.normal.samplerID];
-    vec4 s = getSample(samp, attribs, primID);
+    const auto &samp = onDevice.samplers[mat.asPhysicallyBased.normal.samplerID];
+    vec4 s = getSample(samp, onDevice, attribs, objPos, primID);
     vec3 tbnN = s.xyz();
     if (length(tbnN) > 0.f) {
       vec3f objN = normalize(TBN * tbnN);
@@ -657,21 +685,22 @@ inline float V_Kelemen(float LdotH, const float EPS)
 
 VSNRAY_FUNC
 inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
-                                        const dco::Sampler *samplers,
+                                        const DeviceObjectRegistry &onDevice,
                                         const float4 *attribs,
+                                        float3 objPos,
                                         unsigned primID,
                                         const vec3 Ng, const vec3 Ns,
                                         const vec3 viewDir, const vec3 lightDir,
                                         const vec3 lightIntensity)
 {
   const float metallic = getF(
-      mat.asPhysicallyBased.metallic, samplers, attribs, primID);
+      mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
   const float roughness = getF(
-      mat.asPhysicallyBased.roughness, samplers, attribs, primID);
+      mat.asPhysicallyBased.roughness, onDevice, attribs, objPos, primID);
   const float clearcoat = getF(
-      mat.asPhysicallyBased.clearcoat, samplers, attribs, primID);
+      mat.asPhysicallyBased.clearcoat, onDevice, attribs, objPos, primID);
   const float clearcoatRoughness = getF(
-      mat.asPhysicallyBased.clearcoatRoughness, samplers, attribs, primID);
+      mat.asPhysicallyBased.clearcoatRoughness, onDevice, attribs, objPos, primID);
   const float ior = mat.asPhysicallyBased.ior;
 
   const float alpha = roughness * roughness;
@@ -687,7 +716,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
 
   // Get baseColor:
   vec3 baseColor = getRGBA(
-      mat.asPhysicallyBased.baseColor, samplers, attribs, primID).xyz();
+      mat.asPhysicallyBased.baseColor, onDevice, attribs, objPos, primID).xyz();
 
   // Metallic materials don't reflect diffusely:
   vec3 diffuseColor = lerp_r(baseColor, vec3f(0.f), metallic);
@@ -723,8 +752,9 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
 
 VSNRAY_FUNC
 inline vec3 evalMaterial(const dco::Material &mat,
-                         const dco::Sampler *samplers,
+                         const DeviceObjectRegistry &onDevice,
                          const float4 *attribs,
+                         float3 objPos,
                          unsigned primID,
                          const vec3 Ng, const vec3 Ns,
                          const vec3 viewDir, const vec3 lightDir,
@@ -732,7 +762,7 @@ inline vec3 evalMaterial(const dco::Material &mat,
 {
   vec3 shadedColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
-    vec4f color = getColor(mat, samplers, attribs, primID);
+    vec4f color = getColor(mat, onDevice, attribs, objPos, primID);
 
     shade_record<float> sr;
     sr.normal = Ns;
@@ -749,8 +779,9 @@ inline vec3 evalMaterial(const dco::Material &mat,
     shadedColor = to_rgb(vmat.shade(sr));
   } else if (mat.type == dco::Material::PhysicallyBased) {
     shadedColor = evalPhysicallyBasedMaterial(mat,
-                                              samplers,
+                                              onDevice,
                                               attribs,
+                                              objPos,
                                               primID,
                                               Ng, Ns,
                                               viewDir, lightDir,
@@ -860,7 +891,8 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
       attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
     }
 
-    float opacity = getOpacity(mat, onDevice.samplers, attribs, hr.prim_id);
+    float opacity
+        = getOpacity(mat, onDevice, attribs, hr.isect_pos, hr.prim_id);
 
     float r = ss.random();
     if (r > opacity) {

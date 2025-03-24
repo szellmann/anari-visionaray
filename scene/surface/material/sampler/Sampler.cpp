@@ -8,6 +8,7 @@
 #include "Image3D.h"
 #include "PrimitiveSampler.h"
 #include "TransformSampler.h"
+#include "VolumeSampler.h"
 
 namespace visionaray {
 
@@ -34,6 +35,8 @@ Sampler *Sampler::createInstance(std::string_view subtype, VisionarayGlobalState
     return new TransformSampler(s);
   else if (subtype == "primitive")
     return new PrimitiveSampler(s);
+  else if (subtype == "volume")
+    return new VolumeSampler(s);
   else
     return (Sampler *)new UnknownObject(ANARI_SAMPLER, s);
 }

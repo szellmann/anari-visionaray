@@ -131,9 +131,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         tng = tng4.xyz();
         btng = cross(sn, tng) * tng4.w;
         sn = getPerturbedNormal(
-            mat, onDevice.samplers, attribs, hr.prim_id, tng, btng, sn);
+            mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
       }
-      color = getColor(mat, onDevice.samplers, attribs, hr.prim_id);
+      color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
 
     }
 
@@ -167,8 +167,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
           mat.asMatte.color.rgb = hrv.albedo;
 
           shadedColor = evalMaterial(mat,
-                                     onDevice.samplers, // not used..
+                                     onDevice,
                                      nullptr, // attribs, not used..
+                                     float3(0.f), // objPos, not used..
                                      UINT_MAX, // primID, not used..
                                      gn, gn,
                                      normalize(viewDir),
@@ -183,8 +184,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
         shadedColor = evalMaterial(mat,
-                                   onDevice.samplers,
+                                   onDevice,
                                    attribs,
+                                   hr.isect_pos,
                                    hr.prim_id,
                                    gn, sn,
                                    normalize(viewDir),

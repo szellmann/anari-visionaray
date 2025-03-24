@@ -41,7 +41,8 @@
       "khr_sampler_transform",
       "khr_spatial_field_structured_regular",
       "khr_volume_transfer_function1d",
-      "vsnray_camera_matrix"
+      "vsnray_camera_matrix",
+      "vsnray_sampler_volume"
     ]
   },
   "objects": [

@@ -1859,7 +1859,7 @@ inline aabb get_bounds(const Geometry &geom)
 
 struct Sampler
 {
-  enum Type { Image1D, Image2D, Image3D, Transform, Primitive, Unknown, };
+  enum Type { Image1D, Image2D, Image3D, Transform, Primitive, Volume, Unknown, };
   Type type;
   unsigned samplerID;
   Attribute inAttribute;
@@ -1887,6 +1887,9 @@ struct Sampler
       const uint8_t *data;
       uint32_t offset;
     } asPrimitive;
+    struct {
+      unsigned volID;
+    } asVolume;
   };
 
   VSNRAY_FUNC
@@ -1898,6 +1901,7 @@ struct Sampler
         (type == Image2D && asImage2D) ||
         (type == Image3D && asImage3D) ||
         (type == Primitive && asPrimitive.data) ||
+        (type == Volume && validHandle(asVolume.volID)) ||
         (type == Transform);
   }
 };
