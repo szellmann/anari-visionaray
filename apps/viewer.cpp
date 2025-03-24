@@ -414,6 +414,168 @@ anari::World makeMengerSponge(anari::Device device)
   return world;
 }
 
+anari::World makeVolumeSamplerTest(anari::Device device)
+{
+  int W=32, H=32, D=32;
+  std::vector<float> data(W*H*D);
+  for (int z=0; z<D; ++z) {
+    for (int y=0; y<H; ++y) {
+      for (int x=0; x<W; ++x) {
+        int index = x+W*y+W*H*z;
+        data[index] = x/(W-1.f);
+      }
+    }
+  }
+
+  auto scalar = anariNewArray3D(device, data.data(), 0, 0, ANARI_FLOAT32, W, H, D);
+  auto field = anari::newObject<anari::SpatialField>(device, "structuredRegular");
+  anari::setAndReleaseParameter(device, field, "data", scalar);
+  anari::setParameter(device, field, "filter", ANARI_STRING, "linear");
+  anari::commitParameters(device, field);
+
+  auto volume = anari::newObject<anari::Volume>(device, "transferFunction1D");
+  anari::setParameter(device, volume, "value", field);
+
+  std::vector<float3> colors;
+  std::vector<float> opacities;
+
+  colors.emplace_back(1.0f, 0.0f, 0.0f);
+  colors.emplace_back(1.0f, 0.5f, 0.0f);
+  colors.emplace_back(0.0f, 0.5f, 0.0f);
+  colors.emplace_back(0.0f, 1.0f, 0.0f);
+  colors.emplace_back(0.0f, 1.0f, 5.0f);
+  colors.emplace_back(0.0f, 0.5f, 5.0f);
+  colors.emplace_back(1.0f, 0.0f, 1.0f);
+
+  opacities.emplace_back(0.0f);
+  opacities.emplace_back(0.1f);
+  opacities.emplace_back(1.0f);
+
+  float voxelRange[2] = { 0.f, 1.f };
+
+  anari::setAndReleaseParameter(device,
+      volume,
+      "color",
+      anari::newArray1D(device, colors.data(), colors.size()));
+  anari::setAndReleaseParameter(device,
+      volume,
+      "opacity",
+      anari::newArray1D(device, opacities.data(), opacities.size()));
+  anariSetParameter(
+      device, volume, "valueRange", ANARI_FLOAT32_BOX1, &voxelRange);
+
+  anari::commitParameters(device, volume);
+
+  // Generate sphere scene //
+
+  const uint32_t numSpheres = 10000;
+  const float radius = .015f;
+
+  float bounds[6] = { 1e30f, 1e30f, 1e30f, -1e30f, -1e30f, -1e30f };
+  float3 pos(1.5f, 1.5f, 0.f);
+
+  std::mt19937 rng;
+  rng.seed(0);
+  std::normal_distribution<float> vert_dist(0.f, 0.25f);
+
+  // Create + fill position and color arrays with randomized values //
+
+  auto indicesArray = anari::newArray1D(device, ANARI_UINT32, numSpheres);
+  auto positionsArray =
+      anari::newArray1D(device, ANARI_FLOAT32_VEC3, numSpheres);
+  auto distanceArray = anari::newArray1D(device, ANARI_FLOAT32, numSpheres);
+  {
+    auto *positions = anari::map<float3>(device, positionsArray);
+    auto *distances = anari::map<float>(device, distanceArray);
+    for (uint32_t i = 0; i < numSpheres; i++) {
+      const auto a = positions[i][0] = vert_dist(rng);
+      const auto b = positions[i][1] = vert_dist(rng);
+      const auto c = positions[i][2] = vert_dist(rng);
+      distances[i] = std::sqrt(a * a + b * b + c * c); // will be roughly 0-1
+      // translate
+      positions[i] += pos;
+
+      bounds[0] = fminf(bounds[0], positions[i].x - radius);
+      bounds[1] = fminf(bounds[1], positions[i].y - radius);
+      bounds[2] = fminf(bounds[2], positions[i].z - radius);
+      bounds[3] = fmaxf(bounds[3], positions[i].x + radius);
+      bounds[4] = fmaxf(bounds[4], positions[i].y + radius);
+      bounds[5] = fmaxf(bounds[5], positions[i].z + radius);
+    }
+    anari::unmap(device, positionsArray);
+    anari::unmap(device, distanceArray);
+
+    auto *indicesBegin = anari::map<uint32_t>(device, indicesArray);
+    auto *indicesEnd = indicesBegin + numSpheres;
+    std::iota(indicesBegin, indicesEnd, 0);
+    std::shuffle(indicesBegin, indicesEnd, rng);
+    anari::unmap(device, indicesArray);
+  }
+
+  // Create and parameterize geometry //
+
+  auto geometry = anari::newObject<anari::Geometry>(device, "sphere");
+  anari::setAndReleaseParameter(
+      device, geometry, "primitive.index", indicesArray);
+  anari::setAndReleaseParameter(
+      device, geometry, "vertex.position", positionsArray);
+  anari::setAndReleaseParameter(
+      device, geometry, "vertex.attribute0", distanceArray);
+  anari::setParameter(device, geometry, "radius", radius);
+  anari::commitParameters(device, geometry);
+
+  // Create volume sampler //
+
+  auto volumeSampler = anari::newObject<anari::Sampler>(device, "volume");
+  anari::setAndReleaseParameter(device, volumeSampler, "volume", volume);
+  anari::math::float3 offset(-bounds[0], -bounds[1], -bounds[2]);
+  anari::math::float3 invSize(
+    1.f/(bounds[3]-bounds[0]) * (W-1),
+    1.f/(bounds[4]-bounds[1]) * (H-1),
+    1.f/(bounds[5]-bounds[2]) * (D-1)
+  );
+  anari::math::mat4 xfmGeom2volume = mul(
+    anari::math::scaling_matrix(invSize),
+    anari::math::translation_matrix(offset)
+    );
+  anari::setParameter(device, volumeSampler, "inTransform", xfmGeom2volume);
+  anari::commitParameters(device, volumeSampler);
+
+  // Create and parameterize material //
+
+  auto material = anari::newObject<anari::Material>(device, "matte");
+  anari::setAndReleaseParameter(device, material, "color", volumeSampler);
+  anari::setParameter(device, material, "alphaMode", "blend");
+  anari::commitParameters(device, material);
+
+  // Create and parameterize surface //
+
+  auto surface = anari::newObject<anari::Surface>(device);
+  anari::setAndReleaseParameter(device, surface, "geometry", geometry);
+  anari::setAndReleaseParameter(device, surface, "material", material);
+  anari::commitParameters(device, surface);
+
+  // Create and parameterize world //
+
+  auto world = anari::newObject<anari::World>(device);
+#if 1
+  {
+    auto surfaceArray = anari::newArray1D(device, ANARI_SURFACE, 1);
+    auto *s = anari::map<anari::Surface>(device, surfaceArray);
+    s[0] = surface;
+    anari::unmap(device, surfaceArray);
+    anari::setAndReleaseParameter(device, world, "surface", surfaceArray);
+  }
+#else
+  anari::setAndReleaseParameter(
+      device, world, "surface", anari::newArray1D(device, &surface));
+#endif
+  anari::release(device, surface);
+  anari::commitParameters(device, world);
+
+  return world;
+}
+
 static anari::Array2D makeTextureData(anari::Device d, int dim)
 {
   using texel = std::array<uint8_t, 3>;
@@ -934,6 +1096,10 @@ box3_t Renderer::initWorld()
     anari.world = makeMengerSponge(anari.device);
     anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
     anari::commitParameters(anari.device, anari.world);
+  } else if (g_scene == "VolumeSampler") {
+    anari.world = makeVolumeSamplerTest(anari.device);
+    anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
+    anari::commitParameters(anari.device, anari.world);
   } else if (g_scene == "1984") {
     anari.world = make1984(anari.device);
     anari::getProperty(anari.device, anari.world, "bounds", bounds, ANARI_WAIT);
@@ -967,6 +1133,9 @@ void Renderer::on_display()
     else if (ImGui::Selectable("Sponge", g_scene == "Sponge")) {
       g_scene = "Sponge";
     }
+    else if (ImGui::Selectable("VolumeSampler", g_scene == "VolumeSampler")) {
+      g_scene = "VolumeSampler";
+    }
     else if (ImGui::Selectable("Cones", g_scene == "Cones")) {
       g_scene = "Cones";
     }
@@ -990,7 +1159,7 @@ void Renderer::on_display()
     cam->viewAll(bounds);
     cam->commit();
 
-    if (g_scene == "Sponge") {
+    if (g_scene == "Sponge" || g_scene == "VolumeSampler") {
       anari::setParameter(anari.device, anari.renderer, "ambientRadiance", 1.f);
       anari::commitParameters(anari.device, anari.renderer);
     } else {
