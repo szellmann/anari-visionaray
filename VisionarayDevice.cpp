@@ -288,6 +288,9 @@ void VisionarayDevice::initDevice()
 
   reportMessage(ANARI_SEVERITY_DEBUG, "initializing visionaray device (%p)", this);
   auto &state = *deviceState();
+
+  state.anariDevice = (anari::Device)this;
+
   m_initialized = true;
 }
 

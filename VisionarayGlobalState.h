@@ -35,6 +35,8 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 #endif
   Frame *currentFrame{nullptr};
 
+  anari::Device anariDevice{nullptr}; // public handle of _this_ helide instance
+
   // Helper methods //
 
   VisionarayGlobalState(ANARIDevice d);

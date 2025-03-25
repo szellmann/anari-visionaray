@@ -94,6 +94,10 @@ void Frame::commitParameters()
       getParam<anari::DataType>("channel.primitiveId", ANARI_UNKNOWN);
   m_objIdType = getParam<anari::DataType>("channel.objectId", ANARI_UNKNOWN);
   m_instIdType = getParam<anari::DataType>("channel.instanceId", ANARI_UNKNOWN);
+  m_callback = getParam<ANARIFrameCompletionCallback>(
+      "frameCompletionCallback", nullptr);
+  m_callbackUserPtr =
+      getParam<void *>("frameCompletionCallbackUserData", nullptr);
 }
 
 void Frame::finalize()
@@ -361,6 +365,9 @@ void Frame::renderFrame()
           sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size());
 #endif
     }
+
+    if (m_callback)
+      m_callback(m_callbackUserPtr, state->anariDevice, (ANARIFrame)this);
 
 #ifdef WITH_CUDA
     CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));

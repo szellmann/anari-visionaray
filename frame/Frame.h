@@ -143,6 +143,9 @@ struct Frame : public helium::BaseFrame
   Event_t m_eventStart;
   Event_t m_eventStop;
 #endif
+
+  anari::FrameCompletionCallback m_callback{nullptr};
+  const void *m_callbackUserPtr{nullptr};
 };
 
 } // namespace visionaray
