@@ -36,6 +36,11 @@ void TransferFunction1D::commitParameters()
   }
 
   m_valueRange = getParam<box1>("valueRange", box1(0.f, 1.f));
+  double valueRange_d[2] = {0.0, 1.0};
+  if (getParam("valueRange", ANARI_FLOAT64_BOX1, &valueRange_d[0])) {
+    m_valueRange.min = float(valueRange_d[0]);
+    m_valueRange.max = float(valueRange_d[1]);
+  }
 
   m_colorData = getParamObject<Array1D>("color");
   m_uniformColor = float4(1.f);
