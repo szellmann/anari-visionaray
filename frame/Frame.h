@@ -138,6 +138,7 @@ struct Frame : public helium::BaseFrame
   hipEvent_t m_eventStop;
 #else
   mutable std::future<void> m_future;
+  std::packaged_task<void()> m_task;
   typedef std::chrono::time_point<std::chrono::steady_clock> Event_t;
   Event_t m_eventStart;
   Event_t m_eventStop;
