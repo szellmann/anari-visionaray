@@ -10,7 +10,8 @@ namespace visionaray {
 
 static bool imageSamplerFormatSupported(ANARIDataType type)
 {
-  return type == ANARI_FLOAT32_VEC3  ||
+  return type == ANARI_FLOAT32       ||
+         type == ANARI_FLOAT32_VEC3  ||
          type == ANARI_FLOAT32_VEC4  ||
          type == ANARI_UFIXED8       ||
          type == ANARI_UFIXED8_VEC3  ||
@@ -25,7 +26,9 @@ inline bool imageSamplerUpdateData(Texture &tex, const Image &img)
   if (!imageSamplerFormatSupported(img->elementType()))
     return false;
 
-  if (img->elementType() == ANARI_FLOAT32_VEC3)
+  if (img->elementType() == ANARI_FLOAT32)
+    tex.reset(img->template dataAs<float>(), PF_R32F, PF_RGBA8, AlphaIsOne);
+  else if (img->elementType() == ANARI_FLOAT32_VEC3)
     tex.reset(img->template dataAs<vec3>(), PF_RGB32F, PF_RGBA8, AlphaIsOne);
   else if (img->elementType() == ANARI_FLOAT32_VEC4)
     tex.reset(img->template dataAs<vec4>(), PF_RGBA32F, PF_RGBA8);
