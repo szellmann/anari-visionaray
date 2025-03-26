@@ -1968,6 +1968,8 @@ struct Material
       MaterialParamF clearcoat;
       MaterialParamF clearcoatRoughness;
       float ior;
+      MaterialParamRGB sheenColor;
+      MaterialParamF sheenRoughness;
     } asPhysicallyBased;
   };
 };

@@ -19,10 +19,17 @@ struct PBM : public Material
   } m_baseColor;
 
   struct {
+    float3 value{0.f, 0.f, 0.f};
+    helium::IntrusivePtr<Sampler> sampler;
+    dco::Attribute attribute;
+  } m_sheenColor;
+
+  struct {
     float value{1.f};
     helium::IntrusivePtr<Sampler> sampler;
     dco::Attribute attribute;
-  } m_opacity, m_metallic, m_roughness, m_clearcoat, m_clearcoatRoughness;
+  } m_opacity, m_metallic, m_roughness, m_clearcoat, m_clearcoatRoughness,
+    m_sheenRoughness;
 
   float m_ior{1.5f};
 

@@ -31,6 +31,8 @@ void PBM::commitParameters()
   m_roughness.sampler = getParamObject<Sampler>("roughness");
   m_roughness.attribute = toAttribute(getParamString("roughness", "none"));
 
+  m_normal.sampler = getParamObject<Sampler>("normal");
+
   m_clearcoat.value = 0.f;
   getParam("clearcoat", ANARI_FLOAT32, &m_clearcoat.value);
   m_clearcoat.sampler = getParamObject<Sampler>("clearcoat");
@@ -45,7 +47,15 @@ void PBM::commitParameters()
   m_ior = 1.5f;
   getParam("ior", ANARI_FLOAT32, &m_ior);
 
-  m_normal.sampler = getParamObject<Sampler>("normal");
+  m_sheenColor.value = float3(0.f, 0.f, 0.f);
+  getParam("sheenColor", ANARI_FLOAT32_VEC3, &m_sheenColor.value);
+  m_sheenColor.sampler = getParamObject<Sampler>("sheenColor");
+  m_sheenColor.attribute = toAttribute(getParamString("sheenColor", "none"));
+
+  m_sheenRoughness.value = 0.f;
+  getParam("sheenRoughness", ANARI_FLOAT32, &m_sheenRoughness.value);
+  m_sheenRoughness.sampler = getParamObject<Sampler>("sheenRoughness");
+  m_sheenRoughness.attribute = toAttribute(getParamString("sheenRoughness", "none"));
 
   m_alphaMode = toAlphaMode(getParamString("alphaMode", "opaque"));
   m_alphaCutoff = getParam<float>("alphaCutoff", 0.5f);
@@ -91,6 +101,13 @@ void PBM::finalize()
     vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
   }
 
+  if (m_normal.sampler && m_normal.sampler->isValid()) {
+    vmat.asPhysicallyBased.normal.samplerID
+        = m_normal.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.normal.samplerID = UINT_MAX;
+  }
+
   vmat.asPhysicallyBased.clearcoat.f = m_clearcoat.value;
   vmat.asPhysicallyBased.clearcoat.attribute = m_clearcoat.attribute;
   if (m_clearcoat.sampler && m_clearcoat.sampler->isValid()) {
@@ -111,11 +128,22 @@ void PBM::finalize()
 
   vmat.asPhysicallyBased.ior = m_ior;
 
-  if (m_normal.sampler && m_normal.sampler->isValid()) {
-    vmat.asPhysicallyBased.normal.samplerID
-        = m_normal.sampler->visionaraySampler().samplerID;
+  vmat.asPhysicallyBased.sheenColor.rgb = m_sheenColor.value;
+  vmat.asPhysicallyBased.sheenColor.attribute = m_sheenColor.attribute;
+  if (m_sheenColor.sampler && m_sheenColor.sampler->isValid()) {
+    vmat.asPhysicallyBased.sheenColor.samplerID
+        = m_sheenColor.sampler->visionaraySampler().samplerID;
   } else {
-    vmat.asPhysicallyBased.normal.samplerID = UINT_MAX;
+    vmat.asPhysicallyBased.sheenColor.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.sheenRoughness.f = m_sheenRoughness.value;
+  vmat.asPhysicallyBased.sheenRoughness.attribute = m_sheenRoughness.attribute;
+  if (m_sheenRoughness.sampler && m_sheenRoughness.sampler->isValid()) {
+    vmat.asPhysicallyBased.sheenRoughness.samplerID
+        = m_sheenRoughness.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.sheenRoughness.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.alphaMode = m_alphaMode;

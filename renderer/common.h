@@ -697,11 +697,18 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
       mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
   const float roughness = getF(
       mat.asPhysicallyBased.roughness, onDevice, attribs, objPos, primID);
+
   const float clearcoat = getF(
       mat.asPhysicallyBased.clearcoat, onDevice, attribs, objPos, primID);
   const float clearcoatRoughness = getF(
       mat.asPhysicallyBased.clearcoatRoughness, onDevice, attribs, objPos, primID);
+
   const float ior = mat.asPhysicallyBased.ior;
+
+  vec3 sheenColor = getRGBA(
+      mat.asPhysicallyBased.sheenColor, onDevice, attribs, objPos, primID).xyz();
+  const float sheenRoughness = getF(
+      mat.asPhysicallyBased.sheenRoughness, onDevice, attribs, objPos, primID);
 
   const float alpha = roughness * roughness;
   const float clearcoatAlpha = clearcoatRoughness * clearcoatRoughness;
@@ -747,7 +754,16 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float Fc = F_Schlick(LdotH, 0.04f) * clearcoat;
   float Frc = (Dc * Vc) * Fc;
 
-  return ((diffuseBRDF + specularBRDF * (1.f - Fc)) * (1.f - Fc) + Frc) * lightIntensity * NdotL;
+  // (Charlie) sheen
+  float sheenAlphaInv = 0.f;
+  if (sheenRoughness > 0.f)
+    sheenAlphaInv = 1.f/sheenRoughness;
+  float cos2h = NdotH * NdotH;
+  float sin2h = fmaxf(1.f - cos2h, 0.0078125f);
+  vec3 Ds = sheenColor *
+      ((2.f + sheenAlphaInv) * powf(sin2h, sheenAlphaInv * 0.5f) / (constants::two_pi<float>()));
+
+  return (((diffuseBRDF + specularBRDF * (1.f - Fc)) * (1.f - Fc) + Frc) + Ds) * lightIntensity * NdotL;
 }
 
 VSNRAY_FUNC
