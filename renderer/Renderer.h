@@ -90,11 +90,8 @@ struct Renderer : public Object
   float m_ambientRadiance{0.2f};
   std::string m_renderMode{"default"};
   bool m_gradientShading{false};
-  float m_volumeSamplingRate{0.5f};
   bool m_heatMapEnabled{false};
   float m_heatMapScale{0.1f};
-  bool m_taaEnabled{false};
-  float m_taaAlpha{0.3f};
 };
 
 } // namespace visionaray

@@ -25,11 +25,8 @@ void Renderer::commitParameters()
   m_ambientRadiance = getParam<float>("ambientRadiance", 0.2f);
   m_renderMode = getParamString("mode", "default");
   m_gradientShading = getParam<bool>("gradientShading", false);
-  m_volumeSamplingRate = getParam<float>("volumeSamplingRate", 0.5f);
   m_heatMapEnabled = getParam<bool>("heatMapEnabled", false);
   m_heatMapScale = getParam<float>("heatMapScale", 0.1f);
-  m_taaEnabled = getParam<bool>("taa", false);
-  m_taaAlpha = getParam<float>("taaAlpha", 0.3f);
 }
 
 void Renderer::finalize()
@@ -112,12 +109,8 @@ void Renderer::finalize()
   else if (m_renderMode == "geometry.color")
     vrend.rendererState.renderMode = RenderMode::GeometryColor;
   vrend.rendererState.gradientShading = m_gradientShading;
-  auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
-  vrend.rendererState.volumeSamplingRateInv = safe_rcp(m_volumeSamplingRate);
   vrend.rendererState.heatMapEnabled = m_heatMapEnabled;
   vrend.rendererState.heatMapScale = m_heatMapScale;
-  vrend.rendererState.taaEnabled = m_taaEnabled;
-  vrend.rendererState.taaAlpha = m_taaAlpha;
 }
 
 Renderer *Renderer::createInstance(std::string_view subtype, VisionarayGlobalState *s)

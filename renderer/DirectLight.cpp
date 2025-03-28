@@ -16,6 +16,8 @@ void DirectLight::commitParameters()
   m_occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
   m_ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
   m_pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);
+  m_taaEnabled = getParam<bool>("taa", false);
+  m_taaAlpha = getParam<float>("taaAlpha", 0.3f);
 }
 
 void DirectLight::finalize()
@@ -24,6 +26,8 @@ void DirectLight::finalize()
   vrend.rendererState.occlusionDistance = m_occlusionDistance;
   vrend.rendererState.ambientSamples = m_ambientSamples;
   vrend.rendererState.pixelSamples = m_pixelSamples;
+  vrend.rendererState.taaEnabled = m_taaEnabled;
+  vrend.rendererState.taaAlpha = m_taaAlpha;
 }
 
 } // namespace visionaray
