@@ -162,8 +162,9 @@ bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
       if (hitRec.volumeHit) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
-          dco::Material mat;
+          dco::Material mat = dco::createMaterial();
           mat.type = dco::Material::Matte;
+          mat.asMatte.color = dco::createMaterialParamRGB();
           mat.asMatte.color.rgb = hrv.albedo;
 
           shadedColor = evalMaterial(mat,

@@ -1929,12 +1929,32 @@ struct MaterialParamRGB
   Attribute attribute;
 };
 
+VSNRAY_FUNC
+inline MaterialParamRGB createMaterialParamRGB()
+{
+  MaterialParamRGB param;
+  param.rgb = float3(0,0,0);
+  param.samplerID = UINT_MAX;
+  param.attribute = Attribute::None;
+  return param;
+}
+
 struct MaterialParamF
 {
   float f;
   unsigned samplerID;
   Attribute attribute;
 };
+
+VSNRAY_FUNC
+inline MaterialParamF createMaterialParamF()
+{
+  MaterialParamF param;
+  param.f = 0.f;
+  param.samplerID = UINT_MAX;
+  param.attribute = Attribute::None;
+  return param;
+}
 
 enum class AlphaMode
 {
@@ -1974,6 +1994,7 @@ struct Material
   };
 };
 
+VSNRAY_FUNC
 inline Material createMaterial()
 {
   Material mat;
