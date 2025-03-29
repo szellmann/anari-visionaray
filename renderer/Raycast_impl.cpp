@@ -156,7 +156,13 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     float3 color(0.f);
     float alpha = 0.f;
 
-    rayMarchVolume(ss, ray, vol, rendererState.volumeSamplingRateInv, color, alpha);
+    mat4 invXfm = inverse(inst.xfms[0]);
+
+    Ray localRay = ray;
+    localRay.ori = (invXfm * float4(ray.ori, 1.f)).xyz();
+    localRay.dir = (invXfm * float4(ray.dir, 0.f)).xyz();
+
+    rayMarchVolume(ss, localRay, vol, rendererState.volumeSamplingRateInv, color, alpha);
     result.color = over(float4(color,alpha), result.color);
     result.Ng = float3{}; // TODO: gradient
     result.Ns = float3{}; // TODO..
