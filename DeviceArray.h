@@ -532,11 +532,7 @@ struct HostDeviceArray : public std::vector<T>
   }
 
  protected:
-#if defined(WITH_CUDA) || defined(WITH_HIP)
   DeviceArray<T> deviceData;
-#else
-  Base deviceData;
-#endif
   bool updated = true;
   bool deviceMapped = false;
 
