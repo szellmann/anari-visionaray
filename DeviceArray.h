@@ -366,6 +366,82 @@ struct DeviceArray
 #endif
 
 // ==================================================================
+// for use with device lambdas, to avoid per-thread copy of
+// larger objects (cuda/hip versions, plus host emulation):
+// ==================================================================
+
+template <typename T>
+struct DevicePointer
+{
+  explicit DevicePointer(const T *input)
+  {
+#ifdef WITH_CUDA
+    CUDA_SAFE_CALL(cudaMalloc(&pointer, sizeof(T)));
+    CUDA_SAFE_CALL(cudaMemcpy(pointer, input, sizeof(T), cudaMemcpyHostToDevice));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMalloc(&pointer, sizeof(T)));
+    HIP_SAFE_CALL(hipMemcpy(pointer, input, sizeof(T), hipMemcpyHostToDevice));
+#else
+    pointer = (T *)std::malloc(sizeof(T));
+    std::memcpy(pointer, input, sizeof(T));
+#endif
+  }
+
+  ~DevicePointer()
+  {
+    if (refCount-- == 0) {
+#ifdef WITH_CUDA
+      CUDA_SAFE_CALL(cudaFree(pointer));
+#elif defined(WITH_HIP)
+      HIP_SAFE_CALL(hipFree(pointer));
+#else
+      std::free(pointer);
+#endif
+    }
+  }
+
+  DevicePointer(DevicePointer &rhs)
+  {
+    pointer = rhs.pointer;
+    refCount = rhs.refCount;
+    rhs.refCount++;
+  }
+
+  DevicePointer &operator=(DevicePointer &rhs)
+  {
+    if (&rhs != this) {
+      pointer = rhs.pointer;
+      refCount = rhs.refCount;
+      rhs.refCount++;
+    }
+    return *this;
+  }
+
+  DevicePointer(DevicePointer &&) = delete;
+  DevicePointer &operator=(DevicePointer &&) = delete;
+
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  __device__
+  __forceinline__ const T &operator*() const
+  { return *pointer; }
+
+  __device__
+  __forceinline__ T &operator*()
+  { return *pointer; }
+#else
+  const T &operator*() const
+  { return *pointer; }
+
+  T &operator*()
+  { return *pointer; }
+#endif
+
+ private:
+  T *pointer{nullptr};
+  size_t refCount{0ull};
+};
+
+// ==================================================================
 // host/device array
 // ==================================================================
 

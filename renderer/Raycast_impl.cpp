@@ -188,44 +188,14 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
                                             const RendererState &rendererState,
                                             unsigned worldID, int frameID)
 {
+  DevicePointer<DeviceObjectRegistry> onDevicePtr(&DD);
+  DevicePointer<RendererState> rendererStatePtr(&rendererState);
+  DevicePointer<dco::Frame> framePtr(&frame);
 #ifdef WITH_CUDA
-  DeviceObjectRegistry *onDevicePtr;
-  CUDA_SAFE_CALL(cudaMalloc(&onDevicePtr, sizeof(DD)));
-  CUDA_SAFE_CALL(cudaMemcpy(onDevicePtr, &DD, sizeof(DD), cudaMemcpyHostToDevice));
-
-  RendererState *rendererStatePtr;
-  CUDA_SAFE_CALL(cudaMalloc(&rendererStatePtr, sizeof(rendererState)));
-  CUDA_SAFE_CALL(cudaMemcpy(rendererStatePtr,
-                            &rendererState,
-                            sizeof(rendererState),
-                            cudaMemcpyHostToDevice));
-
-  dco::Frame *framePtr;
-  CUDA_SAFE_CALL(cudaMalloc(&framePtr, sizeof(frame)));
-  CUDA_SAFE_CALL(cudaMemcpy(framePtr, &frame, sizeof(frame), cudaMemcpyHostToDevice));
-
   cuda::for_each(0, size.x, 0, size.y,
 #elif defined(WITH_HIP)
-  DeviceObjectRegistry *onDevicePtr;
-  HIP_SAFE_CALL(hipMalloc(&onDevicePtr, sizeof(DD)));
-  HIP_SAFE_CALL(hipMemcpy(onDevicePtr, &DD, sizeof(DD), hipMemcpyHostToDevice));
-
-  RendererState *rendererStatePtr;
-  HIP_SAFE_CALL(hipMalloc(&rendererStatePtr, sizeof(rendererState)));
-  HIP_SAFE_CALL(hipMemcpy(rendererStatePtr,
-                          &rendererState,
-                          sizeof(rendererState),
-                          hipMemcpyHostToDevice));
-
-  dco::Frame *framePtr;
-  HIP_SAFE_CALL(hipMalloc(&framePtr, sizeof(frame)));
-  HIP_SAFE_CALL(hipMemcpy(framePtr, &frame, sizeof(frame), hipMemcpyHostToDevice));
-
   hip::for_each(0, size.x, 0, size.y,
 #else
-  auto *onDevicePtr = &DD;
-  auto *rendererStatePtr = &rendererState;
-  auto *framePtr = &frame;
   parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif
       [=] VSNRAY_GPU_FUNC (int x, int y) {
@@ -285,15 +255,6 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
         finalSample.color = accumColor*(1.f/spp);
         frame.writeSample(x, y, rendererState.accumID, finalSample);
       });
-#ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaFree(onDevicePtr));
-  CUDA_SAFE_CALL(cudaFree(rendererStatePtr));
-  CUDA_SAFE_CALL(cudaFree(framePtr));
-#elif defined(WITH_HIP)
-  HIP_SAFE_CALL(hipFree(onDevicePtr));
-  HIP_SAFE_CALL(hipFree(rendererStatePtr));
-  HIP_SAFE_CALL(hipFree(framePtr));
-#endif
 }
 
 } // namespace visionaray
