@@ -1606,10 +1606,11 @@ inline aabb get_bounds(const Instance &inst)
 VSNRAY_FUNC
 inline aabb get_prim_bounds(const Instance &inst)
 {
+  aabb result;
+  result.invalidate();
+
   if (inst.type == Instance::Transform && inst.theBVH.num_nodes()) {
 
-    aabb result;
-    result.invalidate();
     for (unsigned i=0; i<inst.theBVH.num_primitives(); ++i) {
       aabb bound = get_prim_bounds(inst.theBVH.primitive(i));
       mat3f rot = inverse(inst.affineInv[0]);
@@ -1620,10 +1621,7 @@ inline aabb get_prim_bounds(const Instance &inst)
         result.insert(v);
       }
     }
-    return result;
   } else if (inst.type == Instance::MotionTransform && inst.len) {
-    aabb result;
-    result.invalidate();
     for (unsigned i=0; i<inst.theBVH.num_primitives(); ++i) {
       for (unsigned j = 0; j < inst.len; ++j) {
         aabb bound = get_prim_bounds(inst.theBVH.primitive(i));
@@ -1636,10 +1634,9 @@ inline aabb get_prim_bounds(const Instance &inst)
         }
       }
     }
-    return result;
   }
 
-  return {};
+  return result;
 }
 
 VSNRAY_FUNC
