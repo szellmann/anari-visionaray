@@ -48,6 +48,7 @@ void World::commitParameters()
   m_zeroSurfaceData = getParamObject<ObjectArray>("surface");
   m_zeroVolumeData = getParamObject<ObjectArray>("volume");
   m_zeroLightData = getParamObject<ObjectArray>("light");
+  m_instanceData = getParamObject<ObjectArray>("instance");
 }
 
 void World::finalize()
@@ -89,21 +90,18 @@ void World::finalize()
   m_zeroGroup->finalize();
   m_zeroInstance->finalize();
 
-  m_instanceData = getParamObject<ObjectArray>("instance");
-
   m_instances.clear();
 
   if (m_instanceData) {
-    m_instanceData->removeAppendedHandles();
-    if (addZeroInstance)
-      m_instanceData->appendHandle(m_zeroInstance.ptr);
     std::for_each(m_instanceData->handlesBegin(),
         m_instanceData->handlesEnd(),
         [&](auto *o) {
           if (o && o->isValid())
             m_instances.push_back((Instance *)o);
         });
-  } else if (addZeroInstance)
+  }
+
+  if (addZeroInstance)
     m_instances.push_back(m_zeroInstance.ptr);
 
   m_objectUpdates.lastTLSBuild = 0;
