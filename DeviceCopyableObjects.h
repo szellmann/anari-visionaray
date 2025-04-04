@@ -472,10 +472,13 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     ray.ori = P;
     ray.dir = float3(1.f);
     ray.tmin = ray.tmax = 0.f;
+    default_intersector isect;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-    auto hr = intersect(ray, sf.asUnstructured.samplingBVH);
+    auto hr = intersect<detail::AnyHit>(ray, sf.asUnstructured.samplingBVH, isect);
 #else
-    auto hr = intersect_ray1_bvh4(ray, sf.asUnstructured.samplingBVH);
+    auto hr = intersect_ray1_bvh4<detail::AnyHit>(ray,
+                                                  sf.asUnstructured.samplingBVH,
+                                                  isect);
 #endif
 
     if (!hr.hit)
