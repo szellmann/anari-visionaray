@@ -242,7 +242,7 @@ endif()
 
 option(ANARI_VISIONARAY_ENABLE_VIEWER "Compile the sample viewer application" OFF)
 if (ANARI_VISIONARAY_ENABLE_VIEWER)
-  find_package(Boost COMPONENTS filesystem iostreams system)
+  find_package(Boost CONFIG COMPONENTS filesystem iostreams system)
   add_executable(visionaraySampleViewer)
   target_sources(visionaraySampleViewer PRIVATE
     apps/viewer.cpp
