@@ -66,9 +66,6 @@ void SpatialField::setCellSize(float cellSize)
 void SpatialField::dispatch()
 {
   deviceState()->dcos.spatialFields.update(vfield.fieldID, vfield);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.spatialFields = deviceState()->dcos.spatialFields.devicePtr();
 }
 
 } // namespace visionaray

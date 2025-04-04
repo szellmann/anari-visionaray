@@ -110,9 +110,6 @@ void Geometry::markFinalized()
 void Geometry::dispatch()
 {
   deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 } // namespace visionaray

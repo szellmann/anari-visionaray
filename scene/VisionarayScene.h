@@ -113,6 +113,7 @@ struct VisionaraySceneImpl
 
  private:
   void dispatch();
+  void updateDevicePointers();
 
   VisionarayGlobalState *deviceState();
 #if defined(WITH_CUDA) || defined(WITH_HIP)

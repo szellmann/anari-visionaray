@@ -163,9 +163,6 @@ void Instance::visionarayInstanceUpdate()
 void Instance::dispatch()
 {
   deviceState()->dcos.instances.update(vinstance.instID, vinstance);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
 } // namespace visionaray
