@@ -171,6 +171,9 @@ aabb TransferFunction1D::bounds() const
 void TransferFunction1D::dispatch()
 {
   deviceState()->dcos.volumes.update(vvol.volID, vvol);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 } // namespace visionaray

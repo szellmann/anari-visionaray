@@ -83,6 +83,9 @@ const Material *Surface::material() const
 void Surface::dispatch()
 {
   deviceState()->dcos.surfaces.update(vsurf.surfID, vsurf);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.devicePtr();
 }
 
 } // namespace visionaray

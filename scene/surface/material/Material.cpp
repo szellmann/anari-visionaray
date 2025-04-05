@@ -39,6 +39,9 @@ void Material::commitParameters()
 void Material::dispatch()
 {
   deviceState()->dcos.materials.update(vmat.matID, vmat);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.materials = deviceState()->dcos.materials.devicePtr();
 }
 
 } // namespace visionaray

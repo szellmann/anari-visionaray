@@ -52,6 +52,9 @@ Light *Light::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 void Light::dispatch()
 {
   deviceState()->dcos.lights.update(vlight.lightID, vlight);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.lights = deviceState()->dcos.lights.devicePtr();
 }
 
 } // namespace visionaray

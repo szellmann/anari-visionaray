@@ -336,6 +336,9 @@ void VisionaraySceneImpl::attachInstance(
 
   m_instances.set(instID, inst.instID);
   deviceState()->dcos.instances.update(inst.instID, inst);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 #endif
 }
 
@@ -386,6 +389,9 @@ void VisionaraySceneImpl::attachGeometry(
 
   m_geometries.set(geomID, geom.geomID);
   deviceState()->dcos.geometries.update(geom.geomID, geom);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 #endif
 }
 
@@ -409,16 +415,25 @@ void VisionaraySceneImpl::attachVolume(
 
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
 {
   deviceState()->dcos.geometries.update(geom.geomID, geom);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 void VisionaraySceneImpl::updateVolume(dco::Volume vol)
 {
   deviceState()->dcos.volumes.update(vol.volID, vol);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
@@ -475,23 +490,12 @@ void VisionaraySceneImpl::dispatch()
     m_state->dcos.groups.update(m_groupID, group);
   }
 
-  updateDevicePointers();
-}
-
-void VisionaraySceneImpl::updateDevicePointers()
-{
-  deviceState()->onDevice.TLSs = deviceState()->dcos.TLSs.devicePtr();
-  deviceState()->onDevice.worlds = deviceState()->dcos.worlds.devicePtr();
-  deviceState()->onDevice.groups = deviceState()->dcos.groups.devicePtr();
-  deviceState()->onDevice.surfaces = deviceState()->dcos.surfaces.devicePtr();
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
-  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
-  deviceState()->onDevice.materials = deviceState()->dcos.materials.devicePtr();
-  deviceState()->onDevice.samplers = deviceState()->dcos.samplers.devicePtr();
-  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
-  deviceState()->onDevice.spatialFields = deviceState()->dcos.spatialFields.devicePtr();
-  deviceState()->onDevice.lights = deviceState()->dcos.lights.devicePtr();
-  deviceState()->onDevice.frames = deviceState()->dcos.frames.devicePtr();
+  // Upload/set accessible pointers
+  m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();
+  m_state->onDevice.groups = m_state->dcos.groups.devicePtr();
+  if (type == World) {
+    m_state->onDevice.worlds = m_state->dcos.worlds.devicePtr();
+  }
 }
 
 VisionarayGlobalState *VisionaraySceneImpl::deviceState()

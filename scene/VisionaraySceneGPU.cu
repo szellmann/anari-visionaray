@@ -412,7 +412,12 @@ void VisionaraySceneGPU::dispatch()
     deviceState()->dcos.groups.update(m_impl->parent->m_groupID, group);
   }
 
-  m_impl->parent->updateDevicePointers();
+  // Upload/set accessible pointers
+  deviceState()->onDevice.TLSs = deviceState()->dcos.TLSs.devicePtr();
+  deviceState()->onDevice.groups = deviceState()->dcos.groups.devicePtr();
+  if (m_impl->parent->type == VisionaraySceneImpl::World) {
+    deviceState()->onDevice.worlds = deviceState()->dcos.worlds.devicePtr();
+  }
 }
 
 void VisionaraySceneGPU::attachInstance(
@@ -432,6 +437,9 @@ void VisionaraySceneGPU::attachInstance(
 
   m_impl->parent->m_instances.set(instID, inst.instID);
   deviceState()->dcos.instances.update(inst.instID, inst);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
 void VisionaraySceneGPU::attachGeometry(
@@ -521,6 +529,9 @@ void VisionaraySceneGPU::attachGeometry(
 
   m_impl->parent->m_geometries.set(geomID, geom.geomID);
   deviceState()->dcos.geometries.update(geom.geomID, geom);
+
+  // Upload/set accessible pointers
+  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 cuda_index_bvh<dco::BLS>::bvh_ref VisionaraySceneGPU::refBVH()
