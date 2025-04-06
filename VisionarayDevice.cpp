@@ -239,6 +239,23 @@ const void *VisionarayDevice::getParameterInfo(ANARIDataType objectType,
       infoType);
 }
 
+// Object + Parameter Lifetime Management /////////////////////////////////////
+
+int VisionarayDevice::getProperty(ANARIObject object,
+    const char *name,
+    ANARIDataType type,
+    void *mem,
+    uint64_t size,
+    uint32_t mask)
+{
+  if (mask == ANARI_WAIT) {
+    auto lock = scopeLockObject();
+    deviceState()->waitOnCurrentFrame();
+  }
+
+  return helium::BaseDevice::getProperty(object, name, type, mem, size, mask);
+}
+
 // Frame Manipulation /////////////////////////////////////////////////////////
 
 ANARIFrame VisionarayDevice::newFrame()
