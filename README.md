@@ -39,3 +39,17 @@ CI script (you don't even need CUDA).
 experimental but seldom tested HIP version. The latter two must be enabled with
 CMake for them to compile.
 
+List of Proprietary ANARI Extensions
+------------------------------------
+
+`anari-visionaray` adds the following extensions not specified by ANARI:
+
+- `VSNRAY_CAMERA_MATRIX`: adds a camera type (subtype: "matrix") that takes two
+  `ANARI_FLOAT32_MAT4` parameters "view" and "proj" that corresponds to
+  OpenGL's `MODELVIEW` and `PROJECTION` matrices. This is intended to be used
+  for interoperability with OpenGL.
+- `VSNRAY_SAMPLER_VOLUME`: adds a sampler type that has an `ANARI_VOLUME`
+  parameter named "volume" that is used to compose the input tuple.
+- `VSNRAY_RENDERER_CLIP_PLANE`: allows to set an array of clip planes evaluated
+  by the ray tracing renderers. The list is comprised of `float4` tuples with
+  the `xyz` coordinates the normal vector and `w` an offset to the clip plane.
