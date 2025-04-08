@@ -42,6 +42,7 @@
       "khr_spatial_field_structured_regular",
       "khr_volume_transfer_function1d",
       "vsnray_camera_matrix",
+      "vsnray_renderer_clip_plane",
       "vsnray_sampler_volume"
     ]
   },

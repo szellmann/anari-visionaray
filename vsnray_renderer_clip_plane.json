@@ -1,0 +1,24 @@
+{
+    "info" : {
+        "name" : "VSNRAY_RENDERER_CLIP_PLANE",
+        "type" : "extension",
+        "dependencies" : []
+    },
+
+    "objects" : [
+        {
+            "type" : "ANARI_RENDERER",
+            "name" : "default",
+            "description" : "array of clip plane objects on the renderer",
+            "parameters" : [
+                {
+                    "name" : "clipPlane",
+                    "types" : ["ANARI_ARRAY1D"],
+                    "elementType" : ["ANARI_FLOAT32_VEC4"],
+                    "tags" : [],
+                    "description" : "array of clip planes comprised of normal and offset"
+                }
+            ]
+        }
+    ]
+}
