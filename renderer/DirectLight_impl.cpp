@@ -21,7 +21,7 @@ struct ShadeRec
 };
 
 VSNRAY_FUNC
-bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
+inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     const DeviceObjectRegistry &onDevice, const RendererState &rendererState,
     const HitRec &hitRec,
     ShadeRec &shadeRec,
