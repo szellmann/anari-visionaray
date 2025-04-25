@@ -46,7 +46,7 @@ struct Frame : public helium::BaseFrame
   void *mapDepthBuffer();
 
   bool ready() const;
-  void wait() const;
+  void wait();
 
  private:
   void checkAccumulationReset();
