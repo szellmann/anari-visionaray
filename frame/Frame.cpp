@@ -468,7 +468,7 @@ bool Frame::ready() const
 #endif
 }
 
-void Frame::wait() const
+void Frame::wait()
 {
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaEventSynchronize(m_eventStop));
