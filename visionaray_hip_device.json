@@ -73,6 +73,17 @@
           "description": "background color and alpha (RGBA)"
         },
         {
+          "name": "clipPlane",
+          "types": [
+            "ANARI_ARRAY1D"
+          ],
+          "elementType" : [
+            "ANARI_FLOAT32_VEC4"
+          ],
+          "tags": [],
+          "description": "list of clip planes applied to surfaces and volumes"
+        },
+        {
           "name": "mode",
           "types": [
             "ANARI_STRING"
@@ -210,6 +221,17 @@
             1.0
           ],
           "description": "background color and alpha (RGBA)"
+        },
+        {
+          "name": "clipPlane",
+          "types": [
+            "ANARI_ARRAY1D"
+          ],
+          "elementType" : [
+            "ANARI_FLOAT32_VEC4"
+          ],
+          "tags": [],
+          "description": "list of clip planes applied to surfaces and volumes"
         },
         {
           "name": "mode",
