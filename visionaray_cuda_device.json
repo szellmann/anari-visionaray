@@ -194,6 +194,15 @@
           "tags": [],
           "default": 0.2,
           "description": "ambient light intensity"
+        },
+        {
+          "name": "gradientShading",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "gradient-based shading for volumes"
         }
       ]
     },
@@ -295,6 +304,15 @@
           "tags": [],
           "default": 0.2,
           "description": "ambient light intensity"
+        },
+        {
+          "name": "gradientShading",
+          "types": [
+            "ANARI_BOOL"
+          ],
+          "tags": [],
+          "default": false,
+          "description": "gradient-based shading for volumes"
         },
         {
           "name": "volumeSamplingRate",

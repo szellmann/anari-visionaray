@@ -529,14 +529,14 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
 }
 
 VSNRAY_FUNC
-inline bool sampleGradient(const SpatialField &sf, vec3 P, float3 &value) {
+inline bool sampleGradient(const SpatialField &sf, vec3 P, vec3 delta, float3 &value) {
   float x0=0, x1=0, y0=0, y1=0, z0=0, z1=0;
-  bool b0 = sampleField(sf, sf.pointToVoxelSpace(P+float3{sf.cellSize, 0.f, 0.f}), x1);
-  bool b1 = sampleField(sf, sf.pointToVoxelSpace(P-float3{sf.cellSize, 0.f, 0.f}), x0);
-  bool b2 = sampleField(sf, sf.pointToVoxelSpace(P+float3{0.f, sf.cellSize, 0.f}), y1);
-  bool b3 = sampleField(sf, sf.pointToVoxelSpace(P-float3{0.f, sf.cellSize, 0.f}), y0);
-  bool b4 = sampleField(sf, sf.pointToVoxelSpace(P+float3{0.f, 0.f, sf.cellSize}), z1);
-  bool b5 = sampleField(sf, sf.pointToVoxelSpace(P-float3{0.f, 0.f, sf.cellSize}), z0);
+  bool b0 = sampleField(sf, P+float3{delta.x, 0.f, 0.f}, x1);
+  bool b1 = sampleField(sf, P-float3{delta.x, 0.f, 0.f}, x0);
+  bool b2 = sampleField(sf, P+float3{0.f, delta.y, 0.f}, y1);
+  bool b3 = sampleField(sf, P-float3{0.f, delta.y, 0.f}, y0);
+  bool b4 = sampleField(sf, P+float3{0.f, 0.f, delta.z}, z1);
+  bool b5 = sampleField(sf, P-float3{0.f, 0.f, delta.z}, z0);
   if (b0 && b1 && b2 && b3 && b4 && b5) {
     value = float3{x1,y1,z1}-float3{x0,y0,z0};
     return true; // TODO
@@ -613,6 +613,7 @@ struct HitRecordVolume
 {
   bool hit{false};
   float t{FLT_MAX};
+  float3 isect_pos;
   float3 albedo{0.f,0.f,0.f};
   float extinction{0.f};
   float Tr{1.f};
@@ -652,6 +653,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     if (hr.t < hrv.t) {
       hrv.hit = true;
       hrv.t = hr.t;
+      hrv.isect_pos = ray.ori + ray.dir * hrv.t;
       hrv.volID = vol.volID;
       hrv.localID = hr.geom_id;
     }
@@ -697,6 +699,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
           hr.hit = true;
           Tr = 0.f;
           hr.t = t;
+          hr.isect_pos = ray.ori + ray.dir * hr.t;
           return false; // stop traversal
         }
       }
@@ -732,6 +735,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     if (hr.t < hrv.t) {
       hrv.hit = true;
       hrv.t = hr.t;
+      hrv.isect_pos = hr.isect_pos;
       hrv.volID = vol.volID;
       hrv.localID = hr.geom_id;
       hrv.albedo = albedo;
@@ -1740,6 +1744,7 @@ inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
   auto hr = intersect(ray, tls);
 
   result.instID = hr.inst_id;
+  result.isect_pos = hr.isect_pos;
 
   return result;
 }

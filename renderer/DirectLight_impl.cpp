@@ -76,15 +76,23 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     const dco::Instance &inst = onDevice.instances[instID];
     const dco::Group &group = onDevice.groups[inst.groupID];
 
+    viewDir = -ray.dir;
+
     if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
-      viewDir = -ray.dir;
+
+      float3 localHitPos = hrv.isect_pos;
 
       const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.localID]];
 
       if (rendererState.gradientShading) {
-        if (sampleGradient(vol.field,hitPos,gn))
+        float3 P = vol.field.pointToVoxelSpace(localHitPos);
+        float3 delta(vol.field.cellSize, vol.field.cellSize, vol.field.cellSize);
+        delta *= float3(vol.field.voxelSpaceTransform(0,0),
+                        vol.field.voxelSpaceTransform(1,1),
+                        vol.field.voxelSpaceTransform(2,2));
+        if (sampleGradient(vol.field,P,delta,gn))
           gn = normalize(gn);
       }
 
@@ -92,6 +100,12 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
         gn = uniform_sample_sphere(ss.random(), ss.random());
 
       sn = gn;
+
+      mat3 nxfm = getNormalTransform(inst, ray);
+      gn = nxfm * gn;
+      sn = nxfm * sn;
+
+      sn = faceforward(sn, viewDir, gn);
 
       color.xyz() = hrv.albedo;
 
@@ -114,8 +128,6 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       for (int i=0; i<5; ++i) {
         attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
       }
-
-      viewDir = -ray.dir;
 
       float3 localHitPos = hr.isect_pos;
       getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);

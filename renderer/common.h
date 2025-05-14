@@ -280,7 +280,12 @@ inline void getNormals(const dco::Geometry &geom,
     Ng = normalize(hitPos-curvePos);
     Ns = Ng;
   } else if (geom.type == dco::Geometry::ISOSurface) {
-    if (!sampleGradient(geom.as<dco::ISOSurface>(0).field,hitPos,Ng)) {
+    const auto &sf = geom.as<dco::ISOSurface>(0).field;
+    float3 delta(sf.cellSize, sf.cellSize, sf.cellSize);
+    delta *= float3(sf.voxelSpaceTransform(0,0),
+                    sf.voxelSpaceTransform(1,1),
+                    sf.voxelSpaceTransform(2,2));
+    if (!sampleGradient(sf,sf.pointToVoxelSpace(hitPos),delta,Ng)) {
       Ng = vec3f(0.f);
     } else {
       Ng = normalize(Ng);

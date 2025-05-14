@@ -162,7 +162,28 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     localRay.ori = (invXfm * float4(ray.ori, 1.f)).xyz();
     localRay.dir = (invXfm * float4(ray.dir, 0.f)).xyz();
 
-    rayMarchVolume(ss, localRay, vol, rendererState.volumeSamplingRateInv, color, alpha);
+    if (rendererState.gradientShading) {
+      rayMarchVolume<1>(ss,
+                        onDevice,
+                        localRay,
+                        vol,
+                        world.allLights,
+                        world.numLights,
+                        rendererState.volumeSamplingRateInv,
+                        color,
+                        alpha);
+    } else {
+      rayMarchVolume<0>(ss,
+                        onDevice,
+                        localRay,
+                        vol,
+                        world.allLights,
+                        world.numLights,
+                        rendererState.volumeSamplingRateInv,
+                        color,
+                        alpha);
+    }
+
     result.color = over(float4(color,alpha), result.color);
     result.Ng = float3{}; // TODO: gradient
     result.Ns = float3{}; // TODO..
