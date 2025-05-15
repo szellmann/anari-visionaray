@@ -14,6 +14,8 @@ inline float rayMarchVolume(ScreenSample &ss,
                             const dco::Volume &vol,
                             const dco::LightRef *allLights,
                             unsigned numLights,
+                            float3 ambientColor,
+                            float ambientRadiance,
                             float samplingRateInv,
                             float3 &color,
                             float &alpha) {
@@ -79,6 +81,7 @@ inline float rayMarchVolume(ScreenSample &ss,
                                        normalize(ls.dir),
                                        ls.intensity * safe_rcp(ls.dist2));
             shadedColor = shadedColor * safe_rcp(ls.pdf);
+            shadedColor += sample.xyz() * ambientColor * ambientRadiance;
           }
         }
       }
