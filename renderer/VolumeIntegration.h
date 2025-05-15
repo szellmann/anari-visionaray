@@ -59,6 +59,8 @@ inline float rayMarchVolume(ScreenSample &ss,
 
         gn = faceforward(gn, viewDir, gn);
 
+        shadedColor = float3(0.f);
+
         if (length(gn) > 1e-10f) {
           auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
           for (unsigned lightID=0; lightID<numLights; ++lightID) {
@@ -71,19 +73,21 @@ inline float rayMarchVolume(ScreenSample &ss,
             mat.asMatte.color = dco::createMaterialParamRGB();
             mat.asMatte.color.rgb = sample.xyz();
 
-            shadedColor = evalMaterial(mat,
-                                       onDevice,
-                                       nullptr, // attribs, not used..
-                                       float3(0.f), // objPos, not used..
-                                       UINT_MAX, // primID, not used..
-                                       gn, gn,
-                                       normalize(viewDir),
-                                       normalize(ls.dir),
-                                       ls.intensity * safe_rcp(ls.dist2));
-            shadedColor = shadedColor * safe_rcp(ls.pdf);
-            shadedColor += sample.xyz() * ambientColor * ambientRadiance;
+            auto color = evalMaterial(mat,
+                                      onDevice,
+                                      nullptr, // attribs, not used..
+                                      float3(0.f), // objPos, not used..
+                                      UINT_MAX, // primID, not used..
+                                      gn, gn,
+                                      normalize(viewDir),
+                                      normalize(ls.dir),
+                                      ls.intensity * safe_rcp(ls.dist2));
+            color = color * safe_rcp(ls.pdf);
+            shadedColor += color;
           }
         }
+
+        shadedColor += sample.xyz() * ambientColor * ambientRadiance;
       }
 
       color += transmittance * (1.f - stepTransmittance) * shadedColor;
