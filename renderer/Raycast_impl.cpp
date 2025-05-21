@@ -95,9 +95,9 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     else if (rendererState.renderMode == RenderMode::Albedo)
       shadedColor = color.xyz();
     else if (rendererState.renderMode == RenderMode::Tangent)
-      shadedColor = tng;
+      shadedColor = (tng + float3(1.f)) * float3(0.5f);
     else if (rendererState.renderMode == RenderMode::Bitangent)
-      shadedColor = btng;
+      shadedColor = (btng + float3(1.f)) * float3(0.5f);
     else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
       shadedColor = attribs[(int)dco::Attribute::_0].xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
