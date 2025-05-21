@@ -591,13 +591,15 @@ inline vec3 getPerturbedNormal(const dco::Material &mat,
 
   mat3 TBN(T,B,N);
   if (mat.type == dco::Material::PhysicallyBased) {
-    const auto &samp = onDevice.samplers[mat.asPhysicallyBased.normal.samplerID];
-    vec4 s = getSample(samp, onDevice, attribs, objPos, primID);
-    vec3 tbnN = s.xyz();
-    if (length(tbnN) > 0.f) {
-      vec3f objN = normalize(TBN * tbnN);
-      //pn = lerp_r(N, objN, 0.5f); // encode in outTransform!
-      pn = objN;
+    if (onDevice.samplers) {
+      const auto &samp = onDevice.samplers[mat.asPhysicallyBased.normal.samplerID];
+      vec4 s = getSample(samp, onDevice, attribs, objPos, primID);
+      vec3 tbnN = s.xyz();
+      if (length(tbnN) > 0.f) {
+        vec3f objN = normalize(TBN * tbnN);
+        //pn = lerp_r(N, objN, 0.5f); // encode in outTransform!
+        pn = objN;
+      }
     }
   }
 
@@ -621,8 +623,8 @@ inline mat3 getNormalTransform(const dco::Instance &inst, const Ray &ray)
     float frac = time01 * (inst.len-1) - ID1;
 
     return lerp_r(inst.normalXfms[ID1],
-                inst.normalXfms[ID2],
-                frac);
+                  inst.normalXfms[ID2],
+                  frac);
   }
 
   return {};
