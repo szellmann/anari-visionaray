@@ -591,7 +591,7 @@ inline vec3 getPerturbedNormal(const dco::Material &mat,
 
   mat3 TBN(T,B,N);
   if (mat.type == dco::Material::PhysicallyBased) {
-    if (onDevice.samplers) {
+    if (onDevice.samplers && dco::validHandle(mat.asPhysicallyBased.normal.samplerID)) {
       const auto &samp = onDevice.samplers[mat.asPhysicallyBased.normal.samplerID];
       vec4 s = getSample(samp, onDevice, attribs, objPos, primID);
       vec3 tbnN = s.xyz();
