@@ -22,7 +22,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
   dco::World world = onDevice.worlds[worldID];
 
-  auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+  auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID], /*shadow:*/false);
 
   bool hit = false;
 
@@ -130,7 +130,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       hitPos = ray.ori + hr.t * ray.dir;
       const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
       ray.tmin = hr.t + eps;
-      hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+      hr = intersectSurfaces(ray, onDevice.TLSs[worldID], /*shadow:*/false);
     } else {
       ray.tmax = hr.t;
       break;

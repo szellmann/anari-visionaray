@@ -10,7 +10,7 @@ VSNRAY_FUNC
 inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
     DeviceObjectRegistry onDevice)
 {
-  auto hr = intersectSurfaces<1>(ss, ray, onDevice, worldID);
+  auto hr = intersectSurfaces<1>(ss, ray, onDevice, worldID, /*shadow:*/true);
   auto hrv = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
   return hr.hit || hrv.hit;
 }

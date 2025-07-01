@@ -91,6 +91,8 @@ struct Ray : basic_ray<float>
 #endif
 };
 
+struct ShadowRay : Ray {};
+
 } // namespace visionaray
 
 namespace visionaray::dco {
@@ -1418,8 +1420,9 @@ inline aabb get_bounds(const BLS &bls)
   return inval;
 }
 
+template <detail::traversal_type TT>
 VSNRAY_FUNC
-inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS &bls)
+inline hit_record<Ray, primitive<unsigned>> intersectBLS(const Ray &ray, const BLS &bls)
 {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
@@ -1441,27 +1444,41 @@ inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS 
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
     return intersect(ray,bls.asVolume);
 #else
+  default_intersector isect;
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    return intersect_ray1_bvh4(ray,bls.asTriangle);
+    return intersect_ray1_bvh4<TT>(ray,bls.asTriangle,isect);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    return intersect_ray1_bvh4(ray,bls.asQuad);
+    return intersect_ray1_bvh4<TT>(ray,bls.asQuad,isect);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    return intersect_ray1_bvh4(ray,bls.asSphere);
+    return intersect_ray1_bvh4<TT>(ray,bls.asSphere,isect);
   else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    return intersect_ray1_bvh4(ray,bls.asCone);
+    return intersect_ray1_bvh4<TT>(ray,bls.asCone,isect);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    return intersect_ray1_bvh4(ray,bls.asCylinder);
+    return intersect_ray1_bvh4<TT>(ray,bls.asCylinder,isect);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    return intersect_ray1_bvh4(ray,bls.asBezierCurve);
+    return intersect_ray1_bvh4<TT>(ray,bls.asBezierCurve,isect);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    return intersect_ray1_bvh4(ray,bls.asISOSurface);
+    return intersect_ray1_bvh4<TT>(ray,bls.asISOSurface,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    return intersect_ray1_bvh4(ray,bls.asVolume);
+    return intersect_ray1_bvh4<TT>(ray,bls.asVolume,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
-    return intersect_ray1_bvh4(ray,bls.asVolume);
+    return intersect_ray1_bvh4<TT>(ray,bls.asVolume,isect);
 #endif
 
   return {};
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(const Ray &ray, const BLS &bls)
+{
+  return intersectBLS<detail::ClosestHit>(ray, bls);
+}
+
+VSNRAY_FUNC
+inline hit_record<Ray, primitive<unsigned>> intersect(
+    const ShadowRay &ray, const BLS &bls)
+{
+  return intersectBLS<detail::AnyHit>(*(Ray *)&ray, bls);
 }
 
 
@@ -1648,9 +1665,10 @@ inline aabb get_prim_bounds(const Instance &inst)
   return result;
 }
 
+template <typename RayType>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(
-    const Ray &ray, const Instance &inst)
+    const RayType &ray, const Instance &inst)
 {
   mat3 affineInv;
   vec3 transInv;
@@ -1677,7 +1695,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
                       frac);
   }
 
-  Ray xfmRay(ray);
+  RayType xfmRay(ray);
   xfmRay.ori = affineInv * (xfmRay.ori + transInv);
   xfmRay.dir = affineInv * xfmRay.dir;
 
@@ -1703,12 +1721,17 @@ typedef index_bvh<Instance>::bvh_ref TLS;
 
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
-    Ray ray, const TLS &tls)
+    Ray ray, const TLS &tls, bool shadow)
 {
   ray.intersectionMask
       = Ray::Triangle | Ray::Quad | Ray::Sphere | Ray::Cone | Ray::Cylinder |
         Ray::Curve | Ray::BezierCurve | Ray::ISOSurface;
-  return intersect(ray, tls);
+  if (shadow) {
+    ShadowRay shadowRay = *(ShadowRay *)&ray;
+    return intersect(shadowRay, tls);
+  } else {
+    return intersect(ray, tls);
+  }
 }
 
 VSNRAY_FUNC

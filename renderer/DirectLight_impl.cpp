@@ -334,7 +334,8 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
             ShadeRec shadeRec;
             for (unsigned bounceID=0;bounceID<2;++bounceID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
-              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice);
+              bool shadow = bounceID==1;
+              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadow);
               if (!shade(ss, ray, worldID, onDevice,
                     rendererState,
                     hitRec,

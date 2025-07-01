@@ -897,9 +897,10 @@ VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     ScreenSample &ss, Ray ray,
     const DeviceObjectRegistry &onDevice,
-    unsigned worldID)
+    unsigned worldID,
+    bool shadow)
 {
-  auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+  auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID], shadow);
   while (EvalOpacity) {
     if (!hr.hit) break;
 
@@ -922,7 +923,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
       const float3 hitPos = ray.ori + hr.t * ray.dir;
       const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
       ray.tmin = hr.t + eps;
-      hr = intersectSurfaces(ray, onDevice.TLSs[worldID]);
+      hr = intersectSurfaces(ray, onDevice.TLSs[worldID], shadow);
     } else {
       break;
     }
@@ -972,12 +973,12 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
 
 VSNRAY_FUNC
 inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const DeviceObjectRegistry &onDevice)
+    const DeviceObjectRegistry &onDevice, bool shadow)
 {
   HitRec hr;
-  hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID);
-  hr.light   = intersectLights(ss, ray, worldID, onDevice);
-  hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
+  hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID, shadow);
+  hr.light   = intersectLights(ss, ray, worldID, onDevice/*, shadow*/);
+  hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice/*, shadow*/);
   hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
   hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t < hr.surface.t)
                              && (!hr.volume.hit || hr.light.t < hr.volume.t);
