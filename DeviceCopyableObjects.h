@@ -500,10 +500,13 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     float basisPRD[2] = {0.f,0.f};
     ray.prd = &basisPRD;
 
+    default_intersector isect;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
     auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
 #else
-    auto hr = intersect_ray1_bvh4(ray, sf.asBlockStructured.samplingBVH);
+    auto hr = intersect_ray1_bvh4<detail::AnyHit>(ray,
+                                                  sf.asBlockStructured.samplingBVH,
+                                                  isect);
 #endif
 
     if (basisPRD[1] == 0.f)
