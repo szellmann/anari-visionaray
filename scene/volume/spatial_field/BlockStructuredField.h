@@ -28,7 +28,7 @@ struct BlockStructuredField : public SpatialField
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::Block> m_samplingBVH;
 #else
-  index_bvh4<dco::Block> m_samplingBVH;
+  index_bvh8<dco::Block> m_samplingBVH;
 #endif
 
   aabb m_bounds;

@@ -433,7 +433,7 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
-      bvh4<UElem>::bvh_ref samplingBVH;
+      bvh8<UElem>::bvh_ref samplingBVH;
 #endif
     } asUnstructured;
     struct {
@@ -442,7 +442,7 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<Block>::bvh_ref samplingBVH;
 #else
-      index_bvh4<Block>::bvh_ref samplingBVH;
+      index_bvh8<Block>::bvh_ref samplingBVH;
 #endif
     } asBlockStructured;
 #ifdef WITH_NANOVDB
@@ -480,7 +480,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
                                                   sf.asUnstructured.samplingBVH,
                                                   isect);
 #else
-    auto hr = intersect_ray1_bvh4<detail::AnyHit>(ray,
+    auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
                                                   sf.asUnstructured.samplingBVH,
                                                   isect);
 #endif
@@ -504,7 +504,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
     auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
 #else
-    auto hr = intersect_ray1_bvh4<detail::AnyHit>(ray,
+    auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
                                                   sf.asBlockStructured.samplingBVH,
                                                   isect);
 #endif
@@ -1356,14 +1356,14 @@ struct BLS
   };
 #else
   union {
-    bvh4<basic_triangle<3,float>>::bvh_ref asTriangle;
-    bvh4<basic_triangle<3,float>>::bvh_ref asQuad;
-    bvh4<basic_sphere<float>>::bvh_ref asSphere;
-    bvh4<dco::Cone>::bvh_ref asCone;
-    bvh4<basic_cylinder<float>>::bvh_ref asCylinder;
-    bvh4<dco::BezierCurve>::bvh_ref asBezierCurve;
-    bvh4<dco::ISOSurface>::bvh_ref asISOSurface;
-    bvh4<dco::Volume>::bvh_ref asVolume;
+    bvh8<basic_triangle<3,float>>::bvh_ref asTriangle;
+    bvh8<basic_triangle<3,float>>::bvh_ref asQuad;
+    bvh8<basic_sphere<float>>::bvh_ref asSphere;
+    bvh8<dco::Cone>::bvh_ref asCone;
+    bvh8<basic_cylinder<float>>::bvh_ref asCylinder;
+    bvh8<dco::BezierCurve>::bvh_ref asBezierCurve;
+    bvh8<dco::ISOSurface>::bvh_ref asISOSurface;
+    bvh8<dco::Volume>::bvh_ref asVolume;
   };
 #endif
 };
@@ -1449,23 +1449,23 @@ inline hit_record<Ray, primitive<unsigned>> intersectBLS(const Ray &ray, const B
 #else
   default_intersector isect;
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    return intersect_ray1_bvh4<TT>(ray,bls.asTriangle,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asTriangle,isect);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    return intersect_ray1_bvh4<TT>(ray,bls.asQuad,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asQuad,isect);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    return intersect_ray1_bvh4<TT>(ray,bls.asSphere,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asSphere,isect);
   else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    return intersect_ray1_bvh4<TT>(ray,bls.asCone,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asCone,isect);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    return intersect_ray1_bvh4<TT>(ray,bls.asCylinder,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asCylinder,isect);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    return intersect_ray1_bvh4<TT>(ray,bls.asBezierCurve,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asBezierCurve,isect);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    return intersect_ray1_bvh4<TT>(ray,bls.asISOSurface,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asISOSurface,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    return intersect_ray1_bvh4<TT>(ray,bls.asVolume,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asVolume,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
-    return intersect_ray1_bvh4<TT>(ray,bls.asVolume,isect);
+    return intersect_ray1_bvhN<TT>(ray,bls.asVolume,isect);
 #endif
 
   return {};
