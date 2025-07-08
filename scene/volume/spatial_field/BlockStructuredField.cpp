@@ -13,8 +13,8 @@ BlockStructuredField::BlockStructuredField(VisionarayGlobalState *d)
 
 void BlockStructuredField::commitParameters()
 {
-  m_params.cellWidth = getParamObject<helium::Array1D>("cellWidth");
-  m_params.blockBounds = getParamObject<helium::Array1D>("block.bounds");
+  m_params.refinementRatio = getParamObject<helium::Array1D>("refinementRatio");
+  m_params.blockStart = getParamObject<helium::Array1D>("block.start");
   m_params.blockLevel = getParamObject<helium::Array1D>("block.level");
   m_params.blockData = getParamObject<helium::ObjectArray>("block.data");
   m_params.gridOrigin = getParam<float3>("gridOrigin", float3(0.f));
@@ -23,9 +23,9 @@ void BlockStructuredField::commitParameters()
 
 void BlockStructuredField::finalize()
 {
-  if (!m_params.blockBounds) {
+  if (!m_params.blockStart) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "missing required parameter 'block.bounds' on amr spatial field");
+        "missing required parameter 'block.start' on amr spatial field");
     return;
   }
 
@@ -41,9 +41,10 @@ void BlockStructuredField::finalize()
     return;
   }
 
-  size_t numLevels = m_params.cellWidth->totalSize();
+  size_t numLevels = m_params.refinementRatio->totalSize();
   size_t numBlocks = m_params.blockData->totalSize();
-  auto *blockBounds = m_params.blockBounds->beginAs<aabbi>();
+  auto *refinementRatio = m_params.refinementRatio->beginAs<unsigned>();
+  auto *blockStarts = m_params.blockStart->beginAs<int3>();
   auto *blockLevels = m_params.blockLevel->beginAs<int>();
   auto *blockData = (Array3D **)m_params.blockData->handlesBegin();
 
@@ -55,12 +56,17 @@ void BlockStructuredField::finalize()
   }
 
   for (size_t i=0; i<numBlocks; ++i) {
-    m_blocks[i].bounds = blockBounds[i];
+    const Array3D *bd = *(blockData+i);
+    int3 blockSize((int)bd->size().x, (int)bd->size().y, (int)bd->size().z);
+
+    m_blocks[i].bounds.min = blockStarts[i];
+    m_blocks[i].bounds.max = blockStarts[i] + blockSize - int3(1);
     m_blocks[i].level = blockLevels[i];
     m_blocks[i].scalarOffset = m_scalars.size();
     m_blocks[i].valueRange = box1f(FLT_MAX,-FLT_MAX);
 
-    const Array3D *bd = *(blockData+i);
+    float cellWidth = powf((float)refinementRatio[blockLevels[i]], (float)blockLevels[i]);
+    (void)cellWidth; // ignore for now
 
     for (unsigned z=0;z<bd->size().z;++z) {
       for (unsigned y=0;y<bd->size().y;++y) {
