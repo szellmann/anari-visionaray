@@ -433,7 +433,7 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
-      bvh8<UElem>::bvh_ref samplingBVH;
+      bvh4<UElem>::bvh_ref samplingBVH;
 #endif
     } asUnstructured;
     struct {
@@ -442,7 +442,7 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<Block>::bvh_ref samplingBVH;
 #else
-      index_bvh8<Block>::bvh_ref samplingBVH;
+      index_bvh4<Block>::bvh_ref samplingBVH;
 #endif
     } asBlockStructured;
 #ifdef WITH_NANOVDB
@@ -1356,14 +1356,14 @@ struct BLS
   };
 #else
   union {
-    bvh8<basic_triangle<3,float>>::bvh_ref asTriangle;
-    bvh8<basic_triangle<3,float>>::bvh_ref asQuad;
-    bvh8<basic_sphere<float>>::bvh_ref asSphere;
-    bvh8<dco::Cone>::bvh_ref asCone;
-    bvh8<basic_cylinder<float>>::bvh_ref asCylinder;
-    bvh8<dco::BezierCurve>::bvh_ref asBezierCurve;
-    bvh8<dco::ISOSurface>::bvh_ref asISOSurface;
-    bvh8<dco::Volume>::bvh_ref asVolume;
+    bvh4<basic_triangle<3,float>>::bvh_ref asTriangle;
+    bvh4<basic_triangle<3,float>>::bvh_ref asQuad;
+    bvh4<basic_sphere<float>>::bvh_ref asSphere;
+    bvh4<dco::Cone>::bvh_ref asCone;
+    bvh4<basic_cylinder<float>>::bvh_ref asCylinder;
+    bvh4<dco::BezierCurve>::bvh_ref asBezierCurve;
+    bvh4<dco::ISOSurface>::bvh_ref asISOSurface;
+    bvh4<dco::Volume>::bvh_ref asVolume;
   };
 #endif
 };
