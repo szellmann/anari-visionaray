@@ -17,6 +17,7 @@ void UnstructuredField::commitParameters()
   m_params.index = getParamObject<Array1D>("index");
   m_params.cellIndex = getParamObject<Array1D>("cell.index");
   m_params.cellType = getParamObject<Array1D>("cell.type");
+  m_params.cellData = getParamObject<Array1D>("cell.data");
 }
 
 void UnstructuredField::finalize()
@@ -27,9 +28,9 @@ void UnstructuredField::finalize()
     return;
   }
 
-  if (!m_params.vertexData) { // currently vertex data only!
+  if (!(m_params.vertexData || m_params.cellData)) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "missing required parameter 'vertex.data' on unstructured spatial field");
+        "missing required parameter 'vertex.data' (or 'cellData') on unstructured spatial field");
     return;
   }
 
@@ -65,8 +66,9 @@ void UnstructuredField::finalize()
   m_elements.resize(numCells);
 
   auto *vertexPosition = m_params.vertexPosition->beginAs<vec3>();
-  auto *vertexData = m_params.vertexData->beginAs<float>();
+  auto *vertexData = m_params.vertexData ? m_params.vertexData->beginAs<float>() : nullptr;
   auto *cellType = m_params.cellType->beginAs<uint8_t>();
+  auto *cellData = m_params.cellData ? m_params.cellData->beginAs<float>() : nullptr;
 
   uint32_t *index32{nullptr};
   uint64_t *index64{nullptr};
@@ -105,7 +107,8 @@ void UnstructuredField::finalize()
   };
 
   for (size_t i=0; i<m_vertices.size(); ++i) {
-    m_vertices[i] = float4(vertexPosition[i],vertexData[i]);
+    float value = (vertexData != nullptr) ? vertexData[i] : NAN;
+    m_vertices[i] = float4(vertexPosition[i],value);
   }
 
   for (size_t i=0; i<m_indices.size(); ++i) {
@@ -135,6 +138,11 @@ void UnstructuredField::finalize()
     m_elements[cellID].elemID = cellID;
     m_elements[cellID].vertexBuffer = m_vertices.devicePtr();
     m_elements[cellID].indexBuffer = m_indices.devicePtr();
+
+    m_elements[cellID].cellValue = 0.f;
+    if (cellData != nullptr) {
+      m_elements[cellID].cellValue = cellData[cellID];
+    }
 
     // compute cellBounds; the minimum size will determine the
     // step size used for (ISO) gradient shading:

@@ -104,6 +104,9 @@ struct UElem
   uint64_t begin;
   uint64_t end;
   uint64_t elemID;
+  // vertex data takes precedence; this value is used
+  // if vertex value has special value NAN!
+  float cellValue;
   const uint64_t *indexBuffer;
   float4 *vertexBuffer;
   // "stitcher" extension
@@ -154,6 +157,11 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
           || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
           || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
           || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
+
+    // no vertex data: use cell data instead
+    if (isnan(v[0].w)) {
+      value = elem.cellValue;
+    }
 
     result.hit = hit;
   } else {
