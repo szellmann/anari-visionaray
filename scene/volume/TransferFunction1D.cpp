@@ -130,6 +130,16 @@ void TransferFunction1D::finalize()
   vvol.field = m_field->visionaraySpatialField();
   vvol.unitDistance = m_unitDistance;
 
+  if (vvol.unitDistance == 0.f) {
+    if (!m_field) {
+      reportMessage(ANARI_SEVERITY_WARNING,
+          "invalid/zero unitDistance on transferFunction1D volume, setting to 1.0");
+    }
+    // Don't mess with EPS here at all, just initialize
+    // to default if the value is invalid:
+    vvol.unitDistance = 1.f;
+  }
+
   vvol.asTransferFunction1D.numValues = tex.size()[0];
   vvol.asTransferFunction1D.valueRange = m_valueRange;
 #ifdef WITH_CUDA
