@@ -35,6 +35,7 @@ struct ScreenSample
 enum class RenderMode
 {
   Default,
+  PrimitiveId,
   Ng,
   Ns,
   Tangent,

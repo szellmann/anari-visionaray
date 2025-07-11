@@ -86,6 +86,8 @@ void Renderer::finalize()
   vrend.rendererState.ambientRadiance = m_ambientRadiance;
   if (m_renderMode == "default")
     vrend.rendererState.renderMode = RenderMode::Default;
+  else if (m_renderMode == "primitiveId")
+    vrend.rendererState.renderMode = RenderMode::PrimitiveId;
   else if (m_renderMode == "Ng")
     vrend.rendererState.renderMode = RenderMode::Ng;
   else if (m_renderMode == "Ns")

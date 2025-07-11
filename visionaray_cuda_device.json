@@ -93,6 +93,7 @@
           "default": "default",
           "values": [
             "default",
+            "primitiveId",
             "Ng",
             "Ns",
             "tangent",
@@ -252,6 +253,7 @@
           "default": "default",
           "values": [
             "default",
+            "primitiveId",
             "Ng",
             "Ns",
             "tangent",

@@ -88,6 +88,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       shadedColor +=
           color.xyz() * rendererState.ambientColor * rendererState.ambientRadiance;
     }
+    else if (rendererState.renderMode == RenderMode::PrimitiveId)
+      shadedColor = randomColor(hr.prim_id).xyz();
     else if (rendererState.renderMode == RenderMode::Ng)
       shadedColor = (gn + float3(1.f)) * float3(0.5f);
     else if (rendererState.renderMode == RenderMode::Ns)

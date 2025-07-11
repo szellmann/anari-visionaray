@@ -472,10 +472,11 @@ inline SpatialField createSpatialField()
 }
 
 VSNRAY_FUNC
-inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
+inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primID) {
   // This assumes that P is in voxel space!
   if (sf.type == SpatialField::StructuredRegular) {
     value = tex3D(sf.asStructuredRegular.sampler,P);
+    primID = 0;
     return true;
   } else if (sf.type == SpatialField::Unstructured) {
     Ray ray;
@@ -497,6 +498,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
       return false;
 
     value = hr.u; // value is stored in "u"!
+    primID = hr.prim_id;
     return true;
   } else if (sf.type == SpatialField::BlockStructured) {
     Ray ray;
@@ -521,6 +523,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
       return false;
 
     value = basisPRD[0]/basisPRD[1];
+    primID = hr.prim_id;
     return true;
   }
 #ifdef WITH_NANOVDB
@@ -529,16 +532,24 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
     if (sf.asNanoVDB.filterMode == Nearest) {
       auto smp = nanovdb::math::createSampler<0>(acc);
       value = smp(nanovdb::math::Vec3<float>(P.x,P.y,P.z));
+      primID = 0;
       return true;
     } else if (sf.asNanoVDB.filterMode == Linear) {
       auto smp = nanovdb::math::createSampler<1>(acc);
       value = smp(nanovdb::math::Vec3<float>(P.x,P.y,P.z));
+      primID = 0;
       return true;
     }
   }
 #endif
 
   return false;
+}
+
+VSNRAY_FUNC
+inline bool sampleField(const SpatialField &sf, vec3 P, float &value) {
+  int ignore;
+  return sampleField(sf,P,value,ignore);
 }
 
 VSNRAY_FUNC
@@ -631,6 +642,7 @@ struct HitRecordVolume
   float extinction{0.f};
   float Tr{1.f};
   int volID{-1}; // global to the device
+  int primID{-1};
   int instID{-1};
   int localID{-1}; // local to the group
 };
@@ -668,6 +680,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       hrv.t = hr.t;
       hrv.isect_pos = ray.ori + ray.dir * hrv.t;
       hrv.volID = vol.volID;
+      hrv.primID = hr.prim_id;
       hrv.localID = hr.geom_id;
     }
     return hr;
@@ -702,7 +715,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
 
       float3 P = ray.ori+ray.dir*t;
       float v = 0.f;
-      if (sampleField(sf,P,v)) {
+      int primID = 0;
+      if (sampleField(sf,P,v,primID)) {
         float4 sample
             = postClassify(vol.asTransferFunction1D,v);
         albedo = sample.xyz();
@@ -713,6 +727,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
           Tr = 0.f;
           hr.t = t;
           hr.isect_pos = ray.ori + ray.dir * hr.t;
+          hr.prim_id = primID;
           return false; // stop traversal
         }
       }
@@ -1758,6 +1773,7 @@ inline HitRecordVolume intersectVolumeBounds(Ray ray, const TLS &tls)
 
   auto hr = intersect(ray, tls);
 
+  result.primID = hr.prim_id;
   result.instID = hr.inst_id;
   result.localID = hr.geom_id;
 
@@ -1777,6 +1793,7 @@ inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
   ray.intersectionMask = Ray::Volume;
   auto hr = intersect(ray, tls);
 
+  result.primID = hr.prim_id;
   result.instID = hr.inst_id;
   result.isect_pos = hr.isect_pos;
 
