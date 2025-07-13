@@ -108,7 +108,7 @@ struct UElem
   // if vertex value has special value NAN!
   float cellValue;
   const uint64_t *indexBuffer;
-  float4 *vertexBuffer;
+  const float4 *vertexBuffer;
   // "stitcher" extension
   int3 *gridDimsBuffer;
   aabb *gridDomainsBuffer;
@@ -442,6 +442,10 @@ struct SpatialField
       hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
       bvh4<UElem>::bvh_ref samplingBVH;
+      // for marcher:
+      index_bvh4<basic_triangle<3,float>>::bvh_ref shellBVH;
+      const UElem *elems;
+      const uint64_t *faceNeighbors;
 #endif
     } asUnstructured;
     struct {

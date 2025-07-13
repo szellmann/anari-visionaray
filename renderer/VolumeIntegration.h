@@ -2,9 +2,335 @@
 
 #include "renderer/common.h"
 #include "renderer/DDA.h"
+#include "scene/volume/spatial_field/Connectivity.h"
+#include "scene/volume/spatial_field/Plane.h"
 #include "DeviceCopyableObjects.h"
 
 namespace visionaray {
+
+VSNRAY_FUNC
+inline
+void clip(const Ray ray,
+          int &outID,
+          float &out_t,
+          const Plane &plane,
+          int neighborID)
+{
+  float d = dot(plane.N,ray.dir);
+  if (d >= 0.f) return;
+  float t = plane.eval(ray.ori) / -d;
+  if (t < out_t) {
+    out_t = t;
+    outID = neighborID;
+  }
+}
+
+VSNRAY_FUNC
+inline void evalTet(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
+  float3 va = v[0].xyz();
+  float3 vb = v[1].xyz();
+  float3 vc = v[2].xyz();
+  float3 vd = v[3].xyz();
+  const float fa = p[0].eval(P)/p[0].eval(va);
+  const float fb = p[1].eval(P)/p[1].eval(vb);
+  const float fc = p[2].eval(P)/p[2].eval(vc);
+  const float fd = p[3].eval(P)/p[3].eval(vd);
+
+  value_out = fa*v[0].w + fb*v[1].w + fc*v[2].w + fd*v[3].w;
+}
+
+VSNRAY_FUNC
+inline void evalPyr(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
+  const float f0 = v[0].w;
+  const float f1 = v[1].w;
+  const float f2 = v[2].w;
+  const float f3 = v[3].w;
+  const float f4 = v[4].w;
+
+  const float3 p0 = v[0].xyz();
+  const float3 p1 = v[1].xyz();
+  const float3 p2 = v[2].xyz();
+  const float3 p3 = v[3].xyz();
+  const float3 p4 = v[4].xyz();
+
+  float w = p[0].eval(P)/p[0].eval(p4);
+
+  float u0 = p[1].eval(P);
+  float u1 = p[2].eval(P);
+  float u = u0 / max(u0+u1,1e-10f);
+
+  float v0 = p[3].eval(P);
+  float v1 = p[4].eval(P);
+  float vv = v0 / max(v0+v1,1e-10f);
+
+  value_out = w*f4 + (1.f-w)*((1.f-u)*(1.f-vv)*f0+
+                              (1.f-u)*(    vv)*f1+
+                              (    u)*(1.f-vv)*f3+
+                              (    u)*(    vv)*f2);
+}
+
+VSNRAY_FUNC
+inline void evalWedge(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
+  const float f0 = v[0].w;
+  const float f1 = v[1].w;
+  const float f2 = v[2].w;
+  const float f3 = v[3].w;
+  const float f4 = v[4].w;
+  const float f5 = v[5].w;
+  const float3 p0 = v[0].xyz();
+  const float3 p1 = v[1].xyz();
+  const float3 p2 = v[2].xyz();
+  const float3 p3 = v[3].xyz();
+  const float3 p4 = v[4].xyz();
+  const float3 p5 = v[5].xyz();
+
+  float w = p[0].eval(P);
+
+  float u0 = p[1].eval(P);
+  float u1 = p[2].eval(P);
+  float u = u0 / max(u0+u1,1e-10f);
+
+  float v0 = p[3].eval(P);
+  float v1 = p[4].eval(P);
+  float vv = v0 / max(v0+v1,1e-10f);
+
+  const float fbase
+    = (1.f-u)*(1.f-vv)*f0
+    + (1.f-u)*(    vv)*f1
+    + (    u)*(1.f-vv)*f3
+    + (    u)*(    vv)*f4;
+  const float ftop = (1.f-u)*f2 + u*f5;
+  value_out = (1.f-w)*fbase + w*ftop;
+}
+
+VSNRAY_FUNC
+inline void evalHex(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
+  const float t_frt = p[0].eval(P); //if (t_frt < 0.f) return false;
+  const float t_bck = p[1].eval(P); //if (t_bck < 0.f) return false;
+  const float t_lft = p[2].eval(P); //if (t_lft < 0.f) return false;
+  const float t_rgt = p[3].eval(P); //if (t_rgt < 0.f) return false;
+  const float t_top = p[4].eval(P); //if (t_top < 0.f) return false;
+  const float t_btm = p[5].eval(P); //if (t_btm < 0.f) return false;
+
+  const float f_x = t_lft/(t_lft+t_rgt);
+  const float f_y = t_frt/(t_frt+t_bck);
+  const float f_z = t_btm/(t_btm+t_top);
+  
+  float f0 = v[0].w;
+  float f1 = v[1].w;
+  float f2 = v[2].w;
+  float f3 = v[3].w;
+  float f4 = v[4].w;
+  float f5 = v[5].w;
+  float f6 = v[6].w;
+  float f7 = v[7].w;
+  value_out// = 1.f/8.f *(f0+f1+f2+f3+f4+f5+f6+f7);
+    =
+    + (1.f-f_z)*(1.f-f_y)*(1.f-f_x)*f0
+    + (1.f-f_z)*(1.f-f_y)*(    f_x)*f1
+    + (1.f-f_z)*(    f_y)*(1.f-f_x)*f3
+    + (1.f-f_z)*(    f_y)*(    f_x)*f2
+    + (    f_z)*(1.f-f_y)*(1.f-f_x)*f4
+    + (    f_z)*(1.f-f_y)*(    f_x)*f5
+    + (    f_z)*(    f_y)*(1.f-f_x)*f7
+    + (    f_z)*(    f_y)*(    f_x)*f6
+    ;
+}
+
+template <bool Shading>
+VSNRAY_FUNC
+inline float elementMarchVolume(ScreenSample &ss,
+                                const DeviceObjectRegistry &onDevice,
+                                Ray ray,
+                                const dco::Volume &vol,
+                                const dco::LightRef *allLights,
+                                unsigned numLights,
+                                float3 ambientColor,
+                                float ambientRadiance,
+                                float samplingRateInv,
+                                float3 &color,
+                                float &alpha) {
+  const auto &sf = vol.field;
+
+  assert(sf.type == dco::SpatialField::Unstructured);
+
+  float t=FLT_MAX;
+  float3 viewDir = -ray.dir;
+  const float alphaMax=0.99f;
+  float transmittance = 1.f;
+  while (alpha<alphaMax) {
+    default_intersector isect;
+    auto hr = intersect_ray1_bvhN<detail::ClosestHit>(ray,
+                                                      sf.asUnstructured.shellBVH,
+                                                      isect);
+
+    if (!hr.hit || hr.t>=ray.tmax) break;
+
+    const auto *triangles = sf.asUnstructured.shellBVH.primitives();
+    auto tri = triangles[hr.prim_id];
+    auto n = cross(tri.e1,tri.e2);
+
+    struct {
+      float t;
+      unsigned elemID;
+    } entry, exit;
+    unsigned entry_id, exit_id;
+    if (dot(viewDir,n) > 0.f) {
+      // front face hit, find exit face:
+      Ray ray2 = ray;
+      const float3 hitPos = ray.ori + hr.t * ray.dir;
+      const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
+      ray2.tmin = hr.t + eps;
+
+      auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
+                                                         sf.asUnstructured.shellBVH,
+                                                         isect);
+      entry.t = hr.t;
+      entry.elemID = hr.geom_id;
+
+      exit.t = hr2.t;
+      exit.elemID = hr2.geom_id;
+    } else {
+      // back face hit, find entry face:
+      Ray ray2 = ray;
+      const float3 hitPos = ray.ori + hr.t * ray.dir;
+      const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
+      ray2.tmin = hr.t + eps;
+      ray2.dir *= -1.f;
+
+      auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
+                                                         sf.asUnstructured.shellBVH,
+                                                         isect);
+
+      entry.t = hr2.t;
+      entry.elemID = hr2.geom_id;
+
+      exit.t = hr.t;
+      exit.elemID = hr.geom_id;
+    }
+
+    t = entry.t;
+    uint64_t elemID = entry.elemID;
+    #if 1
+    float value_in = NAN;
+    while (t < exit.t && alpha<alphaMax && elemID != ~0ull) {
+      dco::UElem elem = sf.asUnstructured.elems[elemID];
+
+      size_t numVerts = elem.end-elem.begin;
+
+      float4 v[8];
+      for (int i=0; i<numVerts; ++i) {
+        uint64_t idx = elem.indexBuffer[elem.begin+i];
+        v[i] = elem.vertexBuffer[idx];
+      }
+
+      int planeID = -1; // in [0:6)
+      float out_t = FLT_MAX;
+      float value = 0.f;
+
+      Plane p[6];
+      if (numVerts == 4) {
+        using conn::Tet;
+        p[0] = makePlane(v[Tet[0][0]],v[Tet[0][1]],v[Tet[0][2]]);
+        p[1] = makePlane(v[Tet[1][0]],v[Tet[1][1]],v[Tet[1][2]]);
+        p[2] = makePlane(v[Tet[2][0]],v[Tet[2][1]],v[Tet[2][2]]);
+        p[3] = makePlane(v[Tet[3][0]],v[Tet[3][1]],v[Tet[3][2]]);
+
+        for (int i=0;i<4;++i) {
+          clip(ray,planeID,out_t,p[i],i);
+        }
+
+        float3 P = ray.ori+ray.dir*out_t;
+        evalTet(P,p,v,value);
+      } else if (numVerts == 5) {
+        using conn::Pyr;
+        p[0] = makePlane(v[Pyr[0][0]],v[Pyr[0][1]],v[Pyr[0][2]]);
+        p[1] = makePlane(v[Pyr[1][0]],v[Pyr[1][1]],v[Pyr[1][2]]);
+        p[2] = makePlane(v[Pyr[2][0]],v[Pyr[2][1]],v[Pyr[2][2]]);
+        p[3] = makePlane(v[Pyr[3][0]],v[Pyr[3][1]],v[Pyr[3][2]]);
+        p[4] = makePlane(v[Pyr[4][0]],v[Pyr[4][1]],v[Pyr[4][2]]);
+
+        for (int i=0;i<5;++i) {
+          clip(ray,planeID,out_t,p[i],i);
+        }
+
+         float3 P = ray.ori+ray.dir*out_t;
+         evalPyr(P,p,v,value);
+      } else if (numVerts == 6) {
+        using conn::Wed;
+        p[0] = makePlane(v[Wed[0][0]],v[Wed[0][1]],v[Wed[0][2]]);
+        p[1] = makePlane(v[Wed[1][0]],v[Wed[1][1]],v[Wed[1][2]]);
+        p[2] = makePlane(v[Wed[2][0]],v[Wed[2][1]],v[Wed[2][2]]);
+        p[3] = makePlane(v[Wed[3][0]],v[Wed[3][1]],v[Wed[3][2]]);
+        p[4] = makePlane(v[Wed[4][0]],v[Wed[4][1]],v[Wed[4][2]]);
+
+        for (int i=0;i<6;++i) {
+          clip(ray,planeID,out_t,p[i],i);
+        }
+
+         float3 P = ray.ori+ray.dir*out_t;
+         evalWedge(P,p,v,value);
+      } else if (numVerts == 8) {
+        using conn::Hex;
+        p[0] = makePlane(v[Hex[0][0]],v[Hex[0][1]],v[Hex[0][2]]);
+        p[1] = makePlane(v[Hex[1][0]],v[Hex[1][1]],v[Hex[1][2]]);
+        p[2] = makePlane(v[Hex[2][0]],v[Hex[2][1]],v[Hex[2][2]]);
+        p[3] = makePlane(v[Hex[3][0]],v[Hex[3][1]],v[Hex[3][2]]);
+        p[4] = makePlane(v[Hex[4][0]],v[Hex[4][1]],v[Hex[4][2]]);
+        p[5] = makePlane(v[Hex[5][0]],v[Hex[5][1]],v[Hex[5][2]]);
+
+        for (int i=0;i<6;++i) {
+          clip(ray,planeID,out_t,p[i],i);
+        }
+
+         float3 P = ray.ori+ray.dir*out_t;
+         evalHex(P,p,v,value);
+      }
+
+      uint64_t outID = ~0ull; // the neighbor
+      assert(planeID>=0 && planeID<6);
+      outID = sf.asUnstructured.faceNeighbors[elemID*6+planeID];
+
+      if (out_t > ray.tmin) {
+        if (isnan(value_in)) {
+          float3 P = ray.ori+ray.dir*max(t,ray.tmin);
+          if (numVerts == 4)
+            evalTet(P,p,v,value_in);
+          else if (numVerts == 5)
+            evalPyr(P,p,v,value_in);
+          else if (numVerts == 6)
+            evalWedge(P,p,v,value_in);
+          else if (numVerts == 8)
+            evalHex(P,p,v,value_in);
+          else
+            assert(0);
+        }
+        float dt = out_t-max(t,ray.tmin);
+
+        // TODO: for now only cell.data
+        //float value = elem.cellValue;
+        float4 sample = postClassify(vol.asTransferFunction1D,0.5f*value_in+0.5f*value);
+        //float4 sample = postClassify(vol.asTransferFunction1D,v[0].w);
+        float3 shadedColor = sample.xyz();
+        float stepTransmittance = powf(1.f - sample.w, dt / vol.unitDistance);
+        color += transmittance * (1.f - stepTransmittance) * shadedColor;
+        alpha += transmittance * (1.f - stepTransmittance);
+        transmittance *= stepTransmittance;
+
+        value_in = value;
+      }
+
+      t = out_t;
+      elemID = outID;
+    }
+    #endif
+
+    const float3 exitPos = ray.ori + exit.t * ray.dir;
+    const float eps = epsilonFrom(exitPos, ray.dir, exit.t);
+    ray.tmin = exit.t + eps;
+  }
+  return t;
+}
 
 template <bool Shading>
 VSNRAY_FUNC
@@ -19,9 +345,24 @@ inline float rayMarchVolume(ScreenSample &ss,
                             float samplingRateInv,
                             float3 &color,
                             float &alpha) {
-  auto boxHit = intersect(ray, vol.bounds);
-
   const auto &sf = vol.field;
+
+  // special case: element marching
+  if (sf.type == dco::SpatialField::Unstructured) {
+    return elementMarchVolume<Shading>(ss,
+                                       onDevice,
+                                       ray,
+                                       vol,
+                                       allLights,
+                                       numLights,
+                                       ambientColor,
+                                       ambientRadiance,
+                                       samplingRateInv,
+                                       color,
+                                       alpha);
+  }
+
+  auto boxHit = intersect(ray, vol.bounds);
 
   ray.tmin = max(ray.tmin, boxHit.tnear);
   ray.tmax = min(ray.tmax, boxHit.tfar);

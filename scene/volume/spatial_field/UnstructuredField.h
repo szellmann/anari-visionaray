@@ -36,6 +36,16 @@ struct UnstructuredField : public SpatialField
 #else
   bvh4<dco::UElem> m_samplingBVH;
 #endif
+  // shell accel
+#ifdef WITH_CUDA
+  //cuda_index_bvh<dco::UElem> m_samplingBVH;
+#else
+  // must be an *index* BVH so we can access the
+  // triangles based on their prim_id in the shader:
+  index_bvh4<basic_triangle<3,float>> m_shellBVH;
+#endif
+  // for marching
+  HostDeviceArray<uint64_t> m_faceNeighbors;
 
   struct Parameters
   {
