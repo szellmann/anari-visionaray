@@ -190,7 +190,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                         alpha);
     }
 
-    result.color = over(float4(color,alpha), result.color);
+    result.color = over(alpha*float4(color,1.f), result.color);
     result.Ng = float3{}; // TODO: gradient
     result.Ns = float3{}; // TODO..
     result.albedo = float3{}; // TODO..

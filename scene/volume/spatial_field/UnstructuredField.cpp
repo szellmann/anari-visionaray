@@ -1,5 +1,6 @@
 
 #include "array/Array3D.h"
+#include "Connectivity.h"
 #include "UnstructuredField.h"
 
 namespace visionaray {
@@ -90,10 +91,31 @@ void UnstructuredField::finalize()
     }
   };
 
+#if 1
   for (size_t i=0; i<m_vertices.size(); ++i) {
     float value = (vertexData != nullptr) ? vertexData[i] : NAN;
     m_vertices[i] = float4(vertexPosition[i],value);
   }
+#else
+  float minDistance = FLT_MAX;
+  for (size_t i=0; i<m_vertices.size(); ++i) {
+    float value = (vertexData != nullptr) ? vertexData[i] : NAN;
+    m_vertices[i] = float4(vertexPosition[i],value);
+    float3 pos(vertexPosition[i].x,vertexPosition[i].y,vertexPosition[i].z);
+    minDistance = std::min(minDistance,length(pos));
+  }
+
+  for (size_t i=0; i<m_vertices.size(); ++i) {
+    float3 pos(vertexPosition[i].x,vertexPosition[i].y,vertexPosition[i].z);
+    float3 norm = normalize(pos);
+    pos -= norm*minDistance;
+    pos *= 30.f;
+    pos += norm*minDistance;
+    m_vertices[i].x = pos.x;
+    m_vertices[i].y = pos.y;
+    m_vertices[i].z = pos.z;
+  }
+#endif
 
   for (size_t i=0; i<m_indices.size(); ++i) {
     m_indices[i] = uint64_t(index[i]);
@@ -182,6 +204,52 @@ void UnstructuredField::finalize()
       elem.gridScalarsBuffer = m_gridScalars.devicePtr();
       m_elements.push_back(elem);
     }
+  }
+
+  // connectivity for element marcher
+
+  conn::Mesh connMesh(m_vertices.hostPtr(),
+                      m_indices.hostPtr(),
+                      m_elements.hostPtr(),
+                      numCells);
+
+  auto fn = computeFaceConnectivity(connMesh);
+  // TODO:!!!!!
+  m_faceNeighbors.resize(fn.size());
+  m_faceNeighbors.reset(fn.data());
+
+  auto shell = computeShell(connMesh,fn.data());
+
+#if 0
+  for (size_t i=0; i<shell.size(); ++i) {
+    float3 v1 = shell[i].v1;
+    float3 v2 = shell[i].e1 + v1;
+    float3 v3 = shell[i].e2 + v1;
+
+    std::cout << "v " << v1.x << ' ' << v1.y << ' ' << v1.z << '\n';
+    std::cout << "v " << v2.x << ' ' << v2.y << ' ' << v2.z << '\n';
+    std::cout << "v " << v3.x << ' ' << v3.y << ' ' << v3.z << '\n';
+  }
+
+  for (size_t i=0; i<shell.size(); ++i) {
+    std::cout << "f " << (i*3)+1 << ' ' << (i*3)+2 << ' ' << (i*3)+3 << '\n';
+  }
+#endif
+
+  // build shell BVH, init marcher:
+  {
+    binned_sah_builder builder;
+    builder.enable_spatial_splits(false);
+
+    auto shellBVH2 = builder.build(
+      index_bvh<basic_triangle<3,float>>{}, shell.data(), shell.size());
+
+    bvh_collapser collapser;
+    collapser.collapse(shellBVH2, m_shellBVH, deviceState()->threadPool);
+
+    vfield.asUnstructured.shellBVH = m_shellBVH.ref();
+    vfield.asUnstructured.elems = m_elements.hostPtr(); // devicePtr() here but the data isn't on the device......
+    vfield.asUnstructured.faceNeighbors = m_faceNeighbors.hostPtr();
   }
 
   // sampling BVH
