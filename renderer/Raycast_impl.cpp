@@ -265,6 +265,10 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
           }
         }
 
+        // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
+        //   accumColor = float4(1.f) - accumColor;
+        // }
+
 #ifdef _MSC_VER
         uint64_t clock_end = clock();
 #else
