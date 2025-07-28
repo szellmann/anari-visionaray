@@ -442,11 +442,17 @@ struct SpatialField
       hip_index_bvh<UElem>::bvh_ref samplingBVH;
 #else
       bvh4<UElem>::bvh_ref samplingBVH;
+#endif
       // for marcher:
+#ifdef WITH_CUDA
+      cuda_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
+#elif defined(WITH_HIP)
+      hip_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
+#else
       index_bvh4<basic_triangle<3,float>>::bvh_ref shellBVH;
+#endif
       const UElem *elems;
       const uint64_t *faceNeighbors;
-#endif
     } asUnstructured;
     struct {
 #ifdef WITH_CUDA

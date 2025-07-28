@@ -244,12 +244,16 @@ void UnstructuredField::finalize()
     auto shellBVH2 = builder.build(
       index_bvh<basic_triangle<3,float>>{}, shell.data(), shell.size());
 
+#ifdef WITH_CUDA
+    m_shellBVH = cuda_index_bvh<basic_triangle<3,float>>(shellBVH2);
+#else
     bvh_collapser collapser;
     collapser.collapse(shellBVH2, m_shellBVH, deviceState()->threadPool);
+#endif
 
     vfield.asUnstructured.shellBVH = m_shellBVH.ref();
-    vfield.asUnstructured.elems = m_elements.hostPtr(); // devicePtr() here but the data isn't on the device......
-    vfield.asUnstructured.faceNeighbors = m_faceNeighbors.hostPtr();
+    vfield.asUnstructured.elems = m_elements.devicePtr(); // devicePtr() here but the data isn't on the device......
+    vfield.asUnstructured.faceNeighbors = m_faceNeighbors.devicePtr();
   }
 
   // sampling BVH
