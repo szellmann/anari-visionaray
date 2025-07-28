@@ -156,7 +156,8 @@ struct Mesh
     p.x *= 0x400000;
     p.y *= 0x200000;
     p.z *= 0x200000;
-    return morton_encode3D(uint64_t(p.x), uint64_t(p.y), uint64_t(p.z));
+    typedef unsigned long long ulonglong;
+    return morton_encode3D(ulonglong(p.x), ulonglong(p.y), ulonglong(p.z));
   }
 
   const float4 *vertices;
