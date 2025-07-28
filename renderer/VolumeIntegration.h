@@ -160,9 +160,15 @@ inline float elementMarchVolume(ScreenSample &ss,
   float transmittance = 1.f;
   while (alpha<alphaMax) {
     default_intersector isect;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+    auto hr = intersect_rayN_bvh2<detail::ClosestHit>(ray,
+                                                      sf.asUnstructured.shellBVH,
+                                                      isect);
+#else
     auto hr = intersect_ray1_bvhN<detail::ClosestHit>(ray,
                                                       sf.asUnstructured.shellBVH,
                                                       isect);
+#endif
 
     if (!hr.hit || hr.t>=ray.tmax) break;
 
@@ -182,9 +188,16 @@ inline float elementMarchVolume(ScreenSample &ss,
       const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
       ray2.tmin = hr.t + eps;
 
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+      auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
+                                                         sf.asUnstructured.shellBVH,
+                                                         isect);
+#else
       auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
                                                          sf.asUnstructured.shellBVH,
                                                          isect);
+#endif
+
       entry.t = hr.t;
       entry.elemID = hr.geom_id;
 
@@ -198,9 +211,15 @@ inline float elementMarchVolume(ScreenSample &ss,
       ray2.tmin = hr.t + eps;
       ray2.dir *= -1.f;
 
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+      auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
+                                                         sf.asUnstructured.shellBVH,
+                                                         isect);
+#else
       auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
                                                          sf.asUnstructured.shellBVH,
                                                          isect);
+#endif
 
       entry.t = hr2.t;
       entry.elemID = hr2.geom_id;

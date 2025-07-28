@@ -38,7 +38,9 @@ struct UnstructuredField : public SpatialField
 #endif
   // shell accel
 #ifdef WITH_CUDA
-  //cuda_index_bvh<dco::UElem> m_samplingBVH;
+  // must be an *index* BVH so we can access the
+  // triangles based on their prim_id in the shader:
+  cuda_index_bvh<basic_triangle<3,float>> m_shellBVH;
 #else
   // must be an *index* BVH so we can access the
   // triangles based on their prim_id in the shader:
