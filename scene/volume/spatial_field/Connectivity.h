@@ -235,7 +235,7 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.vertexBuffer = mesh.vertices;
     elem.indexBuffer = mesh.indices;
 
-    conn::for_each_uface(mesh, mesh.elements[elemID], [&](conn::UniqueFace face) {
+    conn::for_each_uface(mesh, elem, [&](conn::UniqueFace face) {
       auto it = face2elems.find(face);
       if (it == face2elems.end()) {
         face2elems.insert({face,{elemID,~0ull}});
@@ -256,7 +256,7 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
 
     int i=0;
 
-    conn::for_each_uface(mesh, mesh.elements[elemID], [&](conn::UniqueFace face) {
+    conn::for_each_uface(mesh, elem, [&](conn::UniqueFace face) {
       auto it = face2elems.find(face);
       assert(it != face2elems.end());
       const auto &ep = it->second;
