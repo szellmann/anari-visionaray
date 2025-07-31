@@ -219,9 +219,9 @@ void VisionarayRendererRaycast::renderFrame(const dco::Frame &frame,
   DevicePointer<RendererState> rendererStatePtr(&rendererState);
   DevicePointer<dco::Frame> framePtr(&frame);
 #ifdef WITH_CUDA
-  cuda::for_each(0, size.x, 0, size.y,
+  cuda::for_each(state->renderingStream, 0, size.x, 0, size.y,
 #elif defined(WITH_HIP)
-  hip::for_each(0, size.x, 0, size.y,
+  hip::for_each(state->renderingStream, 0, size.x, 0, size.y,
 #else
   parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif

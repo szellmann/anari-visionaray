@@ -6,6 +6,21 @@ namespace visionaray {
 GridAccel::GridAccel(VisionarayGlobalState *s) : m_state(s)
 {
   vaccel = dco::createGridAccel();
+
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaStreamCreate(&stream));
+#elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipStreamCreate(&stream));
+#endif
+}
+
+GridAccel::~GridAccel()
+{
+#ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaStreamDestroy(stream));
+#elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipStreamDestroy(stream));
+#endif
 }
 
 void GridAccel::init(int3 dims, box3 worldBounds)
@@ -54,7 +69,7 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
   dco::GridAccel *gridPtr;
   CUDA_SAFE_CALL(cudaMalloc(&gridPtr, sizeof(vaccel)));
   CUDA_SAFE_CALL(cudaMemcpy(gridPtr, &vaccel, sizeof(vaccel), cudaMemcpyHostToDevice));
-  cuda::for_each(0, numMCs,
+  cuda::for_each(stream, 0, numMCs,
 #else
   auto *gridPtr = &vaccel;
   parallel::for_each(deviceState()->threadPool, 0, numMCs,

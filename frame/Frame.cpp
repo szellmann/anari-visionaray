@@ -39,12 +39,16 @@ Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
   vframe = dco::createFrame();
   vframe.frameID = deviceState()->dcos.frames.alloc(vframe);
 #ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaStreamCreate(&taa.stream));
+
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStart));
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStop));
 
   CUDA_SAFE_CALL(cudaEventRecord(m_eventStart));
   CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
 #elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipStreamCreate(&taa.stream));
+
   HIP_SAFE_CALL(hipEventCreate(&m_eventStart));
   HIP_SAFE_CALL(hipEventCreate(&m_eventStop));
 
@@ -60,9 +64,13 @@ Frame::~Frame()
 {
   wait();
 #ifdef WITH_CUDA
+  CUDA_SAFE_CALL(cudaStreamDestroy(taa.stream));
+
   CUDA_SAFE_CALL(cudaEventDestroy(m_eventStart));
   CUDA_SAFE_CALL(cudaEventDestroy(m_eventStop));
 #elif defined(WITH_HIP)
+  HIP_SAFE_CALL(hipStreamDestroy(taa.stream));
+
   HIP_SAFE_CALL(hipEventDestroy(m_eventStart));
   HIP_SAFE_CALL(hipEventDestroy(m_eventStop));
 #endif
@@ -274,18 +282,20 @@ void Frame::renderFrame()
 
     if (m_nextFrameReset) {
 #ifdef WITH_CUDA
-      cuda::for_each(0, size.x, 0, size.y, [=] VSNRAY_GPU_FUNC (int x, int y) {
-        frame.accumBuffer[x+size.x*y] = vec4{0.f};
-        if (frame.depthBuffer) {
-          frame.depthBuffer[x+size.x*y] = 1e31f;
-        }
+      cuda::for_each(state->renderingStream, 0, size.x, 0, size.y,
+        [=] VSNRAY_GPU_FUNC (int x, int y) {
+          frame.accumBuffer[x+size.x*y] = vec4{0.f};
+          if (frame.depthBuffer) {
+            frame.depthBuffer[x+size.x*y] = 1e31f;
+          }
       });
 #elif WITH_HIP
-      hip::for_each(0, size.x, 0, size.y, [=] VSNRAY_GPU_FUNC (int x, int y) {
-        frame.accumBuffer[x+size.x*y] = vec4{0.f};
-        if (frame.depthBuffer) {
-          frame.depthBuffer[x+size.x*y] = 1e31f;
-        }
+      hip::for_each(state->renderingStream, 0, size.x, 0, size.y,
+        [=] VSNRAY_GPU_FUNC (int x, int y) {
+          frame.accumBuffer[x+size.x*y] = vec4{0.f};
+          if (frame.depthBuffer) {
+            frame.depthBuffer[x+size.x*y] = 1e31f;
+          }
       });
 #else
       std::fill(frame.accumBuffer, frame.accumBuffer + size.x * size.y, vec4{0.f});
@@ -338,9 +348,9 @@ void Frame::renderFrame()
 
       // TAA pass
 #ifdef WITH_CUDA
-      cuda::for_each(0, size.x, 0, size.y,
+      cuda::for_each(taa.stream, 0, size.x, 0, size.y,
 #elif WITH_HIP
-      hip::for_each(0, size.x, 0, size.y,
+      hip::for_each(taa.stream, 0, size.x, 0, size.y,
 #else
       parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
 #endif

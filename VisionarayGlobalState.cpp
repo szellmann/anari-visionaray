@@ -8,9 +8,9 @@ VisionarayGlobalState::VisionarayGlobalState(ANARIDevice d)
     : helium::BaseGlobalDeviceState(d), threadPool(std::thread::hardware_concurrency())
 {
 #ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaStreamCreate(&stream));
+  CUDA_SAFE_CALL(cudaStreamCreate(&renderingStream));
 #elif defined(WITH_HIP)
-  HIP_SAFE_CALL(hipStreamCreate(&stream));
+  HIP_SAFE_CALL(hipStreamCreate(&renderingStream));
 #endif
 }
 
@@ -19,9 +19,9 @@ VisionarayGlobalState::~VisionarayGlobalState()
   waitOnCurrentFrame();
 
 #ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaStreamDestroy(stream));
+  CUDA_SAFE_CALL(cudaStreamDestroy(renderingStream));
 #elif defined(WITH_HIP)
-  HIP_SAFE_CALL(hipStreamDestroy(stream));
+  HIP_SAFE_CALL(hipStreamDestroy(renderingStream));
 #endif
 }
 

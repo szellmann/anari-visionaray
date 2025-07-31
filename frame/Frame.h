@@ -110,8 +110,10 @@ struct Frame : public helium::BaseFrame
     HostDeviceArray<float3> prevAlbedoBuffer;
 #ifdef WITH_CUDA
     cuda_texture<float4, 2> history;
+    cudaStream_t            stream;
 #elif defined(WITH_HIP)
     hip_texture<float4, 2> history;
+    hipStream_t            stream;
 #else
     texture<float4, 2> history;
 #endif

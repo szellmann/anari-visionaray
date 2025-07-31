@@ -159,16 +159,19 @@ namespace visionaray {
     }
 
     template <typename Func>
-    void for_each(int32_t xmin, int32_t xmax, Func func)
+    void for_each(cudaStream_t stream,
+                  int32_t xmin, int32_t xmax,
+                  Func func)
     {
       dim3 blockSize = 256;
       dim3 gridSize = div_up(xmax-xmin, (int)blockSize.x);
 
-      for_each_kernel<<<gridSize, blockSize>>>(xmin, xmax, func);
+      for_each_kernel<<<gridSize, blockSize, 0, stream>>>(xmin, xmax, func);
     }
 
     template <typename Func>
-    void for_each(int32_t xmin, int32_t xmax,
+    void for_each(cudaStream_t stream,
+                  int32_t xmin, int32_t xmax,
                   int32_t ymin, int32_t ymax,
                   Func func)
     {
@@ -178,13 +181,14 @@ namespace visionaray {
               div_up(ymax-ymin, (int)blockSize.y)
               );
 
-      for_each_kernel<<<gridSize, blockSize>>>(xmin, xmax,
-                                               ymin, ymax,
-                                               func);
+      for_each_kernel<<<gridSize, blockSize, 0, stream>>>(xmin, xmax,
+                                                          ymin, ymax,
+                                                          func);
     }
 
     template <typename Func>
-    void for_each(int32_t xmin, int32_t xmax,
+    void for_each(cudaStream_t stream,
+                  int32_t xmin, int32_t xmax,
                   int32_t ymin, int32_t ymax,
                   int32_t zmin, int32_t zmax,
                   Func func)
@@ -196,10 +200,10 @@ namespace visionaray {
               div_up(zmax-zmin, (int)blockSize.z)
               );
 
-      for_each_kernel<<<gridSize, blockSize>>>(xmin, xmax,
-                                               ymin, ymax,
-                                               zmin, zmax,
-                                               func);
+      for_each_kernel<<<gridSize, blockSize, 0, stream>>>(xmin, xmax,
+                                                          ymin, ymax,
+                                                          zmin, zmax,
+                                                          func);
     }
   } // cuda
 #endif
@@ -248,17 +252,20 @@ namespace visionaray {
     }
 
     template <typename Func>
-    void for_each(int32_t xmin, int32_t xmax, Func func)
+    void for_each(hipStream_t stream,
+                  int32_t xmin, int32_t xmax,
+                  Func func)
     {
       dim3 blockSize = 256;
       dim3 gridSize = div_up(xmax-xmin, (int)blockSize.x);
 
       hipLaunchKernelGGL(
-        for_each_kernel<Func>, gridSize, blockSize, 0, 0, xmin, xmax, func);
+        for_each_kernel<Func>, gridSize, blockSize, 0, stream, xmin, xmax, func);
     }
 
     template <typename Func>
-    void for_each(int32_t xmin, int32_t xmax,
+    void for_each(hipStream_t stream,
+                  int32_t xmin, int32_t xmax,
                   int32_t ymin, int32_t ymax,
                   Func func)
     {
@@ -269,12 +276,13 @@ namespace visionaray {
               );
 
       hipLaunchKernelGGL(
-        for_each_kernel<Func>, gridSize, blockSize, 0, 0,
+        for_each_kernel<Func>, gridSize, blockSize, 0, stream,
         xmin, xmax, ymin, ymax, func);
     }
 
     template <typename Func>
-    void for_each(int32_t xmin, int32_t xmax,
+    void for_each(hipStream_t stream,
+                  int32_t xmin, int32_t xmax,
                   int32_t ymin, int32_t ymax,
                   int32_t zmin, int32_t zmax,
                   Func func)
@@ -287,7 +295,7 @@ namespace visionaray {
               );
 
       hipLaunchKernelGGL(
-        for_each_kernel<Func>, gridSize, blockSize, 0, 0,
+        for_each_kernel<Func>, gridSize, blockSize, 0, stream,
         xmin, xmax, ymin, ymax, zmin, zmax, func);
     }
   } // hip

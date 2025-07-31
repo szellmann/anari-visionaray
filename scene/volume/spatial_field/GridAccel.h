@@ -46,6 +46,8 @@ inline void updateMCStepSize(const vec3i  mcID,
 struct GridAccel
 {
   GridAccel(VisionarayGlobalState *s);
+  ~GridAccel();
+
   void init(int3 dims, box3 worldBounds);
 
   dco::GridAccel &visionarayAccel();
@@ -76,6 +78,12 @@ private:
 
   // World bounds the grid spans
   box3 m_worldBounds;
+
+#ifdef WITH_CUDA
+  cudaStream_t stream;
+#elif defined(WITH_HIP)
+  hipStream_t stream;
+#endif
 };
 
 } // visionaray
