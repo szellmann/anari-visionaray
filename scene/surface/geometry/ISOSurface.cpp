@@ -26,13 +26,24 @@ void ISOSurface::finalize()
 {
   if (!m_field) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "no spatial field provided to implicitISOSurface volume");
+        "no spatial field provided to implicitISOSurface geometry");
     return;
   }
 
   if (!m_isoValue || m_isoValue->size() == 0) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "no ISO values provided to implicitISOSurface volume");
+        "no ISO values provided to implicitISOSurface geometry");
+    return;
+  }
+
+  if (!m_field->isValid()) {
+    m_field->finalize();
+    m_field->markFinalized();
+  }
+
+  if (!m_field->isValid()) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "spatial field not valid on implicitISOSurface geometry");
     return;
   }
 

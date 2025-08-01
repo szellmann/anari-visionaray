@@ -84,7 +84,7 @@ void StructuredRegularField::finalize()
 
 bool StructuredRegularField::isValid() const
 {
-  return m_dataArray;
+  return m_dataArray && bounds().valid();
 }
 
 aabb StructuredRegularField::bounds() const
