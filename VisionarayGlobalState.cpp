@@ -16,8 +16,6 @@ VisionarayGlobalState::VisionarayGlobalState(ANARIDevice d)
 
 VisionarayGlobalState::~VisionarayGlobalState()
 {
-  waitOnCurrentFrame();
-
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaStreamDestroy(renderingStream));
 #elif defined(WITH_HIP)
