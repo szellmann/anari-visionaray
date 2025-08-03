@@ -173,14 +173,6 @@ struct ElemPair {
   uint64_t L,R;
 };
 
-struct asTet {
-  asTet(const float4 *verts) : vertices(verts)
-  {}
-
-  const float4 *vertices;
-  //Face
-};
-
 template <typename Lambda>
 void for_each_uface(const Mesh &mesh, const dco::UElem &elem, Lambda lambda) {
   size_t numVerts = elem.end-elem.begin;
@@ -395,4 +387,4 @@ std::vector<basic_triangle<3,float>> computeShell(const conn::Mesh &mesh,
   return result;
 }
 
-} // visionaray
+} // namespace visionaray
