@@ -69,6 +69,100 @@ struct UniqueFaceEqual
   }
 };
 
+// ========================================================
+// element helpers
+// ========================================================
+
+struct Face
+{
+  Face() = default;
+  Face(const float4 *vertices, uint64_t i0, uint64_t i1, uint64_t i2)
+    : vertices(vertices)
+  {
+    indices[0] = i0;
+    indices[1] = i1;
+    indices[2] = i2;
+    indices[3] = -1;
+  }
+
+  Face(const float4 *vertices, uint64_t i0, uint64_t i1, uint64_t i2, uint64_t i3)
+    : vertices(vertices)
+  {
+    indices[0] = i0;
+    indices[1] = i1;
+    indices[2] = i2;
+    indices[3] = i3;
+  }
+
+  int numTriangles() const
+  {
+    if (indices[3] == -1) return 1;
+    else return 2;
+  }
+
+  basic_triangle<3,float> triangle(int i) const
+  {
+    float3 v1, v2, v3;
+    if (i==0) {
+      v1 = vertices[indices[0]].xyz();
+      v2 = vertices[indices[1]].xyz();
+      v3 = vertices[indices[2]].xyz();
+    } else {
+      v1 = vertices[indices[1]].xyz();
+      v2 = vertices[indices[3]].xyz();
+      v3 = vertices[indices[2]].xyz();
+    }
+    basic_triangle<3,float> tri;
+    tri.v1 = v1;
+    tri.e2 = v2-v1;
+    tri.e1 = v3-v1;
+    return tri;
+  }
+
+  const float4 *vertices;
+  uint64_t indices[4];
+};
+
+struct UElem
+{
+  UElem(const float4 vertices[8], size_t numVerts)
+    : vertices(vertices), numVertices(numVerts)
+  {}
+
+  int numFaces() const
+  {
+    if (numVertices == 4) return 4;
+    else if (numVertices == 5) return 5;
+    else if (numVertices == 6) return 5;
+    else if (numVertices == 8) return 6;
+    assert(0);
+    return -1;
+  }
+
+  Face face(int i) const
+  {
+    if (numVertices == 4) {
+      return Face(vertices,Tet[i][0],Tet[i][1],Tet[i][2]);
+    } else if (numVertices == 5) {
+      return Face(vertices,Pyr[i][0],Pyr[i][1],Pyr[i][2],Pyr[i][3]);
+    } else if (numVertices == 6) {
+      return Face(vertices,Wed[i][0],Wed[i][1],Wed[i][2],Wed[i][3]);
+    } else if (numVertices == 8) {
+      return Face(vertices,Hex[i][0],Hex[i][1],Hex[i][2],Hex[i][3]);
+    }
+    assert(0);
+    return {};
+  }
+
+  const float4 *vertices;
+  size_t numVertices;
+};
+
+
+// ========================================================
+// mesh
+// ========================================================
+
 struct Mesh
 {
   Mesh(const float4 *vertices,
@@ -297,88 +391,16 @@ std::vector<basic_triangle<3,float>> computeShell(const conn::Mesh &mesh,
     }
 
     auto nb = faceNeighbors + elemID*6;
-    for (int i=0; i<8; ++i) {
-      auto addTriangle = [&](const float4 v1, const float4 v2, const float4 v3) {
-        basic_triangle<3,float> tri;
-        tri.prim_id = (unsigned)result.size();
-        tri.geom_id = elemID;
-        tri.v1 = v1.xyz();
-        tri.e2 = v2.xyz()-v1.xyz();
-        tri.e1 = v3.xyz()-v1.xyz();
-        result.push_back(tri);
-      };
 
+    conn::UElem cElem(v,numVerts);
+    for (int i=0; i<cElem.numFaces(); ++i) {
       if (nb[i] == ~0ull) {
-        if (numVerts == 4) { // tet
-          using conn::Tet;
-          if (i == 0) addTriangle(v[Tet[0][0]],v[Tet[0][1]],v[Tet[0][2]]);
-          if (i == 1) addTriangle(v[Tet[1][0]],v[Tet[1][1]],v[Tet[1][2]]);
-          if (i == 2) addTriangle(v[Tet[2][0]],v[Tet[2][1]],v[Tet[2][2]]);
-          if (i == 3) addTriangle(v[Tet[3][0]],v[Tet[3][1]],v[Tet[3][2]]);
-        } else if (numVerts == 5) { // pyr
-          using conn::Pyr;
-          if (i == 0) {
-            addTriangle(v[Pyr[0][0]],v[Pyr[0][1]],v[Pyr[0][2]]);
-            addTriangle(v[Pyr[0][1]],v[Pyr[0][3]],v[Pyr[0][2]]);
-          }
-          if (i == 1) {
-            addTriangle(v[Pyr[1][0]],v[Pyr[1][1]],v[Pyr[1][2]]);
-          }
-          if (i == 2) {
-            addTriangle(v[Pyr[2][0]],v[Pyr[2][1]],v[Pyr[2][2]]);
-          }
-          if (i == 3) {
-            addTriangle(v[Pyr[3][0]],v[Pyr[3][1]],v[Pyr[3][2]]);
-          }
-          if (i == 4) {
-            addTriangle(v[Pyr[4][0]],v[Pyr[4][1]],v[Pyr[4][2]]);
-          }
-        } else if (numVerts == 6) { // wedge
-          using conn::Wed;
-          if (i == 0) {
-            addTriangle(v[Wed[0][0]],v[Wed[0][1]],v[Wed[0][2]]);
-            addTriangle(v[Wed[0][1]],v[Wed[0][3]],v[Wed[0][2]]);
-          }
-          if (i == 1) {
-            addTriangle(v[Wed[1][0]],v[Wed[1][1]],v[Wed[1][2]]);
-          }
-          if (i == 2) {
-            addTriangle(v[Wed[2][0]],v[Wed[2][1]],v[Wed[2][2]]);
-          }
-          if (i == 3) {
-            addTriangle(v[Wed[3][0]],v[Wed[3][1]],v[Wed[3][2]]);
-            addTriangle(v[Wed[3][1]],v[Wed[3][3]],v[Wed[3][2]]);
-          }
-          if (i == 4) {
-            addTriangle(v[Wed[4][0]],v[Wed[4][1]],v[Wed[4][2]]);
-            addTriangle(v[Wed[4][1]],v[Wed[4][3]],v[Wed[4][2]]);
-          }
-        } else if (numVerts == 8) { // hex
-          using conn::Hex;
-          if (i == 0) {
-            addTriangle(v[Hex[0][0]],v[Hex[0][1]],v[Hex[0][2]]);
-            addTriangle(v[Hex[0][1]],v[Hex[0][3]],v[Hex[0][2]]);
-          }
-          if (i == 1) {
-            addTriangle(v[Hex[1][0]],v[Hex[1][1]],v[Hex[1][2]]);
-            addTriangle(v[Hex[1][1]],v[Hex[1][3]],v[Hex[1][2]]);
-          }
-          if (i == 2) {
-            addTriangle(v[Hex[2][0]],v[Hex[2][1]],v[Hex[2][2]]);
-            addTriangle(v[Hex[2][1]],v[Hex[2][3]],v[Hex[2][2]]);
-          }
-          if (i == 3) {
-            addTriangle(v[Hex[3][0]],v[Hex[3][1]],v[Hex[3][2]]);
-            addTriangle(v[Hex[3][1]],v[Hex[3][3]],v[Hex[3][2]]);
-          }
-          if (i == 4) {
-            addTriangle(v[Hex[4][0]],v[Hex[4][1]],v[Hex[4][2]]);
-            addTriangle(v[Hex[4][1]],v[Hex[4][3]],v[Hex[4][2]]);
-          }
-          if (i == 5) {
-            addTriangle(v[Hex[5][0]],v[Hex[5][1]],v[Hex[5][2]]);
-            addTriangle(v[Hex[5][1]],v[Hex[5][3]],v[Hex[5][2]]);
-          }
+        const auto &face = cElem.face(i);
+        for (int j=0; j<face.numTriangles(); ++j) {
+          auto tri = face.triangle(j);
+          tri.prim_id = (unsigned)result.size();
+          tri.geom_id = elemID;
+          result.push_back(tri);
         }
       }
     }
