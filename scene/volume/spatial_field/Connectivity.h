@@ -21,7 +21,7 @@ __host__ __device__ static const int Tet[4][3] {
 };
 
 __host__ __device__ static const int Pyr[5][4] {
-  { 0, 1, 2, 3 },
+  { 0, 1, 3, 2 },
   { 0, 4, 1, -1 },
   { 2, 4, 3, -1 },
   { 0, 3, 4, -1 },
@@ -319,7 +319,7 @@ std::vector<basic_triangle<3,float>> computeShell(const conn::Mesh &mesh,
           using conn::Pyr;
           if (i == 0) {
             addTriangle(v[Pyr[0][0]],v[Pyr[0][1]],v[Pyr[0][2]]);
-            addTriangle(v[Pyr[0][0]],v[Pyr[0][2]],v[Pyr[0][3]]);
+            addTriangle(v[Pyr[0][1]],v[Pyr[0][3]],v[Pyr[0][2]]);
           }
           if (i == 1) {
             addTriangle(v[Pyr[1][0]],v[Pyr[1][1]],v[Pyr[1][2]]);
