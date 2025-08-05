@@ -93,7 +93,7 @@ struct Face
     indices[3] = i3;
   }
 
-  int numTriangles() const
+  inline int numTriangles() const
   {
     if (indices[3] == -1) return 1;
     else return 2;
@@ -116,6 +116,20 @@ struct Face
     tri.e2 = v2-v1;
     tri.e1 = v3-v1;
     return tri;
+  }
+
+  inline bool isPlanar() const
+  {
+    if (numTriangles() == 1)
+      return true;
+
+    auto tri0 = triangle(0);
+    auto tri1 = triangle(1);
+
+    float3 n0 = normalize(cross(tri0.e1,tri0.e2));
+    float3 n1 = normalize(cross(tri1.e1,tri1.e2));
+
+    return (1.f-fabsf(dot(n0,n1))) < 1e-3f;
   }
 
   const float4 *vertices;
@@ -216,6 +230,36 @@ struct UElem
     return f;
   }
 
+  inline bool allFacesPlanar() const
+  {
+    for (int i=0; i<numFaces(); ++i) {
+      if (!face(i).isPlanar()) return false;
+    }
+    return true;
+  }
+
+  inline bool hasCoplanarFaces() const
+  {
+    for (int i=0; i<numFaces(); ++i) {
+      const Face f1 = face(i);
+      if (!f1.isPlanar()) continue;
+      auto tri1 = f1.triangle(0);
+      float3 n1 = normalize(cross(tri1.e1,tri1.e2));
+      for (int j=i+1; j<numFaces(); ++j) {
+        const Face f2 = face(j);
+        if (!f2.isPlanar()) continue;
+        auto tri2 = f2.triangle(0);
+        float3 n2 = normalize(cross(tri2.e1,tri2.e2));
+        float3 diff = abs(n1-n2);
+        const float eps = 1e-4f;
+        if (diff.x<eps && diff.y<eps && diff.z<eps) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   float4 vertices[8];
   uint64_t indices[8];
   size_t numVertices;
@@ -277,6 +321,9 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.indexBuffer = mesh.indices;
 
     conn::UElem cElem(elem);
+    //if (!cElem.allFacesPlanar()) continue;
+    if (cElem.hasCoplanarFaces()) continue;
+
     for (int i=0; i<cElem.numFaces(); ++i) {
       conn::UniqueFace face = cElem.uniqueFace(i);
       auto it = face2elems.find(face);
@@ -298,6 +345,14 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.indexBuffer = mesh.indices;
 
     conn::UElem cElem(elem);
+    //if (!cElem.allFacesPlanar()) continue;
+    if (cElem.hasCoplanarFaces()) {
+      for (int i=0; i<6; ++i) {
+        faceNeighbors.push_back(~0ull);
+      }
+      continue;
+    }
+
     for (int i=0; i<cElem.numFaces(); ++i) {
       conn::UniqueFace face = cElem.uniqueFace(i);
       auto it = face2elems.find(face);
@@ -341,6 +396,9 @@ std::vector<basic_triangle<3,float>> computeShell(const conn::Mesh &mesh,
     auto nb = faceNeighbors + elemID*6;
 
     conn::UElem cElem(elem);
+    //if (!cElem.allFacesPlanar()) continue;
+    if (cElem.hasCoplanarFaces()) continue;
+
     for (int i=0; i<cElem.numFaces(); ++i) {
       if (nb[i] == ~0ull) {
         const auto &face = cElem.face(i);
