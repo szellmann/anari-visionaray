@@ -260,9 +260,41 @@ struct UElem
     return false;
   }
 
+  inline bool checkWindingOrder() const
+  {
+    for (int i=0; i<numFaces(); ++i) {
+      const Face f = face(i);
+      auto tri = f.triangle(0);
+      const Plane p = makePlane(tri.v1,tri.e1+tri.v1,tri.e2+tri.v1);
+
+      const float eps = 1e-4f;
+
+      // find a vertex that is not in this plane:
+      float sgn = 0.f;
+      for (int j=0; j<numVertices; ++j) {
+        float3 refp = vertices[j].xyz();
+        sgn = p.eval(refp);
+        if (fabsf(sgn) > eps) break;
+      }
+      if (sgn > eps) return false;
+    }
+
+    // all normals facing inwards: check passed
+    return true;
+  }
+
+  inline bool isValid() const
+  {
+    // TODO: test and enable winding order check:
+    // TODO: support non-planar faces and relax this:
+    return allFacesPlanar() && !hasCoplanarFaces();// && checkWindingOrder();
+  }
+
+  // vertices, with index indirection already resolved
   float4 vertices[8];
+  // indices, as from the original data
   uint64_t indices[8];
-  size_t numVertices;
+  int numVertices;
 };
 
 
@@ -321,8 +353,7 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.indexBuffer = mesh.indices;
 
     conn::UElem cElem(elem);
-    //if (!cElem.allFacesPlanar()) continue;
-    if (cElem.hasCoplanarFaces()) continue;
+    if (!cElem.isValid()) continue;
 
     for (int i=0; i<cElem.numFaces(); ++i) {
       conn::UniqueFace face = cElem.uniqueFace(i);
@@ -345,8 +376,7 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.indexBuffer = mesh.indices;
 
     conn::UElem cElem(elem);
-    //if (!cElem.allFacesPlanar()) continue;
-    if (cElem.hasCoplanarFaces()) {
+    if (!cElem.isValid()) {
       for (int i=0; i<6; ++i) {
         faceNeighbors.push_back(~0ull);
       }
@@ -396,8 +426,8 @@ std::vector<basic_triangle<3,float>> computeShell(const conn::Mesh &mesh,
     auto nb = faceNeighbors + elemID*6;
 
     conn::UElem cElem(elem);
-    //if (!cElem.allFacesPlanar()) continue;
-    if (cElem.hasCoplanarFaces()) continue;
+
+    if (!cElem.isValid()) continue;
 
     for (int i=0; i<cElem.numFaces(); ++i) {
       if (nb[i] == ~0ull) {
