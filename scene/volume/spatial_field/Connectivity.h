@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <unordered_map>
 #include <vector>
-#include <visionaray/morton.h>
 #include "DeviceCopyableObjects.h"
 
 namespace visionaray {
@@ -100,7 +99,7 @@ struct Face
     else return 2;
   }
 
-  basic_triangle<3,float> triangle(int i) const
+  inline basic_triangle<3,float> triangle(int i) const
   {
     float3 v1, v2, v3;
     if (i==0) {
@@ -125,9 +124,16 @@ struct Face
 
 struct UElem
 {
-  UElem(const float4 vertices[8], size_t numVerts)
-    : vertices(vertices), numVertices(numVerts)
-  {}
+  UElem(const dco::UElem &elem)
+  {
+    numVertices = elem.end-elem.begin;
+
+    for (int i=0; i<numVertices; ++i) {
+      uint64_t idx = elem.indexBuffer[elem.begin+i];
+      vertices[i] = elem.vertexBuffer[idx];
+      indices[i] = idx;
+    }
+  }
 
   int numFaces() const
   {
@@ -139,7 +145,7 @@ struct UElem
     return -1;
   }
 
-  Face face(int i) const
+  inline Face face(int i) const
   {
     if (numVertices == 4) {
       return Face(vertices,Tet[i][0],Tet[i][1],Tet[i][2]);
@@ -154,7 +160,64 @@ struct UElem
     return {};
   }
 
-  const float4 *vertices;
+  inline UniqueFace uniqueFace(int i) const
+  {
+    uint64_t I[4];
+    if (numVertices == 4) {
+      I[0] = indices[Tet[i][0]];
+      I[1] = indices[Tet[i][1]];
+      I[2] = indices[Tet[i][2]];
+      std::sort(I,I+3);
+    } else if (numVertices == 5) {
+      if (face(i).numTriangles() == 1) {
+        I[0] = indices[Pyr[i][0]];
+        I[1] = indices[Pyr[i][1]];
+        I[2] = indices[Pyr[i][2]];
+        std::sort(I,I+3);
+      } else {
+        I[0] = indices[Pyr[i][0]];
+        I[1] = indices[Pyr[i][1]];
+        I[2] = indices[Pyr[i][2]];
+        I[3] = indices[Pyr[i][3]];
+        std::sort(I,I+4);
+      }
+    } else if (numVertices == 6) {
+      if (face(i).numTriangles() == 1) {
+        I[0] = indices[Wed[i][0]];
+        I[1] = indices[Wed[i][1]];
+        I[2] = indices[Wed[i][2]];
+        std::sort(I,I+3);
+      } else {
+        I[0] = indices[Wed[i][0]];
+        I[1] = indices[Wed[i][1]];
+        I[2] = indices[Wed[i][2]];
+        I[3] = indices[Wed[i][3]];
+        std::sort(I,I+4);
+      }
+    } else if (numVertices == 8) {
+      if (face(i).numTriangles() == 1) {
+        I[0] = indices[Hex[i][0]];
+        I[1] = indices[Hex[i][1]];
+        I[2] = indices[Hex[i][2]];
+        std::sort(I,I+3);
+      } else {
+        I[0] = indices[Hex[i][0]];
+        I[1] = indices[Hex[i][1]];
+        I[2] = indices[Hex[i][2]];
+        I[3] = indices[Hex[i][3]];
+        std::sort(I,I+4);
+      }
+    }
+
+    UniqueFace f;
+    f.i1 = I[0];
+    f.i2 = I[1];
+    f.i3 = I[2];
+    return f;
+  }
+
+  float4 vertices[8];
+  uint64_t indices[8];
   size_t numVertices;
 };
 
@@ -185,75 +248,6 @@ struct Mesh
     }
   }
 
-  // three indices
-  inline UniqueFace makeUniqueFace(uint64_t i1, uint64_t i2, uint64_t i3) const
-  {
-    uint64_t I[3] = { i1, i2, i3 };
-    std::sort(I,I+3);
-    UniqueFace f;
-    f.i1 = I[0];
-    f.i2 = I[1];
-    f.i3 = I[2];
-    return f;
-  }
-
-  // four indices
-  inline UniqueFace makeUniqueFace(
-      uint64_t i1, uint64_t i2, uint64_t i3, uint64_t i4) const
-  {
-    uint64_t I[4] = { i1, i2, i3, i4 };
-    std::sort(I,I+4);
-    UniqueFace f;
-    f.i1 = I[0];
-    f.i2 = I[1];
-    f.i3 = I[2];
-    return f;
-  }
-
-  // three vertices, generate indices on morton curve
-  inline UniqueFace makeUniqueFace(
-      const float4 &v1, const float4 &v2, const float4 &v3) const
-  {
-    uint64_t morton[3] = {
-      quantize(v1.xyz()),
-      quantize(v2.xyz()),
-      quantize(v3.xyz())
-    };
-    std::sort(morton,morton+3);
-    UniqueFace f;
-    f.i1 = morton[0];
-    f.i2 = morton[1];
-    f.i3 = morton[2];
-    return f;
-  }
-
-  // four vertices, generate indices on morton curve
-  inline UniqueFace makeUniqueFace(
-      const float4 &v1, const float4 &v2, const float4 &v3, const float4 &v4) const
-  {
-    uint64_t morton[4] = {
-      quantize(v1.xyz()),
-      quantize(v2.xyz()),
-      quantize(v3.xyz()),
-      quantize(v4.xyz())
-    };
-    std::sort(morton,morton+4);
-    UniqueFace f;
-    f.i1 = morton[0];
-    f.i2 = morton[1];
-    f.i3 = morton[2];
-    return f;
-  }
-
-  inline uint64_t quantize(float3 p) const {
-    p = (p - bounds.min) / bounds.size();
-    p.x *= 0x400000;
-    p.y *= 0x200000;
-    p.z *= 0x200000;
-    typedef unsigned long long ulonglong;
-    return morton_encode3D(ulonglong(p.x), ulonglong(p.y), ulonglong(p.z));
-  }
-
   const float4 *vertices;
   const uint64_t *indices;
   const dco::UElem *elements;
@@ -266,45 +260,6 @@ struct ElemPair {
   // IDs of left/right element
   uint64_t L,R;
 };
-
-template <typename Lambda>
-void for_each_uface(const Mesh &mesh, const dco::UElem &elem, Lambda lambda) {
-  size_t numVerts = elem.end-elem.begin;
-  float4 v[8];
-  uint64_t I[8];
-  for (int i=0; i<numVerts; ++i) {
-    uint64_t idx = elem.indexBuffer[elem.begin+i];
-    v[i] = elem.vertexBuffer[idx];
-    I[i] = idx;
-  }
-  //#define ARR v
-  #define ARR I
-  if (numVerts == 4) { // tet
-    lambda(mesh.makeUniqueFace(ARR[Tet[0][0]],ARR[Tet[0][1]],ARR[Tet[0][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Tet[1][0]],ARR[Tet[1][1]],ARR[Tet[1][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Tet[2][0]],ARR[Tet[2][1]],ARR[Tet[2][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Tet[3][0]],ARR[Tet[3][1]],ARR[Tet[3][2]]));
-  } else if (numVerts == 5) { // pyr
-    lambda(mesh.makeUniqueFace(ARR[Pyr[0][0]],ARR[Pyr[0][1]],ARR[Pyr[0][2]],ARR[Pyr[0][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Pyr[1][0]],ARR[Pyr[1][1]],ARR[Pyr[1][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Pyr[2][0]],ARR[Pyr[2][1]],ARR[Pyr[2][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Pyr[3][0]],ARR[Pyr[3][1]],ARR[Pyr[3][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Pyr[4][0]],ARR[Pyr[4][1]],ARR[Pyr[4][2]]));
-  } else if (numVerts == 6) { // wedge
-    lambda(mesh.makeUniqueFace(ARR[Wed[0][0]],ARR[Wed[0][1]],ARR[Wed[0][2]],ARR[Wed[0][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Wed[1][0]],ARR[Wed[1][1]],ARR[Wed[1][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Wed[2][0]],ARR[Wed[2][1]],ARR[Wed[2][2]]));
-    lambda(mesh.makeUniqueFace(ARR[Wed[3][0]],ARR[Wed[3][1]],ARR[Wed[3][2]],ARR[Wed[3][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Wed[4][0]],ARR[Wed[4][1]],ARR[Wed[4][2]],ARR[Wed[4][3]]));
-  } else if (numVerts == 8) { // hex
-    lambda(mesh.makeUniqueFace(ARR[Hex[0][0]],ARR[Hex[0][1]],ARR[Hex[0][2]],ARR[Hex[0][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Hex[1][0]],ARR[Hex[1][1]],ARR[Hex[1][2]],ARR[Hex[1][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Hex[2][0]],ARR[Hex[2][1]],ARR[Hex[2][2]],ARR[Hex[2][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Hex[3][0]],ARR[Hex[3][1]],ARR[Hex[3][2]],ARR[Hex[3][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Hex[4][0]],ARR[Hex[4][1]],ARR[Hex[4][2]],ARR[Hex[4][3]]));
-    lambda(mesh.makeUniqueFace(ARR[Hex[5][0]],ARR[Hex[5][1]],ARR[Hex[5][2]],ARR[Hex[5][3]]));
-  }
-}
 
 } // conn
 
@@ -321,7 +276,9 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.vertexBuffer = mesh.vertices;
     elem.indexBuffer = mesh.indices;
 
-    conn::for_each_uface(mesh, elem, [&](conn::UniqueFace face) {
+    conn::UElem cElem(elem);
+    for (int i=0; i<cElem.numFaces(); ++i) {
+      conn::UniqueFace face = cElem.uniqueFace(i);
       auto it = face2elems.find(face);
       if (it == face2elems.end()) {
         face2elems.insert({face,{elemID,~0ull}});
@@ -329,7 +286,7 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
         auto &ep = it->second;
         ep.R = elemID;
       }
-    });
+    }
   }
 
   std::vector<uint64_t> faceNeighbors;
@@ -340,9 +297,9 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
     elem.vertexBuffer = mesh.vertices;
     elem.indexBuffer = mesh.indices;
 
-    int i=0;
-
-    conn::for_each_uface(mesh, elem, [&](conn::UniqueFace face) {
+    conn::UElem cElem(elem);
+    for (int i=0; i<cElem.numFaces(); ++i) {
+      conn::UniqueFace face = cElem.uniqueFace(i);
       auto it = face2elems.find(face);
       assert(it != face2elems.end());
       const auto &ep = it->second;
@@ -357,10 +314,9 @@ std::vector<uint64_t> computeFaceConnectivity(const conn::Mesh &mesh)
           faceNeighbors.push_back(ep.L);
         }
       }
-      i++;
-    });
+    }
 
-    for (int j=i; j<6; ++j) {
+    for (int i=cElem.numFaces(); i<6; ++i) {
       faceNeighbors.push_back(~0ull);
     }
   }
@@ -382,17 +338,9 @@ std::vector<basic_triangle<3,float>> computeShell(const conn::Mesh &mesh,
     elem.vertexBuffer = mesh.vertices;
     elem.indexBuffer = mesh.indices;
 
-    size_t numVerts = elem.end-elem.begin;
-
-    float4 v[8];
-    for (int i=0; i<numVerts; ++i) {
-      uint64_t idx = elem.indexBuffer[elem.begin+i];
-      v[i] = elem.vertexBuffer[idx];
-    }
-
     auto nb = faceNeighbors + elemID*6;
 
-    conn::UElem cElem(v,numVerts);
+    conn::UElem cElem(elem);
     for (int i=0; i<cElem.numFaces(); ++i) {
       if (nb[i] == ~0ull) {
         const auto &face = cElem.face(i);
