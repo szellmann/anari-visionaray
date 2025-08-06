@@ -99,6 +99,11 @@ struct Face
     else return 2;
   }
 
+  inline float4 vertex(int i) const
+  {
+    return vertices[indices[i]];
+  }
+
   inline basic_triangle<3,float> triangle(int i) const
   {
     float3 v1, v2, v3;

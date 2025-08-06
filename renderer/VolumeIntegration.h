@@ -248,63 +248,26 @@ inline float elementMarchVolume(ScreenSample &ss,
       float value = 0.f;
 
       Plane p[6];
-      if (numVerts == 4) {
-        using conn::Tet;
-        p[0] = makePlane(v[Tet[0][0]],v[Tet[0][1]],v[Tet[0][2]]);
-        p[1] = makePlane(v[Tet[1][0]],v[Tet[1][1]],v[Tet[1][2]]);
-        p[2] = makePlane(v[Tet[2][0]],v[Tet[2][1]],v[Tet[2][2]]);
-        p[3] = makePlane(v[Tet[3][0]],v[Tet[3][1]],v[Tet[3][2]]);
+      conn::UElem cElem(elem);
 
-        for (int i=0;i<4;++i) {
-          clip(ray,planeID,out_t,p[i],i);
-        }
-
-        float3 P = ray.ori+ray.dir*out_t;
-        evalTet(P,p,v,value);
-      } else if (numVerts == 5) {
-        using conn::Pyr;
-        p[0] = makePlane(v[Pyr[0][0]],v[Pyr[0][1]],v[Pyr[0][2]]);
-        p[1] = makePlane(v[Pyr[1][0]],v[Pyr[1][1]],v[Pyr[1][2]]);
-        p[2] = makePlane(v[Pyr[2][0]],v[Pyr[2][1]],v[Pyr[2][2]]);
-        p[3] = makePlane(v[Pyr[3][0]],v[Pyr[3][1]],v[Pyr[3][2]]);
-        p[4] = makePlane(v[Pyr[4][0]],v[Pyr[4][1]],v[Pyr[4][2]]);
-
-        for (int i=0;i<5;++i) {
-          clip(ray,planeID,out_t,p[i],i);
-        }
-
-         float3 P = ray.ori+ray.dir*out_t;
-         evalPyr(P,p,v,value);
-      } else if (numVerts == 6) {
-        using conn::Wed;
-        p[0] = makePlane(v[Wed[0][0]],v[Wed[0][1]],v[Wed[0][2]]);
-        p[1] = makePlane(v[Wed[1][0]],v[Wed[1][1]],v[Wed[1][2]]);
-        p[2] = makePlane(v[Wed[2][0]],v[Wed[2][1]],v[Wed[2][2]]);
-        p[3] = makePlane(v[Wed[3][0]],v[Wed[3][1]],v[Wed[3][2]]);
-        p[4] = makePlane(v[Wed[4][0]],v[Wed[4][1]],v[Wed[4][2]]);
-
-        for (int i=0;i<6;++i) {
-          clip(ray,planeID,out_t,p[i],i);
-        }
-
-         float3 P = ray.ori+ray.dir*out_t;
-         evalWedge(P,p,v,value);
-      } else if (numVerts == 8) {
-        using conn::Hex;
-        p[0] = makePlane(v[Hex[0][0]],v[Hex[0][1]],v[Hex[0][2]]);
-        p[1] = makePlane(v[Hex[1][0]],v[Hex[1][1]],v[Hex[1][2]]);
-        p[2] = makePlane(v[Hex[2][0]],v[Hex[2][1]],v[Hex[2][2]]);
-        p[3] = makePlane(v[Hex[3][0]],v[Hex[3][1]],v[Hex[3][2]]);
-        p[4] = makePlane(v[Hex[4][0]],v[Hex[4][1]],v[Hex[4][2]]);
-        p[5] = makePlane(v[Hex[5][0]],v[Hex[5][1]],v[Hex[5][2]]);
-
-        for (int i=0;i<6;++i) {
-          clip(ray,planeID,out_t,p[i],i);
-        }
-
-         float3 P = ray.ori+ray.dir*out_t;
-         evalHex(P,p,v,value);
+      for (int i=0; i<cElem.numFaces(); ++i) {
+        const conn::Face f = cElem.face(i);
+        const auto tri = f.triangle(0);
+        p[i] = makePlane(f.vertex(0).xyz(),
+                         f.vertex(1).xyz(),
+                         f.vertex(2).xyz());
+        clip(ray,planeID,out_t,p[i],i);
       }
+
+      float3 P = ray.ori+ray.dir*out_t;
+      if (numVerts == 4)
+        evalTet(P,p,v,value);
+      else if (numVerts == 5)
+        evalPyr(P,p,v,value);
+      else if (numVerts == 6)
+        evalWedge(P,p,v,value);
+      else if (numVerts == 8)
+        evalHex(P,p,v,value);
 
       uint64_t outID = ~0ull; // the neighbor
       assert(planeID>=0 && planeID<6);
