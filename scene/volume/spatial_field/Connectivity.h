@@ -75,6 +75,8 @@ struct UniqueFaceEqual
 struct Face
 {
   Face() = default;
+
+  __host__ __device__
   Face(const float4 *vertices, uint64_t i0, uint64_t i1, uint64_t i2)
     : vertices(vertices)
   {
@@ -84,6 +86,7 @@ struct Face
     indices[3] = -1;
   }
 
+  __host__ __device__
   Face(const float4 *vertices, uint64_t i0, uint64_t i1, uint64_t i2, uint64_t i3)
     : vertices(vertices)
   {
@@ -93,17 +96,20 @@ struct Face
     indices[3] = i3;
   }
 
+  __host__ __device__
   inline int numTriangles() const
   {
     if (indices[3] == -1) return 1;
     else return 2;
   }
 
+  __host__ __device__
   inline float4 vertex(int i) const
   {
     return vertices[indices[i]];
   }
 
+  __host__ __device__
   inline basic_triangle<3,float> triangle(int i) const
   {
     float3 v1, v2, v3;
@@ -123,6 +129,7 @@ struct Face
     return tri;
   }
 
+  __host__
   inline bool isPlanar() const
   {
     if (numTriangles() == 1)
@@ -143,6 +150,7 @@ struct Face
 
 struct UElem
 {
+  __host__ __device__
   UElem(const dco::UElem &elem)
   {
     numVertices = elem.end-elem.begin;
@@ -154,6 +162,7 @@ struct UElem
     }
   }
 
+  __host__ __device__
   int numFaces() const
   {
     if (numVertices == 4) return 4;
@@ -164,6 +173,7 @@ struct UElem
     return -1;
   }
 
+  __host__ __device__
   inline Face face(int i) const
   {
     if (numVertices == 4) {
@@ -179,6 +189,7 @@ struct UElem
     return {};
   }
 
+  __host__
   inline UniqueFace uniqueFace(int i) const
   {
     uint64_t I[4];
@@ -235,6 +246,7 @@ struct UElem
     return f;
   }
 
+  __host__
   inline bool allFacesPlanar() const
   {
     for (int i=0; i<numFaces(); ++i) {
@@ -243,6 +255,7 @@ struct UElem
     return true;
   }
 
+  __host__
   inline bool hasCoplanarFaces() const
   {
     for (int i=0; i<numFaces(); ++i) {
@@ -265,6 +278,7 @@ struct UElem
     return false;
   }
 
+  __host__
   inline bool checkWindingOrder() const
   {
     for (int i=0; i<numFaces(); ++i) {
@@ -288,6 +302,7 @@ struct UElem
     return true;
   }
 
+  __host__
   inline bool isValid() const
   {
     // TODO: test and enable winding order check:
