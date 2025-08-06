@@ -100,6 +100,7 @@ set(SOURCES
     scene/surface/material/Matte.cpp
     scene/surface/material/PBM.cpp
     scene/surface/Surface.cpp
+    scene/volume/spatial_field/Connectivity.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/spatial_field/StructuredRegularField.cpp
     scene/volume/TransferFunction1D.cpp
