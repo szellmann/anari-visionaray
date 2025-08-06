@@ -237,12 +237,6 @@ inline float elementMarchVolume(ScreenSample &ss,
 
       size_t numVerts = elem.end-elem.begin;
 
-      float4 v[8];
-      for (int i=0; i<numVerts; ++i) {
-        uint64_t idx = elem.indexBuffer[elem.begin+i];
-        v[i] = elem.vertexBuffer[idx];
-      }
-
       int planeID = -1; // in [0:6)
       float out_t = FLT_MAX;
       float value = 0.f;
@@ -252,7 +246,6 @@ inline float elementMarchVolume(ScreenSample &ss,
 
       for (int i=0; i<cElem.numFaces(); ++i) {
         const conn::Face f = cElem.face(i);
-        const auto tri = f.triangle(0);
         p[i] = makePlane(f.vertex(0).xyz(),
                          f.vertex(1).xyz(),
                          f.vertex(2).xyz());
@@ -261,13 +254,13 @@ inline float elementMarchVolume(ScreenSample &ss,
 
       float3 P = ray.ori+ray.dir*out_t;
       if (numVerts == 4)
-        evalTet(P,p,v,value);
+        evalTet(P,p,cElem.vertices,value);
       else if (numVerts == 5)
-        evalPyr(P,p,v,value);
+        evalPyr(P,p,cElem.vertices,value);
       else if (numVerts == 6)
-        evalWedge(P,p,v,value);
+        evalWedge(P,p,cElem.vertices,value);
       else if (numVerts == 8)
-        evalHex(P,p,v,value);
+        evalHex(P,p,cElem.vertices,value);
 
       uint64_t outID = ~0ull; // the neighbor
       assert(planeID>=0 && planeID<6);
@@ -277,13 +270,13 @@ inline float elementMarchVolume(ScreenSample &ss,
         if (isnan(value_in)) {
           float3 P = ray.ori+ray.dir*max(t,ray.tmin);
           if (numVerts == 4)
-            evalTet(P,p,v,value_in);
+            evalTet(P,p,cElem.vertices,value_in);
           else if (numVerts == 5)
-            evalPyr(P,p,v,value_in);
+            evalPyr(P,p,cElem.vertices,value_in);
           else if (numVerts == 6)
-            evalWedge(P,p,v,value_in);
+            evalWedge(P,p,cElem.vertices,value_in);
           else if (numVerts == 8)
-            evalHex(P,p,v,value_in);
+            evalHex(P,p,cElem.vertices,value_in);
           else
             assert(0);
         }
