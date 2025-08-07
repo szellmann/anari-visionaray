@@ -137,6 +137,32 @@ inline void evalHex(float3 P, const Plane p[6], const float4 v[8], float &value_
     ;
 }
 
+VSNRAY_FUNC
+inline float evalElem(float3 P,
+                      const conn::UElem &cElem,
+                      const Plane p[6],
+                      size_t numVerts,
+                      float cellValue)
+{
+  if (isnan(cElem.vertices[0].w))
+    return cellValue;
+
+  float value = 0.f;
+
+  if (numVerts == 4)
+    evalTet(P,p,cElem.vertices,value);
+  else if (numVerts == 5)
+    evalPyr(P,p,cElem.vertices,value);
+  else if (numVerts == 6)
+    evalWedge(P,p,cElem.vertices,value);
+  else if (numVerts == 8)
+    evalHex(P,p,cElem.vertices,value);
+  else
+    assert(0);
+
+  return value;
+}
+
 template <bool Shading>
 VSNRAY_FUNC
 inline float elementMarchVolume(ScreenSample &ss,
@@ -239,7 +265,6 @@ inline float elementMarchVolume(ScreenSample &ss,
 
       int planeID = -1; // in [0:6)
       float out_t = FLT_MAX;
-      float value = 0.f;
 
       Plane p[6];
       conn::UElem cElem(elem);
@@ -253,14 +278,7 @@ inline float elementMarchVolume(ScreenSample &ss,
       }
 
       float3 P = ray.ori+ray.dir*out_t;
-      if (numVerts == 4)
-        evalTet(P,p,cElem.vertices,value);
-      else if (numVerts == 5)
-        evalPyr(P,p,cElem.vertices,value);
-      else if (numVerts == 6)
-        evalWedge(P,p,cElem.vertices,value);
-      else if (numVerts == 8)
-        evalHex(P,p,cElem.vertices,value);
+      float value = evalElem(P,cElem,p,numVerts,elem.cellValue);
 
       uint64_t outID = ~0ull; // the neighbor
       assert(planeID>=0 && planeID<6);
@@ -269,21 +287,10 @@ inline float elementMarchVolume(ScreenSample &ss,
       if (out_t > ray.tmin) {
         if (isnan(value_in)) {
           float3 P = ray.ori+ray.dir*max(t,ray.tmin);
-          if (numVerts == 4)
-            evalTet(P,p,cElem.vertices,value_in);
-          else if (numVerts == 5)
-            evalPyr(P,p,cElem.vertices,value_in);
-          else if (numVerts == 6)
-            evalWedge(P,p,cElem.vertices,value_in);
-          else if (numVerts == 8)
-            evalHex(P,p,cElem.vertices,value_in);
-          else
-            assert(0);
+          value_in = evalElem(P,cElem,p,numVerts,elem.cellValue);
         }
         float dt = out_t-max(t,ray.tmin);
 
-        // TODO: for now only cell.data
-        //float value = elem.cellValue;
         float4 sample_in = postClassify(vol.asTransferFunction1D,value_in);
         float4 sample_out = postClassify(vol.asTransferFunction1D,value);
         float4 sample = over(sample_in,sample_out);
