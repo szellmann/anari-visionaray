@@ -322,7 +322,7 @@ inline float elementMarchVolume(ScreenSample &ss,
         float4 sample = postClassify(vol.asTransferFunction1D,value);
 
         float3 shadedColor = sample.xyz();
-        float stepTransmittance = powf(1.f - sample.w, dt / vol.unitDistance);
+        float stepTransmittance = powf(1.f - sample.w, min(dt,exit.t-t) / vol.unitDistance);
         color += transmittance * (1.f - stepTransmittance) * shadedColor;
         alpha += transmittance * (1.f - stepTransmittance);
         transmittance *= stepTransmittance;
