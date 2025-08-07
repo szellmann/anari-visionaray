@@ -163,6 +163,27 @@ inline float evalElem(float3 P,
   return value;
 }
 
+VSNRAY_FUNC
+inline void nextElem(const Ray &ray,
+                     const conn::UElem &cElem,
+                     const Plane p[6],
+                     size_t numVerts,
+                     const uint64_t *faceNeighbors,
+                     uint64_t currID,
+                     uint64_t &outID,
+                     float &out_t)
+{
+  int planeID = -1; // in [0:6)
+
+  out_t = FLT_MAX;
+  for (int i=0; i<cElem.numFaces(); ++i) {
+    clip(ray,planeID,out_t,p[i],i);
+  }
+
+  assert(planeID>=0 && planeID<6);
+  outID = faceNeighbors[currID*6+planeID];
+}
+
 template <bool Shading>
 VSNRAY_FUNC
 inline float elementMarchVolume(ScreenSample &ss,
@@ -256,58 +277,58 @@ inline float elementMarchVolume(ScreenSample &ss,
 
     t = entry.t;
     uint64_t elemID = entry.elemID;
-    #if 1
-    float value_in = NAN;
-    while (t < exit.t && alpha<alphaMax && elemID != ~0ull) {
-      dco::UElem elem = sf.asUnstructured.elems[elemID];
+    uint64_t nextID;
+    interval<float> currentRange(entry.t,FLT_MAX);
+    dco::UElem elem = sf.asUnstructured.elems[elemID];
+    size_t numVerts = elem.end-elem.begin;
+    conn::UElem cElem(elem);
+    Plane p[6];
+    for (int i=0; i<cElem.numFaces(); ++i) {
+      const conn::Face f = cElem.face(i);
+      p[i] = makePlane(f.vertex(0).xyz(),
+                       f.vertex(1).xyz(),
+                       f.vertex(2).xyz());
+    }
+    nextElem(ray,cElem,p,numVerts,sf.asUnstructured.faceNeighbors,elemID,nextID,currentRange.max);
 
-      size_t numVerts = elem.end-elem.begin;
+    float dt = sf.cellSize*samplingRateInv;
 
-      int planeID = -1; // in [0:6)
-      float out_t = FLT_MAX;
+    while (t < exit.t && alpha<alphaMax) {
+      while (!currentRange.contains(t)) {
+        elemID = nextID;
 
-      Plane p[6];
-      conn::UElem cElem(elem);
+        if (elemID == ~0ull)
+          break;
 
-      for (int i=0; i<cElem.numFaces(); ++i) {
-        const conn::Face f = cElem.face(i);
-        p[i] = makePlane(f.vertex(0).xyz(),
-                         f.vertex(1).xyz(),
-                         f.vertex(2).xyz());
-        clip(ray,planeID,out_t,p[i],i);
+        elem = sf.asUnstructured.elems[elemID];
+        cElem = conn::UElem(elem);
+        for (int i=0; i<cElem.numFaces(); ++i) {
+          const conn::Face f = cElem.face(i);
+          p[i] = makePlane(f.vertex(0).xyz(),
+                           f.vertex(1).xyz(),
+                           f.vertex(2).xyz());
+        }
+        currentRange.min = currentRange.max;
+        nextElem(ray,cElem,p,numVerts,sf.asUnstructured.faceNeighbors,elemID,nextID,currentRange.max);
       }
 
-      float3 P = ray.ori+ray.dir*out_t;
-      float value = evalElem(P,cElem,p,numVerts,elem.cellValue);
+      if (elemID == ~0ull)
+        break;
 
-      uint64_t outID = ~0ull; // the neighbor
-      assert(planeID>=0 && planeID<6);
-      outID = sf.asUnstructured.faceNeighbors[elemID*6+planeID];
-
-      if (out_t > ray.tmin) {
-        if (isnan(value_in)) {
-          float3 P = ray.ori+ray.dir*max(t,ray.tmin);
-          value_in = evalElem(P,cElem,p,numVerts,elem.cellValue);
-        }
-        float dt = out_t-max(t,ray.tmin);
-
-        float4 sample_in = postClassify(vol.asTransferFunction1D,value_in);
-        float4 sample_out = postClassify(vol.asTransferFunction1D,value);
-        float4 sample = over(sample_in,sample_out);
+      if (t > ray.tmin) {
+        float3 P = ray.ori+ray.dir*t;
+        float value = evalElem(P,cElem,p,numVerts,elem.cellValue);
+        float4 sample = postClassify(vol.asTransferFunction1D,value);
 
         float3 shadedColor = sample.xyz();
         float stepTransmittance = powf(1.f - sample.w, dt / vol.unitDistance);
         color += transmittance * (1.f - stepTransmittance) * shadedColor;
         alpha += transmittance * (1.f - stepTransmittance);
         transmittance *= stepTransmittance;
-
-        value_in = value;
       }
 
-      t = out_t;
-      elemID = outID;
+      t += dt;
     }
-    #endif
 
     const float3 exitPos = ray.ori + exit.t * ray.dir;
     const float eps = epsilonFrom(exitPos, ray.dir, exit.t);

@@ -123,6 +123,7 @@ void UnstructuredField::finalize()
 
   uint64_t currentIndex=0;
   float minCellDiagonal=FLT_MAX;
+  float avgCellDiagonal=0.f;
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
     uint64_t firstIndex, lastIndex;
 
@@ -155,6 +156,7 @@ void UnstructuredField::finalize()
       cellBounds.extend(V.xyz());
     }
     minCellDiagonal = fminf(minCellDiagonal,length(cellBounds.max-cellBounds.min));
+    avgCellDiagonal += length(cellBounds.max-cellBounds.min)/m_elements.size();
   }
 
   // voxel grid extensions for AMR "stitching"
@@ -278,7 +280,7 @@ void UnstructuredField::finalize()
 #endif
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),vec3f(0.f));
-  setCellSize(minCellDiagonal);
+  setCellSize(avgCellDiagonal);
 
   buildGrid();
 
