@@ -70,24 +70,8 @@ void UnstructuredField::finalize()
   auto *cellType = m_params.cellType->beginAs<uint8_t>();
   auto *cellData = m_params.cellData ? m_params.cellData->beginAs<float>() : nullptr;
 
-  uint32_t *index32{nullptr};
-  uint64_t *index64{nullptr};
-  if (m_params.index->elementType() == ANARI_UINT32)
-    index32 = (uint32_t *)m_params.index->beginAs<uint32_t>();
-  else if (m_params.index->elementType() == ANARI_UINT64)
-    index64 = (uint64_t *)m_params.index->beginAs<uint64_t>();
-  else {
-    reportMessage(ANARI_SEVERITY_ERROR,
-        "parameter 'index' on unstructured spatial field has wrong element type");
-    return;
-  }
-
-  uint32_t *cellIndex32{nullptr};
-  uint64_t *cellIndex64{nullptr};
-  if (m_params.cellIndex && m_params.cellIndex->elementType() == ANARI_UINT32)
-    cellIndex32 = (uint32_t *)m_params.cellIndex->beginAs<uint32_t>();
-  else if (m_params.cellIndex && m_params.cellIndex->elementType() == ANARI_UINT64)
-    cellIndex64 = (uint64_t *)m_params.cellIndex->beginAs<uint64_t>();
+  uint32_t *index = (uint32_t *)m_params.index->beginAs<uint32_t>();
+  uint32_t *cellIndex = (uint32_t *)m_params.cellIndex->beginAs<uint32_t>();
 
   // try to guess how to interpret the cell type, as this is
   // not properly specified yet:
@@ -112,7 +96,7 @@ void UnstructuredField::finalize()
   }
 
   for (size_t i=0; i<m_indices.size(); ++i) {
-    m_indices[i] = index64 ? index64[i] : uint64_t(index32[i]);
+    m_indices[i] = uint64_t(index[i]);
   }
 
   uint64_t currentIndex=0;
@@ -120,12 +104,9 @@ void UnstructuredField::finalize()
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
     uint64_t firstIndex, lastIndex;
 
-    if (cellIndex32) {
-      firstIndex = cellIndex32[cellID];
-      lastIndex = cellID < numCells-1 ? cellIndex32[cellID+1] : numIndices;
-    } if (cellIndex64) {
-      firstIndex = cellIndex64[cellID];
-      lastIndex = cellID < numCells-1 ? cellIndex64[cellID+1] : numIndices;
+    if (cellIndex) {
+      firstIndex = cellIndex[cellID];
+      lastIndex = cellID < numCells-1 ? cellIndex[cellID+1] : numIndices;
     } else /*if (cellType) */ {
       auto ic = indexCount(cellType[cellID]);
       firstIndex = currentIndex;
