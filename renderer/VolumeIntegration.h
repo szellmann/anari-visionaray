@@ -301,6 +301,7 @@ inline float elementMarchVolume(ScreenSample &ss,
           break;
 
         elem = sf.asUnstructured.elems[elemID];
+        numVerts = elem.end-elem.begin;
         cElem = conn::UElem(elem);
         for (int i=0; i<cElem.numFaces(); ++i) {
           const conn::Face f = cElem.face(i);
