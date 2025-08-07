@@ -284,8 +284,10 @@ inline float elementMarchVolume(ScreenSample &ss,
 
         // TODO: for now only cell.data
         //float value = elem.cellValue;
-        float4 sample = postClassify(vol.asTransferFunction1D,0.5f*value_in+0.5f*value);
-        //float4 sample = postClassify(vol.asTransferFunction1D,v[0].w);
+        float4 sample_in = postClassify(vol.asTransferFunction1D,value_in);
+        float4 sample_out = postClassify(vol.asTransferFunction1D,value);
+        float4 sample = over(sample_in,sample_out);
+
         float3 shadedColor = sample.xyz();
         float stepTransmittance = powf(1.f - sample.w, dt / vol.unitDistance);
         color += transmittance * (1.f - stepTransmittance) * shadedColor;
