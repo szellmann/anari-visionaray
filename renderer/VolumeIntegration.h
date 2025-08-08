@@ -227,7 +227,7 @@ inline float elementMarchVolume(ScreenSample &ss,
       float t;
       unsigned elemID;
     } entry, exit;
-    unsigned entry_id, exit_id;
+
     if (dot(viewDir,n) > 0.f) {
       // front face hit, find exit face:
       Ray ray2 = ray;
@@ -244,6 +244,8 @@ inline float elementMarchVolume(ScreenSample &ss,
                                                          sf.asUnstructured.shellBVH,
                                                          isect);
 #endif
+
+      if (!hr2.hit) break;
 
       entry.t = hr.t;
       entry.elemID = hr.geom_id;
@@ -267,6 +269,8 @@ inline float elementMarchVolume(ScreenSample &ss,
                                                          sf.asUnstructured.shellBVH,
                                                          isect);
 #endif
+
+      if (!hr2.hit) break;
 
       entry.t = hr2.t;
       entry.elemID = hr2.geom_id;
