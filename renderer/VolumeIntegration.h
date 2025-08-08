@@ -8,6 +8,10 @@
 
 namespace visionaray {
 
+//=========================================================
+// UElem marching helpers
+//=========================================================
+
 VSNRAY_FUNC
 inline
 void clip(const Ray ray,
@@ -184,6 +188,10 @@ inline void nextElem(const Ray &ray,
   outID = faceNeighbors[currID*6+planeID];
 }
 
+//=========================================================
+// UElem marching main function
+//=========================================================
+
 template <bool Shading>
 VSNRAY_FUNC
 inline float elementMarchVolume(ScreenSample &ss,
@@ -342,6 +350,10 @@ inline float elementMarchVolume(ScreenSample &ss,
   return t;
 }
 
+//=========================================================
+// Ray marching all other field types
+//=========================================================
+
 template <bool Shading>
 VSNRAY_FUNC
 inline float rayMarchVolume(ScreenSample &ss,
@@ -356,21 +368,6 @@ inline float rayMarchVolume(ScreenSample &ss,
                             float3 &color,
                             float &alpha) {
   const auto &sf = vol.field;
-
-  // special case: element marching
-  if (sf.type == dco::SpatialField::Unstructured) {
-    return elementMarchVolume<Shading>(ss,
-                                       onDevice,
-                                       ray,
-                                       vol,
-                                       allLights,
-                                       numLights,
-                                       ambientColor,
-                                       ambientRadiance,
-                                       samplingRateInv,
-                                       color,
-                                       alpha);
-  }
 
   auto boxHit = intersect(ray, vol.bounds);
 

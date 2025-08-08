@@ -164,7 +164,21 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     localRay.ori = (invXfm * float4(ray.ori, 1.f)).xyz();
     localRay.dir = (invXfm * float4(ray.dir, 0.f)).xyz();
 
-    if (rendererState.gradientShading) {
+    if (vol.field.type == dco::SpatialField::Unstructured) {
+      // Unstructured volumes: element marching
+      elementMarchVolume<0>(ss,
+                            onDevice,
+                            localRay,
+                            vol,
+                            world.allLights,
+                            world.numLights,
+                            rendererState.ambientColor,
+                            rendererState.ambientRadiance,
+                            rendererState.volumeSamplingRateInv,
+                            color,
+                            alpha);
+    } else if (rendererState.gradientShading) {
+      // All other field types, gradient shading on:
       rayMarchVolume<1>(ss,
                         onDevice,
                         localRay,
@@ -177,6 +191,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                         color,
                         alpha);
     } else {
+      // All other field types, gradient shading off:
       rayMarchVolume<0>(ss,
                         onDevice,
                         localRay,
