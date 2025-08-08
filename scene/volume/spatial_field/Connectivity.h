@@ -278,6 +278,7 @@ struct UElem
     return false;
   }
 
+  // test if *either* of the faces' winding order is wrong
   __host__
   inline bool checkWindingOrder() const
   {
@@ -299,6 +300,31 @@ struct UElem
     }
 
     // all normals facing inwards: check passed
+    return true;
+  }
+
+  // test if *all* of the faces' winding order is wrong
+  __host__
+  inline bool checkWindingOrderFlipped() const
+  {
+    for (int i=0; i<numFaces(); ++i) {
+      const Face f = face(i);
+      auto tri = f.triangle(0);
+      const Plane p = makePlane(tri.v1,tri.e1+tri.v1,tri.e2+tri.v1);
+
+      const float eps = 1e-4f;
+
+      // find a vertex that is not in this plane:
+      float sgn = 0.f;
+      for (int j=0; j<numVertices; ++j) {
+        float3 refp = vertices[j].xyz();
+        sgn = p.eval(refp);
+        if (fabsf(sgn) > eps) break;
+      }
+      if (sgn < -eps) return false;
+    }
+
+    // all normals facing outwards: this element could be flipped!
     return true;
   }
 
