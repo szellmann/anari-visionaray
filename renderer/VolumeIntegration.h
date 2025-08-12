@@ -236,12 +236,14 @@ inline float elementMarchVolume(ScreenSample &ss,
       unsigned elemID;
     } entry, exit;
 
+    const float3 hitPos = ray.ori + hr.t * ray.dir;
+    const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
+
     if (dot(viewDir,n) > 0.f) {
       // front face hit, find exit face:
       Ray ray2 = ray;
-      const float3 hitPos = ray.ori + hr.t * ray.dir;
-      const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
-      ray2.tmin = hr.t + eps;
+      ray2.ori = hitPos - n * eps;
+      ray2.tmin = 0.f;
 
 #if defined(WITH_CUDA) || defined(WITH_HIP)
       auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
@@ -258,14 +260,13 @@ inline float elementMarchVolume(ScreenSample &ss,
       entry.t = hr.t;
       entry.elemID = hr.geom_id;
 
-      exit.t = hr2.t;
+      exit.t = hr.t+hr2.t;
       exit.elemID = hr2.geom_id;
     } else {
       // back face hit, find entry face:
       Ray ray2 = ray;
-      const float3 hitPos = ray.ori + hr.t * ray.dir;
-      const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
-      ray2.tmin = hr.t + eps;
+      ray2.ori = hitPos - n * eps;
+      ray2.tmin = 0.f;
       ray2.dir *= -1.f;
 
 #if defined(WITH_CUDA) || defined(WITH_HIP)
@@ -280,7 +281,7 @@ inline float elementMarchVolume(ScreenSample &ss,
 
       if (!hr2.hit) break;
 
-      entry.t = hr2.t;
+      entry.t = hr.t-hr2.t;
       entry.elemID = hr2.geom_id;
 
       exit.t = hr.t;
@@ -344,8 +345,8 @@ inline float elementMarchVolume(ScreenSample &ss,
     }
 
     const float3 exitPos = ray.ori + exit.t * ray.dir;
-    const float eps = epsilonFrom(exitPos, ray.dir, exit.t);
-    ray.tmin = exit.t + eps;
+    const float epsExit = epsilonFrom(exitPos, ray.dir, exit.t);
+    ray.ori = exitPos + n * epsExit;
   }
   return t;
 }
