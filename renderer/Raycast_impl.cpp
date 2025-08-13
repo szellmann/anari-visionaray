@@ -215,10 +215,6 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     hit = true;
   }
 
-  // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
-  //   result.color = float4(1.f) - result.color;
-  // }
-
   return result;
 }
 
