@@ -30,21 +30,27 @@ void clip(const Ray ray,
 }
 
 VSNRAY_FUNC
-inline void evalTet(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
-  float3 va = v[0].xyz();
-  float3 vb = v[1].xyz();
-  float3 vc = v[2].xyz();
-  float3 vd = v[3].xyz();
-  const float fa = p[0].eval(P)/p[0].eval(va);
-  const float fb = p[1].eval(P)/p[1].eval(vb);
-  const float fc = p[2].eval(P)/p[2].eval(vc);
-  const float fd = p[3].eval(P)/p[3].eval(vd);
+inline void evalTet(float3 P, const float4 v[8], float &value_out) {
+  const float3 va = v[0].xyz();
+  const float3 vb = v[1].xyz();
+  const float3 vc = v[2].xyz();
+  const float3 vd = v[3].xyz();
+
+  const Plane pa = makePlane(vb,vd,vc);
+  const Plane pb = makePlane(va,vc,vd);
+  const Plane pc = makePlane(va,vd,vb);
+  const Plane pd = makePlane(va,vb,vc);
+
+  const float fa = pa.eval(P)/pa.eval(va);
+  const float fb = pb.eval(P)/pb.eval(vb);
+  const float fc = pc.eval(P)/pc.eval(vc);
+  const float fd = pd.eval(P)/pd.eval(vd);
 
   value_out = fa*v[0].w + fb*v[1].w + fc*v[2].w + fd*v[3].w;
 }
 
 VSNRAY_FUNC
-inline void evalPyr(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
+inline void evalPyr(float3 P, const float4 v[8], float &value_out) {
   const float f0 = v[0].w;
   const float f1 = v[1].w;
   const float f2 = v[2].w;
@@ -57,14 +63,15 @@ inline void evalPyr(float3 P, const Plane p[6], const float4 v[8], float &value_
   const float3 p3 = v[3].xyz();
   const float3 p4 = v[4].xyz();
 
-  float w = p[0].eval(P)/p[0].eval(p4);
+  const Plane base = makePlane(p0,p1,p2);
+  float w = base.eval(P)/base.eval(p4);
 
-  float u0 = p[1].eval(P);
-  float u1 = p[2].eval(P);
+  float u0 = makePlane(p0,p4,p1).eval(P);
+  float u1 = makePlane(p2,p4,p3).eval(P);
   float u = u0 / max(u0+u1,1e-10f);
 
-  float v0 = p[3].eval(P);
-  float v1 = p[4].eval(P);
+  float v0 = makePlane(p0,p3,p4).eval(P);
+  float v1 = makePlane(p1,p4,p2).eval(P);
   float vv = v0 / max(v0+v1,1e-10f);
 
   value_out = w*f4 + (1.f-w)*((1.f-u)*(1.f-vv)*f0+
@@ -74,7 +81,7 @@ inline void evalPyr(float3 P, const Plane p[6], const float4 v[8], float &value_
 }
 
 VSNRAY_FUNC
-inline void evalWedge(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
+inline void evalWedge(float3 P, const float4 v[8], float &value_out) {
   const float f0 = v[0].w;
   const float f1 = v[1].w;
   const float f2 = v[2].w;
@@ -88,15 +95,26 @@ inline void evalWedge(float3 P, const Plane p[6], const float4 v[8], float &valu
   const float3 p4 = v[4].xyz();
   const float3 p5 = v[5].xyz();
 
-  float w = p[0].eval(P);
+  const Plane base = makePlane(p0,p1,p3);
 
-  float u0 = p[1].eval(P);
-  float u1 = p[2].eval(P);
-  float u = u0 / max(u0+u1,1e-10f);
+  float w0 = base.eval(P);
+  Plane top;
+  top.N = cross(cross(base.N,p5-p2),p5-p2);
+  top.d = dot(top.N,p2);
+  const float w1 = top.eval(P);
+  const float w = w0/(w0+w1+1e-10f);
 
-  float v0 = p[3].eval(P);
-  float v1 = p[4].eval(P);
-  float vv = v0 / max(v0+v1,1e-10f);
+  const Plane front = makePlane(p0,p2,p1);
+  const Plane back  = makePlane(p3,p4,p5);
+  const float u0 = front.eval(P);
+  const float u1 = back.eval(P);
+  const float u = u0/(u0+u1+1e-10f);
+
+  const Plane left = makePlane(p0,p3,p2);
+  const Plane right  = makePlane(p1,p2,p4);
+  const float v0 = left.eval(P);
+  const float v1 = right.eval(P);
+  const float vv = v0/(v0+v1+1e-10f);
 
   const float fbase
     = (1.f-u)*(1.f-vv)*f0
@@ -104,17 +122,34 @@ inline void evalWedge(float3 P, const Plane p[6], const float4 v[8], float &valu
     + (    u)*(1.f-vv)*f3
     + (    u)*(    vv)*f4;
   const float ftop = (1.f-u)*f2 + u*f5;
+
   value_out = (1.f-w)*fbase + w*ftop;
 }
 
 VSNRAY_FUNC
-inline void evalHex(float3 P, const Plane p[6], const float4 v[8], float &value_out) {
-  const float t_frt = p[0].eval(P); //if (t_frt < 0.f) return false;
-  const float t_bck = p[1].eval(P); //if (t_bck < 0.f) return false;
-  const float t_lft = p[2].eval(P); //if (t_lft < 0.f) return false;
-  const float t_rgt = p[3].eval(P); //if (t_rgt < 0.f) return false;
-  const float t_top = p[4].eval(P); //if (t_top < 0.f) return false;
-  const float t_btm = p[5].eval(P); //if (t_btm < 0.f) return false;
+inline void evalHex(float3 P, const float4 v[8], float &value_out) {
+  const float3 v0 = v[0].xyz();
+  const float3 v1 = v[1].xyz();
+  const float3 v2 = v[2].xyz();
+  const float3 v3 = v[3].xyz();
+  const float3 v4 = v[4].xyz();
+  const float3 v5 = v[5].xyz();
+  const float3 v6 = v[6].xyz();
+  const float3 v7 = v[7].xyz();
+
+  const Plane frt = makePlane(v0,v4,v1);
+  const Plane bck = makePlane(v3,v2,v7);
+  const Plane lft = makePlane(v0,v3,v4);
+  const Plane rgt = makePlane(v1,v5,v2);
+  const Plane top = makePlane(v4,v7,v5);
+  const Plane btm = makePlane(v0,v1,v3);
+
+  const float t_frt = frt.eval(P);
+  const float t_bck = bck.eval(P);
+  const float t_lft = lft.eval(P);
+  const float t_rgt = rgt.eval(P);
+  const float t_top = top.eval(P);
+  const float t_btm = btm.eval(P);
 
   const float f_x = t_lft/(t_lft+t_rgt);
   const float f_y = t_frt/(t_frt+t_bck);
@@ -144,7 +179,6 @@ inline void evalHex(float3 P, const Plane p[6], const float4 v[8], float &value_
 VSNRAY_FUNC
 inline float evalElem(float3 P,
                       const conn::UElem &cElem,
-                      const Plane p[6],
                       size_t numVerts,
                       float cellValue)
 {
@@ -154,13 +188,13 @@ inline float evalElem(float3 P,
   float value = 0.f;
 
   if (numVerts == 4)
-    evalTet(P,p,cElem.vertices,value);
+    evalTet(P,cElem.vertices,value);
   else if (numVerts == 5)
-    evalPyr(P,p,cElem.vertices,value);
+    evalPyr(P,cElem.vertices,value);
   else if (numVerts == 6)
-    evalWedge(P,p,cElem.vertices,value);
+    evalWedge(P,cElem.vertices,value);
   else if (numVerts == 8)
-    evalHex(P,p,cElem.vertices,value);
+    evalHex(P,cElem.vertices,value);
   else
     assert(0);
 
@@ -170,7 +204,6 @@ inline float evalElem(float3 P,
 VSNRAY_FUNC
 inline void nextElem(const Ray &ray,
                      const conn::UElem &cElem,
-                     const Plane p[6],
                      size_t numVerts,
                      const uint64_t *faceNeighbors,
                      uint64_t currID,
@@ -181,7 +214,11 @@ inline void nextElem(const Ray &ray,
 
   out_t = FLT_MAX;
   for (int i=0; i<cElem.numFaces(); ++i) {
-    clip(ray,planeID,out_t,p[i],i);
+    const conn::Face f = cElem.face(i);
+    const Plane p = makePlane(f.vertex(0).xyz(),
+                              f.vertex(1).xyz(),
+                              f.vertex(2).xyz());
+    clip(ray,planeID,out_t,p,i);
   }
 
   assert(planeID>=0 && planeID<6);
@@ -236,51 +273,40 @@ inline float elementMarchVolume(ScreenSample &ss,
       unsigned elemID;
     } entry, exit;
 
+    const bool frontFace = dot(viewDir,n) > 0.f;
+
     const float3 hitPos = ray.ori + hr.t * ray.dir;
     const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
 
-    if (dot(viewDir,n) > 0.f) {
-      // front face hit, find exit face:
-      Ray ray2 = ray;
-      ray2.ori = hitPos - n * eps;
-      ray2.tmin = 0.f;
+    Ray ray2 = ray;
+    ray2.ori = hitPos - n * eps;
+    ray2.tmin = 0.f;
+
+    if (!frontFace) {
+      // we're inside so have to search backwards
+      // to find the entry position:
+      ray2.dir *= -1.f;
+    }
 
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-      auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
-                                                         sf.asUnstructured.shellBVH,
-                                                         isect);
+    auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
+                                                       sf.asUnstructured.shellBVH,
+                                                       isect);
 #else
-      auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
-                                                         sf.asUnstructured.shellBVH,
-                                                         isect);
+    auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
+                                                       sf.asUnstructured.shellBVH,
+                                                       isect);
 #endif
 
-      if (!hr2.hit) break;
+    if (!hr2.hit) break;
 
+    if (frontFace) {
       entry.t = hr.t;
       entry.elemID = hr.geom_id;
 
       exit.t = hr.t+hr2.t;
       exit.elemID = hr2.geom_id;
     } else {
-      // back face hit, find entry face:
-      Ray ray2 = ray;
-      ray2.ori = hitPos - n * eps;
-      ray2.tmin = 0.f;
-      ray2.dir *= -1.f;
-
-#if defined(WITH_CUDA) || defined(WITH_HIP)
-      auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
-                                                         sf.asUnstructured.shellBVH,
-                                                         isect);
-#else
-      auto hr2 = intersect_ray1_bvhN<detail::ClosestHit>(ray2,
-                                                         sf.asUnstructured.shellBVH,
-                                                         isect);
-#endif
-
-      if (!hr2.hit) break;
-
       entry.t = hr.t-hr2.t;
       entry.elemID = hr2.geom_id;
 
@@ -295,14 +321,7 @@ inline float elementMarchVolume(ScreenSample &ss,
     dco::UElem elem = sf.asUnstructured.elems[elemID];
     size_t numVerts = elem.end-elem.begin;
     conn::UElem cElem(elem);
-    Plane p[6];
-    for (int i=0; i<cElem.numFaces(); ++i) {
-      const conn::Face f = cElem.face(i);
-      p[i] = makePlane(f.vertex(0).xyz(),
-                       f.vertex(1).xyz(),
-                       f.vertex(2).xyz());
-    }
-    nextElem(ray,cElem,p,numVerts,sf.asUnstructured.faceNeighbors,elemID,nextID,currentRange.max);
+    nextElem(ray,cElem,numVerts,sf.asUnstructured.faceNeighbors,elemID,nextID,currentRange.max);
 
     float dt = sf.cellSize*samplingRateInv;
 
@@ -316,14 +335,8 @@ inline float elementMarchVolume(ScreenSample &ss,
         elem = sf.asUnstructured.elems[elemID];
         numVerts = elem.end-elem.begin;
         cElem = conn::UElem(elem);
-        for (int i=0; i<cElem.numFaces(); ++i) {
-          const conn::Face f = cElem.face(i);
-          p[i] = makePlane(f.vertex(0).xyz(),
-                           f.vertex(1).xyz(),
-                           f.vertex(2).xyz());
-        }
         currentRange.min = currentRange.max;
-        nextElem(ray,cElem,p,numVerts,sf.asUnstructured.faceNeighbors,elemID,nextID,currentRange.max);
+        nextElem(ray,cElem,numVerts,sf.asUnstructured.faceNeighbors,elemID,nextID,currentRange.max);
       }
 
       if (elemID == ~0ull)
@@ -331,7 +344,7 @@ inline float elementMarchVolume(ScreenSample &ss,
 
       if (t > ray.tmin) {
         float3 P = ray.ori+ray.dir*t;
-        float value = evalElem(P,cElem,p,numVerts,elem.cellValue);
+        float value = evalElem(P,cElem,numVerts,elem.cellValue);
         float4 sample = postClassify(vol.asTransferFunction1D,value);
 
         float3 shadedColor = sample.xyz();
