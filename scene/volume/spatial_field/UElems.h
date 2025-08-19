@@ -100,8 +100,15 @@ namespace visionaray {
     #define PYRAMID_OUTSIDE_CELL_TOLERANCE 1e-6
 
     const bool assumeInside = false;
-    const float determinantTolerance = 1e-6f;
     const float4 V[5] = {_v0,_v1,_v2,_v3,_v4};
+
+    aabb bbox;
+    bbox.invalidate();
+    for (int i=0; i<5; ++i) {
+      bbox.insert(V[i].xyz());
+    }
+
+    const float determinantTolerance = norm2(bbox.size()) * 1e-6f;
 
     float pcoords[3] = {.5f, .5f, .5f};
     float derivs[15];
@@ -231,8 +238,15 @@ namespace visionaray {
     #define WEDGE_OUTSIDE_CELL_TOLERANCE 1e-6
 
     const bool assumeInside = false;
-    const float determinantTolerance = 1e-6f;
     const float4 V[6] = {_v0,_v1,_v2,_v3,_v4,_v5};
+
+    aabb bbox;
+    bbox.invalidate();
+    for (int i=0; i<6; ++i) {
+      bbox.insert(V[i].xyz());
+    }
+
+    const float determinantTolerance = norm2(bbox.size()) * 1e-6f;
 
     float pcoords[3] = {.5f, .5f, .5f};
     float derivs[18];
@@ -385,8 +399,15 @@ namespace visionaray {
     #define HEX_OUTSIDE_CELL_TOLERANCE 1e-6
 
     const bool assumeInside = false;
-    const float determinantTolerance = 1e-6f;
     const float4 V[8] = {v0,v1,v2,v3,v4,v5,v6,v7};
+
+    aabb bbox;
+    bbox.invalidate();
+    for (int i=0; i<8; ++i) {
+      bbox.insert(V[i].xyz());
+    }
+
+    const float determinantTolerance = norm2(bbox.size()) * 1e-6f;
 
     float pcoords[3] = {0.5, 0.5, 0.5};
     float derivs[24];
