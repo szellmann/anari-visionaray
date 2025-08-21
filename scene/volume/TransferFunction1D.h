@@ -3,8 +3,6 @@
 
 #pragma once
 
-// visionaray
-#include "visionaray/texture/texture.h"
 // ours
 #include "Volume.h"
 #include "array/Array1D.h"

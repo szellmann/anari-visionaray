@@ -1,9 +1,8 @@
 #pragma once
 
-// visionaray
-#include <visionaray/texture/texture.h>
 //ours
 #include "array/Array2D.h"
+#include "common.h"
 #include "DeviceArray.h"
 #include "Light.h"
 

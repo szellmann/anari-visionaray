@@ -28,6 +28,16 @@
 #include <anari/anari_cpp.hpp>
 // visionaray
 #include "visionaray/math/math.h"
+// include texture headers here to not accidentally
+// pull in intrinsics for different architecture
+// in other places:
+#if defined(WITH_CUDA)
+#include "visionaray/texture/cuda_texture.h"
+#elif defined(WITH_HIP)
+#include "visionaray/texture/hip_texture.h"
+#else
+#include "visionaray/texture/texture.h"
+#endif
 
 // ==================================================================
 // common traits

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "visionaray/texture/texture.h"
 // ours
 #include "camera/Camera.h"
 #include "renderer/Renderer.h"

@@ -9,13 +9,6 @@
 #include "visionaray/point_light.h"
 #include "visionaray/spot_light.h"
 #include "visionaray/thin_lens_camera.h"
-#if defined(WITH_CUDA)
-#include "visionaray/texture/cuda_texture.h"
-#elif defined(WITH_HIP)
-#include "visionaray/texture/hip_texture.h"
-#else
-#include "visionaray/texture/texture.h"
-#endif
 // ours
 #include "frame/common.h"
 #include "renderer/DDA.h"

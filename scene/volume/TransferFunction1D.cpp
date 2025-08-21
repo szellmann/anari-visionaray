@@ -1,12 +1,6 @@
 // Copyright 2022 The Khronos Group
 // SPDX-License-Identifier: Apache-2.0
 
-// visionaray
-#ifdef WITH_CUDA
-#include <visionaray/texture/cuda_texture.h>
-#elif defined(WITH_HIP)
-#include <visionaray/texture/hip_texture.h>
-#endif
 // ours
 #include "TransferFunction1D.h"
 

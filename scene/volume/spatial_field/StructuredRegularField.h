@@ -3,8 +3,6 @@
 
 #pragma once
 
-// visionaray
-#include "visionaray/texture/texture.h"
 // ours
 #include "SpatialField.h"
 #include "array/Array3D.h"
