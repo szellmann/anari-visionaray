@@ -83,7 +83,7 @@ struct Face
     indices[0] = i0;
     indices[1] = i1;
     indices[2] = i2;
-    indices[3] = -1;
+    indices[3] = ~0ull;
   }
 
   __host__ __device__
@@ -99,7 +99,7 @@ struct Face
   __host__ __device__
   inline int numTriangles() const
   {
-    if (indices[3] == -1) return 1;
+    if (indices[3] == ~0ull) return 1;
     else return 2;
   }
 
