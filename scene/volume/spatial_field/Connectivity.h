@@ -12,6 +12,7 @@ namespace visionaray {
 
 namespace conn {
 
+__device__
 static const int Tet[4][3] {
   { 1, 3, 2 },
   { 0, 2, 3 },
@@ -19,6 +20,7 @@ static const int Tet[4][3] {
   { 0, 1, 2 },
 };
 
+__device__
 static const int Pyr[5][4] {
   { 0, 1, 3, 2 },
   { 0, 4, 1, -1 },
@@ -27,6 +29,7 @@ static const int Pyr[5][4] {
   { 1, 4, 2, -1 },
 };
 
+__device__
 static const int Wed[5][4] {
   { 0, 1, 3, 4 },
   { 0, 2, 1, -1 },
@@ -35,6 +38,7 @@ static const int Wed[5][4] {
   { 1, 2, 4, 5 },
 };
 
+__device__
 static const int Hex[6][4] {
   { 0, 4, 1, 5 },
   { 3, 2, 7, 6 },
