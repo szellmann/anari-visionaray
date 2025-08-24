@@ -15,10 +15,10 @@ BlockStructuredField::BlockStructuredField(VisionarayGlobalState *d)
 
 void BlockStructuredField::commitParameters()
 {
-  m_params.cellWidth = getParamObject<helium::Array1D>("cellWidth");
+  m_params.refinementRatio = getParamObject<helium::Array1D>("refinementRatio");
   m_params.blockBounds = getParamObject<helium::Array1D>("block.bounds");
   m_params.blockLevel = getParamObject<helium::Array1D>("block.level");
-  m_params.blockData = getParamObject<helium::ObjectArray>("block.data");
+  m_params.data = getParamObject<helium::Array1D>("data");
   m_params.gridOrigin = getParam<float3>("gridOrigin", float3(0.f));
   m_params.gridSpacing = getParam<float3>("gridSpacing", float3(1.f));
 }
@@ -37,17 +37,18 @@ void BlockStructuredField::finalize()
     return;
   }
 
-  if (!m_params.blockData) {
+  if (!m_params.data) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "missing required parameter 'block.data' on amr spatial field");
+        "missing required parameter 'data' on amr spatial field");
     return;
   }
 
-  size_t numLevels = m_params.cellWidth->totalSize();
-  size_t numBlocks = m_params.blockData->totalSize();
+  size_t numLevels = m_params.refinementRatio->totalSize();
+  size_t numBlocks = m_params.blockBounds->totalSize();
+  auto *refinementRatio = m_params.refinementRatio->beginAs<unsigned>();
   auto *blockBounds = m_params.blockBounds->beginAs<aabbi>();
   auto *blockLevels = m_params.blockLevel->beginAs<int>();
-  auto *blockData = (Array3D **)m_params.blockData->handlesBegin();
+  auto *data = m_params.data->beginAs<float>();
 
   m_blocks.resize(numBlocks);
 
@@ -57,25 +58,21 @@ void BlockStructuredField::finalize()
   }
 
   for (size_t i=0; i<numBlocks; ++i) {
+    int3 blockSize = blockBounds[i].max - blockBounds[i].min + int3(1);
+
     m_blocks[i].bounds = blockBounds[i];
     m_blocks[i].level = blockLevels[i];
     m_blocks[i].scalarOffset = m_scalars.size();
     m_blocks[i].valueRange = box1f(FLT_MAX,-FLT_MAX);
 
-    const Array3D *bd = *(blockData+i);
+    float cellWidth = powf((float)refinementRatio[blockLevels[i]], (float)blockLevels[i]);
+    (void)cellWidth; // ignore for now
 
-    for (unsigned z=0;z<bd->size().z;++z) {
-      for (unsigned y=0;y<bd->size().y;++y) {
-        for (unsigned x=0;x<bd->size().x;++x) {
-          // TODO: can we actually iterate linearly here?!
-          size_t index = z*size_t(bd->size().x)*bd->size().y 
-                       + y*bd->size().x
-                       + x;
-          float f = bd->dataAs<float>()[index];
-          m_scalars.push_back(f);
-          m_blocks[i].valueRange.extend(f);
-        }
-      }
+    for (int j=0; j<blockSize.x*blockSize.y*blockSize.z; ++j) {
+      size_t index = size_t(m_blocks[i].scalarOffset) + j;
+      float f = data[index];
+      m_scalars.push_back(f);
+      m_blocks[i].valueRange.extend(f);
     }
 
     if (levelBounds.size() <= m_blocks[i].level) {
