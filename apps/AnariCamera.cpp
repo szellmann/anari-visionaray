@@ -1,3 +1,6 @@
+// Copyright 2023-2025 Stefan Zellmann
+// SPDX-License-Identifier: Apache-2.0
+
 #include <anari/anari_cpp/ext/linalg.h>
 #include "AnariCamera.h"
 #include <iostream>

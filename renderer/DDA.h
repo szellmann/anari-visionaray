@@ -1,3 +1,6 @@
+// Copyright 2023-2025 Stefan Zellmann
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include "scene/volume/spatial_field/GridAccel-common.h"

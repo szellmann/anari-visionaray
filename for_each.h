@@ -1,5 +1,5 @@
-// This file is distributed under the MIT license.
-// See the LICENSE file for details.
+// Copyright 2023-2025 Stefan Zellmann
+// SPDX-License-Identifier: Apache-2.0
 
 #pragma once
 

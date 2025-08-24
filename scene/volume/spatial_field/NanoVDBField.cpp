@@ -1,3 +1,6 @@
+// Copyright 2023-2025 Stefan Zellmann
+// SPDX-License-Identifier: Apache-2.0
+
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
 #endif

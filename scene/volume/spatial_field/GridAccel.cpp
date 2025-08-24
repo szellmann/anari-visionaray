@@ -1,3 +1,6 @@
+// Copyright 2023-2025 Stefan Zellmann
+// SPDX-License-Identifier: Apache-2.0
+
 #include "for_each.h"
 #include "GridAccel.h"
 

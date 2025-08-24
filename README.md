@@ -54,3 +54,8 @@ List of Proprietary ANARI Extensions
   by the ray tracing renderers. The list is comprised of `float4` tuples with
   the `xyz` coordinates represeting the normal vector and `w` an offset to the
   clip plane.
+
+License
+-------
+
+anari-visionaray is licensed under the Apache 2.0 License
