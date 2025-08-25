@@ -8,7 +8,7 @@
 namespace visionaray {
 
 BlockStructuredField::BlockStructuredField(VisionarayGlobalState *d)
-    : SpatialField(d)
+    : SpatialField(d), m_params(this)
 {
   vfield.type = dco::SpatialField::BlockStructured;
 }
@@ -129,6 +129,8 @@ void BlockStructuredField::finalize()
   vfield.gridAccel = m_gridAccel.visionarayAccel();
 
   dispatch();
+
+  notifyChangeObservers();
 }
 
 bool BlockStructuredField::isValid() const

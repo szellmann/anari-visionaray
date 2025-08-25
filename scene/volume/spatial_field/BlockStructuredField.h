@@ -37,10 +37,16 @@ struct BlockStructuredField : public SpatialField
 
   struct Parameters
   {
-    helium::IntrusivePtr<helium::Array1D> refinementRatio;
-    helium::IntrusivePtr<helium::Array1D> blockBounds;
-    helium::IntrusivePtr<helium::Array1D> blockLevel;
-    helium::IntrusivePtr<helium::Array1D> data;
+    Parameters(helium::BaseObject *observer)
+      : refinementRatio(observer)
+      , blockBounds(observer)
+      , blockLevel(observer)
+      , data(observer)
+    {}
+    helium::ChangeObserverPtr<helium::Array1D> refinementRatio;
+    helium::ChangeObserverPtr<helium::Array1D> blockBounds;
+    helium::ChangeObserverPtr<helium::Array1D> blockLevel;
+    helium::ChangeObserverPtr<helium::Array1D> data;
     float3 gridOrigin{0.f, 0.f, 0.f};
     float3 gridSpacing{1.f, 1.f, 1.f};
   } m_params;
