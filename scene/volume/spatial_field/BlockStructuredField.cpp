@@ -50,6 +50,7 @@ void BlockStructuredField::finalize()
   auto *blockLevels = m_params.blockLevel->beginAs<int>();
   auto *data = m_params.data->beginAs<float>();
 
+  m_scalars.clear();
   m_blocks.resize(numBlocks);
 
   std::vector<aabb> levelBounds(numLevels);
