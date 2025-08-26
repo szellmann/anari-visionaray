@@ -129,8 +129,6 @@ void BlockStructuredField::finalize()
   vfield.gridAccel = m_gridAccel.visionarayAccel();
 
   dispatch();
-
-  notifyChangeObservers();
 }
 
 bool BlockStructuredField::isValid() const
