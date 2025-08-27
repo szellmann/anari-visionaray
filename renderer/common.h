@@ -690,6 +690,43 @@ inline float D_GGX(float NdotH, float roughness, float EPS)
 }
 
 VSNRAY_FUNC
+inline float G_SmithGGX(float NdotL, float NdotV, float roughness)
+{
+  float alpha = roughness;
+  return ((2.f * NdotL) / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
+    *    ((2.f * NdotV) / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
+}
+
+VSNRAY_FUNC
+inline float V_SmithGGX(float NdotV, float NdotL, float roughness)
+{
+#if 0
+  // full variant, equivalent to G/(4*(n*v)*(n*l))
+  constexpr float EPS = 1e-14f;
+  float alpha = roughness;
+  float denom = 4.f * NdotV * NdotL;
+  return G_SmithGGX(NdotL, NdotV, roughness) / max(EPS,denom);
+#else
+  // equivalent but simplified:
+  float alpha = roughness;
+  float GGXV = 1.f / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV));
+  float GGXL = 1.f / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL));
+  return 0.5f / (GGXV + GGXL);
+#endif
+}
+
+VSNRAY_FUNC
+inline float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness)
+{
+  // height-correlated Smith function - accorcing to Heitz
+  // correlating masking and shading is a bit more accurate:
+  float alpha = roughness;
+  float GGXV = NdotL / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV));
+  float GGXL = NdotV / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL));
+  return 0.5f / (GGXV + GGXL);
+}
+
+VSNRAY_FUNC
 inline float V_Kelemen(float LdotH, const float EPS)
 {
   return 0.25f / fmaxf(EPS, (LdotH * LdotH));
@@ -751,14 +788,19 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   // GGX microfacet distribution
   float D = D_GGX(NdotH, alpha, EPS);
 
+#if 1
+  // Masking-shadowing term integrated (and simplified into) V
+  // also allows us to toy with different variants of V
+//float V = V_SmithGGX(NdotV, NdotL, alpha);
+  float V = V_SmithGGXCorrelated(NdotV, NdotL, alpha);
+  vec3 specularBRDF = F * D * V;
+#else
   // Masking-shadowing term
-  float G = ((2.f * NdotL * heaviside(LdotH))
-        / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL)))
-    *       ((2.f * NdotV * heaviside(VdotH))
-        / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV)));
+  float G = G_SmithGGX(NdotL, NdotV, alpha);
 
   float denom = 4.f * NdotV * NdotL;
   vec3 specularBRDF = (F * D * G) / max(EPS,denom);
+#endif
 
   // Clearcoat
   float Dc = D_GGX(NdotH, clearcoatAlpha, EPS);
