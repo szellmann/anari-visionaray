@@ -81,6 +81,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    localHitPos,
                                    hr.prim_id,
                                    gn, sn,
+                                   tng, btng,
                                    normalize(viewDir),
                                    normalize(ls.dir),
                                    ls.intensity * safe_rcp(ls.dist2));

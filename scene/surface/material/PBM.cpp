@@ -33,6 +33,24 @@ void PBM::commitParameters()
   m_roughness.sampler = getParamObject<Sampler>("roughness");
   m_roughness.attribute = toAttribute(getParamString("roughness", "none"));
 
+  m_anisotropyStrength.value = 0.f;
+  getParam("anisotropyStrength", ANARI_FLOAT32, &m_anisotropyStrength.value);
+  m_anisotropyStrength.sampler = getParamObject<Sampler>("anisotropyStrength");
+  m_anisotropyStrength.attribute
+      = toAttribute(getParamString("anisotropyStrength", "none"));
+
+  m_anisotropyDirection.value = float2(1.f, 0.f);
+  getParam("anisotropyDirection", ANARI_FLOAT32_VEC2, &m_anisotropyDirection.value);
+  m_anisotropyDirection.sampler = getParamObject<Sampler>("anisotropyDirection");
+  m_anisotropyDirection.attribute
+      = toAttribute(getParamString("anisotropyDirection", "none"));
+
+  m_anisotropyRotation.value = 0.f;
+  getParam("anisotropyRotation", ANARI_FLOAT32, &m_anisotropyRotation.value);
+  m_anisotropyRotation.sampler = getParamObject<Sampler>("anisotropyRotation");
+  m_anisotropyRotation.attribute
+      = toAttribute(getParamString("anisotropyRotation", "none"));
+
   m_normal.sampler = getParamObject<Sampler>("normal");
 
   m_clearcoat.value = 0.f;
@@ -101,6 +119,33 @@ void PBM::finalize()
         = m_roughness.sampler->visionaraySampler().samplerID;
   } else {
     vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.anisotropyStrength.f = m_anisotropyStrength.value;
+  vmat.asPhysicallyBased.anisotropyStrength.attribute = m_anisotropyStrength.attribute;
+  if (m_anisotropyStrength.sampler && m_anisotropyStrength.sampler->isValid()) {
+    vmat.asPhysicallyBased.anisotropyStrength.samplerID
+        = m_anisotropyStrength.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.anisotropyStrength.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.anisotropyDirection.uv = m_anisotropyDirection.value;
+  vmat.asPhysicallyBased.anisotropyDirection.attribute = m_anisotropyDirection.attribute;
+  if (m_anisotropyDirection.sampler && m_anisotropyDirection.sampler->isValid()) {
+    vmat.asPhysicallyBased.anisotropyDirection.samplerID
+        = m_anisotropyDirection.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.anisotropyDirection.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.anisotropyRotation.f = m_anisotropyRotation.value;
+  vmat.asPhysicallyBased.anisotropyRotation.attribute = m_anisotropyRotation.attribute;
+  if (m_anisotropyRotation.sampler && m_anisotropyRotation.sampler->isValid()) {
+    vmat.asPhysicallyBased.anisotropyRotation.samplerID
+        = m_anisotropyRotation.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.anisotropyRotation.samplerID = UINT_MAX;
   }
 
   if (m_normal.sampler && m_normal.sampler->isValid()) {

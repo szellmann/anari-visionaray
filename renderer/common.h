@@ -497,6 +497,22 @@ inline vec4 getRGBA(const dco::MaterialParamRGB &param,
 }
 
 VSNRAY_FUNC
+inline vec2 getUV(const dco::MaterialParamUV &param,
+                  const DeviceObjectRegistry &onDevice,
+                  const float4 *attribs,
+                  float3 objPos,
+                  unsigned primID)
+{
+  if (param.samplerID < UINT_MAX)
+    return getSample(
+        onDevice.samplers[param.samplerID], onDevice, attribs, objPos, primID).xy();
+  else if (param.attribute != dco::Attribute::None)
+    return attribs[(int)param.attribute].xy();
+  else
+    return param.uv;
+}
+
+VSNRAY_FUNC
 inline float getF(const dco::MaterialParamF &param,
                   const DeviceObjectRegistry &onDevice,
                   const float4 *attribs,
@@ -690,6 +706,16 @@ inline float D_GGX(float NdotH, float roughness, float EPS)
 }
 
 VSNRAY_FUNC
+inline float D_GGX_Anisotropic(float NdotH, float TdotH, float BdotH, float at, float ab)
+{
+  float a2 = at*ab;
+  float3 v(ab * TdotH, at * BdotH, a2 * NdotH);
+  float v2 = dot(v,v);
+  float w2 = a2 / v2;
+  return a2 * w2 * w2 * constants::inv_pi<float>();
+}
+
+VSNRAY_FUNC
 inline float G_SmithGGX(float NdotL, float NdotV, float roughness)
 {
   float alpha = roughness;
@@ -739,13 +765,21 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         float3 objPos,
                                         unsigned primID,
                                         const vec3 Ng, const vec3 Ns,
+                                        const vec3 T, const vec3 B,
                                         const vec3 viewDir, const vec3 lightDir,
-                                        const vec3 lightIntensity)
+                                        const vec3 lightIntensity, bool dbg)
 {
   const float metallic = getF(
       mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
   const float roughness = getF(
       mat.asPhysicallyBased.roughness, onDevice, attribs, objPos, primID);
+
+  const float anisotropyStrength = getF(
+      mat.asPhysicallyBased.anisotropyStrength, onDevice, attribs, objPos, primID);
+  const float2 anisotropyDirection = getUV(
+      mat.asPhysicallyBased.anisotropyDirection, onDevice, attribs, objPos, primID);
+  const float anisotropyRotation = getF(
+      mat.asPhysicallyBased.anisotropyRotation, onDevice, attribs, objPos, primID);
 
   const float clearcoat = getF(
       mat.asPhysicallyBased.clearcoat, onDevice, attribs, objPos, primID);
@@ -762,6 +796,14 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float alpha = roughness * roughness;
   const float clearcoatAlpha = clearcoatRoughness * clearcoatRoughness;
 
+  // anisotropic basis:
+  const float2 rotation(cosf(anisotropyRotation), sinf(anisotropyRotation));
+  float2 direction = anisotropyDirection;
+  direction = mat2(rotation.x, rotation.y, -rotation.y, rotation.x) * normalize(direction);
+  const mat3 TBN(T,B,Ns);
+  const float3 anisotropicT = normalize(TBN * float3(direction, 0.f));
+  const float3 anisotropicB = normalize(cross(Ns, anisotropicT));
+
   constexpr float EPS = 1e-14f;
   const vec3 H = normalize(lightDir+viewDir);
   const float NdotV = fabsf(dot(Ns,viewDir)) + EPS;
@@ -769,6 +811,8 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float NdotL = fmaxf(EPS,dot(Ns,lightDir));
   const float VdotH = fmaxf(EPS,dot(viewDir,H));
   const float LdotH = fmaxf(EPS,dot(lightDir,H));
+  const float TdotH = dot(anisotropicT,H);
+  const float BdotH = dot(anisotropicB,H);
 
   // Get baseColor:
   vec3 baseColor = getRGBA(
@@ -786,7 +830,14 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 diffuseBRDF = diffuseColor * Fd_Burley(NdotV, NdotL, LdotH, alpha);
 
   // GGX microfacet distribution
-  float D = D_GGX(NdotH, alpha, EPS);
+  float D = 0.f;
+  if (length(anisotropicT) > EPS && length(anisotropicB) > EPS) {
+    float at = max(alpha * (1.f + anisotropyStrength), 0.001f);
+    float ab = max(alpha * (1.f - anisotropyStrength), 0.001f);
+    D = D_GGX_Anisotropic(NdotH, TdotH, BdotH, at, ab);
+  } else {
+    D = D_GGX(NdotH, alpha, EPS);
+  }
 
 #if 1
   // Masking-shadowing term integrated (and simplified into) V
@@ -827,8 +878,9 @@ inline vec3 evalMaterial(const dco::Material &mat,
                          float3 objPos,
                          unsigned primID,
                          const vec3 Ng, const vec3 Ns,
+                         const vec3 T, const vec3 B,
                          const vec3 viewDir, const vec3 lightDir,
-                         const vec3 lightIntensity)
+                         const vec3 lightIntensity, bool dbg=false)
 {
   vec3 shadedColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
@@ -854,8 +906,9 @@ inline vec3 evalMaterial(const dco::Material &mat,
                                               objPos,
                                               primID,
                                               Ng, Ns,
+                                              T, B,
                                               viewDir, lightDir,
-                                              lightIntensity);
+                                              lightIntensity,dbg);
   }
   return shadedColor;
 }

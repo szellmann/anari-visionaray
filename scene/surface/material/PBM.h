@@ -30,8 +30,14 @@ struct PBM : public Material
     float value{1.f};
     helium::IntrusivePtr<Sampler> sampler;
     dco::Attribute attribute;
-  } m_opacity, m_metallic, m_roughness, m_clearcoat, m_clearcoatRoughness,
-    m_sheenRoughness;
+  } m_opacity, m_metallic, m_roughness, m_anisotropyStrength, m_anisotropyRotation,
+    m_clearcoat, m_clearcoatRoughness, m_sheenRoughness;
+
+  struct {
+    float2 value{1.f, 0.f};
+    helium::IntrusivePtr<Sampler> sampler;
+    dco::Attribute attribute;
+  } m_anisotropyDirection;
 
   float m_ior{1.5f};
 

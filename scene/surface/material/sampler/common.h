@@ -30,6 +30,8 @@ inline bool imageSamplerUpdateData(Texture &tex, const Image &img)
 
   if (img->elementType() == ANARI_FLOAT32)
     tex.reset(img->template dataAs<float>(), PF_R32F, PF_RGBA8, AlphaIsOne);
+  else if (img->elementType() == ANARI_FLOAT32_VEC2)
+    tex.reset(img->template dataAs<vec2>(), PF_RG32F, PF_RGBA8, AlphaIsOne);
   else if (img->elementType() == ANARI_FLOAT32_VEC3)
     tex.reset(img->template dataAs<vec3>(), PF_RGB32F, PF_RGBA8, AlphaIsOne);
   else if (img->elementType() == ANARI_FLOAT32_VEC4)

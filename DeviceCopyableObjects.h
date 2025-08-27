@@ -2002,6 +2002,23 @@ inline MaterialParamRGB createMaterialParamRGB()
   return param;
 }
 
+struct MaterialParamUV
+{
+  float2 uv;
+  unsigned samplerID;
+  Attribute attribute;
+};
+
+VSNRAY_FUNC
+inline MaterialParamUV createMaterialParamUV()
+{
+  MaterialParamUV param;
+  param.uv = float2(0,0);
+  param.samplerID = UINT_MAX;
+  param.attribute = Attribute::None;
+  return param;
+}
+
 struct MaterialParamF
 {
   float f;
@@ -2043,6 +2060,9 @@ struct Material
       MaterialParamF opacity;
       MaterialParamF metallic;
       MaterialParamF roughness;
+      MaterialParamF anisotropyStrength;
+      MaterialParamUV anisotropyDirection;
+      MaterialParamF anisotropyRotation;
       struct {
         unsigned samplerID;
       } normal;

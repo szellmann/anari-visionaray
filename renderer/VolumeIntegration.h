@@ -444,6 +444,7 @@ inline float rayMarchVolume(ScreenSample &ss,
                                       float3(0.f), // objPos, not used..
                                       UINT_MAX, // primID, not used..
                                       gn, gn,
+                                      float3(0.f), float3(0.f), // tangent, bitangent
                                       normalize(viewDir),
                                       normalize(ls.dir),
                                       ls.intensity * safe_rcp(ls.dist2));
