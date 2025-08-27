@@ -188,6 +188,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                      float3(0.f), // objPos, not used..
                                      UINT_MAX, // primID, not used..
                                      gn, gn,
+                                     tng, btng,
                                      normalize(viewDir),
                                      normalize(ls.dir),
                                      ls.intensity * safe_rcp(ls.dist2));
@@ -205,6 +206,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                    hr.isect_pos,
                                    hr.prim_id,
                                    gn, sn,
+                                   tng, btng,
                                    normalize(viewDir),
                                    normalize(ls.dir),
                                    ls.intensity * safe_rcp(ls.dist2));

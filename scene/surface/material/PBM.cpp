@@ -33,6 +33,11 @@ void PBM::commitParameters()
   m_roughness.sampler = getParamObject<Sampler>("roughness");
   m_roughness.attribute = toAttribute(getParamString("roughness", "none"));
 
+  m_anisotropy.value = 0.f;
+  getParam("anisotropy", ANARI_FLOAT32, &m_anisotropy.value);
+  m_anisotropy.sampler = getParamObject<Sampler>("anisotropy");
+  m_anisotropy.attribute = toAttribute(getParamString("anisotropy", "none"));
+
   m_normal.sampler = getParamObject<Sampler>("normal");
 
   m_clearcoat.value = 0.f;
@@ -101,6 +106,15 @@ void PBM::finalize()
         = m_roughness.sampler->visionaraySampler().samplerID;
   } else {
     vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.anisotropy.f = m_anisotropy.value;
+  vmat.asPhysicallyBased.anisotropy.attribute = m_anisotropy.attribute;
+  if (m_anisotropy.sampler && m_anisotropy.sampler->isValid()) {
+    vmat.asPhysicallyBased.anisotropy.samplerID
+        = m_anisotropy.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.anisotropy.samplerID = UINT_MAX;
   }
 
   if (m_normal.sampler && m_normal.sampler->isValid()) {
