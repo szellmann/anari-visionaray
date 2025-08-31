@@ -310,31 +310,33 @@ void Frame::renderFrame()
       m_nextFrameReset = false;
     }
 
-    rend.rendererState.envID = HDRI::backgroundID;
+    if (rend.rendererState.accumID < rend.sampleLimit()) {
+      rend.rendererState.envID = HDRI::backgroundID;
 
-    if (cam.type == dco::Camera::Pinhole) {
-      rend.rendererState.currMV = cam.asPinholeCam.get_view_matrix();
-      rend.rendererState.currPR = cam.asPinholeCam.get_proj_matrix();
-    } else if (cam.type == dco::Camera::Matrix) {
-      rend.rendererState.currMV = cam.asMatrixCam.get_view_matrix();
-      rend.rendererState.currPR = cam.asMatrixCam.get_proj_matrix();
+      if (cam.type == dco::Camera::Pinhole) {
+        rend.rendererState.currMV = cam.asPinholeCam.get_view_matrix();
+        rend.rendererState.currPR = cam.asPinholeCam.get_proj_matrix();
+      } else if (cam.type == dco::Camera::Matrix) {
+        rend.rendererState.currMV = cam.asMatrixCam.get_view_matrix();
+        rend.rendererState.currPR = cam.asMatrixCam.get_proj_matrix();
+      }
+
+      int frameID = (int)vframe.frameCounter++; // modify the member here!
+      auto worldID = scene->m_worldID;
+      auto onDevice = state->onDevice;
+
+      rend.renderFrame(frame, cam, size, state, onDevice, worldID, frameID);
+
+      if (cam.type == dco::Camera::Pinhole)
+        cam.asPinholeCam.end_frame();
+      else if (cam.type == dco::Camera::Matrix)
+        cam.asMatrixCam.end_frame();
+
+      rend.rendererState.prevMV = rend.rendererState.currMV;
+      rend.rendererState.prevPR = rend.rendererState.currPR;
+
+      rend.rendererState.accumID++;
     }
-
-    int frameID = (int)vframe.frameCounter++; // modify the member here!
-    auto worldID = scene->m_worldID;
-    auto onDevice = state->onDevice;
-
-    rend.renderFrame(frame, cam, size, state, onDevice, worldID, frameID);
-
-    if (cam.type == dco::Camera::Pinhole)
-      cam.asPinholeCam.end_frame();
-    else if (cam.type == dco::Camera::Matrix)
-      cam.asMatrixCam.end_frame();
-
-    rend.rendererState.prevMV = rend.rendererState.currMV;
-    rend.rendererState.prevPR = rend.rendererState.currPR;
-
-    rend.rendererState.accumID++;
 
     if (m_renderer->visionarayRenderer().taa()) {
       // Update history texture

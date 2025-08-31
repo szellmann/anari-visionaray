@@ -157,6 +157,14 @@
           "description": "samples per-pixel"
         },
         {
+          "name": "sampleLimit",
+          "types": ["ANARI_INT32"],
+          "tags": [],
+          "default": 1024,
+          "minimum": 0,
+          "description": "stop refining the frame after this number of samples"
+        },
+        {
           "name": "ambientSamples",
           "types": [
             "ANARI_INT32"

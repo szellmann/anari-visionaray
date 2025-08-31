@@ -18,6 +18,7 @@ struct DirectLight : public Renderer
   float m_occlusionDistance{1e20f};
   int m_ambientSamples{1};
   int m_pixelSamples{1};
+  int m_sampleLimit{1024};
   bool m_taaEnabled{false};
   float m_taaAlpha{0.3f};
 };

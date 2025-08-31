@@ -65,6 +65,7 @@ struct RendererState
   RenderMode renderMode{RenderMode::Default};
   float4 *clipPlanes{nullptr};
   unsigned numClipPlanes{0};
+  int sampleLimit{1024};
   int pixelSamples{1};
   int accumID{0};
   int envID{-1};

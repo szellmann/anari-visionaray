@@ -51,6 +51,11 @@ struct VisionarayRenderer
     return type == DirectLight && rendererState.taaEnabled;
   }
 
+  VSNRAY_FUNC
+  int sampleLimit() const {
+    return rendererState.sampleLimit;
+  }
+
   union {
     VisionarayRendererRaycast     asRaycast;
     VisionarayRendererDirectLight asDirectLight;
