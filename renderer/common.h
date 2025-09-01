@@ -767,7 +767,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         const vec3 Ng, const vec3 Ns,
                                         const vec3 T, const vec3 B,
                                         const vec3 viewDir, const vec3 lightDir,
-                                        const vec3 lightIntensity, bool dbg)
+                                        const vec3 lightIntensity)
 {
   const float metallic = getF(
       mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
@@ -880,7 +880,7 @@ inline vec3 evalMaterial(const dco::Material &mat,
                          const vec3 Ng, const vec3 Ns,
                          const vec3 T, const vec3 B,
                          const vec3 viewDir, const vec3 lightDir,
-                         const vec3 lightIntensity, bool dbg=false)
+                         const vec3 lightIntensity)
 {
   vec3 shadedColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
@@ -908,7 +908,7 @@ inline vec3 evalMaterial(const dco::Material &mat,
                                               Ng, Ns,
                                               T, B,
                                               viewDir, lightDir,
-                                              lightIntensity,dbg);
+                                              lightIntensity);
   }
   return shadedColor;
 }

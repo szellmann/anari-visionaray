@@ -209,7 +209,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
                                    tng, btng,
                                    normalize(viewDir),
                                    normalize(ls.dir),
-                                   ls.intensity * safe_rcp(ls.dist2), ray.debug());
+                                   ls.intensity * safe_rcp(ls.dist2));
         shadedColor = shadedColor * safe_rcp(ls.pdf) * float(world.numLights);
       }
     }
