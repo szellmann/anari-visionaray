@@ -18,18 +18,25 @@ struct ShadeRec
   float3 viewDir{0.f};
   float3 hitPos{0.f};
   float4 attribs[5];
+  float transmission{0.f};
+  float ior{1.f};
   bool hdriMiss{false};
-  bool shadow{false};
+  struct {
+    bool eval{false};
+    Ray ray;
+  } bounce, shadow;
   float eps{1e-4f};
 };
 
 VSNRAY_FUNC
-inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
-    const DeviceObjectRegistry &onDevice, const RendererState &rendererState,
-    const HitRec &hitRec,
-    ShadeRec &shadeRec,
-    PixelSample &result,
-    unsigned bounceID)
+inline void shade(ScreenSample &ss, const Ray &ray,
+                  unsigned worldID,
+                  const DeviceObjectRegistry &onDevice,
+                  const RendererState &rendererState,
+                  const HitRec &hitRec,
+                  ShadeRec &shadeRec,
+                  PixelSample &result,
+                  unsigned bounceID)
 {
   auto &throughput = shadeRec.throughput;
   auto &baseColor = shadeRec.baseColor;
@@ -41,7 +48,10 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
   auto &viewDir = shadeRec.viewDir;
   auto &hitPos = shadeRec.hitPos;
   auto &attribs = shadeRec.attribs;
+  auto &transmission = shadeRec.transmission;
+  auto &ior = shadeRec.ior;
   auto &hdriMiss = shadeRec.hdriMiss;
+  auto &bounce = shadeRec.bounce;
   auto &shadow = shadeRec.shadow;
   auto &eps = shadeRec.eps;
 
@@ -51,237 +61,311 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
   dco::World world = onDevice.worlds[worldID];
 
-  if (!shadow) {
-
-    if (!hitRec.hit) {
-      if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
-        auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-        throughput = hdri.intensity(ray.dir);
-        hdriMiss = true;
-      } else {
-        throughput = float3{0.f};
-      }
-      return false;
-    }
-
-    float4 color{1.f};
-    float transmission = 0.f;
-    float2 uv{hr.u,hr.v};
-
-    if (hitRec.lightHit) {
-      hitPos = ray.ori + hrl.t * ray.dir;
-      const dco::Light &light = getLight(world.allLights, hrl.lightID, onDevice);
-      if (light.type == dco::Light::Quad)
-        throughput = light.asQuad.intensity(hitPos);
-      hdriMiss = true; // TODO?!
-      return false;
-    }
-
-    int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
-    const dco::Instance &inst = onDevice.instances[instID];
-    const dco::Group &group = onDevice.groups[inst.groupID];
-
-    viewDir = -ray.dir;
-
-    if (hitRec.volumeHit) {
-      hitPos = ray.ori + hrv.t * ray.dir;
-      eps = epsilonFrom(hitPos, ray.dir, hrv.t);
-
-      float3 localHitPos = hrv.isect_pos;
-
-      const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.localID]];
-
-      if (rendererState.gradientShading) {
-        float3 P = vol.field.pointToVoxelSpace(localHitPos);
-        float3 delta(vol.field.cellSize, vol.field.cellSize, vol.field.cellSize);
-        delta *= float3(vol.field.voxelSpaceTransform(0,0),
-                        vol.field.voxelSpaceTransform(1,1),
-                        vol.field.voxelSpaceTransform(2,2));
-        if (sampleGradient(vol.field,P,delta,gn))
-          gn = normalize(gn);
-      }
-
-      if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
-        gn = uniform_sample_sphere(ss.random(), ss.random());
-
-      sn = gn;
-
-      mat3 nxfm = getNormalTransform(inst, ray);
-      gn = nxfm * gn;
-      sn = nxfm * sn;
-
-      sn = faceforward(sn, viewDir, gn);
-
-      color.xyz() = hrv.albedo;
-
-      result.depth = hrv.t;
-      result.primId = hrv.primID;
-      result.objId = group.objIds[hrv.localID];
-      result.instId = inst.userID;
+  if (!hitRec.hit) {
+    if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
+      auto hdri = onDevice.lights[rendererState.envID].asHDRI;
+      throughput = hdri.intensity(ray.dir);
+      hdriMiss = true;
     } else {
-      result.depth = hr.t;
-      result.primId = hr.prim_id;
+      throughput = float3{0.f};
+    }
+    return;
+  }
 
-      const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-      const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
+  float4 color{1.f};
+  float2 uv{hr.u,hr.v};
 
-      result.objId = group.objIds[hr.geom_id];
-      result.instId = inst.userID;
+  float transmissionIN = transmission;
+  float iorIN = ior;
 
-      hitPos = ray.ori + hr.t * ray.dir;
-      eps = epsilonFrom(hitPos, ray.dir, hr.t);
+  if (hitRec.lightHit) {
+    hitPos = ray.ori + hrl.t * ray.dir;
+    const dco::Light &light = getLight(world.allLights, hrl.lightID, onDevice);
+    if (light.type == dco::Light::Quad)
+      throughput = light.asQuad.intensity(hitPos);
+    hdriMiss = true; // TODO?!
+    return;
+  }
 
-      for (int i=0; i<5; ++i) {
-        attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
-      }
+  int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
+  const dco::Instance &inst = onDevice.instances[instID];
+  const dco::Group &group = onDevice.groups[inst.groupID];
 
-      float3 localHitPos = hr.isect_pos;
-      getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
+  viewDir = -ray.dir;
 
-      mat3 nxfm = getNormalTransform(inst, ray);
-      gn = nxfm * gn;
-      sn = nxfm * sn;
+  if (hitRec.volumeHit) {
+    hitPos = ray.ori + hrv.t * ray.dir;
+    eps = epsilonFrom(hitPos, ray.dir, hrv.t);
 
-      sn = faceforward(sn, viewDir, gn);
+    float3 localHitPos = hrv.isect_pos;
 
-      float4 tng4 = getTangent(geom, hr.prim_id, localHitPos, uv);
-      if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
-        tng = tng4.xyz();
-        btng = cross(sn, tng) * tng4.w;
-        sn = getPerturbedNormal(
-            mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
-      }
-      color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
-      transmission = getTransmission(mat, onDevice, attribs, localHitPos, hr.prim_id);
+    const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.localID]];
+
+    if (rendererState.gradientShading) {
+      float3 P = vol.field.pointToVoxelSpace(localHitPos);
+      float3 delta(vol.field.cellSize, vol.field.cellSize, vol.field.cellSize);
+      delta *= float3(vol.field.voxelSpaceTransform(0,0),
+                      vol.field.voxelSpaceTransform(1,1),
+                      vol.field.voxelSpaceTransform(2,2));
+      if (sampleGradient(vol.field,P,delta,gn))
+        gn = normalize(gn);
     }
 
-    result.Ng = gn;
-    result.Ns = sn;
-    result.albedo = color.xyz();
+    if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
+      gn = uniform_sample_sphere(ss.random(), ss.random());
 
-    // Compute motion vector; assume for now the hit was diffuse!
-    recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
-    vec3 prevWP, currWP;
-    project(prevWP, hitPos, rendererState.prevMV, rendererState.prevPR, viewport);
-    project(currWP, hitPos, rendererState.currMV, rendererState.currPR, viewport);
+    sn = gn;
 
-    result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
+    mat3 nxfm = getNormalTransform(inst, ray);
+    gn = nxfm * gn;
+    sn = nxfm * sn;
 
-    LightSample ls;
-    memset(&ls, 0, sizeof(ls));
+    sn = faceforward(sn, viewDir, gn);
 
-    if (world.numLights > 0) {
-      int lightID = uniformSampleOneLight(ss.random, world.numLights);
-      const dco::Light &light = getLight(world.allLights, lightID, onDevice);
-      ls = sampleLight(light, hitPos, ss.random);
+    color.xyz() = hrv.albedo;
+
+    result.depth = hrv.t;
+    result.primId = hrv.primID;
+    result.objId = group.objIds[hrv.localID];
+    result.instId = inst.userID;
+  } else {
+    result.depth = hr.t;
+    result.primId = hr.prim_id;
+
+    const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
+    const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
+
+    result.objId = group.objIds[hr.geom_id];
+    result.instId = inst.userID;
+
+    hitPos = ray.ori + hr.t * ray.dir;
+    eps = epsilonFrom(hitPos, ray.dir, hr.t);
+
+    for (int i=0; i<5; ++i) {
+      attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
     }
 
-    if (rendererState.renderMode == RenderMode::Default) {
-      auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
-      if (hitRec.volumeHit) {
-        if (rendererState.gradientShading && length(gn) > 1e-10f) {
-          dco::Material mat = dco::createMaterial();
-          mat.type = dco::Material::Matte;
-          mat.asMatte.color = dco::createMaterialParamRGB();
-          mat.asMatte.color.rgb = hrv.albedo;
+    float3 localHitPos = hr.isect_pos;
+    getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
-          shadedColor = evalMaterial(mat,
-                                     onDevice,
-                                     nullptr, // attribs, not used..
-                                     float3(0.f), // objPos, not used..
-                                     UINT_MAX, // primID, not used..
-                                     gn, gn,
-                                     tng, btng,
-                                     normalize(viewDir),
-                                     normalize(ls.dir),
-                                     ls.intensity * safe_rcp(ls.dist2));
-          shadedColor = shadedColor * safe_rcp(ls.pdf) * float(world.numLights);
-        }
-        else
-          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(ls.dist2);
-      } else {
-        const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
-        const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
+    mat3 nxfm = getNormalTransform(inst, ray);
+    gn = nxfm * gn;
+    sn = nxfm * sn;
 
-        shadedColor = evalMaterial(mat,
+    sn = faceforward(sn, viewDir, gn);
+
+    float4 tng4 = getTangent(geom, hr.prim_id, localHitPos, uv);
+    if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
+      tng = tng4.xyz();
+      btng = cross(sn, tng) * tng4.w;
+      sn = getPerturbedNormal(
+          mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
+    }
+    color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
+    transmission = getTransmission(mat, onDevice, attribs, localHitPos, hr.prim_id);
+    ior = getIOR(mat);
+  }
+
+  result.Ng = gn;
+  result.Ns = sn;
+  result.albedo = color.xyz();
+
+  // Compute motion vector; assume for now the hit was diffuse!
+  recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
+  vec3 prevWP, currWP;
+  project(prevWP, hitPos, rendererState.prevMV, rendererState.prevPR, viewport);
+  project(currWP, hitPos, rendererState.currMV, rendererState.currPR, viewport);
+
+  result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
+
+  LightSample ls;
+  memset(&ls, 0, sizeof(ls));
+
+  if (world.numLights > 0) {
+    int lightID = uniformSampleOneLight(ss.random, world.numLights);
+    const dco::Light &light = getLight(world.allLights, lightID, onDevice);
+    ls = sampleLight(light, hitPos, ss.random);
+  }
+
+  if (rendererState.renderMode == RenderMode::Default) {
+    auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
+    if (hitRec.volumeHit) {
+      if (rendererState.gradientShading && length(gn) > 1e-10f) {
+        dco::Material mat = dco::createMaterial();
+        mat.type = dco::Material::Matte;
+        mat.asMatte.color = dco::createMaterialParamRGB();
+        mat.asMatte.color.rgb = hrv.albedo;
+
+        auto shaded = evalMaterial(mat,
                                    onDevice,
-                                   attribs,
-                                   hr.isect_pos,
-                                   hr.prim_id,
-                                   gn, sn,
+                                   nullptr, // attribs, not used..
+                                   float3(0.f), // objPos, not used..
+                                   UINT_MAX, // primID, not used..
+                                   gn, gn,
                                    tng, btng,
                                    normalize(viewDir),
                                    normalize(ls.dir),
                                    ls.intensity * safe_rcp(ls.dist2));
-        shadedColor = shadedColor * safe_rcp(ls.pdf) * float(world.numLights);
+        shadedColor += shaded * safe_rcp(ls.pdf) * float(world.numLights);
       }
-    }
-    else if (rendererState.renderMode == RenderMode::PrimitiveId)
-      shadedColor = randomColor(result.primId).xyz();
-    else if (rendererState.renderMode == RenderMode::Ng)
-      shadedColor = (gn + float3(1.f)) * float3(0.5f);
-    else if (rendererState.renderMode == RenderMode::Ns)
-      shadedColor = (sn + float3(1.f)) * float3(0.5f);
-    else if (rendererState.renderMode == RenderMode::Tangent)
-      shadedColor = (tng + float3(1.f)) * float3(0.5f);
-    else if (rendererState.renderMode == RenderMode::Bitangent)
-      shadedColor = (btng + float3(1.f)) * float3(0.5f);
-    else if (rendererState.renderMode == RenderMode::Albedo)
-      shadedColor = color.xyz();
-    else if (rendererState.renderMode == RenderMode::MotionVec) {
-      vec2 xy = result.motionVec.xy();
-      float x = xy.x, y = xy.y;
-      vec2 plr = length(xy) < 1e-10f ? vec2(0.f) : vec2(sqrt(x * x + y * y),atan(y / x));
-      float angle = 180+plr.y * visionaray::constants::radians_to_degrees<float>();
-      float mag = plr.x;
-      vec3 hsv(angle,1.f,mag);
-      shadedColor = hsv2rgb(hsv);
-    } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
-      shadedColor = attribs[(int)dco::Attribute::_0].xyz();
-    else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
-      shadedColor = attribs[(int)dco::Attribute::_1].xyz();
-    else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
-      shadedColor = attribs[(int)dco::Attribute::_2].xyz();
-    else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
-      shadedColor = attribs[(int)dco::Attribute::_3].xyz();
-    else if (rendererState.renderMode == RenderMode::GeometryColor)
-      shadedColor = attribs[(int)dco::Attribute::Color].xyz();
-
-    if (rendererState.renderMode == RenderMode::Default)
-      baseColor = color.xyz();
-    else
-      baseColor = shadedColor;
-
-    if (transmission > 0.f) {
-      ray.ori = hitPos - gn * eps;
-      ray.dir = refract(viewDir, -gn, 1.f);
-      ray.tmin = 0.f;
-      ray.tmax = INFINITY;
-      shadow = false;
+      else
+        shadedColor += hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(ls.dist2);
     } else {
-      // Convert primary to shadow ray
-      ray.ori = hitPos + sn * eps;
-      ray.dir = normalize(ls.dir);
-      ray.tmin = 0.f;
-      ray.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
-      shadow = true;
-    }
-    return true; // continue recursion
-  } else { // process shadow ray
-    int surfV = hr.hit ? 0 : 1;
-    int volV = hitRec.volumeHit ? 0 : 1;
+      const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
+      const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
-    float aoV = rendererState.ambientSamples == 0 ? 1.f
-        : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos, ray.time, eps,
-                        rendererState.ambientSamples,
-                        rendererState.occlusionDistance);
-    // visibility term
-    float V = surfV * volV * hrv.Tr;
-    throughput *= shadedColor * V
-        + (baseColor * rendererState.ambientColor
-         * rendererState.ambientRadiance * aoV);
-    return false; // stop recursion
+      auto shaded = evalMaterial(mat,
+                                 onDevice,
+                                 attribs,
+                                 hr.isect_pos,
+                                 hr.prim_id,
+                                 gn, sn,
+                                 tng, btng,
+                                 normalize(viewDir),
+                                 normalize(ls.dir),
+                                 ls.intensity * safe_rcp(ls.dist2));
+      shadedColor += shaded * (1.f-transmission) * safe_rcp(ls.pdf) * float(world.numLights);
+    }
   }
+  else if (rendererState.renderMode == RenderMode::PrimitiveId)
+    shadedColor += randomColor(result.primId).xyz();
+  else if (rendererState.renderMode == RenderMode::Ng)
+    shadedColor += (gn + float3(1.f)) * float3(0.5f);
+  else if (rendererState.renderMode == RenderMode::Ns)
+    shadedColor += (sn + float3(1.f)) * float3(0.5f);
+  else if (rendererState.renderMode == RenderMode::Tangent)
+    shadedColor += (tng + float3(1.f)) * float3(0.5f);
+  else if (rendererState.renderMode == RenderMode::Bitangent)
+    shadedColor += (btng + float3(1.f)) * float3(0.5f);
+  else if (rendererState.renderMode == RenderMode::Albedo)
+    shadedColor += color.xyz();
+  else if (rendererState.renderMode == RenderMode::MotionVec) {
+    vec2 xy = result.motionVec.xy();
+    float x = xy.x, y = xy.y;
+    vec2 plr = length(xy) < 1e-10f ? vec2(0.f) : vec2(sqrt(x * x + y * y),atan(y / x));
+    float angle = 180+plr.y * visionaray::constants::radians_to_degrees<float>();
+    float mag = plr.x;
+    vec3 hsv(angle,1.f,mag);
+    shadedColor += hsv2rgb(hsv);
+  } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
+    shadedColor += attribs[(int)dco::Attribute::_0].xyz();
+  else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
+    shadedColor += attribs[(int)dco::Attribute::_1].xyz();
+  else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
+    shadedColor += attribs[(int)dco::Attribute::_2].xyz();
+  else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
+    shadedColor += attribs[(int)dco::Attribute::_3].xyz();
+  else if (rendererState.renderMode == RenderMode::GeometryColor)
+    shadedColor += attribs[(int)dco::Attribute::Color].xyz();
+
+  if (rendererState.renderMode == RenderMode::Default)
+    baseColor = color.xyz();
+  else
+    baseColor = shadedColor;
+
+  // BxDF ray
+  if (/*transmissionIN > 0.f ||*/ transmission > 0.f) {
+    float cosi = clamp(dot(sn, viewDir), -1.f, 1.f);
+    bool entering = cosi > 0.f;
+
+    float ior1 = iorIN;
+    float ior2 = ior;
+
+    // (potentially) flip normals and IORs
+    float etai, etat;
+    float3 N = sn;
+    if (entering) {
+      etai = ior1;
+      etat = ior2;
+    } else {
+      etai = ior2;
+      etat = ior1;
+      N = -sn;
+    }
+
+    float eta = etai/etat;
+
+    // Snell's law
+    float sini = sqrtf(fmaxf(0.f, 1.f - cosi*cosi));
+    float sint = eta * sini;
+    float cost = sqrtf(fmaxf(0.f, 1.f - sint*sint));
+
+    float reflectance = fresnel_dielectric(ior1, ior2, cosi, cost);
+
+    float3 refracted = refract(viewDir, N, eta);
+    float3 reflected = reflect(viewDir, N);
+
+    bool tir = sint >= 1.f;
+
+    if (ss.random() < reflectance || tir) {
+      bounce.ray.ori = hitPos - N * eps;
+      bounce.ray.dir = reflected;
+    } else {
+      bounce.ray.ori = hitPos - N * eps;
+      bounce.ray.dir = normalize(refracted);
+    }
+    bounce.ray.tmin = 0.f;
+    bounce.ray.tmax = INFINITY;
+    bounce.eval = true;
+  }
+
+  // Shadow ray
+  if (world.numLights > 0) {
+    shadow.ray.ori = hitPos + sn * eps;
+    shadow.ray.dir = normalize(ls.dir);
+    shadow.ray.tmin = 0.f;
+    shadow.ray.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
+    shadow.eval = true;
+  }
+}
+
+VSNRAY_FUNC
+inline void visibility(ScreenSample &ss, const Ray &ray,
+                       unsigned worldID,
+                       const DeviceObjectRegistry &onDevice,
+                       const RendererState &rendererState,
+                       const HitRec &hitRec,
+                       ShadeRec &shadeRec,
+                       PixelSample &result,
+                       unsigned bounceID)
+{
+  auto &throughput = shadeRec.throughput;
+  auto &baseColor = shadeRec.baseColor;
+  auto &shadedColor = shadeRec.shadedColor;
+  auto &gn = shadeRec.gn;
+  auto &sn = shadeRec.sn;
+  auto &tng = shadeRec.tng;
+  auto &btng = shadeRec.btng;
+  auto &viewDir = shadeRec.viewDir;
+  auto &hitPos = shadeRec.hitPos;
+  auto &attribs = shadeRec.attribs;
+  auto &transmission = shadeRec.transmission;
+  auto &ior = shadeRec.ior;
+  auto &hdriMiss = shadeRec.hdriMiss;
+  auto &bounce = shadeRec.bounce;
+  auto &shadow = shadeRec.shadow;
+  auto &eps = shadeRec.eps;
+
+  auto &hr = hitRec.surface;
+  auto &hrv = hitRec.volume;
+  auto &hrl = hitRec.light;
+
+  dco::World world = onDevice.worlds[worldID];
+
+  int surfV = hr.hit ? 0 : 1;
+  int volV = hitRec.volumeHit ? 0 : 1;
+
+  float aoV = rendererState.ambientSamples == 0 ? 1.f
+      : 1.f-computeAO(ss, worldID, onDevice, gn, sn, viewDir, hitPos, ray.time, eps,
+                      rendererState.ambientSamples,
+                      rendererState.occlusionDistance);
+  // visibility term
+  float V = surfV * volV * hrv.Tr;
+  aoV *= 1.f-transmission;
+  V   *= 1.f-transmission;
+  throughput *= shadedColor * V
+      + (baseColor * rendererState.ambientColor
+       * rendererState.ambientRadiance * aoV);
 }
 
 void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
@@ -355,18 +439,40 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
             unsigned maxDepth = 10u;
             for (unsigned bounceID=0;bounceID<maxDepth;++bounceID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
-              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadeRec.shadow);
-              if (!shade(ss, ray, worldID, onDevice,
+              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, /*shadow:*/false);
+              shade(ss, ray, worldID, onDevice,
                     rendererState,
                     hitRec,
                     shadeRec,
                     ps,
-                    bounceID)) {
-                break;
+                    bounceID);
+
+              HitRec shadowHitRec;
+              if (shadeRec.shadow.eval) {
+                Ray shadowRay = clipRay(shadeRec.shadow.ray,
+                                        rendererState.clipPlanes,
+                                        rendererState.numClipPlanes);
+                shadowHitRec = intersectAll(ss,
+                                            shadowRay,
+                                            worldID,
+                                            onDevice,
+                                            /*shadow:*/true);
               }
+              visibility(ss, ray, worldID, onDevice,
+                    rendererState,
+                    shadowHitRec,
+                    shadeRec,
+                    ps,
+                    bounceID);
 
               if (bounceID == 0) {
                 firstHit = hitRec;
+              }
+
+              if (shadeRec.bounce.eval) {
+                ray = shadeRec.bounce.ray;
+              } else {
+                break; // done!
               }
             }
 
