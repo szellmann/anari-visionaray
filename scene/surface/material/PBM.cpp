@@ -33,6 +33,11 @@ void PBM::commitParameters()
   m_roughness.sampler = getParamObject<Sampler>("roughness");
   m_roughness.attribute = toAttribute(getParamString("roughness", "none"));
 
+  m_transmission.value = 0.f;
+  getParam("transmission", ANARI_FLOAT32, &m_transmission.value);
+  m_transmission.sampler = getParamObject<Sampler>("transmission");
+  m_transmission.attribute = toAttribute(getParamString("transmission", "none"));
+
   m_anisotropy.value = 0.f;
   getParam("anisotropy", ANARI_FLOAT32, &m_anisotropy.value);
   m_anisotropy.sampler = getParamObject<Sampler>("anisotropy");
@@ -51,9 +56,6 @@ void PBM::commitParameters()
   m_clearcoatRoughness.attribute
       = toAttribute(getParamString("clearcoatRoughness", "none"));
 
-  m_ior = 1.5f;
-  getParam("ior", ANARI_FLOAT32, &m_ior);
-
   m_sheenColor.value = float3(0.f, 0.f, 0.f);
   getParam("sheenColor", ANARI_FLOAT32_VEC3, &m_sheenColor.value);
   m_sheenColor.sampler = getParamObject<Sampler>("sheenColor");
@@ -63,6 +65,9 @@ void PBM::commitParameters()
   getParam("sheenRoughness", ANARI_FLOAT32, &m_sheenRoughness.value);
   m_sheenRoughness.sampler = getParamObject<Sampler>("sheenRoughness");
   m_sheenRoughness.attribute = toAttribute(getParamString("sheenRoughness", "none"));
+
+  m_ior = 1.5f;
+  getParam("ior", ANARI_FLOAT32, &m_ior);
 
   m_alphaMode = toAlphaMode(getParamString("alphaMode", "opaque"));
   m_alphaCutoff = getParam<float>("alphaCutoff", 0.5f);
@@ -108,6 +113,15 @@ void PBM::finalize()
     vmat.asPhysicallyBased.roughness.samplerID = UINT_MAX;
   }
 
+  vmat.asPhysicallyBased.transmission.f = m_transmission.value;
+  vmat.asPhysicallyBased.transmission.attribute = m_transmission.attribute;
+  if (m_transmission.sampler && m_transmission.sampler->isValid()) {
+    vmat.asPhysicallyBased.transmission.samplerID
+        = m_transmission.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.transmission.samplerID = UINT_MAX;
+  }
+
   vmat.asPhysicallyBased.anisotropy.f = m_anisotropy.value;
   vmat.asPhysicallyBased.anisotropy.attribute = m_anisotropy.attribute;
   if (m_anisotropy.sampler && m_anisotropy.sampler->isValid()) {
@@ -142,8 +156,6 @@ void PBM::finalize()
     vmat.asPhysicallyBased.clearcoatRoughness.samplerID = UINT_MAX;
   }
 
-  vmat.asPhysicallyBased.ior = m_ior;
-
   vmat.asPhysicallyBased.sheenColor.rgb = m_sheenColor.value;
   vmat.asPhysicallyBased.sheenColor.attribute = m_sheenColor.attribute;
   if (m_sheenColor.sampler && m_sheenColor.sampler->isValid()) {
@@ -161,6 +173,8 @@ void PBM::finalize()
   } else {
     vmat.asPhysicallyBased.sheenRoughness.samplerID = UINT_MAX;
   }
+
+  vmat.asPhysicallyBased.ior = m_ior;
 
   vmat.asPhysicallyBased.alphaMode = m_alphaMode;
   vmat.asPhysicallyBased.alphaCutoff = m_alphaCutoff;

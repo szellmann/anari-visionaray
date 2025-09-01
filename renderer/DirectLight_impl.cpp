@@ -19,6 +19,7 @@ struct ShadeRec
   float3 hitPos{0.f};
   float4 attribs[5];
   bool hdriMiss{false};
+  bool shadow{false};
   float eps{1e-4f};
 };
 
@@ -41,6 +42,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
   auto &hitPos = shadeRec.hitPos;
   auto &attribs = shadeRec.attribs;
   auto &hdriMiss = shadeRec.hdriMiss;
+  auto &shadow = shadeRec.shadow;
   auto &eps = shadeRec.eps;
 
   auto &hr = hitRec.surface;
@@ -49,7 +51,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
 
   dco::World world = onDevice.worlds[worldID];
 
-  if (bounceID == 0) {
+  if (!shadow) {
 
     if (!hitRec.hit) {
       if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
@@ -63,6 +65,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     }
 
     float4 color{1.f};
+    float transmission = 0.f;
     float2 uv{hr.u,hr.v};
 
     if (hitRec.lightHit) {
@@ -149,7 +152,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
             mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
       }
       color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
-
+      transmission = getTransmission(mat, onDevice, attribs, localHitPos, hr.prim_id);
     }
 
     result.Ng = gn;
@@ -249,12 +252,22 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     else
       baseColor = shadedColor;
 
-    // Convert primary to shadow ray
-    ray.ori = hitPos + sn * eps;
-    ray.dir = normalize(ls.dir);
-    ray.tmin = 0.f;
-    ray.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
-  } else { // bounceID == 1
+    if (transmission > 0.f) {
+      ray.ori = hitPos - gn * eps;
+      ray.dir = refract(viewDir, -gn, 1.f);
+      ray.tmin = 0.f;
+      ray.tmax = INFINITY;
+      shadow = false;
+    } else {
+      // Convert primary to shadow ray
+      ray.ori = hitPos + sn * eps;
+      ray.dir = normalize(ls.dir);
+      ray.tmin = 0.f;
+      ray.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
+      shadow = true;
+    }
+    return true; // continue recursion
+  } else { // process shadow ray
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
 
@@ -267,8 +280,8 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     throughput *= shadedColor * V
         + (baseColor * rendererState.ambientColor
          * rendererState.ambientRadiance * aoV);
+    return false; // stop recursion
   }
-  return true;
 }
 
 void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
@@ -339,10 +352,10 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
 
             HitRec firstHit;
             ShadeRec shadeRec;
-            for (unsigned bounceID=0;bounceID<2;++bounceID) {
+            unsigned maxDepth = 10u;
+            for (unsigned bounceID=0;bounceID<maxDepth;++bounceID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
-              bool shadow = bounceID==1;
-              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadow);
+              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadeRec.shadow);
               if (!shade(ss, ray, worldID, onDevice,
                     rendererState,
                     hitRec,
@@ -361,9 +374,9 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
               ps.color = float4(shadeRec.throughput,1.f);
             }
 
-            // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
-            //   ps.color = float4(1.f) - ps.color;
-            // }
+            if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
+              ps.color = float4(1.f) - ps.color;
+            }
           }
 
           accumColor += ps.color;

@@ -585,6 +585,20 @@ inline float getOpacity(const dco::Material &mat,
 }
 
 VSNRAY_FUNC
+inline float getTransmission(const dco::Material &mat,
+                             const DeviceObjectRegistry &onDevice,
+                             const float4 *attribs,
+                             float3 objPos,
+                             unsigned primID)
+{
+  if (mat.type == dco::Material::PhysicallyBased) {
+    return getF(mat.asPhysicallyBased.transmission, onDevice, attribs, objPos, primID);
+  } else {
+    return 0.f;
+  }
+}
+
+VSNRAY_FUNC
 inline vec3 getPerturbedNormal(const dco::Material &mat,
                                const DeviceObjectRegistry &onDevice,
                                const float4 *attribs,

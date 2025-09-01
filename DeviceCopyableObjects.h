@@ -2043,6 +2043,7 @@ struct Material
       MaterialParamF opacity;
       MaterialParamF metallic;
       MaterialParamF roughness;
+      MaterialParamF transmission;
       MaterialParamF anisotropy;
       struct {
         unsigned samplerID;
