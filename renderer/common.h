@@ -1145,4 +1145,18 @@ inline void print(const Ray &ray)
       ray.tmin, ray.tmax, ray.intersectionMask);
 }
 
+VSNRAY_FUNC
+inline void printExact(const Ray &ray)
+{
+  unsigned orix = *(unsigned *)&ray.ori.x;
+  unsigned oriy = *(unsigned *)&ray.ori.y;
+  unsigned oriz = *(unsigned *)&ray.ori.z;
+  unsigned dirx = *(unsigned *)&ray.dir.x;
+  unsigned diry = *(unsigned *)&ray.dir.y;
+  unsigned dirz = *(unsigned *)&ray.dir.z;
+  unsigned tmin = *(unsigned *)&ray.tmin;
+  unsigned tmax = *(unsigned *)&ray.tmax;
+  printf("ray: [ori: (%x,%x,%x), dir: (%x,%x,%x), tmin: %x, tmax: %x, mask: %x]\n",
+      orix, oriy, oriz, dirx, diry, dirz, tmin, tmax, ray.intersectionMask);
+}
 } // visionaray
