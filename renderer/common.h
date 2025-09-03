@@ -710,7 +710,7 @@ inline float D_GGX_Anisotropic(float NdotH, float TdotH, float BdotH, float at, 
 {
   float a2 = at*ab;
   float3 v(ab * TdotH, at * BdotH, a2 * NdotH);
-  float v2 = dot(v,v);
+  float v2 = fmaxf(dot(v,v),1e-14f);
   float w2 = a2 / v2;
   return a2 * w2 * w2 * constants::inv_pi<float>();
 }
