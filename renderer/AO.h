@@ -9,9 +9,10 @@
 namespace visionaray {
 
 VSNRAY_FUNC
-inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    DeviceObjectRegistry onDevice)
+inline bool occluded(ScreenSample &ss, Ray ray, unsigned worldID,
+    DeviceObjectRegistry onDevice, const RendererState &rendererState)
 {
+  ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
   auto hr = intersectSurfaces<1>(ss, ray, onDevice, worldID, /*shadow:*/true);
   auto hrv = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
   return hr.hit || hrv.hit;
@@ -19,10 +20,13 @@ inline bool occluded(ScreenSample &ss, const Ray &ray, unsigned worldID,
 
 VSNRAY_FUNC
 inline float computeAO(ScreenSample &ss, unsigned worldID,
-    DeviceObjectRegistry onDevice,
+    DeviceObjectRegistry onDevice, const RendererState &rendererState,
     vec3 Ng, vec3 Ns, const vec3 viewDir, const vec3 isectPos,
-    float time, float eps, int AO_samples, float AO_radius)
+    float time, float eps)
 {
+  const int AO_samples = rendererState.ambientSamples;
+  const float AO_radius = rendererState.occlusionDistance;
+
   vec3 u, v, w = Ns;
   make_orthonormal_basis(u,v,w);
   float weights = 0.f;
@@ -40,7 +44,7 @@ inline float computeAO(ScreenSample &ss, unsigned worldID,
 
     float weight = max(0.f, dot(dir,Ns));
     weights += weight;
-    if (weight > 0.f && occluded(ss, aoRay, worldID, onDevice)) {
+    if (weight > 0.f && occluded(ss, aoRay, worldID, onDevice, rendererState)) {
       aoCount += weight;
     }
   }
