@@ -6,7 +6,9 @@
 
 namespace visionaray {
 
-struct ShadeRec
+enum RayType { Radiance, Shadow, AO, None };
+
+struct ShadeState
 {
   float3 throughput{1.f};
   float3 baseColor{0.f};
@@ -20,36 +22,48 @@ struct ShadeRec
   float4 attribs[5];
   bool hdriMiss{false};
   float eps{1e-4f};
+  int aoSamples{0};
+  float aoWeights{0.f};
+  float aoCount{0.f};
+  struct {
+    RayType rayType;
+    Ray ray;
+  } next;
 };
 
 VSNRAY_FUNC
-inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
+inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned worldID,
     const DeviceObjectRegistry &onDevice, const RendererState &rendererState,
     const HitRec &hitRec,
-    ShadeRec &shadeRec,
-    PixelSample &result,
-    unsigned bounceID)
+    ShadeState &shadeState,
+    PixelSample &result)
 {
-  auto &throughput = shadeRec.throughput;
-  auto &baseColor = shadeRec.baseColor;
-  auto &shadedColor = shadeRec.shadedColor;
-  auto &gn = shadeRec.gn;
-  auto &sn = shadeRec.sn;
-  auto &tng = shadeRec.tng;
-  auto &btng = shadeRec.btng;
-  auto &viewDir = shadeRec.viewDir;
-  auto &hitPos = shadeRec.hitPos;
-  auto &attribs = shadeRec.attribs;
-  auto &hdriMiss = shadeRec.hdriMiss;
-  auto &eps = shadeRec.eps;
+  auto &throughput = shadeState.throughput;
+  auto &baseColor = shadeState.baseColor;
+  auto &shadedColor = shadeState.shadedColor;
+  auto &gn = shadeState.gn;
+  auto &sn = shadeState.sn;
+  auto &tng = shadeState.tng;
+  auto &btng = shadeState.btng;
+  auto &viewDir = shadeState.viewDir;
+  auto &hitPos = shadeState.hitPos;
+  auto &attribs = shadeState.attribs;
+  auto &hdriMiss = shadeState.hdriMiss;
+  auto &eps = shadeState.eps;
+  auto &aoSamples = shadeState.aoSamples;
+  auto &aoWeights = shadeState.aoWeights;
+  auto &aoCount = shadeState.aoCount;
+  auto &next = shadeState.next;
 
   auto &hr = hitRec.surface;
   auto &hrv = hitRec.volume;
   auto &hrl = hitRec.light;
 
+  next.rayType = None;
+
   dco::World world = onDevice.worlds[worldID];
 
-  if (bounceID == 0) {
+  if (rayType == Radiance) {
 
     if (!hitRec.hit) {
       if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
@@ -59,7 +73,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       } else {
         throughput = float3{0.f};
       }
-      return false;
+      return;
     }
 
     float4 color{1.f};
@@ -71,7 +85,7 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
       if (light.type == dco::Light::Quad)
         throughput = light.asQuad.intensity(hitPos);
       hdriMiss = true; // TODO?!
-      return false;
+      return;
     }
 
     int instID = hitRec.volumeHit ? hrv.instID : hr.inst_id;
@@ -149,7 +163,6 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
             mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
       }
       color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
-
     }
 
     result.Ng = gn;
@@ -249,25 +262,102 @@ inline bool shade(ScreenSample &ss, Ray &ray, unsigned worldID,
     else
       baseColor = shadedColor;
 
-    // Convert primary to shadow ray
-    ray.ori = hitPos + sn * eps;
-    ray.dir = normalize(ls.dir);
-    ray.tmin = 0.f;
-    ray.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
-  } else { // bounceID == 1
+    if (world.numLights > 0) {
+      Ray &shadowRay = next.ray;
+      shadowRay.ori = hitPos + sn * eps;
+      shadowRay.dir = normalize(ls.dir);
+      shadowRay.tmin = 0.f;
+      shadowRay.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
+      shadowRay.time = ray.time;
+      next.rayType = Shadow;
+      return;
+    }
+
+    // No shadow ray:
+    throughput *= shadedColor;
+
+    if (aoSamples < rendererState.ambientSamples) {
+      vec3 u, v, w = sn;
+      make_orthonormal_basis(u,v,w);
+      auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
+      vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
+
+      Ray &aoRay = next.ray;
+      aoRay.ori = hitPos + sn * eps;
+      aoRay.dir = dir;
+      aoRay.tmin = 0.f;
+      aoRay.tmax = rendererState.occlusionDistance;
+      aoRay.time = ray.time;
+      next.rayType = AO;
+      return;
+    }
+
+    // No AO:
+    throughput += baseColor * rendererState.ambientColor * rendererState.ambientRadiance;
+
+    return;
+  } else if (rayType == Shadow) {
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
 
-    float aoV = rendererState.ambientSamples == 0 ? 1.f
-        : 1.f-computeAO(ss, worldID, onDevice, rendererState,
-                        gn, sn, viewDir, hitPos, ray.time, eps);
-    // visibility term
     float V = surfV * volV * hrv.Tr;
-    throughput *= shadedColor * V
-        + (baseColor * rendererState.ambientColor
-         * rendererState.ambientRadiance * aoV);
+    throughput *= shadedColor * V;
+
+    if (aoSamples < rendererState.ambientSamples) {
+      vec3 u, v, w = sn;
+      make_orthonormal_basis(u,v,w);
+      auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
+      vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
+
+      Ray &aoRay = next.ray;
+      aoRay.ori = hitPos + sn * eps;
+      aoRay.dir = dir;
+      aoRay.tmin = 0.f;
+      aoRay.tmax = rendererState.occlusionDistance;
+      aoRay.time = ray.time;
+      next.rayType = AO;
+      return;
+    }
+
+    // No AO:
+    throughput += baseColor * rendererState.ambientColor * rendererState.ambientRadiance;
+
+    return;
+  } else if (rayType == AO) {
+    aoSamples++;
+
+    float weight = fmaxf(0.f, dot(ray.dir,sn));
+    aoWeights += weight;
+    if (weight > 0.f && hr.hit) {
+      aoCount += weight;
+    }
+
+    if (aoSamples < rendererState.ambientSamples) {
+      vec3 u, v, w = sn;
+      make_orthonormal_basis(u,v,w);
+      auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
+      vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
+
+      Ray &aoRay = next.ray;
+      aoRay.ori = hitPos + sn * eps;
+      aoRay.dir = dir;
+      aoRay.tmin = 0.f;
+      aoRay.tmax = rendererState.occlusionDistance;
+      aoRay.time = ray.time;
+      next.rayType = AO;
+      return;
+    }
+
+    float aoV = 0.f;
+    if (aoWeights > 0.f) {
+      aoV = 1.f - (aoCount/aoWeights);
+    }
+
+    throughput
+        += baseColor * rendererState.ambientColor * rendererState.ambientRadiance * aoV;
+
+    return;
   }
-  return true;
 }
 
 void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
@@ -337,27 +427,35 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
           if (onDevice.TLSs[worldID].num_primitives() != 0) {
 
             HitRec firstHit;
-            ShadeRec shadeRec;
-            for (unsigned bounceID=0;bounceID<2;++bounceID) {
+            ShadeState shadeState;
+            RayType rayType = Radiance;
+            for (unsigned bounceID=0;true;++bounceID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
-              bool shadow = bounceID==1;
+              bool shadow = rayType == Shadow || rayType == AO;
               HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadow);
-              if (!shade(ss, ray, worldID, onDevice,
+              // 1. radiance
+              // 2. shadow (optional)
+              // 3. AO (optional)
+              shade(ss, ray, rayType, worldID, onDevice,
                     rendererState,
                     hitRec,
-                    shadeRec,
-                    ps,
-                    bounceID)) {
-                break;
-              }
+                    shadeState,
+                    ps);
 
               if (bounceID == 0) {
                 firstHit = hitRec;
               }
+
+              ray = shadeState.next.ray;
+              rayType = shadeState.next.rayType;
+
+              if (rayType == None) {
+                break;
+              }
             }
 
-            if (firstHit.hit || shadeRec.hdriMiss) {
-              ps.color = float4(shadeRec.throughput,1.f);
+            if (firstHit.hit || shadeState.hdriMiss) {
+              ps.color = float4(shadeState.throughput,1.f);
             }
 
             // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {

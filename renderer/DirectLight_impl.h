@@ -3,7 +3,6 @@
 
 #pragma once
 
-#include "renderer/AO.h"
 #include "renderer/common.h"
 #include "renderer/VolumeIntegration.h"
 #include "sampleCDF.h"
