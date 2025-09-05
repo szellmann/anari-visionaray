@@ -13,9 +13,8 @@ inline bool occluded(ScreenSample &ss, Ray ray, unsigned worldID,
     DeviceObjectRegistry onDevice, const RendererState &rendererState)
 {
   ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
-  auto hr = intersectSurfaces<1>(ss, ray, onDevice, worldID, /*shadow:*/true);
-  auto hrv = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice);
-  return hr.hit || hrv.hit;
+  auto hr = intersectAll(ss, ray, worldID, onDevice, /*shadow:*/true);
+  return hr.hit;
 }
 
 VSNRAY_FUNC
