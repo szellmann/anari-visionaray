@@ -51,6 +51,11 @@ void PBM::commitParameters()
   m_anisotropyRotation.attribute
       = toAttribute(getParamString("anisotropyRotation", "none"));
 
+  m_transmission.value = 0.f;
+  getParam("transmission", ANARI_FLOAT32, &m_transmission.value);
+  m_transmission.sampler = getParamObject<Sampler>("transmission");
+  m_transmission.attribute = toAttribute(getParamString("transmission", "none"));
+
   m_normal.sampler = getParamObject<Sampler>("normal");
 
   m_clearcoat.value = 0.f;
@@ -146,6 +151,15 @@ void PBM::finalize()
         = m_anisotropyRotation.sampler->visionaraySampler().samplerID;
   } else {
     vmat.asPhysicallyBased.anisotropyRotation.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.transmission.f = m_transmission.value;
+  vmat.asPhysicallyBased.transmission.attribute = m_transmission.attribute;
+  if (m_transmission.sampler && m_transmission.sampler->isValid()) {
+    vmat.asPhysicallyBased.transmission.samplerID
+        = m_transmission.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.transmission.samplerID = UINT_MAX;
   }
 
   if (m_normal.sampler && m_normal.sampler->isValid()) {

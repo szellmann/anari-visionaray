@@ -149,6 +149,19 @@ vec3 hsv2rgb(vec3 in)
     return out;
 }
 
+inline VSNRAY_FUNC
+float fresnel_dielectric(float etai, float etat, float cosi, float cost) {
+    // approximation for s-polarized light (perpendicular)
+    auto rs = ( etai * cosi - etat * cost )
+            / ( etai * cosi + etat * cost );
+
+    // approximation for p-polarized light (parallel)
+    auto rp = ( etat * cosi - etai * cost )
+            / ( etat * cosi + etai * cost );
+
+    return (rs * rs + rp * rp) / 2.f;
+}
+
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 {
   int which = int(rnd() * numLights); if (which == numLights) which = 0;
@@ -598,6 +611,30 @@ inline float getOpacity(const dco::Material &mat,
     return opacity;
   else // mode==Mask
     return opacity >= cutoff ? 1.f : 0.f;
+}
+
+VSNRAY_FUNC
+inline float getTransmission(const dco::Material &mat,
+                             const DeviceObjectRegistry &onDevice,
+                             const float4 *attribs,
+                             float3 objPos,
+                             unsigned primID)
+{
+  if (mat.type == dco::Material::PhysicallyBased) {
+    return getF(mat.asPhysicallyBased.transmission, onDevice, attribs, objPos, primID);
+  } else {
+    return 0.f;
+  }
+}
+
+VSNRAY_FUNC
+inline float getIOR(const dco::Material &mat)
+{
+  if (mat.type == dco::Material::PhysicallyBased) {
+    return mat.asPhysicallyBased.ior;
+  } else {
+    return 1.f;
+  }
 }
 
 VSNRAY_FUNC

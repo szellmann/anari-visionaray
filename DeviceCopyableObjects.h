@@ -2063,6 +2063,7 @@ struct Material
       MaterialParamF anisotropyStrength;
       MaterialParamUV anisotropyDirection;
       MaterialParamF anisotropyRotation;
+      MaterialParamF transmission;
       struct {
         unsigned samplerID;
       } normal;
