@@ -34,7 +34,10 @@ void Perspective::finalize()
 {
   Camera::finalize();
   vcam.asPinholeCam.perspective(m_fovy, m_aspect, .001f, 1000.f);
-  vcam.asPinholeCam.look_at(m_pos, m_pos + m_dir, m_up);
+  //vcam.asPinholeCam.look_at(m_pos, m_pos + m_dir, m_up);
+  vcam.asPinholeCam.set_eye(m_pos);
+  vcam.asPinholeCam.set_dir(m_dir);
+  vcam.asPinholeCam.set_up(m_up);
   vcam.asPinholeCam.set_image_region(m_imageRegion);
   vcam.asPinholeCam.set_lens_radius(m_apertureRadius);
   vcam.asPinholeCam.set_focal_distance(m_focusDistance);
