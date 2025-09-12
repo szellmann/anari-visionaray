@@ -331,7 +331,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     float weight = fmaxf(0.f, dot(ray.dir,sn));
     aoWeights += weight;
-    if (weight > 0.f && hr.hit) {
+    if (weight > 0.f && hitRec.hit) {
       aoCount += weight;
     }
 
