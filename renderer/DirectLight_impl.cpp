@@ -269,6 +269,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       shadowRay.tmin = 0.f;
       shadowRay.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
       shadowRay.time = ray.time;
+      shadowRay.dbg = ray.dbg;
       next.rayType = Shadow;
       return;
     }
@@ -288,6 +289,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       aoRay.tmin = 0.f;
       aoRay.tmax = rendererState.occlusionDistance;
       aoRay.time = ray.time;
+      aoRay.dbg = ray.dbg;
       next.rayType = AO;
       return;
     }
@@ -315,6 +317,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       aoRay.tmin = 0.f;
       aoRay.tmax = rendererState.occlusionDistance;
       aoRay.time = ray.time;
+      aoRay.dbg = ray.dbg;
       next.rayType = AO;
       return;
     }
@@ -344,6 +347,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       aoRay.tmin = 0.f;
       aoRay.tmax = rendererState.occlusionDistance;
       aoRay.time = ray.time;
+      aoRay.dbg = ray.dbg;
       next.rayType = AO;
       return;
     }
