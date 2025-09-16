@@ -21,6 +21,9 @@ void UnstructuredField::commitParameters()
   m_params.cellIndex = getParamObject<Array1D>("cell.index");
   m_params.cellType = getParamObject<Array1D>("cell.type");
   m_params.cellData = getParamObject<Array1D>("cell.data");
+  // voxel grid extensions for AMR "stitching"
+  m_params.gridData = getParamObject<ObjectArray>("grid.data");
+  m_params.gridDomains = getParamObject<Array1D>("grid.domains");
 }
 
 void UnstructuredField::finalize()
@@ -140,6 +143,7 @@ void UnstructuredField::finalize()
     }
 
     m_elements.emplace_back();
+    m_elements[cellID].type = elemType;
     m_elements[cellID].begin = firstIndex;
     m_elements[cellID].end = lastIndex;
     m_elements[cellID].elemID = cellID;
@@ -161,10 +165,6 @@ void UnstructuredField::finalize()
     minCellDiagonal = fminf(minCellDiagonal,length(cellBounds.max-cellBounds.min));
     avgCellDiagonal += length(cellBounds.max-cellBounds.min)/m_elements.size();
   }
-
-  // voxel grid extensions for AMR "stitching"
-  m_params.gridData = getParamObject<ObjectArray>("grid.data");
-  m_params.gridDomains = getParamObject<Array1D>("grid.domains");
 
   if (m_params.gridData && m_params.gridDomains) {
     m_gridDims.clear();
@@ -201,6 +201,7 @@ void UnstructuredField::finalize()
     uint64_t firstGridID = m_elements.size();
     for (size_t i=0; i<numGrids; ++i) {
       dco::UElem elem;
+      elem.type = dco::UElem::Grid;
       elem.begin = elem.end = 0; // denotes that this is a grid!
       elem.elemID = /*firstGridID +*/ i;
       elem.gridDimsBuffer = m_gridDims.devicePtr();
