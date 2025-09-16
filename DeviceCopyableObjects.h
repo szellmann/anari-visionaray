@@ -143,7 +143,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
   uint64_t numVerts = elem.end-elem.begin;
 
-  if (numVerts > 0) { // regular uelem
+  if (numVerts >= 4 && numVerts <= 8) { // regular uelem
     float4 v[8];
     for (int i=0; i<numVerts; ++i) {
       uint64_t idx = elem.indexBuffer[elem.begin+i];
@@ -161,6 +161,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
     }
 
     result.hit = hit;
+  } else if (numVerts > 0) { // higher order elems, etc.
+    // TODO
   } else {
     // element is a voxel grid (for "stitcher" AMR data)
     int3 dims = elem.gridDimsBuffer[elem.elemID];
