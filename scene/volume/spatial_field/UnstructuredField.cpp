@@ -76,21 +76,28 @@ void UnstructuredField::finalize()
   uint32_t *index = (uint32_t *)m_params.index->beginAs<uint32_t>();
   uint32_t *cellIndex = (uint32_t *)m_params.cellIndex->beginAs<uint32_t>();
 
-  // try to guess how to interpret the cell type, as this is
-  // not properly specified yet:
+  // Not sure if these are used anymore:
+  enum {
+    BARNEY_TET_ = 0,
+    BARNEY_HEX_ = 1,
+    BARNEY_WEDGE_ = 2,
+    BARNEY_PYR_ = 3,
+  };
+
+  enum {
+    VTK_TET_ = 10,
+    VTK_HEX_ = 12,
+    VTK_WEDGE_ = 13,
+    VTK_PYR_ = 14,
+    VTK_BEZIER_HEX_ = 79,
+  };
 
   auto indexCount = [this](uint8_t val) {
-    // Banari: 0,1,2,3
-    // VTK: 10,12,13,14
-    if (val == 0 || val == 10) return 4ull; // TET
-    if (val == 1 || val == 12) return 8ull; // HEX
-    if (val == 2 || val == 13) return 6ull; // WEDGE
-    if (val == 3 || val == 14) return 5ull; // PYR
-    else {
-      reportMessage(ANARI_SEVERITY_WARNING,
-        "unknown value for 'cell.type' found, returning 0 for index count");
-      return ~0ull;
-    }
+    if (val == BARNEY_TET_ || val == VTK_TET_) return 4ull;
+    if (val == BARNEY_HEX_ || val == VTK_HEX_) return 8ull;
+    if (val == BARNEY_WEDGE_ || val == VTK_WEDGE_) return 6ull;
+    if (val == BARNEY_PYR_ || val == VTK_PYR_) return 5ull;
+    else return ~0ull;
   };
 
   for (size_t i=0; i<m_vertices.size(); ++i) {
@@ -108,14 +115,29 @@ void UnstructuredField::finalize()
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
     uint64_t firstIndex, lastIndex;
 
-    if (cellIndex) {
+    if (cellType) {
+      auto ic = indexCount(cellType[cellID]);
+      if (ic != ~0ull) {
+        firstIndex = currentIndex;
+        lastIndex = currentIndex + ic;
+        currentIndex += ic;
+      } else if (cellType[cellID] == VTK_BEZIER_HEX_) {
+
+        reportMessage(ANARI_SEVERITY_WARNING,
+          "'cell.type' %i (vtk bezier hex) not supported yet", cellType[cellID]);
+        continue;
+      }
+    } else /*if (cellIndex)*/ {
       firstIndex = cellIndex[cellID];
       lastIndex = cellID < numCells-1 ? cellIndex[cellID+1] : numIndices;
-    } else /*if (cellType) */ {
-      auto ic = indexCount(cellType[cellID]);
-      firstIndex = currentIndex;
-      lastIndex = currentIndex + ic;
-      currentIndex += ic;
+      uint64_t ic = lastIndex-firstIndex;
+      if (ic < 4 || ic > 8) {
+        // we don't strictly require cell.type yet but if it's missing
+        // the supported types are tets, pyrs, wedges, or hexes:
+        reportMessage(ANARI_SEVERITY_WARNING,
+          "'cell.type' not specified and index count out of range");
+        continue;
+      }
     }
 
     m_elements[cellID].begin = firstIndex;
