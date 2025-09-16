@@ -66,7 +66,6 @@ void UnstructuredField::finalize()
 
   m_vertices.resize(numVerts);
   m_indices.resize(numIndices);
-  m_elements.resize(numCells);
 
   auto *vertexPosition = m_params.vertexPosition->beginAs<vec3>();
   auto *vertexData = m_params.vertexData ? m_params.vertexData->beginAs<float>() : nullptr;
@@ -112,7 +111,7 @@ void UnstructuredField::finalize()
   uint64_t currentIndex=0;
   float minCellDiagonal=FLT_MAX;
   float avgCellDiagonal=0.f;
-  for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
+  for (size_t cellID=0; cellID<numCells; ++cellID) {
     uint64_t firstIndex, lastIndex;
 
     if (cellType) {
@@ -122,7 +121,6 @@ void UnstructuredField::finalize()
         lastIndex = currentIndex + ic;
         currentIndex += ic;
       } else if (cellType[cellID] == VTK_BEZIER_HEX_) {
-
         reportMessage(ANARI_SEVERITY_WARNING,
           "'cell.type' %i (vtk bezier hex) not supported yet", cellType[cellID]);
         continue;
@@ -140,6 +138,7 @@ void UnstructuredField::finalize()
       }
     }
 
+    m_elements.emplace_back();
     m_elements[cellID].begin = firstIndex;
     m_elements[cellID].end = lastIndex;
     m_elements[cellID].elemID = cellID;
@@ -216,7 +215,7 @@ void UnstructuredField::finalize()
   conn::Mesh connMesh(m_vertices.hostPtr(),
                       m_indices.hostPtr(),
                       m_elements.hostPtr(),
-                      numCells);
+                      m_elements.size());
 
   auto fn = computeFaceConnectivity(connMesh);
   // TODO:!!!!!
@@ -226,7 +225,7 @@ void UnstructuredField::finalize()
   auto shell = computeShell(connMesh,fn.data());
 
   // build shell BVH, init marcher:
-  {
+  if (shell.size() > 0) {
     binned_sah_builder builder;
     builder.enable_spatial_splits(false);
 

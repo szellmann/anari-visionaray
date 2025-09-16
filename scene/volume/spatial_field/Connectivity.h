@@ -161,6 +161,9 @@ struct UElem
   {
     numVertices = elem.end-elem.begin;
 
+    if (numVertices < 4 || numVertices > 8)
+      return;
+
     for (int i=0; i<numVertices; ++i) {
       uint64_t idx = elem.indexBuffer[elem.begin+i];
       vertices[i] = elem.vertexBuffer[idx];
@@ -339,7 +342,8 @@ struct UElem
   {
     // TODO: test and enable winding order check:
     // TODO: support non-planar faces and relax this:
-    return allFacesPlanar() && !hasCoplanarFaces();// && checkWindingOrder();
+    return numVertices >= 4 && numVertices <= 8 &&
+        allFacesPlanar() && !hasCoplanarFaces();// && checkWindingOrder();
   }
 
   // vertices, with index indirection already resolved
