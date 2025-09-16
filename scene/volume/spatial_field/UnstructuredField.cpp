@@ -91,12 +91,13 @@ void UnstructuredField::finalize()
     VTK_BEZIER_HEX_ = 79,
   };
 
-  auto indexCount = [this](uint8_t val) {
-    if (val == BARNEY_TET_ || val == VTK_TET_) return 4ull;
-    if (val == BARNEY_HEX_ || val == VTK_HEX_) return 8ull;
-    if (val == BARNEY_WEDGE_ || val == VTK_WEDGE_) return 6ull;
-    if (val == BARNEY_PYR_ || val == VTK_PYR_) return 5ull;
-    else return ~0ull;
+  auto mapType = [this](uint8_t val) {
+    if (val == BARNEY_TET_ || val == VTK_TET_) return dco::UElem::Tet;
+    if (val == BARNEY_HEX_ || val == VTK_HEX_) return dco::UElem::Hex;
+    if (val == BARNEY_WEDGE_ || val == VTK_WEDGE_) return dco::UElem::Wedge;
+    if (val == BARNEY_PYR_ || val == VTK_PYR_) return dco::UElem::Pyr;
+    if (val == VTK_BEZIER_HEX_) return dco::UElem::BezierHex;
+    return dco::UElem::Unknown;
   };
 
   for (size_t i=0; i<m_vertices.size(); ++i) {
@@ -114,28 +115,28 @@ void UnstructuredField::finalize()
   for (size_t cellID=0; cellID<numCells; ++cellID) {
     uint64_t firstIndex, lastIndex;
 
+    dco::UElem::Type elemType;
+
     if (cellType) {
-      auto ic = indexCount(cellType[cellID]);
-      if (ic != ~0ull) {
-        firstIndex = currentIndex;
-        lastIndex = currentIndex + ic;
-        currentIndex += ic;
-      } else if (cellType[cellID] == VTK_BEZIER_HEX_) {
-        reportMessage(ANARI_SEVERITY_WARNING,
-          "'cell.type' %i (vtk bezier hex) not supported yet", cellType[cellID]);
-        continue;
-      }
-    } else /*if (cellIndex)*/ {
-      firstIndex = cellIndex[cellID];
-      lastIndex = cellID < numCells-1 ? cellIndex[cellID+1] : numIndices;
-      uint64_t ic = lastIndex-firstIndex;
-      if (ic < 4 || ic > 8) {
-        // we don't strictly require cell.type yet but if it's missing
-        // the supported types are tets, pyrs, wedges, or hexes:
-        reportMessage(ANARI_SEVERITY_WARNING,
-          "'cell.type' not specified and index count out of range");
-        continue;
-      }
+      elemType = mapType(cellType[cellID]);
+    }
+
+    firstIndex = cellIndex[cellID];
+    lastIndex = cellID < numCells-1 ? cellIndex[cellID+1] : numIndices;
+    uint64_t ic = lastIndex-firstIndex;
+
+    if (ic < 4) {
+      reportMessage(ANARI_SEVERITY_WARNING, "Invalid element with (%i) indices", ic);
+      continue;
+    }
+
+    if ((elemType == dco::UElem::Tet && ic != 4) ||
+      (elemType == dco::UElem::Pyr && ic != 5) ||
+      (elemType == dco::UElem::Wedge && ic != 6) ||
+      (elemType == dco::UElem::Hex && ic != 8)) {
+      reportMessage(ANARI_SEVERITY_WARNING,
+        "'cell.type' (%i) and index count (%i) do not match", (int)elemType, ic);
+      continue;
     }
 
     m_elements.emplace_back();

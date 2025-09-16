@@ -96,6 +96,8 @@ namespace visionaray::dco {
 
 struct UElem
 {
+  enum Type { Tet, Pyr, Wedge, Hex, BezierHex, Unknown, };
+  Type type;
   uint64_t begin;
   uint64_t end;
   uint64_t elemID;
