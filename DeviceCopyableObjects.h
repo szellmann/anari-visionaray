@@ -14,6 +14,7 @@
 // ours
 #include "frame/common.h"
 #include "renderer/DDA.h"
+#include "scene/volume/spatial_field/HigherOrder.h"
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
 #include "scene/volume/spatial_field/UElemGrid.h"
@@ -162,7 +163,15 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
     result.hit = hit;
   } else if (numVerts > 0) { // higher order elems, etc.
-    // TODO
+    if (elem.type == dco::UElem::BezierHex) {
+      bool hit = intersectBezierHex(value,
+                                    pos,
+                                    elem.
+                                    vertexBuffer,
+                                    elem.indexBuffer+elem.begin,
+                                    numVerts);
+      result.hit = hit;
+    }
   } else {
     // element is a voxel grid (for "stitcher" AMR data)
     int3 dims = elem.gridDimsBuffer[elem.elemID];
