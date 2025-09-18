@@ -354,17 +354,34 @@ void UnstructuredField::buildGrid()
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
   for (size_t cellID=0; cellID<m_elements.size(); ++cellID) {
-    box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
-    box1f valueRange{FLT_MAX, -FLT_MAX};
-
     uint64_t numVertices = m_elements[cellID].end-m_elements[cellID].begin;
-    if (numVertices > 0) {
+
+    if (numVertices >=4 && numVertices <= 8) {
+      box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
+      box1f valueRange{FLT_MAX, -FLT_MAX};
       for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
         const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
         cellBounds.extend(V.xyz());
         valueRange.extend(V.w);
       }
-    } else { // grid!
+      rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
+    } else if (numVertices > 8) {
+      auto elem = m_elements[cellID];
+      int D = cbrt(numVertices) - 1;
+      uelem::BezierHex hex(elem.vertexBuffer, elem.indexBuffer+elem.begin, D);
+
+      constexpr int S=4;
+      uelem::BezierHex childs[S];
+      hex.subdivide<S>(childs);
+
+      for (int s=0; s<S; ++s) {
+        rasterizeBox(vaccel,box3f(childs[s].bounds.min,childs[s].bounds.max),
+                     childs[s].valueRange,vfield.cellSize);
+      }
+    } else if (numVertices == 0) { // grid!
+      box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
+      box1f valueRange{FLT_MAX, -FLT_MAX};
+
       uint64_t elemID = m_elements[cellID].elemID; // not unique! (grids are 0-based)
       cellBounds = box3f(vec3f(m_gridDomains[elemID].min.x,
                                m_gridDomains[elemID].min.y,
@@ -380,9 +397,9 @@ void UnstructuredField::buildGrid()
         float f = m_gridScalars[m_gridScalarsOffsets[elemID] + i];
         valueRange.extend(f);
       }
-    }
 
-    rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
+      rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
+    }
   }
 #endif
 }

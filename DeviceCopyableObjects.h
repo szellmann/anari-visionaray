@@ -118,11 +118,31 @@ VSNRAY_FUNC
 inline aabb get_bounds(const UElem &elem)
 {
   aabb result;
-  if (elem.end-elem.begin > 0) {
+
+  uint64_t numVerts = elem.end-elem.begin;
+
+  if (numVerts >= 4 && numVerts <= 8) {
     result.invalidate();
     for (uint64_t i=elem.begin;i<elem.end;++i) {
       result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
     }
+  } else if (numVerts > 0) {
+    result.invalidate();
+
+    int D = cbrt(numVerts) - 1;
+    uelem::BezierHex hex(elem.vertexBuffer, elem.indexBuffer+elem.begin, D);
+
+    #if 0
+    constexpr int S=2;
+    uelem::BezierHex childs[S];
+    hex.subdivide<S>(childs);
+
+    for (int i=0; i<S; ++i) {
+      result.insert(childs[i].bounds);
+    }
+    #else
+    result = hex.bounds;
+    #endif
   } else { // no vertices -> voxel grid
     result = elem.gridDomainsBuffer[elem.elemID];
   }
@@ -166,8 +186,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
     if (elem.type == dco::UElem::BezierHex) {
       bool hit = intersectBezierHex(value,
                                     pos,
-                                    elem.
-                                    vertexBuffer,
+                                    elem.vertexBuffer,
                                     elem.indexBuffer+elem.begin,
                                     numVerts);
       result.hit = hit;

@@ -17,6 +17,7 @@ struct BezierHex
   float4 cp[N][N][N];
   int actualN;
   aabb bounds;
+  box1f valueRange;
 
   BezierHex() = default;
 
@@ -102,76 +103,109 @@ struct BezierHex
     flipXZ();
 
     bounds.invalidate();
+    valueRange.invalidate();
     for (int i=0; i<n; ++i) {
       for (int j=0; j<n; ++j) {
         for (int k=0; k<n; ++k) {
           bounds.insert(cp[i][j][k].xyz());
+          valueRange.extend(cp[i][j][k].w);
         }
       }
     }
   }
 
-  VSNRAY_FUNC
-  void subdivide(BezierHex &a, BezierHex &b, int axis) {
+  template <int S=2>
+  VSNRAY_FUNC void subdivide(BezierHex *splits, int axis) const {
     assert(axis==0 || axis==1 || axis==2);
 
-    a.actualN = actualN;
-    b.actualN = actualN;
-
-    a.bounds.invalidate();
-    b.bounds.invalidate();
-
-    if (axis == 1) {
-      flipXY();
-    }
-
-    if (axis == 2) {
-      flipXZ();
+    for (int s=0; s<S; ++s) {
+      splits[s].actualN = actualN;
     }
 
     for (int i=0; i<actualN; ++i) {
       for (int j=0; j<actualN; ++j) {
-        float4 dst[N*2-1];
-        float4 tmp[N*2-1];
+        float4 dst[N*S-(S-1)];
+        float4 tmp[N*S-(S-1)];
 
-        memcpy(dst,&cp[i][j],sizeof(cp[i][j]));
-        for (int n=actualN; n<actualN*2-1; ++n) {
+        for (int k=0; k<actualN; ++k) {
+          if (axis == 0) {
+            dst[k] = cp[i][j][k];
+          } else if (axis == 1) {
+            dst[k] = cp[i][k][j];
+          } else if (axis == 2) {
+            dst[k] = cp[k][i][j];
+          } else {
+            assert(0);
+          }
+        }
+
+        for (int n=actualN; n<actualN*S-(S-1); ++n) {
           memcpy(tmp,dst,sizeof(dst));
           int ptr=0;
           dst[ptr++] = tmp[0];
           for (int k=0; k<n-1; ++k) {
             float4 v1 = tmp[k];
             float4 v2 = tmp[k+1];
-            dst[ptr++] = v1*0.5f+v2*0.5f;
+
+            constexpr float t{0.5f};//{1.f/S}; // TODO
+            dst[ptr++] = v1*t+v2*(1-t); // TODO
           }
           dst[ptr++] = tmp[n-1];
         }
 
         for (int k=0; k<actualN; ++k) {
-          a.cp[i][j][k] = dst[k];
-          b.cp[i][j][k] = dst[actualN-1+k];
-
-          a.bounds.insert(a.cp[i][j][k].xyz());
-          b.bounds.insert(b.cp[i][j][k].xyz());
+          for (int s=0; s<S; ++s) {
+            if (axis == 0) {
+              splits[s].cp[i][j][k] = dst[(actualN-1)*s+k];
+            } else if (axis == 1) {
+              splits[s].cp[i][k][j] = dst[(actualN-1)*s+k];
+            } else if (axis == 2) {
+              splits[s].cp[k][i][j] = dst[(actualN-1)*s+k];
+            }
+          }
         }
       }
     }
 
-    if (axis == 1) {
-      a.flipXY();
-      b.flipXY();
-      flipXY();
-    }
+    for (int s=0; s<S; ++s) {
+      splits[s].bounds.invalidate();
+      splits[s].valueRange.invalidate();
 
-    if (axis == 2) {
-      a.flipXZ();
-      b.flipXZ();
-      flipXZ();
+      for (int i=0; i<actualN; ++i) {
+        for (int j=0; j<actualN; ++j) {
+          for (int k=0; k<actualN; ++k) {
+            splits[s].bounds.insert(splits[s].cp[i][j][k].xyz());
+            splits[s].valueRange.extend(splits[s].cp[i][j][k].w);
+          }
+        }
+      }
+    }
+  }
+
+  template <int S>
+  VSNRAY_FUNC void subdivide(BezierHex *splits) {
+    int num=0;
+    splits[num++] = *this;
+    while (num < S) {
+      auto hex = splits[0];
+      int splitAxis = hex.bestSplitAxis();
+      BezierHex childs[2];
+      subdivide<2>(childs,splitAxis);
+      splits[0] = childs[0];
+      splits[num++] = childs[1];
+      std::sort(splits,splits+num,
+        [](BezierHex a, BezierHex b)
+        {
+          return volume(a.bounds) > volume(b.bounds);
+        });
     }
   }
 
   VSNRAY_FUNC
   float value() const {
+  #if 1
+    return (valueRange.min+valueRange.max)*0.5f;
+  #else
     int n=actualN;
     float v1 = (cp[0][0][0].w+cp[n-1][0][0].w)*0.5f;
     float v2 = (cp[0][n-1][0].w+cp[n-1][n-1][0].w)*0.5f;
@@ -182,6 +216,23 @@ struct BezierHex
     float v6 = (v2+v4)*0.5f;
 
     return (v5+v6)*0.5f;
+  #endif
+  }
+
+  VSNRAY_FUNC
+  int bestSplitAxis() const {
+    //return max_index(bounds.size());
+    float3 minV(FLT_MAX);
+    for (int i=0; i<std::min(actualN-1,MAX_ELEM_ORDER+0); ++i) {
+      for (int j=0; j<std::min(actualN-1,MAX_ELEM_ORDER+0); ++j) {
+        for (int k=0; k<std::min(actualN-1,MAX_ELEM_ORDER+0); ++k) {
+          minV.x = fminf(minV.x,length(cp[i][j][k].xyz()-cp[i][j][k+1].xyz()));
+          minV.y = fminf(minV.y,length(cp[i][j][k].xyz()-cp[i][j+1][k].xyz()));
+          minV.z = fminf(minV.z,length(cp[i][j][k].xyz()-cp[i+1][j][k].xyz()));
+        }
+      }
+    }
+    return max_index(minV);
   }
 
   VSNRAY_FUNC
@@ -213,10 +264,10 @@ struct BezierHex
 
 inline
 std::ostream &operator<<(std::ostream &out, BezierHex hex) {
-  for (int z=0; z<std::min(hex.actualN,MAX_ELEM_ORDER+1); ++z) {
-    for (int y=0; y<std::min(hex.actualN,MAX_ELEM_ORDER+1); ++y) {
-      for (int x=0; x<std::min(hex.actualN,MAX_ELEM_ORDER+1); ++x) {
-        out << hex.cp[x][y][z];
+  for (int i=0; i<std::min(hex.actualN,MAX_ELEM_ORDER+1); ++i) {
+    for (int j=0; j<std::min(hex.actualN,MAX_ELEM_ORDER+1); ++j) {
+      for (int k=0; k<std::min(hex.actualN,MAX_ELEM_ORDER+1); ++k) {
+        out << hex.cp[i][j][k];
       }
       out << '\n';
     }
@@ -243,31 +294,36 @@ inline bool intersectBezierHex(float &value, float3 pos,
   int ptr = 0;
   stack[ptr++] = hex;
 
-  bool contained = false;
-
-  const float threshold = volume(hex.bounds) * 0.00001f;
+  const float threshold = volume(hex.bounds) * 1e-5f;
 
 next:
   while (ptr > 0 && ptr < STACK_MAX) {
     hex = stack[--ptr];
 
     while (volume(hex.bounds) > threshold && ptr < STACK_MAX) {
-      int splitAxis = max_index(hex.bounds.size());
+      int splitAxis = hex.bestSplitAxis();
 
-      uelem::BezierHex a, b;
-      hex.subdivide(a,b,splitAxis);
+      constexpr int S=2; // num splits
+      uelem::BezierHex splits[S];
+      hex.subdivide<S>(splits,splitAxis);
 
-      bool b1 = a.bounds.contains(pos);
-      bool b2 = b.bounds.contains(pos);
+      bool b[S];
+      for (int s=0; s<S; ++s) {
+        b[s] = splits[s].bounds.contains(pos);
+      }
 
-      if (b1 && b2) {
-        hex = a;
-        stack[ptr++] = b;
-      } else if (b1) {
-        hex = a;
-      } else if (b2) {
-        hex = b;
-      } else {
+      bool assigned = false;
+      for (int s=0; s<S; ++s) {
+        if (!b[s]) continue;
+        if (assigned) {
+          stack[ptr++] = splits[s];
+        } else {
+          hex = splits[s];
+          assigned = true;
+        }
+      }
+
+      if (!assigned) {
         goto next;
       }
     }
