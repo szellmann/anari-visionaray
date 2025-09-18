@@ -251,7 +251,7 @@ next:
   while (ptr > 0 && ptr < STACK_MAX) {
     hex = stack[--ptr];
 
-    while (volume(hex.bounds) > threshold && ptr < STACK_MAX-1) {
+    while (volume(hex.bounds) > threshold && ptr < STACK_MAX) {
       int splitAxis = max_index(hex.bounds.size());
 
       uelem::BezierHex a, b;
