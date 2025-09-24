@@ -135,7 +135,8 @@ void NanoVDBField::buildGrid()
 #if defined(WITH_CUDA)
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
-  m_gridAccel.init(gridDims, worldBounds);
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(gridDims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
@@ -151,7 +152,8 @@ void NanoVDBField::buildGrid()
 #else
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
-  m_gridAccel.init(gridDims, worldBounds);
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(gridDims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
   auto acc = vfield.asNanoVDB.grid->getAccessor();

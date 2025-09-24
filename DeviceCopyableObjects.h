@@ -352,6 +352,7 @@ struct GridAccel
 {
   int3 dims;
   box3 worldBounds;
+  box3 gridBounds; // in voxel/grid space
   float *stepSizes; // step size to take
   box1 *valueRanges; // min/max ranges
   float *maxOpacities; // used as majorants
@@ -387,6 +388,7 @@ inline GridAccel createGridAccel()
   memset(&accel,0,sizeof(accel));
   accel.dims = int3(0);
   accel.worldBounds = box3f(float3(FLT_MAX),float3(-FLT_MAX));
+  accel.gridBounds = box3f(float3(FLT_MAX),float3(-FLT_MAX));
   accel.stepSizes = nullptr;
   accel.valueRanges = nullptr;
   accel.maxOpacities = nullptr;
@@ -762,7 +764,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
 
   hr.t = ray.tmax;
   if (sf.gridAccel.isValid())
-    dda3(ray, grid.dims, grid.worldBounds, woodcockFunc);
+    dda3(ray, grid.dims, grid.gridBounds, woodcockFunc);
   else
     woodcockFunc(-1, ray.tmin, ray.tmax);
 
@@ -899,7 +901,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
   unitDistance = unitDistance * dt_scale;
 
   if (sf.gridAccel.isValid())
-    dda3(ray, sf.gridAccel.dims, sf.gridAccel.worldBounds, isectFunc);
+    dda3(ray, sf.gridAccel.dims, sf.gridAccel.gridBounds, isectFunc);
   else
     isectFunc(-1, boxHit.tnear, boxHit.tfar);
 

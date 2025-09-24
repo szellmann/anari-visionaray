@@ -46,12 +46,32 @@ inline void updateMCStepSize(const vec3i  mcID,
       = min(stepSizes[linearIndex(mcID,gridDims)], stepSize);
 }
 
+
+VSNRAY_FUNC
+inline void rasterizeBox(dco::GridAccel accel,
+                         const box3f &box,
+                         const box1f &valueRange,
+                         const float stepSize)
+{
+  const vec3i loMC = projectOnGrid(box.min,accel.dims,accel.worldBounds);
+  const vec3i upMC = projectOnGrid(box.max,accel.dims,accel.worldBounds);
+
+  for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
+    for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
+      for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
+        const vec3i mcID(mcx,mcy,mcz);
+        updateMC(mcID,accel.dims,valueRange,accel.valueRanges);
+        updateMCStepSize(mcID,accel.dims,stepSize,accel.stepSizes);
+      }
+    }
+  }
+}
 struct GridAccel
 {
   GridAccel(VisionarayGlobalState *s);
   ~GridAccel();
 
-  void init(int3 dims, box3 worldBounds);
+  void init(int3 dims, box3 worldBounds, box3 gridBounds);
 
   dco::GridAccel &visionarayAccel();
 

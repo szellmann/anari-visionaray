@@ -327,22 +327,7 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
     assert(0 && "Not implemented yet!");
   }
 
-  const vec3i loMC = projectOnGrid(cellBounds.min,vaccel.dims,vaccel.worldBounds);
-  const vec3i upMC = projectOnGrid(cellBounds.max,vaccel.dims,vaccel.worldBounds);
-
-  for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
-    for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
-      for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
-        const vec3i mcID(mcx,mcy,mcz);
-        updateMC(mcID,vaccel.dims,valueRange,vaccel.valueRanges);
-        // TODO: this causes artifacts, should probably do this in
-        // a macrocell neighborhood:
-        //updateMCStepSize(
-        //    mcID,vaccel.dims,length(cellBounds.max-cellBounds.min),vaccel.stepSizes);
-        updateMCStepSize(mcID,vaccel.dims,cellSize,vaccel.stepSizes);
-      }
-    }
-  }
+  rasterizeBox(vaccel,cellBounds,valueRange,cellSize);
 }
 #endif
 
@@ -351,7 +336,8 @@ void UnstructuredField::buildGrid()
 #ifdef WITH_CUDA
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
-  m_gridAccel.init(dims, worldBounds);
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(dims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
@@ -362,7 +348,8 @@ void UnstructuredField::buildGrid()
 #else
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
-  m_gridAccel.init(dims, worldBounds);
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(dims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
@@ -395,23 +382,7 @@ void UnstructuredField::buildGrid()
       }
     }
 
-    const vec3i loMC = projectOnGrid(cellBounds.min,vaccel.dims,vaccel.worldBounds);
-    const vec3i upMC = projectOnGrid(cellBounds.max,vaccel.dims,vaccel.worldBounds);
-
-    for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
-      for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
-        for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
-          const vec3i mcID(mcx,mcy,mcz);
-          updateMC(mcID,vaccel.dims,valueRange,vaccel.valueRanges);
-          // TODO: this causes artifacts, should probably do this in
-          // a macrocell neighborhood:
-          //updateMCStepSize(
-          //    mcID,vaccel.dims,length(cellBounds.max-cellBounds.min),vaccel.stepSizes);
-          updateMCStepSize(
-              mcID,vaccel.dims,vfield.cellSize,vaccel.stepSizes);
-        }
-      }
-    }
+    rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
   }
 #endif
 }

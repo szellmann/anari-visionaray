@@ -26,7 +26,7 @@ GridAccel::~GridAccel()
 #endif
 }
 
-void GridAccel::init(int3 dims, box3 worldBounds)
+void GridAccel::init(int3 dims, box3 worldBounds, box3 gridBounds)
 {
   m_dims = dims;
   m_worldBounds = worldBounds;
@@ -44,6 +44,7 @@ void GridAccel::init(int3 dims, box3 worldBounds)
 
   vaccel.dims = m_dims;
   vaccel.worldBounds = m_worldBounds;
+  vaccel.gridBounds = gridBounds;
   vaccel.stepSizes = m_stepSizes.devicePtr();
   vaccel.valueRanges = m_valueRanges.devicePtr();
   vaccel.maxOpacities = m_maxOpacities.devicePtr();

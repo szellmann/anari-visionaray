@@ -104,7 +104,7 @@ void StructuredRegularField::buildGrid()
   box3f gridBounds = worldBounds;
   gridBounds.min = vfield.pointToVoxelSpace(gridBounds.min);
   gridBounds.max = vfield.pointToVoxelSpace(gridBounds.max);
-  m_gridAccel.init(gridDims, gridBounds);
+  m_gridAccel.init(gridDims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
@@ -120,19 +120,7 @@ void StructuredRegularField::buildGrid()
           m_origin+float3{xyz+uint3{1}}*m_spacing
         };
 
-        const vec3i loMC = projectOnGrid(cellBounds.min,gridDims,worldBounds);
-        const vec3i upMC = projectOnGrid(cellBounds.max,gridDims,worldBounds);
-
-        for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
-          for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
-            for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
-              const vec3i mcID(mcx,mcy,mcz);
-              updateMC(mcID,gridDims,value,vaccel.valueRanges);
-              updateMCStepSize(
-                  mcID,gridDims,min_element(m_spacing / 2.f),vaccel.stepSizes);
-            }
-          }
-        }
+        rasterizeBox(vaccel,cellBounds,box1f(value),min_element(m_spacing / 2.f));
       }
     }
   }

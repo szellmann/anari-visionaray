@@ -164,18 +164,7 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
                         vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
         float scalar = block.getScalar(x,y,z);
 
-        const vec3i loMC = projectOnGrid(cellBounds.min,vaccel.dims,vaccel.worldBounds);
-        const vec3i upMC = projectOnGrid(cellBounds.max,vaccel.dims,vaccel.worldBounds);
-
-        for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
-          for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
-            for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
-              const vec3i mcID(mcx,mcy,mcz);
-              updateMC(mcID,vaccel.dims,scalar,vaccel.valueRanges);
-              updateMCStepSize(mcID,vaccel.dims,cellSize,vaccel.stepSizes);
-            }
-          }
-        }
+        rasterizeBox(vaccel,cellBounds,box1f(scalar),cellSize);
       }
     }
   }
@@ -193,7 +182,8 @@ void BlockStructuredField::buildGrid()
     div_up(int(worldBounds.max.y-worldBounds.min.y),8),
     div_up(int(worldBounds.max.z-worldBounds.min.z),8)
   };
-  m_gridAccel.init(dims, worldBounds);
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(dims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
@@ -210,7 +200,8 @@ void BlockStructuredField::buildGrid()
     div_up(int(worldBounds.max.y-worldBounds.min.y),8),
     div_up(int(worldBounds.max.z-worldBounds.min.z),8)
   };
-  m_gridAccel.init(dims, worldBounds);
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(dims, worldBounds, gridBounds);
 
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
@@ -225,22 +216,11 @@ void BlockStructuredField::buildGrid()
             vec3i cellID(x,y,z);
             vec3i cell_lower = (block.bounds.min+cellID)*cellSize;
             vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
-            aabb cellBounds(vec3f(cell_lower)+m_params.gridOrigin-vec3f(cellSize*0.5f),
-                            vec3f(cell_upper)+m_params.gridOrigin+vec3f(cellSize*0.5f)); // +/- filterDomain
+            box3f cellBounds(vec3f(cell_lower)+m_params.gridOrigin-vec3f(cellSize*0.5f),
+                             vec3f(cell_upper)+m_params.gridOrigin+vec3f(cellSize*0.5f)); // +/- filterDomain
             float scalar = block.getScalar(x,y,z);
 
-            const vec3i loMC = projectOnGrid(cellBounds.min,dims,worldBounds);
-            const vec3i upMC = projectOnGrid(cellBounds.max,dims,worldBounds);
-
-            for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
-              for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {
-                for (int mcx=loMC.x; mcx<=upMC.x; ++mcx) {
-                  const vec3i mcID(mcx,mcy,mcz);
-                  updateMC(mcID,vaccel.dims,scalar,vaccel.valueRanges);
-                  updateMCStepSize(mcID,vaccel.dims,cellSize,vaccel.stepSizes);
-                }
-              }
-            }
+            rasterizeBox(vaccel,cellBounds,box1f(scalar),cellSize);
           }
         }
       }
