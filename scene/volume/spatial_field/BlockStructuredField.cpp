@@ -160,8 +160,8 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
         vec3i cellID(x,y,z);
         vec3i cell_lower = (block.bounds.min+cellID)*cellSize;
         vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
-        aabb cellBounds(vec3f(cell_lower)-vec3f(cellSize*0.5f),
-                        vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
+        box3f cellBounds(vec3f(cell_lower)-vec3f(cellSize*0.5f),
+                         vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
         float scalar = block.getScalar(x,y,z);
 
         rasterizeBox(vaccel,cellBounds,box1f(scalar),cellSize);
