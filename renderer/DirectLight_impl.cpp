@@ -142,16 +142,25 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       hitPos = ray.ori + hr.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
 
-      attribs = getAttributes(geom, inst, hr.prim_id, uv);
-
       float3 localHitPos = hr.isect_pos;
       getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
+
+      float3 worldNormal = gn;
 
       mat3 nxfm = getNormalTransform(inst, ray);
       gn = normalize(nxfm * gn);
       sn = normalize(nxfm * sn);
 
       sn = faceforward(sn, viewDir, gn);
+
+      attribs = getAttributes(geom,
+                              inst,
+                              hitPos,
+                              worldNormal,
+                              localHitPos,
+                              gn,
+                              hr.prim_id,
+                              uv);
 
       float4 tng4 = getTangent(geom, hr.prim_id, localHitPos, uv);
       if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {

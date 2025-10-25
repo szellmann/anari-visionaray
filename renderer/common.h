@@ -452,6 +452,10 @@ inline vec4 getAttribute(const dco::Geometry &geom,
 VSNRAY_FUNC
 inline dco::AttributeRec getAttributes(const dco::Geometry &geom,
                                        const dco::Instance &inst,
+                                       float3 worldPos,
+                                       float3 worldNormal,
+                                       float3 objectPos,
+                                       float3 objectNormal,
                                        unsigned primID,
                                        const vec2 uv)
 {
@@ -461,10 +465,11 @@ inline dco::AttributeRec getAttributes(const dco::Geometry &geom,
   res._2 = getAttribute(geom, inst, dco::Attribute::_2, primID, uv);
   res._3 = getAttribute(geom, inst, dco::Attribute::_3, primID, uv);
   res.color = getAttribute(geom, inst, dco::Attribute::Color, primID, uv);
-  res.worldPos = getAttribute(geom, inst, dco::Attribute::WorldPos, primID, uv);
-  res.worldNormal = getAttribute(geom, inst, dco::Attribute::WorldNormal, primID, uv);
-  res.objectPos = getAttribute(geom, inst, dco::Attribute::ObjectPos, primID, uv);
-  res.objectNormal = getAttribute(geom, inst, dco::Attribute::ObjectNormal, primID, uv);
+  // hit attributes:
+  res.worldPos = float4(worldPos,1.f);
+  res.worldNormal = float4(worldNormal,1.f);
+  res.objectPos = float4(objectPos,1.f);
+  res.objectNormal = float4(objectNormal,1.f);
   return res;
 }
 
@@ -1069,7 +1074,14 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
     const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
 
-    dco::AttributeRec attribs = getAttributes(geom, inst, hr.prim_id, uv);
+    dco::AttributeRec attribs = getAttributes(geom,
+                                              inst,
+                                              float3{}, // TODO: worldPos
+                                              float3{}, // TODO: worldNormal
+                                              float3{}, // TODO: objectNormal
+                                              float3{}, // TODO: objectNormal
+                                              hr.prim_id,
+                                              uv);
 
     float opacity
         = getOpacity(mat, onDevice, attribs, hr.isect_pos, hr.prim_id);

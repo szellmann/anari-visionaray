@@ -26,6 +26,14 @@ dco::Attribute toAttribute(std::string str)
     res = Attribute::_3;
   else if (str == "color")
     res = Attribute::Color;
+  else if (str == "worldPosition")
+    res = Attribute::WorldPos;
+  else if (str == "worldNormal")
+    res = Attribute::WorldNormal;
+  else if (str == "objectPosition")
+    res = Attribute::ObjectPos;
+  else if (str == "objectNormal")
+    res = Attribute::ObjectNormal;
   else if (str == "none")
     res = Attribute::None;
 

@@ -42,13 +42,22 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     vec2f uv{hr.u,hr.v};
     vec3f gn, sn;
 
-    dco::AttributeRec attribs = getAttributes(geom, inst, hr.prim_id, uv);
-
     getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
+
+    vec3f worldNormal = gn;
 
     mat3 nxfm = getNormalTransform(inst, ray);
     gn = normalize(nxfm * gn);
     sn = normalize(nxfm * sn);
+
+    dco::AttributeRec attribs = getAttributes(geom,
+                                              inst,
+                                              hitPos,
+                                              worldNormal,
+                                              localHitPos,
+                                              gn,
+                                              hr.prim_id,
+                                              uv);
 
     vec3f tng{0.f};
     vec3f btng{0.f};
