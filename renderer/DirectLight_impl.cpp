@@ -150,8 +150,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
       mat3 nxfm = getNormalTransform(inst, ray);
-      gn = nxfm * gn;
-      sn = nxfm * sn;
+      gn = normalize(nxfm * gn);
+      sn = normalize(nxfm * sn);
 
       sn = faceforward(sn, viewDir, gn);
 

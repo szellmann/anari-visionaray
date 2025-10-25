@@ -50,8 +50,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
     mat3 nxfm = getNormalTransform(inst, ray);
-    gn = nxfm * gn;
-    sn = nxfm * sn;
+    gn = normalize(nxfm * gn);
+    sn = normalize(nxfm * sn);
 
     vec3f tng{0.f};
     vec3f btng{0.f};

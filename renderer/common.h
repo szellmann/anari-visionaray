@@ -229,6 +229,11 @@ inline uint4 getQuadIndex(const dco::Array &indexArray, unsigned primID)
   return index;
 }
 
+// ============================================================================
+// This function will return normals that by intention are *not* normalized.
+// This is because we assume the calling side will have to renormalize after
+// applying the normal transform anyway
+// ============================================================================
 VSNRAY_FUNC
 inline void getNormals(const dco::Geometry &geom,
                        unsigned primID,
@@ -240,7 +245,7 @@ inline void getNormals(const dco::Geometry &geom,
   // TODO: doesn't work for instances yet
   if (geom.type == dco::Geometry::Triangle) {
     auto tri = geom.as<dco::Triangle>(primID);
-    Ng = normalize(cross(tri.e1,tri.e2));
+    Ng = cross(tri.e1,tri.e2);
     if (geom.normal.len
         && geom.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
       uint3 index = getTriangleIndex(geom.index, primID);
@@ -249,17 +254,16 @@ inline void getNormals(const dco::Geometry &geom,
       vec3 n2 = normals[index.y];
       vec3 n3 = normals[index.z];
       Ns = lerp_r(n1, n2, n3, uv.x, uv.y);
-      Ns = normalize(Ns);
     } else {
       Ns = Ng;
     }
   } else if (geom.type == dco::Geometry::Quad) {
     auto qtri = geom.as<dco::Triangle>(primID);
-    Ng = normalize(cross(qtri.e1,qtri.e2));
+    Ng = cross(qtri.e1,qtri.e2);
     Ns = Ng;
   } else if (geom.type == dco::Geometry::Sphere) {
     auto sph = geom.as<dco::Sphere>(primID);
-    Ng = normalize((hitPos-sph.center) / sph.radius);
+    Ng = (hitPos-sph.center) / sph.radius;
     Ns = Ng;
   } else if (geom.type == dco::Geometry::Cone) {
     // reconstruct normal (see https://iquilezles.org/articles/intersectors/)
@@ -276,7 +280,7 @@ inline void getNormals(const dco::Geometry &geom,
       const float hy = m0 + rr*rr;
       const float y = uv.y; // uv.y stores the unnormalized cone parameter t!
       const vec3f localPos = hitPos-cone.v1;
-      Ng = normalize(m0*(m0*localPos+rr*ba*ra)-ba*hy*y);
+      Ng = m0*(m0*localPos+rr*ba*ra)-ba*hy*y;
     }
     Ns = Ng;
   } else if (geom.type == dco::Geometry::Cylinder) {
@@ -289,13 +293,13 @@ inline void getNormals(const dco::Geometry &geom,
     else {
       float t = dot(hitPos-cyl.v1, axis);
       vec3f pt = cyl.v1 + t * axis;
-      Ng = normalize(hitPos-pt);
+      Ng = hitPos-pt;
     }
     Ns = Ng;
   } else if (geom.type == dco::Geometry::BezierCurve) {
     float t = uv.x;
     vec3f curvePos = geom.as<dco::BezierCurve>(primID).f(t);
-    Ng = normalize(hitPos-curvePos);
+    Ng = hitPos-curvePos;
     Ns = Ng;
   } else if (geom.type == dco::Geometry::ISOSurface) {
     const auto &sf = geom.as<dco::ISOSurface>(0).field;
@@ -305,8 +309,6 @@ inline void getNormals(const dco::Geometry &geom,
                     sf.voxelSpaceTransform(2,2));
     if (!sampleGradient(sf,sf.pointToVoxelSpace(hitPos),delta,Ng)) {
       Ng = vec3f(0.f);
-    } else {
-      Ng = normalize(Ng);
     }
     Ns = Ng;
   }
