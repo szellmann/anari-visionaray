@@ -19,7 +19,7 @@ struct ShadeState
   float3 btng{0.f};
   float3 viewDir{0.f};
   float3 hitPos{0.f};
-  float4 attribs[5];
+  dco::AttributeRec attribs;
   bool hdriMiss{false};
   float eps{1e-4f};
   int aoSamples{0};
@@ -142,9 +142,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       hitPos = ray.ori + hr.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
 
-      for (int i=0; i<5; ++i) {
-        attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
-      }
+      attribs = getAttributes(geom, inst, hr.prim_id, uv);
 
       float3 localHitPos = hr.isect_pos;
       getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
@@ -197,7 +195,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
           shadedColor = evalMaterial(mat,
                                      onDevice,
-                                     nullptr, // attribs, not used..
+                                     {}, // attribs, not used..
                                      float3(0.f), // objPos, not used..
                                      UINT_MAX, // primID, not used..
                                      gn, gn,
@@ -247,15 +245,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       vec3 hsv(angle,1.f,mag);
       shadedColor = hsv2rgb(hsv);
     } else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
-      shadedColor = attribs[(int)dco::Attribute::_0].xyz();
+      shadedColor = attribs._0.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
-      shadedColor = attribs[(int)dco::Attribute::_1].xyz();
+      shadedColor = attribs._1.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
-      shadedColor = attribs[(int)dco::Attribute::_2].xyz();
+      shadedColor = attribs._2.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
-      shadedColor = attribs[(int)dco::Attribute::_3].xyz();
+      shadedColor = attribs._3.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryColor)
-      shadedColor = attribs[(int)dco::Attribute::Color].xyz();
+      shadedColor = attribs.color.xyz();
 
     if (rendererState.renderMode == RenderMode::Default)
       baseColor = color.xyz();

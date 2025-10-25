@@ -440,7 +440,7 @@ inline float rayMarchVolume(ScreenSample &ss,
 
             auto color = evalMaterial(mat,
                                       onDevice,
-                                      nullptr, // attribs, not used..
+                                      {}, // attribs, not used..
                                       float3(0.f), // objPos, not used..
                                       UINT_MAX, // primID, not used..
                                       gn, gn,

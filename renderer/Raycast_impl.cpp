@@ -42,10 +42,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     vec2f uv{hr.u,hr.v};
     vec3f gn, sn;
 
-    float4 attribs[5];
-    for (int i=0; i<5; ++i) {
-      attribs[i] = getAttribute(geom, inst, (dco::Attribute)i, hr.prim_id, uv);
-    }
+    dco::AttributeRec attribs = getAttributes(geom, inst, hr.prim_id, uv);
 
     getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
@@ -104,15 +101,15 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     else if (rendererState.renderMode == RenderMode::Bitangent)
       shadedColor = (btng + float3(1.f)) * float3(0.5f);
     else if (rendererState.renderMode == RenderMode::GeometryAttribute0)
-      shadedColor = attribs[(int)dco::Attribute::_0].xyz();
+      shadedColor = attribs._0.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute1)
-      shadedColor = attribs[(int)dco::Attribute::_1].xyz();
+      shadedColor = attribs._1.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute2)
-      shadedColor = attribs[(int)dco::Attribute::_2].xyz();
+      shadedColor = attribs._2.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryAttribute3)
-      shadedColor = attribs[(int)dco::Attribute::_3].xyz();
+      shadedColor = attribs._3.xyz();
     else if (rendererState.renderMode == RenderMode::GeometryColor)
-      shadedColor = attribs[(int)dco::Attribute::Color].xyz();
+      shadedColor = attribs.color.xyz();
 
 
     float a = getOpacity(mat, onDevice, attribs, localHitPos, hr.prim_id);

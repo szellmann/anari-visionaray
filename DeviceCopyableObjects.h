@@ -1590,7 +1590,47 @@ struct Array
 
 enum class Attribute
 {
-  _0, _1, _2, _3, Color, None,
+  _0,
+  _1,
+  _2,
+  _3,
+  Color,
+  WorldPos,
+  WorldNormal,
+  ObjectPos,
+  ObjectNormal,
+  None,
+};
+
+struct AttributeRec
+{
+  float4 _0;
+  float4 _1;
+  float4 _2;
+  float4 _3;
+  float4 color;
+  float4 worldPos;
+  float4 worldNormal;
+  float4 objectPos;
+  float4 objectNormal;
+
+  VSNRAY_FUNC
+  inline float4 get(Attribute attr) const
+  {
+    switch (attr) {
+    case Attribute::_0: return _0;
+    case Attribute::_1: return _1;
+    case Attribute::_2: return _2;
+    case Attribute::_3: return _3;
+    case Attribute::Color: return color;
+    case Attribute::WorldPos: return worldPos;
+    case Attribute::WorldNormal: return worldNormal;
+    case Attribute::ObjectPos: return objectPos;
+    case Attribute::ObjectNormal: return objectNormal;
+    case Attribute::None: default: break; // fall-through to function return
+    }
+    return float4(0,0,0,1);
+  }
 };
 
 // Instance //
