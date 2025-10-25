@@ -71,6 +71,8 @@
           "values": [
             "default",
             "primitiveId",
+            "worldPosition",
+            "objectPosition",
             "Ng",
             "Ns",
             "tangent",

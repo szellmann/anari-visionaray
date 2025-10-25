@@ -88,6 +88,10 @@ void Renderer::finalize()
     vrend.rendererState.renderMode = RenderMode::Default;
   else if (m_renderMode == "primitiveId")
     vrend.rendererState.renderMode = RenderMode::PrimitiveId;
+  else if (m_renderMode == "worldPosition")
+    vrend.rendererState.renderMode = RenderMode::WorldPosition;
+  else if (m_renderMode == "objectPosition")
+    vrend.rendererState.renderMode = RenderMode::ObjectPosition;
   else if (m_renderMode == "Ng")
     vrend.rendererState.renderMode = RenderMode::Ng;
   else if (m_renderMode == "Ns")

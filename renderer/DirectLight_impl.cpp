@@ -235,6 +235,10 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     }
     else if (rendererState.renderMode == RenderMode::PrimitiveId)
       shadedColor = randomColor(result.primId).xyz();
+    else if (rendererState.renderMode == RenderMode::WorldPosition)
+      shadedColor = attribs.worldPos.xyz();
+    else if (rendererState.renderMode == RenderMode::ObjectPosition)
+      shadedColor = attribs.objectPos.xyz();
     else if (rendererState.renderMode == RenderMode::Ng)
       shadedColor = (gn + float3(1.f)) * float3(0.5f);
     else if (rendererState.renderMode == RenderMode::Ns)

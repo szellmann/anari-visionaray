@@ -39,6 +39,8 @@ enum class RenderMode
 {
   Default,
   PrimitiveId,
+  WorldPosition,
+  ObjectPosition,
   Ng,
   Ns,
   Tangent,

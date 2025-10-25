@@ -99,6 +99,10 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     }
     else if (rendererState.renderMode == RenderMode::PrimitiveId)
       shadedColor = randomColor(hr.prim_id).xyz();
+    else if (rendererState.renderMode == RenderMode::WorldPosition)
+      shadedColor = attribs.worldPos.xyz();
+    else if (rendererState.renderMode == RenderMode::ObjectPosition)
+      shadedColor = attribs.objectPos.xyz();
     else if (rendererState.renderMode == RenderMode::Ng)
       shadedColor = (gn + float3(1.f)) * float3(0.5f);
     else if (rendererState.renderMode == RenderMode::Ns)
