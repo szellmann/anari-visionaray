@@ -14,6 +14,7 @@
 // ours
 #include "frame/common.h"
 #include "renderer/DDA.h"
+#include "scene/volume/spatial_field/BezierHex.h"
 #include "scene/volume/spatial_field/Plane.h"
 #include "scene/volume/spatial_field/UElems.h"
 #include "scene/volume/spatial_field/UElemGrid.h"
@@ -96,7 +97,7 @@ namespace visionaray::dco {
 
 struct UElem
 {
-  enum Type { Tet, Pyr, Wedge, Hex, BezierHex, Unknown, };
+  enum Type { Tet, Pyr, Wedge, Hex, Unknown, };
   Type type;
   uint64_t begin;
   uint64_t end;
@@ -417,12 +418,15 @@ struct SpatialField
       // Sampling BVHs, in _voxel_ space (make sure to xform ray first):
 #ifdef WITH_CUDA
       cuda_index_bvh<UElem>::bvh_ref elemBVH;
+      cuda_index_bvh<BezierHex>::bvh_ref bezierHexBVH;
       cuda_index_bvh<UElemGrid>::bvh_ref gridBVH;
 #elif defined(WITH_HIP)
       hip_index_bvh<UElem>::bvh_ref elemBVH;
+      hip_index_bvh<BezierHex>::bvh_ref bezierHexBVH;
       hip_index_bvh<UElemGrid>::bvh_ref gridBVH;
 #else
       bvh4<UElem>::bvh_ref elemBVH;
+      bvh4<BezierHex>::bvh_ref bezierHexBVH;
       bvh4<UElemGrid>::bvh_ref gridBVH;
 #endif
       // for marcher:
@@ -486,6 +490,25 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
 #else
       auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
                                                     sf.asUnstructured.elemBVH,
+                                                    isect);
+  
+#endif
+      if (hr.hit) {
+        value = hr.u; // value is stored in "u"!
+        primID = hr.prim_id;
+        return true;
+      }
+    }
+
+    if (sf.asUnstructured.bezierHexBVH.num_nodes()) {
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+      auto hr = intersect_rayN_bvh2<detail::AnyHit>(ray,
+                                                    sf.asUnstructured.bezierHexBVH,
+                                                    isect);
+  
+#else
+      auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
+                                                    sf.asUnstructured.bezierHexBVH,
                                                     isect);
   
 #endif
