@@ -96,7 +96,7 @@ namespace visionaray::dco {
 
 struct UElem
 {
-  enum Type { Tet, Pyr, Wedge, Hex, BezierHex, Grid, Unknown, };
+  enum Type { Tet, Pyr, Wedge, Hex, BezierHex, Unknown, };
   Type type;
   uint64_t begin;
   uint64_t end;
@@ -106,24 +106,15 @@ struct UElem
   float cellValue;
   const uint64_t *indexBuffer;
   const float4 *vertexBuffer;
-  // "stitcher" extension
-  int3 *gridDimsBuffer;
-  aabb *gridDomainsBuffer;
-  uint64_t *gridScalarsOffsetBuffer;
-  float *gridScalarsBuffer;
 };
 
 VSNRAY_FUNC
 inline aabb get_bounds(const UElem &elem)
 {
   aabb result;
-  if (elem.end-elem.begin > 0) {
-    result.invalidate();
-    for (uint64_t i=elem.begin;i<elem.end;++i) {
-      result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
-    }
-  } else { // no vertices -> voxel grid
-    result = elem.gridDomainsBuffer[elem.elemID];
+  result.invalidate();
+  for (uint64_t i=elem.begin;i<elem.end;++i) {
+    result.insert(elem.vertexBuffer[elem.indexBuffer[i]].xyz());
   }
   return result;
 }
@@ -143,36 +134,25 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 
   uint64_t numVerts = elem.end-elem.begin;
 
-  if (numVerts >= 4 && numVerts <= 8) { // regular uelem
-    float4 v[8];
-    for (int i=0; i<numVerts; ++i) {
-      uint64_t idx = elem.indexBuffer[elem.begin+i];
-      v[i] = elem.vertexBuffer[idx];
-    }
+  assert(numVerts>=4 && numVerts<=8);
 
-    bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
-          || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
-          || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
-          || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
-
-    // no vertex data: use cell data instead
-    if (isnan(v[0].w)) {
-      value = elem.cellValue;
-    }
-
-    result.hit = hit;
-  } else if (numVerts > 0) { // higher order elems, etc.
-    // TODO
-  } else {
-    // element is a voxel grid (for "stitcher" AMR data)
-    int3 dims = elem.gridDimsBuffer[elem.elemID];
-    aabb domain = elem.gridDomainsBuffer[elem.elemID];
-    uint64_t scalarsOffset = elem.gridScalarsOffsetBuffer[elem.elemID];
-
-    bool hit = intersectGrid(dims, domain, scalarsOffset, elem.gridScalarsBuffer,
-                             pos, value);
-    result.hit = hit;
+  float4 v[8];
+  for (int i=0; i<numVerts; ++i) {
+    uint64_t idx = elem.indexBuffer[elem.begin+i];
+    v[i] = elem.vertexBuffer[idx];
   }
+
+  bool hit=numVerts==4 && intersectTet(value,pos,v[0],v[1],v[2],v[3])
+        || numVerts==5 && intersectPyrEXT(value,pos,v[0],v[1],v[2],v[3],v[4])
+        || numVerts==6 && intersectWedgeEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5])
+        || numVerts==8 && intersectHexEXT(value,pos,v[0],v[1],v[2],v[3],v[4],v[5],v[6],v[7]);
+
+  // no vertex data: use cell data instead
+  if (isnan(v[0].w)) {
+    value = elem.cellValue;
+  }
+
+  result.hit = hit;
 
   if (result.hit) {
     result.t = 0.f;
@@ -434,15 +414,16 @@ struct SpatialField
 #endif
     } asStructuredRegular;
     struct {
-      // Sampling BVH. This BVH is in _voxel_ space, so rays that take samples
-      // must first be transformed there from world space in case these spaces
-      // aren't the same!
+      // Sampling BVHs, in _voxel_ space (make sure to xform ray first):
 #ifdef WITH_CUDA
-      cuda_index_bvh<UElem>::bvh_ref samplingBVH;
+      cuda_index_bvh<UElem>::bvh_ref elemBVH;
+      cuda_index_bvh<UElemGrid>::bvh_ref gridBVH;
 #elif defined(WITH_HIP)
-      hip_index_bvh<UElem>::bvh_ref samplingBVH;
+      hip_index_bvh<UElem>::bvh_ref elemBVH;
+      hip_index_bvh<UElemGrid>::bvh_ref gridBVH;
 #else
-      bvh4<UElem>::bvh_ref samplingBVH;
+      bvh4<UElem>::bvh_ref elemBVH;
+      bvh4<UElemGrid>::bvh_ref gridBVH;
 #endif
       // for marcher:
 #ifdef WITH_CUDA
@@ -495,22 +476,46 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
     ray.dir = float3(1.f);
     ray.tmin = ray.tmax = 0.f;
     default_intersector isect;
+
+    if (sf.asUnstructured.elemBVH.num_nodes()) {
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-    auto hr = intersect_rayN_bvh2<detail::AnyHit>(ray,
-                                                  sf.asUnstructured.samplingBVH,
-                                                  isect);
+      auto hr = intersect_rayN_bvh2<detail::AnyHit>(ray,
+                                                    sf.asUnstructured.elemBVH,
+                                                    isect);
+  
 #else
-    auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
-                                                  sf.asUnstructured.samplingBVH,
-                                                  isect);
+      auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
+                                                    sf.asUnstructured.elemBVH,
+                                                    isect);
+  
 #endif
+      if (hr.hit) {
+        value = hr.u; // value is stored in "u"!
+        primID = hr.prim_id;
+        return true;
+      }
+    }
 
-    if (!hr.hit)
-      return false;
+    if (sf.asUnstructured.gridBVH.num_nodes()) {
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+      auto hr = intersect_rayN_bvh2<detail::AnyHit>(ray,
+                                                    sf.asUnstructured.gridBVH,
+                                                    isect);
+  
+#else
+      auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
+                                                    sf.asUnstructured.gridBVH,
+                                                    isect);
+  
+#endif
+      if (hr.hit) {
+        value = hr.u; // value is stored in "u"!
+        primID = hr.prim_id;
+        return true;
+      }
+    }
 
-    value = hr.u; // value is stored in "u"!
-    primID = hr.prim_id;
-    return true;
+    return false;
   } else if (sf.type == SpatialField::BlockStructured) {
     Ray ray;
     ray.ori = P;

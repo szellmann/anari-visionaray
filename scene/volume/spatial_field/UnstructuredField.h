@@ -6,6 +6,7 @@
 #include "array/Array1D.h"
 #include "array/ObjectArray.h"
 #include "SpatialField.h"
+#include "UElemGrid.h"
 
 namespace visionaray {
 
@@ -24,20 +25,24 @@ struct UnstructuredField : public SpatialField
 
  private:
 
+  // first order unstructured elements
+  HostDeviceArray<dco::UElem> m_elements;
   HostDeviceArray<float4> m_vertices;
   HostDeviceArray<uint64_t> m_indices;
-  HostDeviceArray<dco::UElem> m_elements;
-  // for stitcher
-  HostDeviceArray<int3> m_gridDims;
-  HostDeviceArray<aabb> m_gridDomains;
-  HostDeviceArray<uint64_t> m_gridScalarsOffsets;
+
+  // vertex-centric voxel grids ("stitcher gridlets")
+  HostDeviceArray<dco::UElemGrid> m_grids;
   HostDeviceArray<float> m_gridScalars;
-  // sampling accel
+
+  // sampling accels
 #ifdef WITH_CUDA
-  cuda_index_bvh<dco::UElem> m_samplingBVH;
+  cuda_index_bvh<dco::UElem> m_elementBVH;
+  cuda_index_bvh<dco::UElemGrid> m_gridBVH;
 #else
-  bvh4<dco::UElem> m_samplingBVH;
+  bvh4<dco::UElem> m_elementBVH;
+  bvh4<dco::UElemGrid> m_gridBVH;
 #endif
+
   // shell accel
 #ifdef WITH_CUDA
   // must be an *index* BVH so we can access the

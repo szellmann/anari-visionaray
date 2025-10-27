@@ -112,6 +112,10 @@ void UnstructuredField::finalize()
     m_indices[i] = uint64_t(index[i]);
   }
 
+  // build first order element list //
+
+  m_elements.clear();
+
   uint64_t currentIndex=0;
   float minCellDiagonal=FLT_MAX;
   float avgCellDiagonal=0.f;
@@ -166,50 +170,41 @@ void UnstructuredField::finalize()
     avgCellDiagonal += length(cellBounds.max-cellBounds.min)/m_elements.size();
   }
 
-  if (m_params.gridData && m_params.gridDomains) {
-    m_gridDims.clear();
-    m_gridDomains.clear();
-    m_gridScalarsOffsets.clear();
-    m_gridScalars.clear();
+  // build AMR gridlet list //
 
-    size_t numGrids = m_params.gridData->totalSize();
-    auto *gridData = (Array3D **)m_params.gridData->handlesBegin();
-    auto *gridDomains = m_params.gridDomains->beginAs<aabb>();
+  m_grids.clear();
 
-    for (size_t i=0; i<numGrids; ++i) {
-      const Array3D *gd = *(gridData+i);
+  size_t numGrids = m_params.gridData ? m_params.gridData->totalSize() : 0;
+  auto *gridData = m_params.gridData ? (Array3D **)m_params.gridData->handlesBegin() : nullptr;
+  auto *gridDomains = m_params.gridDomains ? m_params.gridDomains->beginAs<aabb>() : nullptr;
 
-      // from anari's array3d we get the number of vertices, not cells!
-      m_gridDims.push_back(int3(gd->size().x-1,gd->size().y-1,gd->size().z-1));
-      m_gridDomains.push_back(*(gridDomains+i));
-      m_gridScalarsOffsets.push_back(m_gridScalars.size());
+  for (size_t gridID=0; gridID<numGrids; ++gridID) {
+    const Array3D *gd = *(gridData+gridID);
 
-      for (unsigned z=0;z<gd->size().z;++z) {
-        for (unsigned y=0;y<gd->size().y;++y) {
-          for (unsigned x=0;x<gd->size().x;++x) {
-            // TODO: can we actually iterate linearly here?!
-            size_t idx = z*size_t(gd->size().x)*gd->size().y
-                         + y*gd->size().x
-                         + x;
-            float f = gd->dataAs<float>()[idx];
-            m_gridScalars.push_back(f);
-          }
+    m_grids.emplace_back();
+    m_grids[gridID].gridID = gridID;
+    m_grids[gridID].dims = int3(gd->size().x-1,gd->size().y-1,gd->size().z-1);
+    m_grids[gridID].domain = *(gridDomains+gridID);
+    m_grids[gridID].scalarsOffset = (uint64_t)m_gridScalars.size();
+
+    // build scalar array
+    for (unsigned z=0;z<gd->size().z;++z) {
+      for (unsigned y=0;y<gd->size().y;++y) {
+        for (unsigned x=0;x<gd->size().x;++x) {
+          // TODO: can we actually iterate linearly here?!
+          size_t idx = z*size_t(gd->size().x)*gd->size().y
+                       + y*gd->size().x
+                       + x;
+          float f = gd->dataAs<float>()[idx];
+          m_gridScalars.push_back(f);
         }
       }
     }
+  }
 
-    uint64_t firstGridID = m_elements.size();
-    for (size_t i=0; i<numGrids; ++i) {
-      dco::UElem elem;
-      elem.type = dco::UElem::Grid;
-      elem.begin = elem.end = 0; // denotes that this is a grid!
-      elem.elemID = /*firstGridID +*/ i;
-      elem.gridDimsBuffer = m_gridDims.devicePtr();
-      elem.gridDomainsBuffer = m_gridDomains.devicePtr();
-      elem.gridScalarsOffsetBuffer = m_gridScalarsOffsets.devicePtr();
-      elem.gridScalarsBuffer = m_gridScalars.devicePtr();
-      m_elements.push_back(elem);
-    }
+  // second pass, set each grid's scalar buffer pointer
+  for (size_t gridID=0; gridID<numGrids; ++gridID) {
+    m_grids[gridID].scalarsBuffer = m_gridScalars.devicePtr();
   }
 
   // connectivity for element marcher
@@ -246,26 +241,41 @@ void UnstructuredField::finalize()
     vfield.asUnstructured.faceNeighbors = m_faceNeighbors.devicePtr();
   }
 
-  // sampling BVH
+  // sampling BVHs
 
 #ifdef WITH_CUDA
   lbvh_builder builder; // the only GPU builder Visionaray has (for now..)
-  m_samplingBVH = builder.build(
-    cuda_index_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
 
-  vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
+  if (!m_elements.empty()) {
+    m_elementBVH = builder.build(
+      cuda_index_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
+  }
+
+  if (!m_grids.empty()) {
+    m_gridBVH = builder.build(
+      cuda_index_bvh<dco::UElemGrid>{}, m_grids.devicePtr(), m_grids.size());
+  }
 #else
   binned_sah_builder builder;
   builder.enable_spatial_splits(false);
 
-  auto samplingBVH2 = builder.build(
-    bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
-
   bvh_collapser collapser;
-  collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->threadPool);
 
-  vfield.asUnstructured.samplingBVH = m_samplingBVH.ref();
+  if (!m_elements.empty()) {
+    auto elemBVH2 = builder.build(
+      bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
+    collapser.collapse(elemBVH2, m_elementBVH, deviceState()->threadPool);
+  }
+
+  if (!m_grids.empty()) {
+    auto gridBVH2 = builder.build(
+      bvh<dco::UElemGrid>{}, m_grids.data(), m_grids.size());
+    collapser.collapse(gridBVH2, m_gridBVH, deviceState()->threadPool);
+  }
 #endif
+
+  vfield.asUnstructured.elemBVH = m_elementBVH.ref();
+  vfield.asUnstructured.gridBVH = m_gridBVH.ref();
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),vec3f(0.f));
   setCellSize(avgCellDiagonal);
@@ -279,7 +289,7 @@ void UnstructuredField::finalize()
 
 bool UnstructuredField::isValid() const
 {
-  return m_samplingBVH.num_nodes();
+  return m_elementBVH.num_nodes() || m_gridBVH.num_nodes();
 }
 
 aabb UnstructuredField::bounds() const
@@ -288,14 +298,14 @@ aabb UnstructuredField::bounds() const
   if (isValid()) {
     bvh_node rootNode;
     CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
-                              m_samplingBVH.nodes().data(),
+                              m_elementBVH.nodes().data(),
                               sizeof(rootNode),
                               cudaMemcpyDeviceToHost));
     return rootNode.get_bounds();
   }
 #else
   if (isValid())
-    return m_samplingBVH.node(0).get_bounds();
+    return m_elementBVH.node(0).get_bounds();
 #endif
   return {};
 }
@@ -316,15 +326,10 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
   box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
   box1f valueRange{FLT_MAX, -FLT_MAX};
 
-  uint64_t numVertices = elements[cellID].end-elements[cellID].begin;
-  if (numVertices > 0) {
-    for (uint64_t i=elements[cellID].begin; i<elements[cellID].end; ++i) {
-      const vec4f V = vertices[elements[cellID].indexBuffer[i]];
-      cellBounds.extend(V.xyz());
-      valueRange.extend(V.w);
-    }
-  } else { // grid!
-    assert(0 && "Not implemented yet!");
+  for (uint64_t i=elements[cellID].begin; i<elements[cellID].end; ++i) {
+    const vec4f V = vertices[elements[cellID].indexBuffer[i]];
+    cellBounds.extend(V.xyz());
+    valueRange.extend(V.w);
   }
 
   rasterizeBox(vaccel,cellBounds,valueRange,cellSize);
@@ -345,6 +350,7 @@ void UnstructuredField::buildGrid()
   size_t numElems = m_elements.size();
   UnstructuredField_buildGridGPU<<<div_up(numElems, numThreads), numThreads>>>(
     vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems, vfield.cellSize);
+  // TODO: stitcher gridlets
 #else
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
@@ -357,29 +363,25 @@ void UnstructuredField::buildGrid()
     box3f cellBounds{vec3{FLT_MAX}, vec3{-FLT_MAX}};
     box1f valueRange{FLT_MAX, -FLT_MAX};
 
-    uint64_t numVertices = m_elements[cellID].end-m_elements[cellID].begin;
-    if (numVertices > 0) {
-      for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
-        const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
-        cellBounds.extend(V.xyz());
-        valueRange.extend(V.w);
-      }
-    } else { // grid!
-      uint64_t elemID = m_elements[cellID].elemID; // not unique! (grids are 0-based)
-      cellBounds = box3f(vec3f(m_gridDomains[elemID].min.x,
-                               m_gridDomains[elemID].min.y,
-                               m_gridDomains[elemID].min.z),
-                         vec3f(m_gridDomains[elemID].max.x,
-                               m_gridDomains[elemID].max.y,
-                               m_gridDomains[elemID].max.z));
-  
-      int3 dims = m_gridDims[elemID];
+    for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
+      const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
+      cellBounds.extend(V.xyz());
+      valueRange.extend(V.w);
+    }
 
-      uint64_t numScalars = (dims.x+1)*size_t(dims.y+1)*(dims.z+1);
-      for (uint64_t i=0; i<numScalars; ++i) {
-        float f = m_gridScalars[m_gridScalarsOffsets[elemID] + i];
-        valueRange.extend(f);
-      }
+    rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
+  }
+
+  for (size_t gridID=0; gridID<m_grids.size(); ++gridID) {
+    box3f cellBounds(m_grids[gridID].domain.min, m_grids[gridID].domain.max);
+    int3 dims = m_grids[gridID].dims;
+
+    box1f valueRange{FLT_MAX, -FLT_MAX};
+
+    uint64_t numScalars = (dims.x+1)*size_t(dims.y+1)*(dims.z+1);
+    for (uint64_t i=0; i<numScalars; ++i) {
+      float f = m_gridScalars[m_grids[gridID].scalarsOffset + i];
+      valueRange.extend(f);
     }
 
     rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
