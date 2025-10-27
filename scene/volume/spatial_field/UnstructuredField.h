@@ -6,6 +6,7 @@
 #include "array/Array1D.h"
 #include "array/ObjectArray.h"
 #include "SpatialField.h"
+#include "BezierHex.h"
 #include "UElemGrid.h"
 
 namespace visionaray {
@@ -30,6 +31,9 @@ struct UnstructuredField : public SpatialField
   HostDeviceArray<float4> m_vertices;
   HostDeviceArray<uint64_t> m_indices;
 
+  // higher order elements
+  HostDeviceArray<dco::BezierHex> m_bezierHexes;
+
   // vertex-centric voxel grids ("stitcher gridlets")
   HostDeviceArray<dco::UElemGrid> m_grids;
   HostDeviceArray<float> m_gridScalars;
@@ -37,9 +41,11 @@ struct UnstructuredField : public SpatialField
   // sampling accels
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::UElem> m_elementBVH;
+  cuda_index_bvh<dco::BezierHex> m_bezierHexBVH;
   cuda_index_bvh<dco::UElemGrid> m_gridBVH;
 #else
   bvh4<dco::UElem> m_elementBVH;
+  bvh4<dco::BezierHex> m_bezierHexBVH;
   bvh4<dco::UElemGrid> m_gridBVH;
 #endif
 

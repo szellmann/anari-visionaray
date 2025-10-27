@@ -99,7 +99,6 @@ void UnstructuredField::finalize()
     if (val == BARNEY_HEX_ || val == VTK_HEX_) return dco::UElem::Hex;
     if (val == BARNEY_WEDGE_ || val == VTK_WEDGE_) return dco::UElem::Wedge;
     if (val == BARNEY_PYR_ || val == VTK_PYR_) return dco::UElem::Pyr;
-    if (val == VTK_BEZIER_HEX_) return dco::UElem::BezierHex;
     return dco::UElem::Unknown;
   };
 
@@ -146,17 +145,29 @@ void UnstructuredField::finalize()
       continue;
     }
 
-    m_elements.emplace_back();
-    m_elements[cellID].type = elemType;
-    m_elements[cellID].begin = firstIndex;
-    m_elements[cellID].end = lastIndex;
-    m_elements[cellID].elemID = cellID;
-    m_elements[cellID].vertexBuffer = m_vertices.devicePtr();
-    m_elements[cellID].indexBuffer = m_indices.devicePtr();
+    const bool firstOrder = ic >= 4 && ic <= 8;
 
-    m_elements[cellID].cellValue = 0.f;
-    if (cellData != nullptr) {
-      m_elements[cellID].cellValue = cellData[cellID];
+    // separate arrays and BVHs for first-order and higher-order elements:
+    // while first-order elements are reconstructed from vertices and indices
+    // on the fly in the shader, this is not practical for higher-order elements
+    if (firstOrder) {
+      m_elements.emplace_back();
+      m_elements[cellID].type = elemType;
+      m_elements[cellID].begin = firstIndex;
+      m_elements[cellID].end = lastIndex;
+      m_elements[cellID].elemID = cellID;
+      m_elements[cellID].vertexBuffer = m_vertices.devicePtr();
+      m_elements[cellID].indexBuffer = m_indices.devicePtr();
+
+      m_elements[cellID].cellValue = 0.f;
+      if (cellData != nullptr) {
+        m_elements[cellID].cellValue = cellData[cellID];
+      }
+    } else if (cellType[cellID] == VTK_BEZIER_HEX_) {
+      m_bezierHexes.emplace_back();
+      m_bezierHexes[cellID]
+          = dco::BezierHex::fromVTU(m_vertices.hostPtr(), m_indices.hostPtr());
+      m_bezierHexes[cellID].elemID = cellID;
     }
 
     // compute cellBounds; the minimum size will determine the
@@ -251,6 +262,11 @@ void UnstructuredField::finalize()
       cuda_index_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
   }
 
+  if (!m_bezierHexes.empty()) {
+    m_bezierHexBVH = builder.build(
+      cuda_index_bvh<dco::BezierHex>{}, m_bezierHexes.devicePtr(), m_bezierHexes.size());
+  }
+
   if (!m_grids.empty()) {
     m_gridBVH = builder.build(
       cuda_index_bvh<dco::UElemGrid>{}, m_grids.devicePtr(), m_grids.size());
@@ -267,6 +283,12 @@ void UnstructuredField::finalize()
     collapser.collapse(elemBVH2, m_elementBVH, deviceState()->threadPool);
   }
 
+  if (!m_bezierHexes.empty()) {
+    auto bezierHexBVH2 = builder.build(
+      bvh<dco::BezierHex>{}, m_bezierHexes.data(), m_bezierHexes.size());
+    collapser.collapse(bezierHexBVH2, m_bezierHexBVH, deviceState()->threadPool);
+  }
+
   if (!m_grids.empty()) {
     auto gridBVH2 = builder.build(
       bvh<dco::UElemGrid>{}, m_grids.data(), m_grids.size());
@@ -275,6 +297,7 @@ void UnstructuredField::finalize()
 #endif
 
   vfield.asUnstructured.elemBVH = m_elementBVH.ref();
+  vfield.asUnstructured.bezierHexBVH = m_bezierHexBVH.ref();
   vfield.asUnstructured.gridBVH = m_gridBVH.ref();
 
   vfield.voxelSpaceTransform = mat4x3(mat3::identity(),vec3f(0.f));
@@ -289,7 +312,7 @@ void UnstructuredField::finalize()
 
 bool UnstructuredField::isValid() const
 {
-  return m_elementBVH.num_nodes() || m_gridBVH.num_nodes();
+  return m_elementBVH.num_nodes() || m_bezierHexBVH.num_nodes() || m_gridBVH.num_nodes();
 }
 
 aabb UnstructuredField::bounds() const
@@ -316,9 +339,21 @@ aabb UnstructuredField::bounds() const
                                 cudaMemcpyDeviceToHost));
       bounds.insert(rootNode.get_bounds());
     }
+
+    if (m_bezierHexBVH.num_nodes()) {
+      bvh_node rootNode;
+      CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
+                                m_bezierHexBVH.nodes().data(),
+                                sizeof(rootNode),
+                                cudaMemcpyDeviceToHost));
+      bounds.insert(rootNode.get_bounds());
+    }
 #else
     if (m_elementBVH.num_nodes())
       bounds.insert(m_elementBVH.node(0).get_bounds());
+
+    if (m_bezierHexBVH.num_nodes())
+      bounds.insert(m_bezierHexBVH.node(0).get_bounds());
 
     if (m_gridBVH.num_nodes())
       bounds.insert(m_gridBVH.node(0).get_bounds());
@@ -332,11 +367,11 @@ aabb UnstructuredField::bounds() const
 }
 
 #ifdef WITH_CUDA
-__global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
-                                               const vec4f      *vertices,
-                                               const dco::UElem *elements,
-                                               size_t            numElems,
-                                               float             cellSize)
+__global__ void UnstructuredField_buildGridGPU_UElem(dco::GridAccel    vaccel,
+                                                     const vec4f      *vertices,
+                                                     const dco::UElem *elements,
+                                                     size_t            numElems,
+                                                     float             cellSize)
 {
   size_t cellID = blockIdx.x * size_t(blockDim.x) + threadIdx.x;
 
@@ -355,6 +390,24 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
 
   rasterizeBox(vaccel,cellBounds,valueRange,cellSize);
 }
+
+__global__ void UnstructuredField_buildGridGPU_BezierHex(dco::GridAccel        vaccel,
+                                                         const dco::BezierHex *hexes,
+                                                         size_t                numHexes,
+                                                         float                 cellSize)
+{
+  size_t hexID = blockIdx.x * size_t(blockDim.x) + threadIdx.x;
+
+  if (hexID >= numHexes)
+    return;
+
+// TODO: deduplicate, refactor into function
+  box3f cellBounds(hexes[hexID].spatialBounds().min,
+                   hexes[hexID].spatialBounds().max);
+  box1f valueRange = hexes[hexID].valueRange();
+
+  rasterizeBox(vaccel,cellBounds,valueRange,cellSize);
+}
 #endif
 
 void UnstructuredField::buildGrid()
@@ -368,10 +421,16 @@ void UnstructuredField::buildGrid()
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
   size_t numThreads = 1024;
+
   size_t numElems = m_elements.size();
-  UnstructuredField_buildGridGPU<<<div_up(numElems, numThreads), numThreads>>>(
+  UnstructuredField_buildGridGPU_UElem<<<div_up(numElems, numThreads), numThreads>>>(
     vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems, vfield.cellSize);
+
   // TODO: stitcher gridlets
+
+  size_t numHexes = m_bezierHexes.size();
+  UnstructuredField_buildGridGPU_BezierHex<<<div_up(numHexes, numThreads), numThreads>>>(
+    vaccel, m_bezierHexes.devicePtr(), numHexes, vfield.cellSize);
 #else
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
@@ -389,6 +448,14 @@ void UnstructuredField::buildGrid()
       cellBounds.extend(V.xyz());
       valueRange.extend(V.w);
     }
+
+    rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
+  }
+
+  for (size_t hexID=0; hexID<m_bezierHexes.size(); ++hexID) {
+    box3f cellBounds(m_bezierHexes[hexID].spatialBounds().min,
+                     m_bezierHexes[hexID].spatialBounds().max);
+    box1f valueRange = m_bezierHexes[hexID].valueRange();
 
     rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
   }
