@@ -294,19 +294,40 @@ bool UnstructuredField::isValid() const
 
 aabb UnstructuredField::bounds() const
 {
-#ifdef WITH_CUDA
   if (isValid()) {
-    bvh_node rootNode;
-    CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
-                              m_elementBVH.nodes().data(),
-                              sizeof(rootNode),
-                              cudaMemcpyDeviceToHost));
-    return rootNode.get_bounds();
-  }
+    aabb bounds;
+    bounds.invalidate();
+
+#ifdef WITH_CUDA
+    if (m_elementBVH.num_nodes()) {
+      bvh_node rootNode;
+      CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
+                                m_elementBVH.nodes().data(),
+                                sizeof(rootNode),
+                                cudaMemcpyDeviceToHost));
+      bounds.insert(rootNode.get_bounds());
+    }
+
+    if (m_gridBVH.num_nodes()) {
+      bvh_node rootNode;
+      CUDA_SAFE_CALL(cudaMemcpy(&rootNode,
+                                m_gridBVH.nodes().data(),
+                                sizeof(rootNode),
+                                cudaMemcpyDeviceToHost));
+      bounds.insert(rootNode.get_bounds());
+    }
 #else
-  if (isValid())
-    return m_elementBVH.node(0).get_bounds();
+    if (m_elementBVH.num_nodes())
+      bounds.insert(m_elementBVH.node(0).get_bounds());
+
+    if (m_gridBVH.num_nodes())
+      bounds.insert(m_gridBVH.node(0).get_bounds());
+
 #endif
+
+    return bounds;
+  } // isValid
+
   return {};
 }
 
