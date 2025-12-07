@@ -406,7 +406,7 @@ inline float rayMarchVolume(ScreenSample &ss,
 
   float t=ray.tmin;
   float transmittance = 1.f;
-  for (;t<ray.tmax&&alpha<0.99f;t+=dt) {
+  for (;t<=ray.tmax&&alpha<0.99f;t+=dt) {
     float3 P = ray.ori+ray.dir*t;
     float v = 0.f;
     if (sampleField(sf,P,v)) {
