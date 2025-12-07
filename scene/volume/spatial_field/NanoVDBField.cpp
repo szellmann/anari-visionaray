@@ -87,7 +87,7 @@ aabb NanoVDBField::bounds() const
   if (!isValid())
     return {};
 
-  auto bbox = m_gridHandle.gridMetaData()->indexBBox();
+  auto bbox = m_gridHandle.gridMetaData()->worldBBox();
   auto lower = bbox.min();
   auto upper = bbox.max();
   return aabb{{(float)lower[0], (float)lower[1], (float)lower[2]},

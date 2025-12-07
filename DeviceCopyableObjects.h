@@ -545,14 +545,15 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
 #ifdef WITH_NANOVDB
   else if (sf.type == SpatialField::NanoVDB) {
     auto acc = sf.asNanoVDB.grid->getAccessor();
+    nanovdb::math::Vec3<float> nvdbPos(P.x,P.y,P.z);
     if (sf.asNanoVDB.filterMode == Nearest) {
       auto smp = nanovdb::math::createSampler<0>(acc);
-      value = smp(nanovdb::math::Vec3<float>(P.x,P.y,P.z));
+      value = smp(sf.asNanoVDB.grid->worldToIndexF(nvdbPos));
       primID = 0;
       return true;
     } else if (sf.asNanoVDB.filterMode == Linear) {
       auto smp = nanovdb::math::createSampler<1>(acc);
-      value = smp(nanovdb::math::Vec3<float>(P.x,P.y,P.z));
+      value = smp(sf.asNanoVDB.grid->worldToIndexF(nvdbPos));
       primID = 0;
       return true;
     }
