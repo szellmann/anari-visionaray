@@ -735,10 +735,10 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       if (sampleField(sf,P,v,primID)) {
         float4 sample
             = postClassify(vol.asTransferFunction1D,v);
-        albedo = sample.xyz();
-        extinction = sample.w;
         float u = rnd();
-        if (extinction >= u * majorant) {
+        if (sample.w >= u * majorant) {
+          albedo = sample.xyz();
+          extinction = sample.w;
           hr.hit = true;
           Tr = 0.f;
           hr.t = t;
