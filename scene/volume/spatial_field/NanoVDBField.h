@@ -35,16 +35,9 @@ struct NanoVDBField : public SpatialField
 
   helium::IntrusivePtr<Array1D> m_gridData;
 
-#ifdef WITH_CUDA
-  nanovdb::GridHandle<nanovdb::cuda::DeviceBuffer> m_gridHandle;
-#else
-  nanovdb::GridHandle<nanovdb::HostBuffer> m_gridHandle;
-  // Need to store an aligned copy of the data b/c helium
-  // arrays aren't aligned
-  // TODO: might move that functionality into HostArray
-  // or similar
-  float *m_gridDataAligned{nullptr};
-#endif
+  HostDeviceArray<uint8_t> m_deviceGrid;
+
+  aabb m_bounds;
 };
 
 } // namespace visionaray

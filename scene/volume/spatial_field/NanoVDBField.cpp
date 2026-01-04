@@ -18,11 +18,7 @@ NanoVDBField::NanoVDBField(VisionarayGlobalState *d)
 }
 
 NanoVDBField::~NanoVDBField()
-{
-#ifndef WITH_CUDA
-  std::free(m_gridDataAligned);
-#endif
-}
+{}
 
 void NanoVDBField::commitParameters()
 {
@@ -39,30 +35,20 @@ void NanoVDBField::finalize()
     return;
   }
 
-#ifdef WITH_CUDA
-  cudaStream_t stream; // TODO: move to global state/use the one there?!
-  cudaStreamCreate(&stream);
-  nanovdb::cuda::DeviceBuffer buffer(m_gridData->totalSize(),
-                                                    /*host:*/true,
-                                                    &stream);
-  memcpy(buffer.data(), m_gridData->data(), m_gridData->totalSize());
-  m_gridHandle = std::move(buffer);
+  auto hostbuffer = nanovdb::HostBuffer::create(m_gridData->totalSize());
+  std::memcpy(hostbuffer.data(), m_gridData->data(), m_gridData->totalSize());
+  nanovdb::GridHandle<nanovdb::HostBuffer> gridHandle = std::move(hostbuffer);
+  // added in later versions, but ours doesn't have bufferSize yet:
+  // m_deviceGrid.resize(gridHandle.bufferSize());
+  // size is deprecated in later versions:
+  m_deviceGrid.resize(gridHandle.size());
+  m_deviceGrid.reset((uint8_t *)gridHandle.data());
+  vfield.asNanoVDB.grid = (nanovdb::NanoGrid<float> *)m_deviceGrid.devicePtr();
 
-  m_gridHandle.deviceUpload(stream, false);
-
-  vfield.asNanoVDB.grid = m_gridHandle.deviceGrid<float>();
-
-  cudaStreamDestroy(stream);
-#else
-  std::free(m_gridDataAligned);
-  m_gridDataAligned
-      = (float *)std::malloc(m_gridData->totalSize() + NANOVDB_DATA_ALIGNMENT);
-  void *dataPtr = nanovdb::alignPtr(m_gridDataAligned);
-  std::memcpy(dataPtr, m_gridData->data(), m_gridData->totalSize());
-  auto buffer = nanovdb::HostBuffer::createFull(m_gridData->totalSize(), dataPtr);
-  m_gridHandle = std::move(buffer);
-  vfield.asNanoVDB.grid = m_gridHandle.grid<float>();
-#endif
+  auto boundsMin = gridHandle.gridMetaData()->worldBBox().min();
+  auto boundsMax = gridHandle.gridMetaData()->worldBBox().max()-nanovdb::Vec3d(1.f);
+  m_bounds = aabb{{(float)boundsMin[0], (float)boundsMin[1], (float)boundsMin[2]},
+                  {(float)boundsMax[0], (float)boundsMax[1], (float)boundsMax[2]}};
 
   vfield.asNanoVDB.filterMode = m_filter == "nearest" ? Nearest : Linear;
 
@@ -79,19 +65,12 @@ void NanoVDBField::finalize()
 
 bool NanoVDBField::isValid() const
 {
-  return (bool)m_gridHandle;
+  return !m_deviceGrid.empty();
 }
 
 aabb NanoVDBField::bounds() const
 {
-  if (!isValid())
-    return {};
-
-  auto bbox = m_gridHandle.gridMetaData()->worldBBox();
-  auto lower = bbox.min();
-  auto upper = bbox.max();
-  return aabb{{(float)lower[0], (float)lower[1], (float)lower[2]},
-              {(float)upper[0], (float)upper[1], (float)upper[2]}};
+  return m_bounds;
 }
 
 #ifdef WITH_CUDA
