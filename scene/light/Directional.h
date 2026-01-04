@@ -18,6 +18,7 @@ struct Directional : public Light
  private:
   vec3 m_direction{0.f, 0.f, -1.f};
   float m_irradiance{1.f};
+  float m_angularDiameter{0.f};
 };
 
 } // namespace visionaray

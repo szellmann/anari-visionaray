@@ -22,6 +22,9 @@ void Directional::commitParameters()
   m_irradiance = std::clamp(getParam<float>("irradiance", 1.f),
       0.f,
       std::numeric_limits<float>::max());
+  m_angularDiameter = std::clamp(getParam<float>("angularDiameter", 0.f),
+      0.f,
+      std::numeric_limits<float>::max());
 }
 
 void Directional::finalize()
@@ -31,7 +34,7 @@ void Directional::finalize()
   vlight.asDirectional.set_direction(-m_direction);
   vlight.asDirectional.set_cl(m_color);
   vlight.asDirectional.set_kl(m_irradiance); // TODO!
-  vlight.asDirectional.set_angular_diameter(3.f); // TODO!
+  vlight.asDirectional.set_angular_diameter(m_angularDiameter);
 
   dispatch();
 }
