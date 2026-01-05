@@ -609,13 +609,23 @@ struct DeviceObjectArray : private std::vector<T>
   DeviceObjectHandle alloc(const T &obj)
   {
     std::unique_lock<std::mutex> l(mtx);
-    Base::push_back(obj);
-    updated = true;
-    return (DeviceObjectHandle)(Base::size()-1);
+    if (freeHandles.empty()) {
+      Base::push_back(obj);
+      updated = true;
+      return (DeviceObjectHandle)(Base::size()-1);
+    } else {
+      DeviceObjectHandle handle = freeHandles.back();
+      freeHandles.pop_back();
+      Base::operator[](handle) = obj;
+      updated = true;
+      return handle;
+    }
   }
 
   void free(DeviceObjectHandle handle)
   {
+    std::unique_lock<std::mutex> l(mtx);
+    freeHandles.push_back(handle);
     updated = true;
   }
 
