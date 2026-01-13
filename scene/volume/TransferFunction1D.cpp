@@ -49,12 +49,6 @@ void TransferFunction1D::commitParameters()
 
 void TransferFunction1D::finalize()
 {
-#ifdef __CUDACC__
-  cudaError_t err = cudaGetLastError();
-  if (err != cudaSuccess) {
-    printf("CUDA error before TransferFunction1D::finalize(): %s\n", cudaGetErrorString(err));
-  }
-#endif
   if (!m_field) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "no spatial field provided to transferFunction1D volume");
