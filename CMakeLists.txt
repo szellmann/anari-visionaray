@@ -151,6 +151,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
 
+# Enable multi-processor compilation for MSVC
+if(MSVC)
+  target_compile_options(${PROJECT_NAME} PRIVATE /MP)
+endif()
+
 if (cuda)
 # set_target_properties(${PROJECT_NAME}_cuda PROPERTIES CUDA_ARCHITECTURES "all-major")
   set_target_properties(${PROJECT_NAME}_cuda PROPERTIES CUDA_ARCHITECTURES "native")
@@ -206,6 +211,9 @@ if (cuda)
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )
+
+  # Note: /MP flag is not compatible with CUDA compilation
+  # Parallel compilation is handled by MSBuild at the project level
 endif()
 
 if (hip)
