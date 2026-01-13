@@ -9,6 +9,10 @@
 // hip
 #include <hip/hip_runtime.h>
 #endif
+// sycl
+#ifdef WITH_SYCL
+#include <sycl/sycl.hpp>
+#endif
 // visionaray
 #include "visionaray/detail/parallel_for.h"
 #include "visionaray/detail/thread_pool.h"

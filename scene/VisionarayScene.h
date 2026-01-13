@@ -20,11 +20,11 @@ namespace visionaray {
 
 struct VisionaraySceneImpl
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   friend struct VisionaraySceneGPU;
 #endif
 
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   typedef index_bvh<basic_triangle<3,float>>  TriangleBVH;
   typedef index_bvh<basic_triangle<3,float>>  QuadBVH;
   typedef index_bvh<basic_sphere<float>>      SphereBVH;

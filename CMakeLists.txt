@@ -37,6 +37,12 @@ if (hip)
   find_package(hip)
 endif()
 
+option(ANARI_VISIONARAY_ENABLE_SYCL "Compile the SYCL device" OFF)
+set(sycl ${ANARI_VISIONARAY_ENABLE_SYCL})
+if (sycl)
+  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-fsycl")
+endif()
+
 option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" ON)
 set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
 
@@ -64,6 +70,16 @@ if (hip)
     DEVICE_TARGET ${PROJECT_NAME}_hip
     CPP_NAMESPACE visionaray
     JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_hip_device.json
+    JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
+  )
+endif()
+
+if (sycl)
+  add_library(${PROJECT_NAME}_sycl SHARED)
+  anari_generate_queries(
+    DEVICE_TARGET ${PROJECT_NAME}_sycl
+    CPP_NAMESPACE visionaray
+    JSON_DEFINITIONS_FILE ${CMAKE_CURRENT_SOURCE_DIR}/visionaray_sycl_device.json
     JSON_ROOT_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}
   )
 endif()
@@ -244,6 +260,35 @@ if (hip)
   )
 
   target_include_directories(${PROJECT_NAME}_hip PUBLIC
+    $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+  )
+endif()
+
+if (sycl)
+  target_sources(${PROJECT_NAME}_sycl PRIVATE ${SOURCES})
+  target_sources(${PROJECT_NAME}_sycl PRIVATE
+    frame/Frame.cpp
+    renderer/DirectLight_impl.cpp
+    renderer/Raycast_impl.cpp
+    scene/VisionaraySceneSYCL.cpp
+  )
+  target_compile_definitions(${PROJECT_NAME}_sycl PRIVATE WITH_SYCL=1)
+  if(WIN32)
+    target_compile_definitions(${PROJECT_NAME}_hip PRIVATE _USE_MATH_DEFINES)
+  endif()
+  if (nanovdb)
+    message(WARNING "No VDB support with SYCL")
+  endif()
+
+  target_link_libraries(${PROJECT_NAME}_sycl
+      visionaray::visionaray anari::anari anari::helium)
+
+  generate_export_header(${PROJECT_NAME}_sycl
+    EXPORT_MACRO_NAME "VISIONARAY_DEVICE_INTERFACE"
+  )
+
+  target_include_directories(${PROJECT_NAME}_sycl PUBLIC
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
   )
