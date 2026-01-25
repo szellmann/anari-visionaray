@@ -421,6 +421,9 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<UElem>::bvh_ref elemBVH;
       hip_index_bvh<UElemGrid>::bvh_ref gridBVH;
+#elif defined(WITH_SYCL)
+      sycl_index_bvh<UElem>::bvh_ref elemBVH;
+      sycl_index_bvh<UElemGrid>::bvh_ref gridBVH;
 #else
       bvh4<UElem>::bvh_ref elemBVH;
       bvh4<UElemGrid>::bvh_ref gridBVH;
@@ -430,6 +433,8 @@ struct SpatialField
       cuda_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
 #elif defined(WITH_HIP)
       hip_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
+#elif defined(WITH_SYCL)
+      sycl_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
 #else
       index_bvh4<basic_triangle<3,float>>::bvh_ref shellBVH;
 #endif
@@ -441,6 +446,8 @@ struct SpatialField
       cuda_index_bvh<Block>::bvh_ref samplingBVH;
 #elif defined(WITH_HIP)
       hip_index_bvh<Block>::bvh_ref samplingBVH;
+#elif defined(WITH_SYCL)
+      sycl_index_bvh<Block>::bvh_ref samplingBVH;
 #else
       index_bvh4<Block>::bvh_ref samplingBVH;
 #endif
@@ -478,7 +485,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
     default_intersector isect;
 
     if (sf.asUnstructured.elemBVH.num_nodes()) {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
       auto hr = intersect_rayN_bvh2<detail::AnyHit>(ray,
                                                     sf.asUnstructured.elemBVH,
                                                     isect);
@@ -497,7 +504,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
     }
 
     if (sf.asUnstructured.gridBVH.num_nodes()) {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
       auto hr = intersect_rayN_bvh2<detail::AnyHit>(ray,
                                                     sf.asUnstructured.gridBVH,
                                                     isect);
@@ -527,7 +534,7 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
     ray.prd = &basisPRD;
 
     default_intersector isect;
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
     auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
 #else
     auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
@@ -1394,6 +1401,17 @@ struct BLS
     hip_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
     hip_index_bvh<dco::Volume>::bvh_ref asVolume;
   };
+#elif defined(WITH_SYCL)
+  union {
+    sycl_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    sycl_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    sycl_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    sycl_index_bvh<dco::Cone>::bvh_ref asCone;
+    sycl_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    sycl_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
+    sycl_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    sycl_index_bvh<dco::Volume>::bvh_ref asVolume;
+  };
 #else
   union {
     bvh4<basic_triangle<3,float>>::bvh_ref asTriangle;
@@ -1467,7 +1485,7 @@ template <detail::traversal_type TT>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectBLS(const Ray &ray, const BLS &bls)
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
     return intersect(ray,bls.asTriangle);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
@@ -1653,6 +1671,8 @@ struct Instance
   cuda_index_bvh<BLS>::bvh_ref theBVH;
 #elif defined(WITH_HIP)
   hip_index_bvh<BLS>::bvh_ref theBVH;
+#elif defined(WITH_SYCL)
+  sycl_index_bvh<BLS>::bvh_ref theBVH;
 #else
   index_bvh<BLS>::bvh_ref theBVH;
 #endif
@@ -1798,6 +1818,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 typedef cuda_index_bvh<Instance>::bvh_ref TLS;
 #elif defined(WITH_HIP)
 typedef hip_index_bvh<Instance>::bvh_ref TLS;
+#elif defined(WITH_SYCL)
+typedef sycl_index_bvh<Instance>::bvh_ref TLS;
 #else
 typedef index_bvh<Instance>::bvh_ref TLS;
 #endif

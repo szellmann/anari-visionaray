@@ -255,7 +255,7 @@ inline float elementMarchVolume(ScreenSample &ss,
   float transmittance = 1.f;
   while (alpha<alphaMax) {
     default_intersector isect;
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
     auto hr = intersect_rayN_bvh2<detail::ClosestHit>(ray,
                                                       sf.asUnstructured.shellBVH,
                                                       isect);
@@ -291,7 +291,7 @@ inline float elementMarchVolume(ScreenSample &ss,
       ray2.dir *= -1.f;
     }
 
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
     auto hr2 = intersect_rayN_bvh2<detail::ClosestHit>(ray2,
                                                        sf.asUnstructured.shellBVH,
                                                        isect);
