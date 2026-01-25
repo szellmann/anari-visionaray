@@ -8,6 +8,8 @@
 #include "anari_library_visionaray_cuda_export.h"
 #elif defined(WITH_HIP)
 #include "anari_library_visionaray_hip_export.h"
+#elif defined(WITH_SYCL)
+#include "anari_library_visionaray_sycl_export.h"
 #else
 #include "anari_library_visionaray_export.h"
 #endif
@@ -55,6 +57,12 @@ extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
 #elif defined(WITH_HIP)
 extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
     visionaray_hip, handle, scb, scbPtr)
+{
+  return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
+}
+#elif defined(WITH_SYCL)
+extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
+    visionaray_sycl, handle, scb, scbPtr)
 {
   return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
 }
