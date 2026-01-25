@@ -9,7 +9,7 @@ namespace visionaray {
 VisionaraySceneImpl::VisionaraySceneImpl(
     VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
   : m_state(state)
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   , m_gpuScene(new VisionaraySceneGPU(this))
 #endif
 {
@@ -40,7 +40,7 @@ void VisionaraySceneImpl::commit()
   m_bounds[boundsID] = m_bounds[!boundsID];
   m_bounds[!boundsID].invalidate();
 
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   m_gpuScene->commit();
 #else
 
@@ -283,7 +283,7 @@ void VisionaraySceneImpl::commit()
   }
 #endif
 
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   m_gpuScene->dispatch();
 #else
   dispatch();
@@ -309,7 +309,7 @@ void VisionaraySceneImpl::release()
 
 bool VisionaraySceneImpl::isValid() const
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   return m_gpuScene->isValid();
 #else
   if (type == World)
@@ -328,7 +328,7 @@ aabb VisionaraySceneImpl::getBounds() const
 void VisionaraySceneImpl::attachInstance(
     dco::Instance inst, unsigned instID, unsigned userID)
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   m_gpuScene->attachInstance(inst, instID, userID);
 #else
   m_bounds[boundsID].insert(get_prim_bounds(inst));
@@ -347,7 +347,7 @@ void VisionaraySceneImpl::attachInstance(
 void VisionaraySceneImpl::attachGeometry(
     dco::Geometry geom, unsigned geomID, unsigned userID)
 {
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   m_gpuScene->attachGeometry(geom, geomID, userID);
 #else
 
@@ -450,6 +450,11 @@ cuda_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
 }
 #elif defined(WITH_HIP)
 hip_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
+{
+  return m_gpuScene->refBVH();
+}
+#elif defined(WITH_SYCL)
+sycl_index_bvh<dco::BLS>::bvh_ref VisionaraySceneImpl::refBVH()
 {
   return m_gpuScene->refBVH();
 }

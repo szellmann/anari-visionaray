@@ -12,7 +12,7 @@
 #include "surface/material/Material.h"
 #include "light/Light.h"
 #include "DeviceCopyableObjects.h"
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
 #include "VisionaraySceneGPU.h"
 #endif
 
@@ -109,6 +109,8 @@ struct VisionaraySceneImpl
   cuda_index_bvh<dco::BLS>::bvh_ref refBVH();
 #elif defined(WITH_HIP)
   hip_index_bvh<dco::BLS>::bvh_ref refBVH();
+#elif defined(WITH_SYCL)
+  sycl_index_bvh<dco::BLS>::bvh_ref refBVH();
 #else
   index_bvh<dco::BLS>::bvh_ref refBVH();
 #endif
@@ -117,7 +119,7 @@ struct VisionaraySceneImpl
   void dispatch();
 
   VisionarayGlobalState *deviceState();
-#if defined(WITH_CUDA) || defined(WITH_HIP)
+#if defined(WITH_CUDA) || defined(WITH_HIP) || defined(WITH_SYCL)
   std::unique_ptr<VisionaraySceneGPU> m_gpuScene{nullptr};
 #endif
 };

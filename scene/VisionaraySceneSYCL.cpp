@@ -9,14 +9,9 @@
 
 namespace visionaray {
 
-// TODO (in visionaray):
-namespace sycl {
-template<typename T> struct device_vector : std::vector<T> {};
-}
-
-template <typename P>
-using sycl_index_bvh = index_bvh_t<sycl::device_vector<P>, sycl::device_vector<bvh_node>, sycl::device_vector<unsigned>>;
-
+// define these for compability with SBVH builder
+// with SYCL, TLSs are currently built on the host (can be removed once we
+// have a SYCL GPU builder..)
 void split_primitive(aabb& L, aabb& R, float plane, int axis, dco::BLS const& prim)
 {
   // empty
