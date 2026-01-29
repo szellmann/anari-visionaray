@@ -25,16 +25,7 @@ struct VisionarayRenderer
                    uint2 size,
                    VisionarayGlobalState *state,
                    const DeviceObjectRegistry &DD,
-                   unsigned worldID, int frameID)
-  {
-    if (type == Raycast) {
-      asRaycast.renderFrame(
-          frame, cam, size, state, DD, rendererState, worldID, frameID);
-    } else if (type == DirectLight) {
-      asDirectLight.renderFrame(
-          frame, cam, size, state, DD, rendererState, worldID, frameID);
-    }
-  }
+                   unsigned worldID, int frameID);
 
   VSNRAY_FUNC
   constexpr bool stochasticRendering() const {

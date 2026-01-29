@@ -12,12 +12,12 @@ namespace visionaray {
 
 struct VisionarayRendererDirectLight
 {
-  void renderFrame(const dco::Frame &frame,
-                   const dco::Camera &cam,
+  void renderFrame(DevicePointer<DeviceObjectRegistry> onDevicePtr,
+                   DevicePointer<RendererState> rendererStatePtr,
+                   DevicePointer<dco::Frame> framePtr,
+                   DevicePointer<dco::Camera> camPtr,
                    uint2 size,
                    VisionarayGlobalState *state,
-                   const DeviceObjectRegistry &DD,
-                   const RendererState &rendererState,
                    unsigned worldID, int frameID);
 
   constexpr static bool stochasticRendering{true};

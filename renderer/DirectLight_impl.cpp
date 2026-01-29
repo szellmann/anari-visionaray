@@ -375,17 +375,14 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
   }
 }
 
-void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
-                                                const dco::Camera &cam,
+void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegistry> onDevicePtr,
+                                                DevicePointer<RendererState> rendererStatePtr,
+                                                DevicePointer<dco::Frame> framePtr,
+                                                DevicePointer<dco::Camera> camPtr,
                                                 uint2 size,
                                                 VisionarayGlobalState *state,
-                                                const DeviceObjectRegistry &DD,
-                                                const RendererState &rendererState,
                                                 unsigned worldID, int frameID)
 {
-  DevicePointer<DeviceObjectRegistry> onDevicePtr(&DD);
-  DevicePointer<RendererState> rendererStatePtr(&rendererState);
-  DevicePointer<dco::Frame> framePtr(&frame);
 #ifdef WITH_CUDA
   cuda::for_each(state->renderingStream, 0, size.x, 0, size.y,
 #elif defined(WITH_HIP)
@@ -398,6 +395,7 @@ void VisionarayRendererDirectLight::renderFrame(const dco::Frame &frame,
         const DeviceObjectRegistry &onDevice = *onDevicePtr;
         const auto &rendererState = *rendererStatePtr;
         const auto &frame = *framePtr;
+        const auto &cam = *camPtr;
 
         int pixelID = x + size.x * y;
         Random rng(pixelID, rendererState.accumID);
