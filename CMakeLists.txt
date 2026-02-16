@@ -110,9 +110,9 @@ set(SOURCES
     scene/Group.cpp
     scene/Instance.cpp
     scene/MotionTransform.cpp
-    scene/VisionarayScene.cpp
     scene/World.cpp
     Object.cpp
+    TimeStamp.cpp
     VisionarayDevice.cpp
     VisionarayGlobalState.cpp
     VisionarayLibrary.cpp
@@ -126,6 +126,7 @@ target_sources(${PROJECT_NAME} PRIVATE
   scene/volume/spatial_field/BlockStructuredField.cpp
   scene/volume/spatial_field/GridAccel.cpp
   scene/volume/spatial_field/UnstructuredField.cpp
+  scene/VisionarayScene.cpp
 )
 if(WIN32)
   target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
@@ -168,7 +169,7 @@ if (cuda)
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/GridAccel.cu
     scene/volume/spatial_field/UnstructuredField.cu
-    scene/VisionaraySceneGPU.cu
+    scene/VisionarayScene.cu
   )
   set_source_files_properties(
     frame/Frame.cu
@@ -177,7 +178,7 @@ if (cuda)
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/GridAccel.cu
     scene/volume/spatial_field/UnstructuredField.cu
-    scene/VisionaraySceneGPU.cu
+    scene/VisionarayScene.cu
     PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
   )
   target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_CUDA=1)
@@ -222,7 +223,7 @@ if (hip)
     frame/Frame.hip
     renderer/DirectLight_impl.hip
     renderer/Raycast_impl.hip
-    scene/VisionaraySceneGPU.hip
+    scene/VisionarayScene.hip
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
   if(WIN32)

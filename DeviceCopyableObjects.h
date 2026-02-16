@@ -1463,6 +1463,11 @@ inline aabb get_bounds(const BLS &bls)
   return inval;
 }
 
+inline void split_primitive(aabb &L, aabb &R, float plane, int axis, const BLS &bls)
+{
+  assert(0);
+}
+
 template <detail::traversal_type TT>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectBLS(const Ray &ray, const BLS &bls)
@@ -1708,6 +1713,12 @@ inline aabb get_bounds(const Instance &inst)
   }
 
   return {};
+}
+
+inline void split_primitive(
+    aabb &L, aabb &R, float plane, int axis, const Instance &inst)
+{
+  assert(0);
 }
 
 // bounds from primitives; node bounds might be more
