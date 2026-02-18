@@ -466,22 +466,6 @@ void VisionaraySceneImpl::attachVolume(
   m_localIDs.vol[vol.volID] = volID;
 }
 
-void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
-{
-  deviceState()->dcos.geometries.update(geom.geomID, geom);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
-}
-
-void VisionaraySceneImpl::updateVolume(dco::Volume vol)
-{
-  deviceState()->dcos.volumes.update(vol.volID, vol);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
-}
-
 void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
 {
   m_lights.set(id, light.lightID);

@@ -88,8 +88,6 @@ struct VisionaraySceneImpl
   void attachSurface(
       dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID=~0u);
   void attachVolume(dco::Volume vol, unsigned geomID, unsigned userID=~0u);
-  void updateGeometry(dco::Geometry geom);
-  void updateVolume(dco::Volume vol);
   void attachLight(dco::Light light, unsigned id);
   aabb getBounds() const;
   index_bvh_ref_t<dco::BLS> refBVH();
