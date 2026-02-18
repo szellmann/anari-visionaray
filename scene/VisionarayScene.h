@@ -18,18 +18,6 @@ namespace visionaray {
 
 struct VisionaraySceneImpl
 {
-  typedef DeviceBVH<basic_triangle<3,float>> TriangleBVH;
-  typedef DeviceBVH<basic_triangle<3,float>> QuadBVH;
-  typedef DeviceBVH<basic_sphere<float>>     SphereBVH;
-  typedef DeviceBVH<dco::Cone>               ConeBVH;
-  typedef DeviceBVH<basic_cylinder<float>>   CylinderBVH;
-  typedef DeviceBVH<dco::BezierCurve>        BezierCurveBVH;
-  typedef DeviceBVH<dco::ISOSurface>         ISOSurfaceBVH;
-  typedef DeviceBVH<dco::Volume>             VolumeBVH;
-
-  typedef DeviceBVH<dco::BLS>                TLS;
-  typedef DeviceBVH<dco::Instance>           WorldTLS;
-
   enum Type { World, Group, };
   Type type;
 
@@ -55,8 +43,8 @@ struct VisionaraySceneImpl
   } m_localIDs;
 
   // Accels //
-  TLS m_TLS;
-  WorldTLS m_worldTLS;
+  DeviceBVH<dco::BLS> m_TLS;
+  DeviceBVH<dco::Instance> m_worldTLS;
   DeviceObjectArray<dco::BLS> m_BLSs;
   DeviceObjectArray<dco::Instance> m_worldBLSs;
 
