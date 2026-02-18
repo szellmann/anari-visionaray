@@ -7,6 +7,7 @@ namespace visionaray {
 
 Cone::Cone(VisionarayGlobalState *s)
   : Geometry(s)
+  , m_BVH(s)
   , m_index(this)
   , m_vertexPosition(this)
   , m_vertexRadius(this)
@@ -113,7 +114,6 @@ void Cone::finalize()
 
   m_BVH.update((const dco::Cone *)vgeom.primitives.data,
                vgeom.primitives.len,
-               &deviceState()->threadPool,
                0); // no spatial splits for cones yet!
 
   vBLS.type = dco::BLS::Cone;

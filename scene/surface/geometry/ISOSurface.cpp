@@ -7,6 +7,7 @@ namespace visionaray {
 
 ISOSurface::ISOSurface(VisionarayGlobalState *d)
   : Geometry(d)
+  , m_BVH(d)
   , m_field(this)
   , m_isoValue(this)
 {
@@ -61,7 +62,6 @@ void ISOSurface::finalize()
 
   m_BVH.update((const dco::ISOSurface *)vgeom.primitives.data,
                vgeom.primitives.len,
-               &deviceState()->threadPool,
                0); // no spatial splits for ISOs 
 
   vBLS.type = dco::BLS::ISOSurface;

@@ -50,7 +50,7 @@ static aabb getPrimBounds(const Obj &obj)
 
 VisionaraySceneImpl::VisionaraySceneImpl(
     VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
-  : m_state(state)
+  : m_state(state), m_TLS(state), m_worldTLS(state)
 {
   this->type = type;
 
@@ -85,12 +85,10 @@ void VisionaraySceneImpl::commit()
 #if defined(WITH_HIP)
       m_worldTLS.update(m_worldBLSs.devicePtr(),
                         m_worldBLSs.size(),
-                        &deviceState()->threadPool,
                         0); // no device LBVH builder on hip yet!
 #else
       m_worldTLS.update(m_worldBLSs.devicePtr(),
                         m_worldBLSs.size(),
-                        &deviceState()->threadPool,
                         BVH_FLAG_PREFER_FAST_BUILD);
 #endif
     }
@@ -148,7 +146,6 @@ void VisionaraySceneImpl::commit()
     // Build TLS
     if (!m_BLSs.empty()) {
       m_TLS.update(m_BLSs.devicePtr(),m_BLSs.size(),
-                   &deviceState()->threadPool,
                    BVH_FLAG_PREFER_FAST_BUILD);
     }
   }

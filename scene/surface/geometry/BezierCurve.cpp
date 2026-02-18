@@ -7,6 +7,7 @@ namespace visionaray {
 
 BezierCurve::BezierCurve(VisionarayGlobalState *s)
   : Geometry(s)
+  , m_BVH(s)
   , m_index(this)
   , m_radius(this)
   , m_vertexPosition(this)
@@ -118,7 +119,6 @@ void BezierCurve::finalize()
 
   m_BVH.update((const dco::BezierCurve *)vgeom.primitives.data,
                vgeom.primitives.len,
-               &deviceState()->threadPool,
                0); // no spatial splits for bez. curves yet!
 
   vBLS.type = dco::BLS::BezierCurve;

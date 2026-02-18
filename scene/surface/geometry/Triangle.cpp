@@ -9,6 +9,7 @@ namespace visionaray {
 
 Triangle::Triangle(VisionarayGlobalState *s)
   : Geometry(s)
+  , m_BVH(s)
   , m_index(this)
   , m_vertexPosition(this)
   , m_vertexNormal(this)
@@ -139,7 +140,6 @@ void Triangle::finalize()
 
   m_BVH.update((const dco::Triangle *)vgeom.primitives.data,
                vgeom.primitives.len,
-               &deviceState()->threadPool,
                BVH_FLAG_ENABLE_SPATIAL_SPLITS);
 
   vBLS.type = dco::BLS::Triangle;

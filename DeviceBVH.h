@@ -39,7 +39,9 @@ struct DeviceBVH
   typedef bvh4<P> DeviceBVH4;
 #endif
 
-  void update(const P *prims, unsigned numPrims, thread_pool *threadPool, unsigned flags);
+  DeviceBVH(VisionarayGlobalState *s);
+
+  void update(const P *prims, unsigned numPrims, unsigned flags);
 
   typename DeviceBVH2::bvh_ref deviceBVH2();
   typename DeviceIndexBVH2::bvh_ref deviceIndexBVH2();
@@ -50,12 +52,12 @@ struct DeviceBVH
 
  private:
   void rebuildHostBVH2();
-  void rebuildHostBVH4();
   void rebuildHostIndexBVH2();
+  void rebuildHostBVH4();
 
   void rebuildDeviceBVH2();
-  void rebuildDeviceBVH4();
   void rebuildDeviceIndexBVH2();
+  void rebuildDeviceBVH4();
 
   VisionarayGlobalState *deviceState();
 
@@ -69,8 +71,9 @@ struct DeviceBVH
 
   const P        *m_primitives{nullptr};
   unsigned        m_numPrimitives{0};
-  thread_pool    *m_threadPool{nullptr};
   unsigned        m_flags{0};
+
+  VisionarayGlobalState *m_state{nullptr};
 
   TimeStamp m_lastUpdate{0};
   struct {
@@ -86,14 +89,14 @@ struct DeviceBVH
 // ========================================================
 
 template<typename P>
-void DeviceBVH<P>::update(const P *prims,
-                          unsigned numPrims,
-                          thread_pool *pool, 
-                          unsigned flags)
+DeviceBVH<P>::DeviceBVH(VisionarayGlobalState *s) : m_state(s)
+{}
+
+template<typename P>
+void DeviceBVH<P>::update(const P *prims, unsigned numPrims, unsigned flags)
 {
   m_primitives = prims;
   m_numPrimitives = numPrims;
-  m_threadPool = pool;
   m_flags = flags;
 
   m_lastUpdate = newTimeStamp();
@@ -222,7 +225,7 @@ void DeviceBVH<P>::rebuildHostBVH4() {
   rebuildHostBVH2();
 
   bvh_collapser collapser;
-  collapser.collapse(m_hostBVH2, m_hostBVH4, *m_threadPool);
+  collapser.collapse(m_hostBVH2, m_hostBVH4, deviceState()->threadPool);
 
   m_hostRebuild.BVH4 = newTimeStamp();
 }
@@ -301,6 +304,11 @@ void DeviceBVH<P>::rebuildDeviceBVH4() {
   m_deviceBVH4 = m_hostBVH4;
 
   m_deviceRebuild.BVH4 = newTimeStamp();
+}
+
+template<typename P>
+VisionarayGlobalState *DeviceBVH<P>::deviceState() {
+  return m_state;
 }
 
 } // namespace visionaray

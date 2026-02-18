@@ -9,6 +9,7 @@ namespace visionaray {
 
 Cylinder::Cylinder(VisionarayGlobalState *s)
   : Geometry(s)
+  , m_BVH(s)
   , m_index(this)
   , m_radius(this)
   , m_vertexPosition(this)
@@ -106,7 +107,6 @@ void Cylinder::finalize()
 
   m_BVH.update((const dco::Cylinder *)vgeom.primitives.data,
                vgeom.primitives.len,
-               &deviceState()->threadPool,
                0); // no spatial splits for cyls yet!
 
   vBLS.type = dco::BLS::Cylinder;

@@ -7,6 +7,7 @@ namespace visionaray {
 
 Sphere::Sphere(VisionarayGlobalState *s)
   : Geometry(s)
+  , m_BVH(s)
   , m_index(this)
   , m_vertexPosition(this)
   , m_vertexRadius(this)
@@ -101,7 +102,6 @@ void Sphere::finalize()
 
   m_BVH.update((const dco::Sphere *)vgeom.primitives.data,
                vgeom.primitives.len,
-               &deviceState()->threadPool,
                BVH_FLAG_ENABLE_SPATIAL_SPLITS);
 
   vBLS.type = dco::BLS::Sphere;

@@ -146,9 +146,7 @@ void TransferFunction1D::finalize()
   vvol.asTransferFunction1D.sampler = texture_ref<float4, 1>(transFuncTexture);
 #endif
 
-  m_BVH.update(&vvol, 1,
-               &deviceState()->threadPool,
-               0); // no spatial splits for volumes/aabbs
+  m_BVH.update(&vvol, 1, 0); // no spatial splits for volumes/aabbs
 
   vBLS.type = dco::BLS::Volume;
 #if defined(WITH_CUDA) || defined(WITH_HIP)

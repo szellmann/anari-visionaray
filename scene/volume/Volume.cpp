@@ -9,7 +9,7 @@
 
 namespace visionaray {
 
-Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s)
+Volume::Volume(VisionarayGlobalState *s) : Object(ANARI_VOLUME, s), m_BVH(s)
 {
   vvol = dco::createVolume();
   vvol.volID = deviceState()->dcos.volumes.alloc(vvol);
