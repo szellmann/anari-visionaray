@@ -49,6 +49,11 @@ struct VisionaraySceneImpl
   // flat list of lights (only used if type is World!)
   DeviceObjectArray<dco::LightRef> m_allLights;
 
+  // map from handles to group-local IDs:
+  struct {
+    std::vector<int> surf, vol, light;
+  } m_localIDs;
+
   // Accels //
   TLS m_TLS;
   WorldTLS m_worldTLS;
@@ -80,8 +85,7 @@ struct VisionaraySceneImpl
   bool isValid() const;
 
   void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
-  void attachGeometry(dco::Geometry geom, unsigned geomID, unsigned userID=~0u);
-  void attachGeometry(
+  void attachSurface(
       dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID=~0u);
   void attachVolume(dco::Volume vol, unsigned geomID, unsigned userID=~0u);
   void updateGeometry(dco::Geometry geom);

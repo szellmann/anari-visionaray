@@ -91,7 +91,7 @@ void Group::visionaraySceneConstruct()
     vscene->release();
   vscene = newVisionarayScene(VisionaraySceneImpl::Group, deviceState());
 
-  uint32_t id = 0;
+  uint32_t surfID = 0;
   if (m_surfaceData) {
     std::for_each(m_surfaceData->handlesBegin(),
         m_surfaceData->handlesEnd(),
@@ -99,9 +99,9 @@ void Group::visionaraySceneConstruct()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
-            vscene->attachGeometry(s->geometry()->visionarayGeometry(),
+            vscene->attachSurface(s->geometry()->visionarayGeometry(),
                 s->material()->visionarayMaterial(),
-                id++, s->id());
+                surfID++, s->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid surface(%p) in building BLS",

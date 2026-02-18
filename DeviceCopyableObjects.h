@@ -618,8 +618,6 @@ struct Volume
 
   // ID in the device's global volume array
   unsigned volID{UINT_MAX};
-  // ID local to the group the volume is in
-  unsigned localID;
   float unitDistance;
 
   SpatialField field;
@@ -691,22 +689,18 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
     // themselves to compute [t0,t1]
     hr.hit = boxHit.hit && (boxHit.tfar >= ray.tmin);
     hr.t = max(ray.tmin,boxHit.tnear);
-    hr.geom_id = vol.localID;
     if (hr.t < hrv.t) {
       hrv.hit = true;
       hrv.t = hr.t;
       hrv.isect_pos = ray.ori + ray.dir * hrv.t;
       hrv.volID = vol.volID;
       hrv.primID = hr.prim_id;
-      hrv.localID = hr.geom_id;
     }
     return hr;
   }
 
   Random &rnd = *prd.rnd;
 
-  hr.geom_id = vol.localID;
-  
   const auto &sf = vol.field;
   dco::GridAccel grid = sf.gridAccel;
 
@@ -1372,6 +1366,8 @@ struct BLS
   };
   Type type{Unknown};
   unsigned blsID{UINT_MAX};
+  // ID local to the group the BLS is in
+  unsigned localID;
 #ifdef WITH_CUDA
   union {
     cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
@@ -1472,48 +1468,53 @@ template <detail::traversal_type TT>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectBLS(const Ray &ray, const BLS &bls)
 {
+  hit_record<Ray, primitive<unsigned>> hr;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    return intersect(ray,bls.asTriangle);
+    hr = intersect(ray,bls.asTriangle);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    return intersect(ray,bls.asQuad);
+    hr = intersect(ray,bls.asQuad);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    return intersect(ray,bls.asSphere);
+    hr = intersect(ray,bls.asSphere);
   else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    return intersect(ray,bls.asCone);
+    hr = intersect(ray,bls.asCone);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    return intersect(ray,bls.asCylinder);
+    hr = intersect(ray,bls.asCylinder);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    return intersect(ray,bls.asBezierCurve);
+    hr = intersect(ray,bls.asBezierCurve);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    return intersect(ray,bls.asISOSurface);
+    hr = intersect(ray,bls.asISOSurface);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    return intersect(ray,bls.asVolume);
+    hr = intersect(ray,bls.asVolume);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
-    return intersect(ray,bls.asVolume);
+    hr = intersect(ray,bls.asVolume);
 #else
   default_intersector isect;
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    return intersect_ray1_bvhN<TT>(ray,bls.asTriangle,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asTriangle,isect);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    return intersect_ray1_bvhN<TT>(ray,bls.asQuad,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asQuad,isect);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    return intersect_ray1_bvhN<TT>(ray,bls.asSphere,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asSphere,isect);
   else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    return intersect_ray1_bvhN<TT>(ray,bls.asCone,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asCone,isect);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    return intersect_ray1_bvhN<TT>(ray,bls.asCylinder,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asCylinder,isect);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    return intersect_ray1_bvhN<TT>(ray,bls.asBezierCurve,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asBezierCurve,isect);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    return intersect_ray1_bvhN<TT>(ray,bls.asISOSurface,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asISOSurface,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    return intersect_ray1_bvhN<TT>(ray,bls.asVolume,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asVolume,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
-    return intersect_ray1_bvhN<TT>(ray,bls.asVolume,isect);
+    hr = intersect_ray1_bvhN<TT>(ray,bls.asVolume,isect);
 #endif
 
-  return {};
+  if (hr.hit) {
+    hr.geom_id = bls.localID;
+  }
+
+  return hr;
 }
 
 VSNRAY_FUNC

@@ -295,6 +295,7 @@ void VisionaraySceneImpl::commit()
 
       dco::BLS bls;
       bls.blsID = m_BLSs.alloc(bls);
+      bls.localID = m_localIDs.surf[geomID];
 
       if (geom.type == dco::Geometry::Triangle) {
         unsigned index = triangleCount++;
@@ -362,6 +363,7 @@ void VisionaraySceneImpl::commit()
 
       dco::BLS bls;
       bls.blsID = m_BLSs.alloc(bls);
+      bls.localID = m_localIDs.vol[volID];
 
       unsigned index = volumeCount++;
       bls.type = dco::BLS::Volume;
@@ -431,194 +433,26 @@ void VisionaraySceneImpl::attachInstance(
   deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
-void VisionaraySceneImpl::attachGeometry(
-    dco::Geometry geom, unsigned geomID, unsigned userID)
+void VisionaraySceneImpl::attachSurface(
+    dco::Geometry geom, dco::Material mat, unsigned surfID, unsigned userID)
 {
   if (geom.primitives.len == 0)
     return;
 
   m_bounds[boundsID].insert(getPrimBounds(geom));
 
-  m_geometries.set(geomID, geom.geomID);
-  m_objIds.set(geomID, userID);
+  m_geometries.set(surfID, geom.geomID);
+  m_materials.set(surfID, mat.matID);
+  m_objIds.set(surfID, userID);
 
-#if defined(WITH_CUDA)
-  // Patch geomID into scene primitives
-  // (first copy to CPU, patch there, then copy back...)
-  if (geom.type == dco::Geometry::Triangle) {
-    std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-    CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Quad) {
-    std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-    CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Sphere) {
-    std::vector<basic_sphere<float>> hostData(geom.primitives.len);
-    CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Cone) {
-    std::vector<dco::Cone> hostData(geom.primitives.len);
-    CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Cylinder) {
-    std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
-    CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::BezierCurve) {
-    std::vector<dco::BezierCurve> hostData(geom.primitives.len);
-    CUDA_SAFE_CALL(cudaMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), cudaMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::ISOSurface) {
-    dco::ISOSurface iso;
-    CUDA_SAFE_CALL(cudaMemcpy(&iso, geom.primitives.data,
-                              sizeof(iso), cudaMemcpyDeviceToHost));
-    iso.isoID = geomID;
-    iso.geomID = geomID;
-    CUDA_SAFE_CALL(cudaMemcpy((void *)geom.primitives.data, &iso,
-                              sizeof(iso), cudaMemcpyHostToDevice));
-  }
-#elif defined(WITH_HIP)
-  // Patch geomID into scene primitives
-  // (first copy to CPU, patch there, then copy back...)
-  if (geom.type == dco::Geometry::Triangle) {
-    std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Quad) {
-    std::vector<basic_triangle<3,float>> hostData(geom.primitives.len);
-    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Sphere) {
-    std::vector<basic_sphere<float>> hostData(geom.primitives.len);
-    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Cone) {
-    std::vector<dco::Cone> hostData(geom.primitives.len);
-    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::Cylinder) {
-    std::vector<basic_cylinder<float>> hostData(geom.primitives.len);
-    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::BezierCurve) {
-    std::vector<dco::BezierCurve> hostData(geom.primitives.len);
-    HIP_SAFE_CALL(hipMemcpy(hostData.data(), geom.primitives.data,
-        hostData.size() * sizeof(hostData[0]), hipMemcpyDeviceToHost));
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      hostData[i].geom_id = geomID;
-    }
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, hostData.data(),
-        hostData.size() * sizeof(hostData[0]), hipMemcpyHostToDevice));
-  } else if (geom.type == dco::Geometry::ISOSurface) {
-    dco::ISOSurface iso;
-    HIP_SAFE_CALL(hipMemcpy(&iso, geom.primitives.data,
-                            sizeof(iso), hipMemcpyDeviceToHost));
-    iso.isoID = geomID;
-    iso.geomID = geomID;
-    HIP_SAFE_CALL(hipMemcpy((void *)geom.primitives.data, &iso,
-                            sizeof(iso), hipMemcpyHostToDevice));
-  }
-#else
-  // Patch geomID into scene primitives
-  if (geom.type == dco::Geometry::Triangle) {
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      geom.as<dco::Triangle>(i).geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::Quad) {
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      geom.as<dco::Triangle>(i).geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::Sphere) {
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      geom.as<dco::Sphere>(i).geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::Cone) {
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      geom.as<dco::Cone>(i).geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::Cylinder) {
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      geom.as<dco::Cylinder>(i).geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::BezierCurve) {
-    for (size_t i=0;i<geom.primitives.len;++i) {
-      geom.as<dco::BezierCurve>(i).geom_id = geomID;
-    }
-  } else if (geom.type == dco::Geometry::ISOSurface) {
-    geom.as<dco::ISOSurface>(0).isoID = geomID;
-    geom.as<dco::ISOSurface>(0).geomID = geomID;
-  }
-#endif
+  if (geom.geomID >= m_localIDs.surf.size())
+    m_localIDs.surf.resize(geom.geomID+1);
+  m_localIDs.surf[geom.geomID] = surfID;
 
-  m_geometries.set(geomID, geom.geomID);
   deviceState()->dcos.geometries.update(geom.geomID, geom);
 
   // Upload/set accessible pointers
   deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
-}
-
-void VisionaraySceneImpl::attachGeometry(
-    dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID)
-{
-  attachGeometry(geom, geomID, userID);
-
-  m_materials.set(geomID, mat.matID);
 }
 
 void VisionaraySceneImpl::attachVolume(
@@ -627,12 +461,14 @@ void VisionaraySceneImpl::attachVolume(
   // use bounds member, that way we don't need to reach for the GPU:
   m_bounds[boundsID].insert(vol.bounds);
 
-  // That's the ID local to the group the volume is in
-  // (this object):
-  vol.localID = volID;
-
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
+
+  // That's the ID local to the group the volume is in
+  // (this object):
+  if (vol.volID >= m_localIDs.vol.size())
+    m_localIDs.vol.resize(vol.volID+1);
+  m_localIDs.vol[vol.volID] = volID;
 
   // Upload/set accessible pointers
   deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
