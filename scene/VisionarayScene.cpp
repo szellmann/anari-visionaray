@@ -448,11 +448,6 @@ void VisionaraySceneImpl::attachSurface(
   if (geom.geomID >= m_localIDs.surf.size())
     m_localIDs.surf.resize(geom.geomID+1);
   m_localIDs.surf[geom.geomID] = surfID;
-
-  deviceState()->dcos.geometries.update(geom.geomID, geom);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.geometries = deviceState()->dcos.geometries.devicePtr();
 }
 
 void VisionaraySceneImpl::attachVolume(
@@ -469,9 +464,6 @@ void VisionaraySceneImpl::attachVolume(
   if (vol.volID >= m_localIDs.vol.size())
     m_localIDs.vol.resize(vol.volID+1);
   m_localIDs.vol[vol.volID] = volID;
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.volumes = deviceState()->dcos.volumes.devicePtr();
 }
 
 void VisionaraySceneImpl::updateGeometry(dco::Geometry geom)
