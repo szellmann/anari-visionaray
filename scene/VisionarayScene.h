@@ -85,8 +85,7 @@ struct VisionaraySceneImpl
   bool isValid() const;
 
   void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
-  void attachSurface(
-      dco::Geometry geom, dco::Material mat, unsigned geomID, unsigned userID=~0u);
+  void attachSurface(dco::Surface surf, unsigned geomID, unsigned userID=~0u);
   void attachVolume(dco::Volume vol, unsigned geomID, unsigned userID=~0u);
   void attachLight(dco::Light light, unsigned id);
   aabb getBounds() const;

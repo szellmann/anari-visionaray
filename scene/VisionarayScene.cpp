@@ -434,20 +434,31 @@ void VisionaraySceneImpl::attachInstance(
 }
 
 void VisionaraySceneImpl::attachSurface(
-    dco::Geometry geom, dco::Material mat, unsigned surfID, unsigned userID)
+    dco::Surface surf, unsigned surfID, unsigned userID)
 {
+  if (!dco::validHandle(surf.geomID))
+    return;
+
+  dco::Geometry geom = deviceState()->dcos.geometries[surf.geomID];
+
   if (geom.primitives.len == 0)
     return;
 
   m_bounds[boundsID].insert(getPrimBounds(geom));
 
   m_geometries.set(surfID, geom.geomID);
-  m_materials.set(surfID, mat.matID);
   m_objIds.set(surfID, userID);
 
   if (geom.geomID >= m_localIDs.surf.size())
     m_localIDs.surf.resize(geom.geomID+1);
   m_localIDs.surf[geom.geomID] = surfID;
+
+  if (!dco::validHandle(surf.matID))
+    return;
+
+  dco::Material mat = deviceState()->dcos.materials[surf.matID];
+
+  m_materials.set(surfID, mat.matID);
 }
 
 void VisionaraySceneImpl::attachVolume(
