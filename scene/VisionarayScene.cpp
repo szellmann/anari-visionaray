@@ -83,12 +83,12 @@ void VisionaraySceneImpl::commit()
     // Build TLS
     if (!m_worldBLSs.empty()) {
 #if defined(WITH_HIP)
-      m_worldTLS.update(m_worldBLSs.hostPtr(),
+      m_worldTLS.update(m_worldBLSs.devicePtr(),
                         m_worldBLSs.size(),
                         &deviceState()->threadPool,
                         0); // no device LBVH builder on hip yet!
 #else
-      m_worldTLS.update(m_worldBLSs.hostPtr(),
+      m_worldTLS.update(m_worldBLSs.devicePtr(),
                         m_worldBLSs.size(),
                         &deviceState()->threadPool,
                         BVH_FLAG_PREFER_FAST_BUILD);
@@ -147,7 +147,7 @@ void VisionaraySceneImpl::commit()
   } else {
     // Build TLS
     if (!m_BLSs.empty()) {
-      m_TLS.update(m_BLSs.hostPtr(),m_BLSs.size(),
+      m_TLS.update(m_BLSs.devicePtr(),m_BLSs.size(),
                    &deviceState()->threadPool,
                    BVH_FLAG_PREFER_FAST_BUILD);
     }
