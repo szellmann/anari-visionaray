@@ -208,10 +208,6 @@ void VisionaraySceneImpl::attachInstance(
   m_objIds.set(instID, userID); // TODO: separate inst/geom
 
   m_instances.set(instID, inst.instID);
-  deviceState()->dcos.instances.update(inst.instID, inst);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.instances = deviceState()->dcos.instances.devicePtr();
 }
 
 void VisionaraySceneImpl::attachSurface(
