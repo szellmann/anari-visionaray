@@ -37,11 +37,6 @@ struct VisionaraySceneImpl
   // flat list of lights (only used if type is World!)
   DeviceObjectArray<dco::LightRef> m_allLights;
 
-  // map from handles to group-local IDs:
-  struct {
-    std::vector<int> surf, vol, light;
-  } m_localIDs;
-
   // Accels //
   DeviceBVH<dco::BLS> m_TLS;
   DeviceBVH<dco::Instance> m_worldTLS;

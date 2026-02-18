@@ -80,25 +80,6 @@ void VisionaraySceneImpl::commit()
   m_bounds[!boundsID].invalidate();
 
   if (type == World) {
-    m_worldBLSs.clear();
-    for (const dco::Handle &instID : m_instances) {
-      if (!dco::validHandle(instID)) continue;
-
-#if defined(WITH_CUDA)
-      dco::Instance inst;
-      CUDA_SAFE_CALL(cudaMemcpy(&inst, deviceState()->onDevice.instances+instID,
-                                sizeof(inst), cudaMemcpyDefault));
-#elif defined(WITH_HIP)
-      HIP_SAFE_CALL(hipMemcpy(&inst, deviceState()->onDevice.instances+instID,
-                              sizeof(inst), hipMemcpyDefault));
-#else
-      const dco::Instance &inst = deviceState()->dcos.instances[instID];
-#endif
-      if (inst.theBVH.num_nodes() == 0) continue;
-
-      m_worldBLSs.alloc(inst);
-    }
-
     // Build TLS
     if (!m_worldBLSs.empty()) {
 #if defined(WITH_HIP)
@@ -202,12 +183,15 @@ aabb VisionaraySceneImpl::getBounds() const
 void VisionaraySceneImpl::attachInstance(
     dco::Instance inst, unsigned instID, unsigned userID)
 {
-  m_bounds[boundsID].insert(getPrimBounds(inst));
-
   m_instances.set(instID, inst.instID);
   m_objIds.set(instID, userID); // TODO: separate inst/geom
 
-  m_instances.set(instID, inst.instID);
+  if (inst.theBVH.num_nodes() == 0)
+    return;
+
+  m_bounds[boundsID].insert(getPrimBounds(inst));
+
+  m_worldBLSs.alloc(inst);
 }
 
 void VisionaraySceneImpl::attachSurface(
@@ -226,13 +210,9 @@ void VisionaraySceneImpl::attachSurface(
   m_geometries.set(surfID, geom.geomID);
   m_objIds.set(surfID, userID);
 
-  if (geom.geomID >= m_localIDs.surf.size())
-    m_localIDs.surf.resize(geom.geomID+1);
-  m_localIDs.surf[geom.geomID] = surfID;
-
   // That's the ID local to the group the volume is in
   // (this object):
-  bls.localID = m_localIDs.surf[geom.geomID];
+  bls.localID = surfID;
   // now add the BLS to our group:
   bls.blsID = m_BLSs.alloc(bls);
 
@@ -253,14 +233,11 @@ void VisionaraySceneImpl::attachVolume(
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
 
-  if (vol.volID >= m_localIDs.vol.size())
-    m_localIDs.vol.resize(vol.volID+1);
-  m_localIDs.vol[vol.volID] = volID;
-
-  bls.blsID = m_BLSs.alloc(bls);
   // That's the ID local to the group the volume is in
   // (this object):
-  bls.localID = m_localIDs.vol[vol.volID];
+  bls.localID = volID;
+  // now add the BLS to our group:
+  bls.blsID = m_BLSs.alloc(bls);
 }
 
 void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
