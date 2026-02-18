@@ -137,6 +137,18 @@ void Triangle::finalize()
     }
   }
 
+  m_BVH.update((const dco::Triangle *)vgeom.primitives.data,
+               vgeom.primitives.len,
+               &deviceState()->threadPool,
+               BVH_FLAG_ENABLE_SPATIAL_SPLITS);
+
+  vBLS.type = dco::BLS::Triangle;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vBLS.asTriangle = m_BVH.deviceIndexBVH2();
+#else
+  vBLS.asTriangle = m_BVH.deviceBVH4();
+#endif
+
   dispatch();
 }
 

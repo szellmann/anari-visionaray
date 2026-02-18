@@ -4,6 +4,7 @@
 #pragma once
 
 #include "DeviceArray.h"
+#include "DeviceBVH.h"
 #include "Geometry.h"
 
 namespace visionaray {
@@ -16,6 +17,8 @@ struct BezierCurve : public Geometry
   void finalize() override;
 
  private:
+
+  DeviceBVH<dco::BezierCurve> m_BVH;
 
   HostDeviceArray<dco::BezierCurve> m_curves;
   helium::ChangeObserverPtr<Array1D> m_index;

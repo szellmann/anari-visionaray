@@ -56,6 +56,11 @@ dco::Geometry Geometry::visionarayGeometry() const
   return vgeom;
 }
 
+dco::BLS Geometry::visionarayBLS() const
+{
+  return vBLS;
+}
+
 void Geometry::commitParameters()
 {
   float4 attrV(0.f, 0.f, 0.f, 1.f);

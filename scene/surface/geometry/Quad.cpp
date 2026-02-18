@@ -152,6 +152,18 @@ void Quad::finalize()
     }
   }
 
+  m_BVH.update((const dco::Triangle *)vgeom.primitives.data,
+               vgeom.primitives.len,
+               &deviceState()->threadPool,
+               BVH_FLAG_ENABLE_SPATIAL_SPLITS);
+
+  vBLS.type = dco::BLS::Quad;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vBLS.asQuad = m_BVH.deviceIndexBVH2();
+#else
+  vBLS.asQuad = m_BVH.deviceBVH4();
+#endif
+
   dispatch();
 }
 

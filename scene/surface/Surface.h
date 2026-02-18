@@ -24,6 +24,7 @@ struct Surface : public Object
   const Material *material() const;
 
   dco::Surface visionaraySurface() const { return vsurf; }
+  dco::BLS visionarayBLS() const { return m_geometry->visionarayBLS(); }
 
  private:
   void dispatch();

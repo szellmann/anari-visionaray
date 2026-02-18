@@ -59,6 +59,18 @@ void ISOSurface::finalize()
   vgeom.primitives.data = m_isoSurface.devicePtr();
   vgeom.primitives.len = m_isoSurface.size();
 
+  m_BVH.update((const dco::ISOSurface *)vgeom.primitives.data,
+               vgeom.primitives.len,
+               &deviceState()->threadPool,
+               0); // no spatial splits for ISOs 
+
+  vBLS.type = dco::BLS::ISOSurface;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vBLS.asISOSurface = m_BVH.deviceIndexBVH2();
+#else
+  vBLS.asISOSurface = m_BVH.deviceBVH4();
+#endif
+
   deviceState()->objectUpdates.lastBLSReconstructSceneRequest = helium::newTimeStamp();
 
   dispatch();

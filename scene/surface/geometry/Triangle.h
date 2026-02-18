@@ -4,6 +4,7 @@
 #pragma once
 
 #include "DeviceArray.h"
+#include "DeviceBVH.h"
 #include "Geometry.h"
 
 namespace visionaray {
@@ -16,6 +17,8 @@ struct Triangle : public Geometry
   void finalize() override;
 
  private:
+
+  DeviceBVH<basic_triangle<3,float>> m_BVH;
 
   helium::ChangeObserverPtr<Array1D> m_index;
   helium::ChangeObserverPtr<Array1D> m_vertexPosition;

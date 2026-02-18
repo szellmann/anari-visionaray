@@ -4,6 +4,7 @@
 #pragma once
 
 // ours
+#include "DeviceBVH.h"
 #include "Geometry.h"
 #include "array/Array1D.h"
 #include "scene/volume/spatial_field/SpatialField.h"
@@ -23,6 +24,8 @@ struct ISOSurface : public Geometry
  private:
 
   // Data //
+
+  DeviceBVH<dco::ISOSurface> m_BVH;
 
   helium::ChangeObserverPtr<SpatialField> m_field;
   helium::ChangeObserverPtr<Array1D> m_isoValue;

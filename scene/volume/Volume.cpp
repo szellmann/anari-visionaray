@@ -43,6 +43,11 @@ dco::Volume Volume::visionarayVolume() const
   return vvol;
 }
 
+dco::BLS Volume::visionarayBLS() const
+{
+  return vBLS;
+}
+
 } // namespace visionaray
 
 VISIONARAY_ANARI_TYPEFOR_DEFINITION(visionaray::Volume *);

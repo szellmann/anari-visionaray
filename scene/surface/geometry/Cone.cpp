@@ -111,6 +111,18 @@ void Cone::finalize()
     }
   }
 
+  m_BVH.update((const dco::Cone *)vgeom.primitives.data,
+               vgeom.primitives.len,
+               &deviceState()->threadPool,
+               0); // no spatial splits for cones yet!
+
+  vBLS.type = dco::BLS::Cone;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vBLS.asCone = m_BVH.deviceIndexBVH2();
+#else
+  vBLS.asCone = m_BVH.deviceBVH4();
+#endif
+
   dispatch();
 }
 

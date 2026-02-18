@@ -104,6 +104,18 @@ void Cylinder::finalize()
     }
   }
 
+  m_BVH.update((const dco::Cylinder *)vgeom.primitives.data,
+               vgeom.primitives.len,
+               &deviceState()->threadPool,
+               0); // no spatial splits for cyls yet!
+
+  vBLS.type = dco::BLS::Cylinder;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vBLS.asCylinder = m_BVH.deviceIndexBVH2();
+#else
+  vBLS.asCylinder = m_BVH.deviceBVH4();
+#endif
+
   dispatch();
 }
 

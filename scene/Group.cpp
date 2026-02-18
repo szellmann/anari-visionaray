@@ -99,7 +99,8 @@ void Group::visionaraySceneConstruct()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
-            vscene->attachSurface(s->visionaraySurface(), surfID++, s->id());
+            vscene->attachSurface(
+                s->visionaraySurface(), s->visionarayBLS(), surfID++, s->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid surface(%p) in building BLS",
@@ -126,7 +127,8 @@ void Group::visionaraySceneConstruct()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
-            vscene->attachVolume(v->visionarayVolume(), volID++, v->id());
+            vscene->attachVolume(
+                v->visionarayVolume(), v->visionarayBLS(), volID++, v->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid volume(%p) in building BLS",

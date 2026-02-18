@@ -22,6 +22,7 @@ struct Geometry : public Object
       std::string_view subtype, VisionarayGlobalState *s);
 
   dco::Geometry visionarayGeometry() const;
+  dco::BLS visionarayBLS() const;
 
   void commitParameters() override;
   void finalize() override;
@@ -30,6 +31,7 @@ struct Geometry : public Object
  protected:
 
   dco::Geometry vgeom;
+  dco::BLS vBLS;
 
   std::optional<float4> m_uniformAttributes[5];
   std::array<helium::IntrusivePtr<Array1D>, 5> m_attributes;

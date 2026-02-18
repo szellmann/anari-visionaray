@@ -60,18 +60,6 @@ struct VisionaraySceneImpl
   DeviceObjectArray<dco::BLS> m_BLSs;
   DeviceObjectArray<dco::Instance> m_worldBLSs;
 
-  // Accel storage //
-  struct {
-    std::vector<TriangleBVH>    triangleBLSs;
-    std::vector<QuadBVH>        quadBLSs;
-    std::vector<SphereBVH>      sphereBLSs;
-    std::vector<ConeBVH>        coneBLSs;
-    std::vector<CylinderBVH>    cylinderBLSs;
-    std::vector<BezierCurveBVH> bezierCurveBLSs;
-    std::vector<ISOSurfaceBVH>  isoSurfaceBLSs;
-    std::vector<VolumeBVH>      volumeBLSs;
-  } m_accelStorage;
-
   // Internal state //
   unsigned m_worldID{UINT_MAX};
   unsigned m_groupID{UINT_MAX};
@@ -85,8 +73,8 @@ struct VisionaraySceneImpl
   bool isValid() const;
 
   void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
-  void attachSurface(dco::Surface surf, unsigned geomID, unsigned userID=~0u);
-  void attachVolume(dco::Volume vol, unsigned geomID, unsigned userID=~0u);
+  void attachSurface(dco::Surface surf, dco::BLS bls, unsigned geomID, unsigned userID=~0u);
+  void attachVolume(dco::Volume vol, dco::BLS bls, unsigned geomID, unsigned userID=~0u);
   void attachLight(dco::Light light, unsigned id);
   aabb getBounds() const;
   index_bvh_ref_t<dco::BLS> refBVH();

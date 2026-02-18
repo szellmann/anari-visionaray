@@ -99,6 +99,18 @@ void Sphere::finalize()
     }
   }
 
+  m_BVH.update((const dco::Sphere *)vgeom.primitives.data,
+               vgeom.primitives.len,
+               &deviceState()->threadPool,
+               BVH_FLAG_ENABLE_SPATIAL_SPLITS);
+
+  vBLS.type = dco::BLS::Sphere;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vBLS.asSphere = m_BVH.deviceIndexBVH2();
+#else
+  vBLS.asSphere = m_BVH.deviceBVH4();
+#endif
+
   dispatch();
 }
 
