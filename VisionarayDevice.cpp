@@ -17,31 +17,15 @@
 #include "scene/Group.h"
 #include "scene/Instance.h"
 
+#if defined(WITH_CUDA)
+#include "anari_library_visionaray_cuda_queries.h"
+#elif defined(WITH_HIP)
+#include "anari_library_visionaray_hip_queries.h"
+#else
+#include "anari_library_visionaray_queries.h"
+#endif
+
 namespace visionaray {
-
-///////////////////////////////////////////////////////////////////////////////
-// Generated function declarations ////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-const char **query_object_types(ANARIDataType type);
-
-const void *query_object_info(ANARIDataType type,
-    const char *subtype,
-    const char *infoName,
-    ANARIDataType infoType);
-
-const void *query_param_info(ANARIDataType type,
-    const char *subtype,
-    const char *paramName,
-    ANARIDataType paramType,
-    const char *infoName,
-    ANARIDataType infoType);
-
-const char **query_extensions();
-
-///////////////////////////////////////////////////////////////////////////////
-// VisionarayDevice definitions ///////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
 
 // Data Arrays ////////////////////////////////////////////////////////////////
 
@@ -134,7 +118,35 @@ ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
   return (ANARIArray3D) new Array3D(deviceState(), md);
 }
 
-// Renderable Objects /////////////////////////////////////////////////////////
+ANARICamera VisionarayDevice::newCamera(const char *subtype)
+{
+  initDevice();
+  return (ANARICamera)Camera::createInstance(subtype, deviceState());
+}
+
+ANARIFrame VisionarayDevice::newFrame()
+{
+  initDevice();
+  return (ANARIFrame) new Frame(deviceState());
+}
+
+ANARIGeometry VisionarayDevice::newGeometry(const char *subtype)
+{
+  initDevice();
+  return (ANARIGeometry)Geometry::createInstance(subtype, deviceState());
+}
+
+ANARIGroup VisionarayDevice::newGroup()
+{
+  initDevice();
+  return (ANARIGroup) new Group(deviceState());
+}
+
+ANARIInstance VisionarayDevice::newInstance(const char *subtype)
+{
+  initDevice();
+  return (ANARIInstance)Instance::createInstance(subtype, deviceState());
+}
 
 ANARILight VisionarayDevice::newLight(const char *subtype)
 {
@@ -142,16 +154,22 @@ ANARILight VisionarayDevice::newLight(const char *subtype)
   return (ANARILight)Light::createInstance(subtype, deviceState());
 }
 
-ANARICamera VisionarayDevice::newCamera(const char *subtype)
+ANARIMaterial VisionarayDevice::newMaterial(const char *subtype)
 {
   initDevice();
-  return (ANARICamera)Camera::createInstance(subtype, deviceState());
+  return (ANARIMaterial)Material::createInstance(subtype, deviceState());
 }
 
-ANARIGeometry VisionarayDevice::newGeometry(const char *subtype)
+ANARIRenderer VisionarayDevice::newRenderer(const char *subtype)
 {
   initDevice();
-  return (ANARIGeometry)Geometry::createInstance(subtype, deviceState());
+  return (ANARIRenderer)Renderer::createInstance(subtype, deviceState());
+}
+
+ANARISampler VisionarayDevice::newSampler(const char *subtype)
+{
+  initDevice();
+  return (ANARISampler)Sampler::createInstance(subtype, deviceState());
 }
 
 ANARISpatialField VisionarayDevice::newSpatialField(const char *subtype)
@@ -171,36 +189,6 @@ ANARIVolume VisionarayDevice::newVolume(const char *subtype)
   initDevice();
   return (ANARIVolume)Volume::createInstance(subtype, deviceState());
 }
-
-// Surface Meta-Data //////////////////////////////////////////////////////////
-
-ANARIMaterial VisionarayDevice::newMaterial(const char *subtype)
-{
-  initDevice();
-  return (ANARIMaterial)Material::createInstance(subtype, deviceState());
-}
-
-ANARISampler VisionarayDevice::newSampler(const char *subtype)
-{
-  initDevice();
-  return (ANARISampler)Sampler::createInstance(subtype, deviceState());
-}
-
-// Instancing /////////////////////////////////////////////////////////////////
-
-ANARIGroup VisionarayDevice::newGroup()
-{
-  initDevice();
-  return (ANARIGroup) new Group(deviceState());
-}
-
-ANARIInstance VisionarayDevice::newInstance(const char *subtype)
-{
-  initDevice();
-  return (ANARIInstance)Instance::createInstance(subtype, deviceState());
-}
-
-// Top-level Worlds ///////////////////////////////////////////////////////////
 
 ANARIWorld VisionarayDevice::newWorld()
 {
@@ -237,39 +225,6 @@ const void *VisionarayDevice::getParameterInfo(ANARIDataType objectType,
       parameterType,
       infoName,
       infoType);
-}
-
-// Object + Parameter Lifetime Management /////////////////////////////////////
-
-int VisionarayDevice::getProperty(ANARIObject object,
-    const char *name,
-    ANARIDataType type,
-    void *mem,
-    uint64_t size,
-    uint32_t mask)
-{
-  if (mask == ANARI_WAIT) {
-    auto lock = scopeLockObject();
-    deviceState()->waitOnCurrentFrame();
-  }
-
-  return helium::BaseDevice::getProperty(object, name, type, mem, size, mask);
-}
-
-// Frame Manipulation /////////////////////////////////////////////////////////
-
-ANARIFrame VisionarayDevice::newFrame()
-{
-  initDevice();
-  return (ANARIFrame) new Frame(deviceState());
-}
-
-// Frame Rendering ////////////////////////////////////////////////////////////
-
-ANARIRenderer VisionarayDevice::newRenderer(const char *subtype)
-{
-  initDevice();
-  return (ANARIRenderer)Renderer::createInstance(subtype, deviceState());
 }
 
 // Other VisionarayDevice definitions /////////////////////////////////////////
