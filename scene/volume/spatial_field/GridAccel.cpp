@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "for_each.h"
+#include "DeviceArray.h"
 #include "GridAccel.h"
 
 namespace visionaray {
@@ -69,13 +70,10 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
 {
   size_t numMCs = m_dims.x * size_t(m_dims.y) * m_dims.z;
 
+  DevicePointer<dco::GridAccel> gridPtr(&vaccel);
 #ifdef WITH_CUDA
-  dco::GridAccel *gridPtr;
-  CUDA_SAFE_CALL(cudaMalloc(&gridPtr, sizeof(vaccel)));
-  CUDA_SAFE_CALL(cudaMemcpy(gridPtr, &vaccel, sizeof(vaccel), cudaMemcpyHostToDevice));
   cuda::for_each(stream, 0, numMCs,
 #else
-  auto *gridPtr = &vaccel;
   parallel::for_each(deviceState()->threadPool, 0, numMCs,
 #endif
     [=] VSNRAY_GPU_FUNC (size_t threadID) {
@@ -107,9 +105,6 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
       }
       vaccel.maxOpacities[threadID] = maxOpacity;
     });
-#ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaFree(gridPtr));
-#endif
 }
 
 } // namespace visionaray
