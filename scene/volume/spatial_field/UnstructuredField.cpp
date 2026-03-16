@@ -350,7 +350,11 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
   for (uint64_t i=elements[cellID].begin; i<elements[cellID].end; ++i) {
     const vec4f V = vertices[elements[cellID].indexBuffer[i]];
     cellBounds.extend(V.xyz());
-    valueRange.extend(V.w);
+    if (isnan(V.w)) {
+      valueRange.extend(elements[cellID].cellValue);
+    } else {
+      valueRange.extend(V.w);
+    }
   }
 
   rasterizeBox(vaccel,cellBounds,valueRange,cellSize);
@@ -387,7 +391,11 @@ void UnstructuredField::buildGrid()
     for (uint64_t i=m_elements[cellID].begin; i<m_elements[cellID].end; ++i) {
       const vec4f V = m_vertices[m_elements[cellID].indexBuffer[i]];
       cellBounds.extend(V.xyz());
-      valueRange.extend(V.w);
+      if (isnan(V.w)) {
+        valueRange.extend(m_elements[cellID].cellValue);
+      } else {
+        valueRange.extend(V.w);
+      }
     }
 
     rasterizeBox(vaccel,cellBounds,valueRange,vfield.cellSize);
