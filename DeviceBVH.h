@@ -224,8 +224,12 @@ void DeviceBVH<P>::rebuildHostBVH4() {
 
   rebuildHostBVH2();
 
-  bvh_collapser collapser;
-  collapser.collapse(m_hostBVH2, m_hostBVH4, deviceState()->threadPool);
+  if (m_hostBVH2.num_nodes() && m_hostBVH2.nodes()[0].get_bounds().valid()) {
+    bvh_collapser collapser;
+    collapser.collapse(m_hostBVH2, m_hostBVH4, deviceState()->threadPool);
+  } else {
+    m_hostBVH4 = {};
+  }
 
   m_hostRebuild.BVH4 = newTimeStamp();
 }
