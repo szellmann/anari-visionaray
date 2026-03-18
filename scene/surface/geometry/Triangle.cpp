@@ -42,6 +42,8 @@ void Triangle::finalize()
     return;
   }
 
+  m_triangles.clear();
+
   unsigned nextID = 0;
   auto addTriangle = [&](basic_triangle<3, float> &tri) {
     //if (length(tri.e1) > 0.f && length(tri.e2) > 0.f) {

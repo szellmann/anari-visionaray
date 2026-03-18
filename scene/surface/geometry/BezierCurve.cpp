@@ -38,6 +38,8 @@ void BezierCurve::finalize()
     return;
   }
 
+  m_curves.clear();
+
   const float *radius = m_radius ? m_radius->beginAs<float>() : nullptr;
   m_globalRadius = getParam<float>("radius", 1.f);
 

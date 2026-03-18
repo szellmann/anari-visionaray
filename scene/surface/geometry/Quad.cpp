@@ -40,6 +40,8 @@ void Quad::finalize()
     return;
   }
 
+  m_triangles.clear();
+
   unsigned nextID = 0;
   auto addTriangles = [&](basic_triangle<3, float> &tri1,
                           basic_triangle<3, float> &tri2) {
