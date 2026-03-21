@@ -103,12 +103,14 @@ void Geometry::finalize()
       vgeom.primitiveAttributes[i].typeInfo = getInfo(m_attributes[i]->elementType());
     }
   }
+
+  markFinalized();
 }
 
 void Geometry::markFinalized()
 {
   Object::markFinalized();
-  deviceState()->objectUpdates.lastBLSCommitSceneRequest =
+  deviceState()->objectUpdates.lastBLSReconstructSceneRequest =
       helium::newTimeStamp();
 }
 
