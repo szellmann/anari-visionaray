@@ -53,7 +53,6 @@ void Renderer::commitParameters()
 
 void Renderer::finalize()
 {
-  m_clipPlanes = getParamObject<Array1D>("clipPlane");
   if (m_clipPlanes) {
     m_clipPlanesOnDevice.resize(m_clipPlanes->size());
     for (size_t i=0; i<m_clipPlanes->size(); ++i) {
