@@ -69,6 +69,12 @@ struct VisionarayDevice : public helium::BaseDevice
       ANARIDataType parameterType,
       const char* infoName,
       ANARIDataType infoType) override;
+  int getProperty(ANARIObject object,
+      const char *name,
+      ANARIDataType type,
+      void *mem,
+      uint64_t size,
+      uint32_t mask) override;
 
   /////////////////////////////////////////////////////////////////////////////
   // Helper/other functions and data members
