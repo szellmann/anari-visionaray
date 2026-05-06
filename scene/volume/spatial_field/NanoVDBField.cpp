@@ -46,7 +46,7 @@ void NanoVDBField::finalize()
   vfield.asNanoVDB.grid = (nanovdb::NanoGrid<float> *)m_deviceGrid.devicePtr();
 
   auto boundsMin = gridHandle.gridMetaData()->worldBBox().min();
-  auto boundsMax = gridHandle.gridMetaData()->worldBBox().max()-nanovdb::Vec3d(1.f);
+  auto boundsMax = gridHandle.gridMetaData()->worldBBox().max();
   m_bounds = aabb{{(float)boundsMin[0], (float)boundsMin[1], (float)boundsMin[2]},
                   {(float)boundsMax[0], (float)boundsMax[1], (float)boundsMax[2]}};
 
