@@ -1,8 +1,11 @@
 // Copyright 2023-2026 Stefan Zellmann
+// Copyright (c) 2026 Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
 #ifdef WITH_CUDA
 #include <cuda_runtime.h>
+#elif defined(WITH_HIP)
+#include <hip/hip_runtime.h>
 #endif
 // nanovdb
 #include <nanovdb/io/IO.h>
@@ -73,7 +76,7 @@ aabb NanoVDBField::bounds() const
   return m_bounds;
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 __global__ void NanoVDBField_buildGridGPU(dco::GridAccel vaccel,
                                          nanovdb::NanoGrid<float> *grid)
 {
@@ -111,7 +114,7 @@ __global__ void NanoVDBField_buildGridGPU(dco::GridAccel vaccel,
 
 void NanoVDBField::buildGrid()
 {
-#if defined(WITH_CUDA)
+#if defined(WITH_CUDA) || defined(WITH_HIP)
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};
   box3f gridBounds = worldBounds;
@@ -126,8 +129,6 @@ void NanoVDBField::buildGrid()
 
   NanoVDBField_buildGridGPU<<<numBlocks, numThreads>>>(
     vaccel, vfield.asNanoVDB.grid);
-#elif defined(WITH_HIP)
-  return;
 #else
   int3 gridDims{16, 16, 16};
   box3f worldBounds = {bounds().min,bounds().max};

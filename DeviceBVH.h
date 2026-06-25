@@ -179,12 +179,14 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
     hPrimitives = (P *)m_primitives;
   }
 #elif defined(WITH_HIP)
-  hitPointerAttribute_t attributes = {};
+  hipPointerAttribute_t attributes = {};
   HIP_SAFE_CALL(hipPointerGetAttributes(&attributes,m_primitives));
-  if (attributes.memoryType == hipMemoryTypeDevice) {
+  if (attributes.type == hipMemoryTypeDevice) {
     hPrimitives = (P *)std::malloc(sizeof(P)*m_numPrimitives);
     HIP_SAFE_CALL(hipMemcpy(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
                             hipMemcpyDeviceToHost));
+  } else {
+    hPrimitives = (P *)m_primitives;
   }
 #else
   hPrimitives = (P *)m_primitives;
@@ -208,7 +210,7 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
     std::free(hPrimitives);
   }
 #elif defined(WITH_HIP)
-  if (attributes.memoryType == hipMemoryTypeDevice) {
+  if (attributes.type == hipMemoryTypeDevice) {
     std::free(hPrimitives);
   }
 #endif
@@ -264,7 +266,7 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
 #elif defined(WITH_HIP)
     hipPointerAttribute_t attributes = {};
     HIP_SAFE_CALL(hipPointerGetAttributes(&attributes,m_primitives));
-    if (attributes.memoryType == hipMemoryTypeDevice) {
+    if (attributes.type == hipMemoryTypeDevice) {
       dPrimitives = (P *)m_primitives;
     } else {
       HIP_SAFE_CALL(hipMalloc(&dPrimitives,sizeof(P)*m_numPrimitives));
@@ -283,7 +285,7 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
       CUDA_SAFE_CALL(cudaFree(dPrimitives));
     }
 #elif defined(WITH_HIP)
-    if (attributes.memoryType == hipMemoryTypeHost) {
+    if (attributes.type != hipMemoryTypeDevice) {
       HIP_SAFE_CALL(hipFree(dPrimitives));
     }
 #endif

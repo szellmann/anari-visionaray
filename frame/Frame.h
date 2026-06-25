@@ -82,7 +82,7 @@ struct Frame : public helium::BaseFrame
   template <typename Array>
   void *mapHostDeviceArray(Array &arr, bool onDevice=false)
   {
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
     if (!onDevice) {
       arr.unmapDevice();
       return (void *)arr.hostPtr();
