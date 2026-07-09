@@ -73,6 +73,8 @@ void GridAccel::computeMaxOpacities(dco::TransferFunction1D tf)
   DevicePointer<dco::GridAccel> gridPtr(&vaccel);
 #ifdef WITH_CUDA
   cuda::for_each(stream, 0, numMCs,
+#elif defined(WITH_HIP)
+  hip::for_each(stream, 0, numMCs,
 #else
   parallel::for_each(deviceState()->threadPool, 0, numMCs,
 #endif

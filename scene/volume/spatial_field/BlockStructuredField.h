@@ -29,6 +29,8 @@ struct BlockStructuredField : public SpatialField
   // sampling accel
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::Block> m_samplingBVH;
+#elif defined(WITH_HIP)
+  hip_index_bvh<dco::Block> m_samplingBVH;
 #else
   index_bvh4<dco::Block> m_samplingBVH;
 #endif

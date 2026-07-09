@@ -223,6 +223,9 @@ if (hip)
     frame/Frame.hip
     renderer/DirectLight_impl.hip
     renderer/Raycast_impl.hip
+    scene/volume/spatial_field/BlockStructuredField.hip
+    scene/volume/spatial_field/GridAccel.hip
+    scene/volume/spatial_field/UnstructuredField.hip
     scene/VisionarayScene.hip
   )
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
@@ -230,7 +233,11 @@ if (hip)
     target_compile_definitions(${PROJECT_NAME}_hip PRIVATE _USE_MATH_DEFINES)
   endif()
   if (nanovdb)
-    message(WARNING "No VDB support with HIP")
+    target_sources(${PROJECT_NAME}_hip PRIVATE
+        scene/volume/spatial_field/NanoVDBField.hip)
+    target_link_libraries(${PROJECT_NAME}_hip
+      $<BUILD_INTERFACE:vsnray_nanovdb>)
+    target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_NANOVDB=1)
   endif()
 
   target_link_libraries(${PROJECT_NAME}_hip
@@ -272,6 +279,9 @@ endif()
 set(DEVICE_LIBS ${PROJECT_NAME})
 if (cuda)
   set(DEVICE_LIBS ${DEVICE_LIBS} ${PROJECT_NAME}_cuda)
+endif()
+if (hip)
+  set(DEVICE_LIBS ${DEVICE_LIBS} ${PROJECT_NAME}_hip)
 endif()
 
 install(TARGETS ${DEVICE_LIBS}

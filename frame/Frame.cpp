@@ -487,8 +487,12 @@ void Frame::wait()
 {
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaEventSynchronize(m_eventStop));
+  if (deviceState()->currentFrame == this)
+    deviceState()->currentFrame = nullptr;
 #elif defined(WITH_HIP)
   HIP_SAFE_CALL(hipEventSynchronize(m_eventStop));
+  if (deviceState()->currentFrame == this)
+    deviceState()->currentFrame = nullptr;
 #else
   if (m_future.valid()) {
     m_future.get();
