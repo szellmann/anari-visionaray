@@ -18,7 +18,7 @@ struct Triangle : public Geometry
 
  private:
 
-  DeviceBVH<basic_triangle<3,float>> m_BVH;
+  DeviceBVH<dco::Triangle> m_BVH;
 
   helium::ChangeObserverPtr<Array1D> m_index;
   helium::ChangeObserverPtr<Array1D> m_vertexPosition;
@@ -26,7 +26,7 @@ struct Triangle : public Geometry
   helium::ChangeObserverPtr<Array1D> m_vertexTangent;
   std::array<helium::IntrusivePtr<Array1D>, 5> m_vertexAttributes;
 
-  HostDeviceArray<basic_triangle<3, float>> m_triangles;
+  HostDeviceArray<dco::Triangle> m_triangles;
   HostDeviceArray<uint3> vindex;
   HostDeviceArray<float3> vnormals;
   HostDeviceArray<float4> vtangents;

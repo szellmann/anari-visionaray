@@ -45,7 +45,7 @@ void Triangle::finalize()
   m_triangles.clear();
 
   unsigned nextID = 0;
-  auto addTriangle = [&](basic_triangle<3, float> &tri) {
+  auto addTriangle = [&](dco::Triangle &tri) {
     //if (length(tri.e1) > 0.f && length(tri.e2) > 0.f) {
     // TODO: we can discard invalid primitives here, but
     // then also have to make sure to also discard vertex
@@ -62,7 +62,7 @@ void Triangle::finalize()
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
       const vec3f v3 = m_vertexPosition->beginAs<vec3f>()[idx.z];
-      basic_triangle<3, float> triangle;
+      dco::Triangle triangle;
       triangle.geom_id = -1;
       triangle.v1 = v1;
       triangle.e1 = v2-v1;
@@ -75,7 +75,7 @@ void Triangle::finalize()
       const vec3f v1 = m_vertexPosition->beginAs<vec3f>()[idx.x];
       const vec3f v2 = m_vertexPosition->beginAs<vec3f>()[idx.y];
       const vec3f v3 = m_vertexPosition->beginAs<vec3f>()[idx.z];
-      basic_triangle<3, float> triangle;
+      dco::Triangle triangle;
       triangle.geom_id = -1;
       triangle.v1 = v1;
       triangle.e1 = v2-v1;

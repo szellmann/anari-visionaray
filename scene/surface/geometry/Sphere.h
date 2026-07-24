@@ -18,9 +18,9 @@ struct Sphere : public Geometry
 
  private:
 
-  DeviceBVH<basic_sphere<float>> m_BVH;
+  DeviceBVH<dco::Sphere> m_BVH;
 
-  HostDeviceArray<basic_sphere<float>> m_spheres;
+  HostDeviceArray<dco::Sphere> m_spheres;
   helium::ChangeObserverPtr<Array1D> m_index;
   helium::ChangeObserverPtr<Array1D> m_vertexPosition;
   helium::ChangeObserverPtr<Array1D> m_vertexRadius;

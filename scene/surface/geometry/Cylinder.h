@@ -18,9 +18,9 @@ struct Cylinder : public Geometry
 
  private:
 
-  DeviceBVH<basic_cylinder<float>> m_BVH;
+  DeviceBVH<dco::Cylinder> m_BVH;
 
-  HostDeviceArray<basic_cylinder<float>> m_cylinders;
+  HostDeviceArray<dco::Cylinder> m_cylinders;
   helium::ChangeObserverPtr<Array1D> m_index;
   helium::ChangeObserverPtr<Array1D> m_radius;
   helium::ChangeObserverPtr<Array1D> m_vertexPosition;
