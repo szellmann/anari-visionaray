@@ -243,10 +243,19 @@ inline void getNormals(const dco::Geometry &geom,
   if (geom.type == dco::Geometry::Triangle) {
     auto tri = geom.as<dco::Triangle>(primID);
     Ng = normalize(cross(tri.e1,tri.e2));
-    if (geom.normal.len
-        && geom.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+    if (geom.faceVarying.normal.len
+        && geom.faceVarying.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+      uint3 index(3 * primID, 3 * primID + 1, 3 * primID + 2);
+      auto *normals = (const vec3 *)geom.vertex.normal.data;
+      vec3 n1 = normals[index.x];
+      vec3 n2 = normals[index.y];
+      vec3 n3 = normals[index.z];
+      Ns = lerp_r(n1, n2, n3, uv.x, uv.y);
+      Ns = normalize(Ns);
+    } else if (geom.vertex.normal.len
+        && geom.vertex.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
       uint3 index = getTriangleIndex(geom.index, primID);
-      auto *normals = (const vec3 *)geom.normal.data;
+      auto *normals = (const vec3 *)geom.vertex.normal.data;
       vec3 n1 = normals[index.x];
       vec3 n2 = normals[index.y];
       vec3 n3 = normals[index.z];
@@ -321,16 +330,31 @@ inline vec4 getTangent(
   vec4f tng(0.f);
 
   if (geom.type == dco::Geometry::Triangle) {
-    if (geom.tangent.len) {
-      uint3 index = getTriangleIndex(geom.index, primID);
-      if (geom.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
-        auto *tangents = (const vec3 *)geom.tangent.data;
+    if (geom.faceVarying.tangent.len) {
+      uint3 index(3 * primID, 3 * primID + 1, 3 * primID + 2);
+      if (geom.faceVarying.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+        auto *tangents = (const vec3 *)geom.faceVarying.tangent.data;
         vec3 tng1 = tangents[index.x];
         vec3 tng2 = tangents[index.y];
         vec3 tng3 = tangents[index.z];
         tng = vec4(lerp_r(tng1, tng2, tng3, uv.x, uv.y), 1.f);
-      } else if (geom.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC4) {
-        auto *tangents = (const vec4 *)geom.tangent.data;
+      } else if (geom.faceVarying.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC4) {
+        auto *tangents = (const vec4 *)geom.faceVarying.tangent.data;
+        vec4 tng1 = tangents[index.x];
+        vec4 tng2 = tangents[index.y];
+        vec4 tng3 = tangents[index.z];
+        tng = lerp_r(tng1, tng2, tng3, uv.x, uv.y);
+      }
+    } else if (geom.vertex.tangent.len) {
+      uint3 index = getTriangleIndex(geom.index, primID);
+      if (geom.vertex.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
+        auto *tangents = (const vec3 *)geom.vertex.tangent.data;
+        vec3 tng1 = tangents[index.x];
+        vec3 tng2 = tangents[index.y];
+        vec3 tng3 = tangents[index.z];
+        tng = vec4(lerp_r(tng1, tng2, tng3, uv.x, uv.y), 1.f);
+      } else if (geom.vertex.tangent.typeInfo.dataType == ANARI_FLOAT32_VEC4) {
+        auto *tangents = (const vec4 *)geom.vertex.tangent.data;
         vec4 tng1 = tangents[index.x];
         vec4 tng2 = tangents[index.y];
         vec4 tng3 = tangents[index.z];
@@ -357,16 +381,63 @@ inline vec4 getAttribute(const dco::Geometry &geom,
   if ((int)attrib >= 5) // hit attributes!
     return color;
 
-  dco::Array vertexColors = geom.vertexAttributes[(int)attrib];
+  dco::Array faceVaryingColors = geom.faceVarying.attributes[(int)attrib];
+  dco::Array vertexColors = geom.vertex.attributes[(int)attrib];
   dco::Array primitiveColors = geom.primitiveAttributes[(int)attrib];
   dco::Uniform geometryColor = geom.uniformAttributes[(int)attrib];
   dco::Uniform instanceColor = inst.uniformAttributes[(int)attrib];
 
+  const TypeInfo &faceVaryingColorInfo = faceVaryingColors.typeInfo;
   const TypeInfo &vertexColorInfo = vertexColors.typeInfo;
   const TypeInfo &primitiveColorInfo = primitiveColors.typeInfo;
 
   // vertex colors take precedence over primitive colors
-  if (vertexColors.len > 0) {
+  if (faceVaryingColors.len > 0) {
+    if (geom.type == dco::Geometry::Triangle) {
+      uint3 index(3 * primID,
+                  3 * primID + 1,
+                  3 * primID + 2);
+      const auto *source1
+          = (const uint8_t *)faceVaryingColors.data
+              + index.x * faceVaryingColorInfo.sizeInBytes;
+      const auto *source2
+          = (const uint8_t *)faceVaryingColors.data
+              + index.y * faceVaryingColorInfo.sizeInBytes;
+      const auto *source3
+          = (const uint8_t *)faceVaryingColors.data
+              + index.z * faceVaryingColorInfo.sizeInBytes;
+      vec4f c1 = toRGBA(source1, faceVaryingColorInfo);
+      vec4f c2 = toRGBA(source2, faceVaryingColorInfo);
+      vec4f c3 = toRGBA(source3, faceVaryingColorInfo);
+      color = lerp_r(c1, c2, c3, uv.x, uv.y);
+    }
+    else if (geom.type == dco::Geometry::Quad) {
+      uint4 index(4 * primID,
+                  4 * primID + 1,
+                  4 * primID + 2,
+                  4 * primID + 3);
+      const auto *source1
+          = (const uint8_t *)faceVaryingColors.data
+              + index.x * faceVaryingColorInfo.sizeInBytes;
+      const auto *source2
+          = (const uint8_t *)faceVaryingColors.data
+              + index.y * faceVaryingColorInfo.sizeInBytes;
+      const auto *source3
+          = (const uint8_t *)faceVaryingColors.data
+              + index.z * faceVaryingColorInfo.sizeInBytes;
+      const auto *source4
+          = (const uint8_t *)faceVaryingColors.data
+              + index.w * faceVaryingColorInfo.sizeInBytes;
+      vec4f c1 = toRGBA(source1, faceVaryingColorInfo);
+      vec4f c2 = toRGBA(source2, faceVaryingColorInfo);
+      vec4f c3 = toRGBA(source3, faceVaryingColorInfo);
+      vec4f c4 = toRGBA(source4, faceVaryingColorInfo);
+      if (primID%2==0)
+        color = lerp_r(c1, c2, c4, uv.x, uv.y);
+      else
+        color = lerp_r(c3, c4, c2, 1.f-uv.x, 1.f-uv.y);
+    }
+  } else if (vertexColors.len > 0) {
     if (geom.type == dco::Geometry::Triangle) {
       uint3 index = getTriangleIndex(geom.index, primID);
       const auto *source1

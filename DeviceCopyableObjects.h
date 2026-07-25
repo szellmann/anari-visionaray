@@ -1928,10 +1928,12 @@ struct Geometry
   Array primitives;
   Uniform uniformAttributes[5];
   Array primitiveAttributes[5];
-  Array vertexAttributes[5];
+  struct {
+    Array attributes[5];
+    Array normal;
+    Array tangent;
+  } vertex, faceVarying;
   Array index;
-  Array normal;
-  Array tangent;
 };
 
 inline Geometry createGeometry()

@@ -12,6 +12,8 @@ Quad::Quad(VisionarayGlobalState *s)
   , m_vertexPosition(this)
   , m_vertexNormal(this)
   , m_vertexTangent(this)
+  , m_faceVaryingNormal(this)
+  , m_faceVaryingTangent(this)
 {
   vgeom.type = dco::Geometry::Quad;
 }
@@ -21,6 +23,7 @@ void Quad::commitParameters()
   Geometry::commitParameters();
   m_index = getParamObject<Array1D>("primitive.index");
   m_vertexPosition = getParamObject<Array1D>("vertex.position");
+
   m_vertexNormal = getParamObject<Array1D>("vertex.normal");
   m_vertexTangent = getParamObject<Array1D>("vertex.tangent");
   m_vertexAttributes[0] = getParamObject<Array1D>("vertex.attribute0");
@@ -28,6 +31,14 @@ void Quad::commitParameters()
   m_vertexAttributes[2] = getParamObject<Array1D>("vertex.attribute2");
   m_vertexAttributes[3] = getParamObject<Array1D>("vertex.attribute3");
   m_vertexAttributes[4] = getParamObject<Array1D>("vertex.color");
+
+  m_faceVaryingNormal = getParamObject<Array1D>("faceVarying.normal");
+  m_faceVaryingTangent = getParamObject<Array1D>("faceVarying.tangent");
+  m_faceVaryingAttributes[0] = getParamObject<Array1D>("faceVarying.attribute0");
+  m_faceVaryingAttributes[1] = getParamObject<Array1D>("faceVarying.attribute1");
+  m_faceVaryingAttributes[2] = getParamObject<Array1D>("faceVarying.attribute2");
+  m_faceVaryingAttributes[3] = getParamObject<Array1D>("faceVarying.attribute3");
+  m_faceVaryingAttributes[4] = getParamObject<Array1D>("faceVarying.color");
 }
 
 void Quad::finalize()
@@ -115,11 +126,12 @@ void Quad::finalize()
     vnormals.resize(m_vertexNormal->size());
     vnormals.reset(m_vertexNormal->beginAs<float3>());
 
-    vgeom.normal.data = vnormals.devicePtr();
-    vgeom.normal.len = m_vertexNormal->size();
-    vgeom.normal.typeInfo = getInfo(m_vertexNormal->elementType());
+    vgeom.vertex.normal.data = vnormals.devicePtr();
+    vgeom.vertex.normal.len = m_vertexNormal->size();
+    vgeom.vertex.normal.typeInfo = getInfo(m_vertexNormal->elementType());
   }
 
+  // per vertex
   if (m_vertexTangent) {
     vtangents.resize(m_vertexTangent->size());
     if (m_vertexTangent->elementType() == ANARI_FLOAT32_VEC4) {
@@ -134,9 +146,9 @@ void Quad::finalize()
           "unsupported type for 'vertex.tangent' on quad geometry");
     }
 
-    vgeom.tangent.data = vtangents.devicePtr();
-    vgeom.tangent.len = m_vertexTangent->size();
-    vgeom.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
+    vgeom.vertex.tangent.data = vtangents.devicePtr();
+    vgeom.vertex.tangent.len = m_vertexTangent->size();
+    vgeom.vertex.tangent.typeInfo = getInfo(m_vertexTangent->elementType());
   }
 
   for (int i = 0; i < 5; ++i ) {
@@ -148,10 +160,55 @@ void Quad::finalize()
       vattributes[i].resize(sizeInBytes);
       vattributes[i].reset(m_vertexAttributes[i]->begin());
 
-      vgeom.vertexAttributes[i].data = vattributes[i].devicePtr();
-      vgeom.vertexAttributes[i].len = m_vertexAttributes[i]->size();
-      vgeom.vertexAttributes[i].typeInfo
+      vgeom.vertex.attributes[i].data = vattributes[i].devicePtr();
+      vgeom.vertex.attributes[i].len = m_vertexAttributes[i]->size();
+      vgeom.vertex.attributes[i].typeInfo
           = getInfo(m_vertexAttributes[i]->elementType());
+    }
+  }
+
+  // face-varying
+  if (m_faceVaryingNormal) {
+    fvnormals.resize(m_faceVaryingNormal->size());
+    fvnormals.reset(m_faceVaryingNormal->beginAs<float3>());
+
+    vgeom.faceVarying.normal.data = fvnormals.devicePtr();
+    vgeom.faceVarying.normal.len = m_faceVaryingNormal->size();
+    vgeom.faceVarying.normal.typeInfo = getInfo(m_faceVaryingNormal->elementType());
+  }
+
+  if (m_faceVaryingTangent) {
+    fvtangents.resize(m_faceVaryingTangent->size());
+    if (m_faceVaryingTangent->elementType() == ANARI_FLOAT32_VEC4) {
+      fvtangents.reset(m_faceVaryingTangent->beginAs<float4>());
+    } else if (m_faceVaryingTangent->elementType() == ANARI_FLOAT32_VEC3) {
+      for (size_t i = 0; i < m_faceVaryingTangent->size(); ++i) {
+        float3 tng = m_faceVaryingTangent->beginAs<float3>()[i];
+        fvtangents[i] = float4(tng, 1.f);
+      }
+    } else {
+      reportMessage(ANARI_SEVERITY_WARNING,
+          "unsupported type for 'faceVarying.tangent' on triangle geometry");
+    }
+
+    vgeom.faceVarying.tangent.data = fvtangents.devicePtr();
+    vgeom.faceVarying.tangent.len = m_faceVaryingTangent->size();
+    vgeom.faceVarying.tangent.typeInfo = getInfo(m_faceVaryingTangent->elementType());
+  }
+
+  for (int i = 0; i < 5; ++i ) {
+    if (m_faceVaryingAttributes[i]) {
+      size_t sizeInBytes
+          = m_faceVaryingAttributes[i]->size()
+          * anari::sizeOf(m_faceVaryingAttributes[i]->elementType());
+
+      fvattributes[i].resize(sizeInBytes);
+      fvattributes[i].reset(m_faceVaryingAttributes[i]->begin());
+
+      vgeom.faceVarying.attributes[i].data = fvattributes[i].devicePtr();
+      vgeom.faceVarying.attributes[i].len = m_faceVaryingAttributes[i]->size();
+      vgeom.faceVarying.attributes[i].typeInfo
+          = getInfo(m_faceVaryingAttributes[i]->elementType());
     }
   }
 
