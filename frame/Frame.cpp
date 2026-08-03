@@ -211,6 +211,21 @@ bool Frame::getProperty(
       return true;
     }
   }
+  else if (type == ANARI_FLOAT32 && name == "refinementProgress") {
+    if (!m_renderer)
+      return false;
+    if (flags & ANARI_WAIT)
+      wait();
+    const int sampleLimit = m_renderer->visionarayRenderer().sampleLimit();
+    if (sampleLimit <= 0)
+      return false;
+    else {
+      const float progress
+          = float(m_renderer->visionarayRenderer().rendererState.accumID) / sampleLimit;
+      helium::writeToVoidP(ptr, progress);
+      return true;
+    }
+  }
 
   return 0;
 }
