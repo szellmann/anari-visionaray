@@ -10,7 +10,6 @@ enum RayType { Radiance, Shadow, AO, None };
 
 struct ShadeState
 {
-  float3 throughput{1.f};
   float3 baseColor{0.f};
   float3 shadedColor{0.f};
   float3 gn{0.f};
@@ -29,7 +28,53 @@ struct ShadeState
     RayType rayType;
     Ray ray;
   } next;
+  struct {
+    float light{1.f};
+    float ao{1.f};
+  } visibility;
 };
+
+template<RayType Type>
+VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
+                                       ScreenSample &ss,
+                                       const Ray &ray,
+                                       const RendererState &rendererState,
+                                       const dco::World &world,
+                                       const LightSample &ls)
+{
+  auto &sn = shadeState.sn;
+  auto &eps = shadeState.eps;
+  auto &hitPos = shadeState.hitPos;
+  auto &next = shadeState.next;
+
+  next.rayType = Type;
+
+  if constexpr (Type == Shadow) {
+    Ray &shadowRay = next.ray;
+    shadowRay.ori = hitPos + sn * eps;
+    shadowRay.dir = normalize(ls.dir);
+    shadowRay.tmin = 0.f;
+    shadowRay.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
+    shadowRay.time = ray.time;
+    shadowRay.dbg = ray.dbg;
+    next.rayType = Shadow;
+  }
+  else if constexpr (Type == AO) {
+    vec3 u, v, w = sn;
+    make_orthonormal_basis(u,v,w);
+    auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
+    vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
+
+    Ray &aoRay = next.ray;
+    aoRay.ori = hitPos + sn * eps;
+    aoRay.dir = dir;
+    aoRay.tmin = 0.f;
+    aoRay.tmax = rendererState.occlusionDistance;
+    aoRay.time = ray.time;
+    aoRay.dbg = ray.dbg;
+    next.rayType = AO;
+  }
+}
 
 VSNRAY_FUNC
 inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned worldID,
@@ -38,7 +83,6 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     ShadeState &shadeState,
     PixelSample &result)
 {
-  auto &throughput = shadeState.throughput;
   auto &baseColor = shadeState.baseColor;
   auto &shadedColor = shadeState.shadedColor;
   auto &gn = shadeState.gn;
@@ -54,6 +98,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
   auto &aoWeights = shadeState.aoWeights;
   auto &aoCount = shadeState.aoCount;
   auto &next = shadeState.next;
+  auto &visibility = shadeState.visibility;
 
   auto &hr = hitRec.surface;
   auto &hrv = hitRec.volume;
@@ -68,10 +113,10 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     if (!hitRec.hit) {
       if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
         auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-        throughput = hdri.intensity(ray.dir);
+        shadedColor = hdri.intensity(ray.dir);
         hdriMiss = true;
       } else {
-        throughput = float3{0.f};
+        shadedColor = float3{0.f};
       }
       return;
     }
@@ -83,7 +128,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       hitPos = ray.ori + hrl.t * ray.dir;
       const dco::Light &light = getLight(world.allLights, hrl.lightID, onDevice);
       if (light.type == dco::Light::Quad)
-        throughput = light.asQuad.intensity(hitPos);
+        shadedColor = light.asQuad.intensity(hitPos);
       hdriMiss = true; // TODO?!
       return;
     }
@@ -273,68 +318,31 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     else
       baseColor = shadedColor;
 
+    // Is there a light? test if we're in shadow:
     if (world.numLights > 0) {
-      Ray &shadowRay = next.ray;
-      shadowRay.ori = hitPos + sn * eps;
-      shadowRay.dir = normalize(ls.dir);
-      shadowRay.tmin = 0.f;
-      shadowRay.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
-      shadowRay.time = ray.time;
-      shadowRay.dbg = ray.dbg;
-      next.rayType = Shadow;
+      prepareNextRay<Shadow>(shadeState,ss,ray,rendererState,world,ls);
       return;
     }
 
-    // No shadow ray:
-    throughput *= shadedColor;
-
+    // No light? test for AO:
     if (aoSamples < rendererState.ambientSamples) {
-      vec3 u, v, w = sn;
-      make_orthonormal_basis(u,v,w);
-      auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
-      vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
-
-      Ray &aoRay = next.ray;
-      aoRay.ori = hitPos + sn * eps;
-      aoRay.dir = dir;
-      aoRay.tmin = 0.f;
-      aoRay.tmax = rendererState.occlusionDistance;
-      aoRay.time = ray.time;
-      aoRay.dbg = ray.dbg;
-      next.rayType = AO;
+      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world,{});
       return;
     }
-
-    // No AO:
-    throughput += baseColor * rendererState.ambientColor * rendererState.ambientRadiance;
 
     return;
   } else if (rayType == Shadow) {
+    // Shadow ray? Finalize light visibility term:
     int surfV = hr.hit ? 0 : 1;
     int volV = hitRec.volumeHit ? 0 : 1;
 
-    float V = surfV * volV * hrv.Tr;
-    throughput *= shadedColor * V;
+    visibility.light = surfV * volV * hrv.Tr;
 
+    // Test AO after shadow rays:
     if (aoSamples < rendererState.ambientSamples) {
-      vec3 u, v, w = sn;
-      make_orthonormal_basis(u,v,w);
-      auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
-      vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
-
-      Ray &aoRay = next.ray;
-      aoRay.ori = hitPos + sn * eps;
-      aoRay.dir = dir;
-      aoRay.tmin = 0.f;
-      aoRay.tmax = rendererState.occlusionDistance;
-      aoRay.time = ray.time;
-      aoRay.dbg = ray.dbg;
-      next.rayType = AO;
+      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world,{});
       return;
     }
-
-    // No AO:
-    throughput += baseColor * rendererState.ambientColor * rendererState.ambientRadiance;
 
     return;
   } else if (rayType == AO) {
@@ -346,30 +354,18 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       aoCount += weight;
     }
 
+    // Tested for AO? Check if there are samples left:
     if (aoSamples < rendererState.ambientSamples) {
-      vec3 u, v, w = sn;
-      make_orthonormal_basis(u,v,w);
-      auto sp = cosine_sample_hemisphere(ss.random(), ss.random());
-      vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
-
-      Ray &aoRay = next.ray;
-      aoRay.ori = hitPos + sn * eps;
-      aoRay.dir = dir;
-      aoRay.tmin = 0.f;
-      aoRay.tmax = rendererState.occlusionDistance;
-      aoRay.time = ray.time;
-      aoRay.dbg = ray.dbg;
-      next.rayType = AO;
+      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world,{});
       return;
     }
 
+    // No more samples to compute? Finalize AO visibility term:
     float aoV = 0.f;
     if (aoWeights > 0.f) {
       aoV = 1.f - (aoCount/aoWeights);
     }
-
-    throughput
-        += baseColor * rendererState.ambientColor * rendererState.ambientRadiance * aoV;
+    visibility.ao *= aoV;
 
     return;
   }
@@ -442,6 +438,7 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
             HitRec firstHit;
             ShadeState shadeState;
             RayType rayType = Radiance;
+            float3 throughput{1.f};
             for (unsigned bounceID=0;true;++bounceID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
               bool shadow = rayType == Shadow || rayType == AO;
@@ -463,12 +460,15 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
               rayType = shadeState.next.rayType;
 
               if (rayType == None) {
+                throughput *= shadeState.shadedColor * shadeState.visibility.light;
+                throughput += shadeState.baseColor * rendererState.ambientColor
+                    * rendererState.ambientRadiance * shadeState.visibility.ao;
                 break;
               }
             }
 
             if (firstHit.hit || shadeState.hdriMiss) {
-              ps.color = float4(shadeState.throughput,1.f);
+              ps.color = float4(throughput,1.f);
             }
 
             // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
