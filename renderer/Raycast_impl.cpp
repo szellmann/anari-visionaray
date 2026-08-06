@@ -81,7 +81,11 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
 
         LightSample ls = sampleLight(light, hitPos, ss.random);
 
-        float3 brdf = evalMaterial(mat,
+        float3 lightDir = normalize(ls.dir);
+        float3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
+        const float NdotL = fmaxf(0.f,dot(sn,lightDir));
+
+        float3 bsdf = evalMaterial(mat,
                                    onDevice,
                                    attribs,
                                    localHitPos,
@@ -89,9 +93,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    gn, sn,
                                    tng, btng,
                                    normalize(viewDir),
-                                   normalize(ls.dir),
-                                   ls.intensity * safe_rcp(ls.dist2));
-        shadedColor += brdf * safe_rcp(ls.pdf);
+                                   lightDir);
+        shadedColor += bsdf * lightIntensity * NdotL * safe_rcp(ls.pdf);
       }
 
       shadedColor +=

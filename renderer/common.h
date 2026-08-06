@@ -901,8 +901,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         unsigned primID,
                                         const vec3 Ng, const vec3 Ns,
                                         const vec3 T, const vec3 B,
-                                        const vec3 viewDir, const vec3 lightDir,
-                                        const vec3 lightIntensity)
+                                        const vec3 viewDir, const vec3 lightDir)
 {
   const float metallic = getF(
       mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
@@ -1003,7 +1002,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 Ds = sheenColor *
       ((2.f + sheenAlphaInv) * powf(sin2h, sheenAlphaInv * 0.5f) / (constants::two_pi<float>()));
 
-  return (((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) + Ds) * lightIntensity * NdotL;
+  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) + Ds;
 }
 
 VSNRAY_FUNC
@@ -1014,29 +1013,26 @@ inline vec3 evalMaterial(const dco::Material &mat,
                          unsigned primID,
                          const vec3 Ng, const vec3 Ns,
                          const vec3 T, const vec3 B,
-                         const vec3 viewDir, const vec3 lightDir,
-                         const vec3 lightIntensity)
+                         const vec3 viewDir, const vec3 lightDir)
 {
-  vec3 shadedColor{0.f, 0.f, 0.f};
+  vec3 materialColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
     vec3 color = getColor(mat, onDevice, attribs, objPos, primID).xyz();
 
-    const float NdotL = fmaxf(0.f,dot(Ns,lightDir));
     vec3 diffuseBRDF = color * Fd_Lambert();
 
-    shadedColor = diffuseBRDF * lightIntensity * NdotL;
+    materialColor = diffuseBRDF;
   } else if (mat.type == dco::Material::PhysicallyBased) {
-    shadedColor = evalPhysicallyBasedMaterial(mat,
-                                              onDevice,
-                                              attribs,
-                                              objPos,
-                                              primID,
-                                              Ng, Ns,
-                                              T, B,
-                                              viewDir, lightDir,
-                                              lightIntensity);
+    materialColor = evalPhysicallyBasedMaterial(mat,
+                                                onDevice,
+                                                attribs,
+                                                objPos,
+                                                primID,
+                                                Ng, Ns,
+                                                T, B,
+                                                viewDir, lightDir);
   }
-  return shadedColor;
+  return materialColor;
 }
 
 struct LightSample : light_sample<float>

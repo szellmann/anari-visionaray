@@ -438,6 +438,10 @@ inline float rayMarchVolume(ScreenSample &ss,
             mat.asMatte.color = dco::createMaterialParamRGB();
             mat.asMatte.color.rgb = sample.xyz();
 
+            vec3 lightDir = normalize(ls.dir);
+            vec3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
+            const float NdotL = fmaxf(0.f,dot(gn,lightDir));
+
             auto color = evalMaterial(mat,
                                       onDevice,
                                       {}, // attribs, not used..
@@ -446,9 +450,8 @@ inline float rayMarchVolume(ScreenSample &ss,
                                       gn, gn,
                                       float3(0.f), float3(0.f), // tangent, bitangent
                                       normalize(viewDir),
-                                      normalize(ls.dir),
-                                      ls.intensity * safe_rcp(ls.dist2));
-            color = color * safe_rcp(ls.pdf);
+                                      lightDir);
+            color = color * lightIntensity * NdotL * safe_rcp(ls.pdf);
             shadedColor += color;
           }
         }

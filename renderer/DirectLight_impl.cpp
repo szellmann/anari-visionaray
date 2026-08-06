@@ -12,6 +12,7 @@ struct ShadeState
 {
   float3 baseColor{0.f};
   float3 shadedColor{0.f};
+  float3 bsdfWeight{0.f};
   float3 gn{0.f};
   float3 sn{0.f};
   float3 tng{0.f};
@@ -85,6 +86,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 {
   auto &baseColor = shadeState.baseColor;
   auto &shadedColor = shadeState.shadedColor;
+  auto &bsdfWeight = shadeState.bsdfWeight;
   auto &gn = shadeState.gn;
   auto &sn = shadeState.sn;
   auto &tng = shadeState.tng;
@@ -249,17 +251,22 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           mat.asMatte.color = dco::createMaterialParamRGB();
           mat.asMatte.color.rgb = hrv.albedo;
 
-          shadedColor = evalMaterial(mat,
-                                     onDevice,
-                                     {}, // attribs, not used..
-                                     float3(0.f), // objPos, not used..
-                                     UINT_MAX, // primID, not used..
-                                     gn, gn,
-                                     tng, btng,
-                                     normalize(viewDir),
-                                     normalize(ls.dir),
-                                     ls.intensity * safe_rcp(ls.dist2));
-          shadedColor = shadedColor * safe_rcp(ls.pdf) * float(world.numLights);
+          vec3 lightDir = normalize(ls.dir);
+          vec3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
+          const float NdotL = fmaxf(0.f,dot(gn,lightDir));
+
+          vec3 bsdf = evalMaterial(mat,
+                                   onDevice,
+                                   {}, // attribs, not used..
+                                   float3(0.f), // objPos, not used..
+                                   UINT_MAX, // primID, not used..
+                                   gn, gn,
+                                   tng, btng,
+                                   normalize(viewDir),
+                                   lightDir);
+          shadedColor = bsdf * lightIntensity * NdotL
+            * safe_rcp(ls.pdf) * float(world.numLights);
+          bsdfWeight = bsdf;
         }
         else
           shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(ls.dist2);
@@ -267,17 +274,22 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
-        shadedColor = evalMaterial(mat,
-                                   onDevice,
-                                   attribs,
-                                   hr.isect_pos,
-                                   hr.prim_id,
-                                   gn, sn,
-                                   tng, btng,
-                                   normalize(viewDir),
-                                   normalize(ls.dir),
-                                   ls.intensity * safe_rcp(ls.dist2));
-        shadedColor = shadedColor * safe_rcp(ls.pdf) * float(world.numLights);
+        vec3 lightDir = normalize(ls.dir);
+        vec3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
+        const float NdotL = fmaxf(0.f,dot(sn,lightDir));
+
+        vec3 bsdf = evalMaterial(mat,
+                                 onDevice,
+                                 attribs,
+                                 hr.isect_pos,
+                                 hr.prim_id,
+                                 gn, sn,
+                                 tng, btng,
+                                 normalize(viewDir),
+                                 lightDir);
+        shadedColor = bsdf * lightIntensity * NdotL
+          * safe_rcp(ls.pdf) * float(world.numLights);
+        bsdfWeight = bsdf;
       }
     }
     else if (rendererState.renderMode == RenderMode::PrimitiveId)
@@ -467,7 +479,7 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
                       + (shadeState.baseColor * rendererState.ambientColor
                         * rendererState.ambientRadiance * shadeState.visibility.ao);
                 intensity += throughput * direct;
-//              throughput *= shadeState.bsdfWeight; // TODO
+                throughput *= shadeState.bsdfWeight;
                 bounceID++;
               }
 
