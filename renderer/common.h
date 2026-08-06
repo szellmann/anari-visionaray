@@ -1005,7 +1005,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 Ds = sheenColor *
       ((2.f + sheenAlphaInv) * powf(sin2h, sheenAlphaInv * 0.5f) / (constants::two_pi<float>()));
 
-  return (((diffuseBRDF + specularBRDF * (1.f - Fc)) * (1.f - Fc) + Frc) + Ds) * lightIntensity * NdotL;
+  return (((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) + Ds) * lightIntensity * NdotL;
 }
 
 VSNRAY_FUNC
