@@ -441,7 +441,8 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
             ShadeState shadeState;
             RayType rayType = Radiance;
             float3 throughput{1.f};
-            for (unsigned bounceID=0;true;++bounceID) {
+            float3 intensity{0.f};
+            for (unsigned passID=0, bounceID=0;true;++passID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
               bool shadow = rayType == Shadow || rayType == AO;
               HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadow);
@@ -454,7 +455,7 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
                     shadeState,
                     ps);
 
-              if (bounceID == 0) {
+              if (passID == 0 && bounceID == 0) {
                 firstHit = hitRec;
               }
 
@@ -462,15 +463,21 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
               rayType = shadeState.next.rayType;
 
               if (rayType == None) {
-                throughput *= shadeState.shadedColor * shadeState.visibility.light;
-                throughput += shadeState.baseColor * rendererState.ambientColor
-                    * rendererState.ambientRadiance * shadeState.visibility.ao;
+                float3 direct = (shadeState.shadedColor * shadeState.visibility.light)
+                      + (shadeState.baseColor * rendererState.ambientColor
+                        * rendererState.ambientRadiance * shadeState.visibility.ao);
+                intensity += throughput * direct;
+//              throughput *= shadeState.bsdfWeight; // TODO
+                bounceID++;
+              }
+
+              if (bounceID >= 1) {
                 break;
               }
             }
 
             if (firstHit.hit || shadeState.hdriMiss) {
-              ps.color = float4(throughput,1.f);
+              ps.color = float4(intensity,1.f);
             }
 
             // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {
