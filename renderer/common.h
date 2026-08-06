@@ -3,8 +3,6 @@
 
 #pragma once
 
-// visionaray
-#include "visionaray/material.h"
 // ours
 #include "common.h"
 #include "DeviceCopyableObjects.h"
@@ -1021,21 +1019,12 @@ inline vec3 evalMaterial(const dco::Material &mat,
 {
   vec3 shadedColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
-    vec4f color = getColor(mat, onDevice, attribs, objPos, primID);
+    vec3 color = getColor(mat, onDevice, attribs, objPos, primID).xyz();
 
-    shade_record<float> sr;
-    sr.normal = Ns;
-    sr.geometric_normal = Ng;
-    sr.view_dir = viewDir;
-    sr.tex_color = float3(1.f);
-    sr.light_dir = normalize(lightDir);
-    sr.light_intensity = lightIntensity;
+    const float NdotL = fmaxf(0.f,dot(Ns,lightDir));
+    vec3 diffuseBRDF = color * Fd_Lambert();
 
-    matte<float> vmat;
-    vmat.cd() = from_rgb(color.xyz());
-    vmat.kd() = 1.f;
-
-    shadedColor = to_rgb(vmat.shade(sr));
+    shadedColor = diffuseBRDF * lightIntensity * NdotL;
   } else if (mat.type == dco::Material::PhysicallyBased) {
     shadedColor = evalPhysicallyBasedMaterial(mat,
                                               onDevice,
