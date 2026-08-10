@@ -3,22 +3,21 @@
 
 #pragma once
 
-#include "renderer/AO.h"
 #include "renderer/common.h"
 #include "renderer/VolumeIntegration.h"
 #include "sampleCDF.h"
-#include "VisionarayGlobalState.h"
+#include "SyncContext.h"
 
 namespace visionaray {
 
-struct VisionarayRendererDirectLight
+struct VisionarayRendererPathtrace
 {
-  void renderFrame(const dco::Frame &frame,
-                   const dco::Camera &cam,
+  void renderFrame(DevicePointer<DeviceObjectRegistry> onDevicePtr,
+                   DevicePointer<RendererState> rendererStatePtr,
+                   DevicePointer<dco::Frame> framePtr,
+                   DevicePointer<dco::Camera> camPtr,
                    uint2 size,
-                   VisionarayGlobalState *state,
-                   const DeviceObjectRegistry &DD,
-                   const RendererState &rendererState,
+                   SyncContext::SP syncContext,
                    unsigned worldID, int frameID);
 
   constexpr static bool stochasticRendering{true};

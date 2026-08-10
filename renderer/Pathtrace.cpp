@@ -1,21 +1,22 @@
 // Copyright 2023-2026 Stefan Zellmann
 // SPDX-License-Identifier: Apache-2.0
 
-#include "DirectLight.h"
+#include "Pathtrace.h"
 
 namespace visionaray {
 
-DirectLight::DirectLight(VisionarayGlobalState *s) : Renderer(s)
+Pathtrace::Pathtrace(VisionarayGlobalState *s) : Renderer(s)
 {
-  vrend.type = VisionarayRenderer::DirectLight;
+  vrend.type = VisionarayRenderer::Pathtrace;
 }
 
-DirectLight::~DirectLight()
+Pathtrace::~Pathtrace()
 {}
 
-void DirectLight::commitParameters()
+void Pathtrace::commitParameters()
 {
   Renderer::commitParameters();
+  m_maxBounce = clamp(getParam<int>("maxBounce", 7), 0, 256);
   m_occlusionDistance = getParam<float>("ambientOcclusionDistance", 1e20f);
   m_ambientSamples = clamp(getParam<int>("ambientSamples", 1), 0, 256);
   m_pixelSamples = clamp(getParam<int>("pixelSamples", 1), 1, 256);
@@ -24,9 +25,10 @@ void DirectLight::commitParameters()
   m_taaAlpha = getParam<float>("taaAlpha", 0.3f);
 }
 
-void DirectLight::finalize()
+void Pathtrace::finalize()
 {
   Renderer::finalize();
+  vrend.rendererState.maxBounce = m_maxBounce;
   vrend.rendererState.occlusionDistance = m_occlusionDistance;
   vrend.rendererState.ambientSamples = m_ambientSamples;
   vrend.rendererState.pixelSamples = m_pixelSamples;

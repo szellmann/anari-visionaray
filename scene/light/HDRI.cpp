@@ -88,8 +88,6 @@ void makeRGBA(const void *imgData, unsigned numComponents, int width, int height
 
 // HDRI definitions ///////////////////////////////////////////////////////////
 
-int HDRI::backgroundID = -1;
-
 HDRI::HDRI(VisionarayGlobalState *s) : Light(s)
 {
   vlight.type = dco::Light::HDRI;
@@ -97,8 +95,6 @@ HDRI::HDRI(VisionarayGlobalState *s) : Light(s)
 
 HDRI::~HDRI()
 {
-  if (m_visible)
-    backgroundID = -1; // reset!
 }
 
 void HDRI::commitParameters()
@@ -161,13 +157,6 @@ void HDRI::finalize()
   vlight.asHDRI.cdf.rows = m_cdfLastCol.devicePtr();
   vlight.asHDRI.cdf.width = width;
   vlight.asHDRI.cdf.height = height;
-
-  if (m_visible) {
-    backgroundID = vlight.lightID;
-  } else {
-    if (backgroundID == vlight.lightID)
-      backgroundID = -1;
-  }
 
   dispatch();
 }

@@ -1,4 +1,4 @@
 // Copyright 2023-2026 Stefan Zellmann
 // SPDX-License-Identifier: Apache-2.0
 
-#include "DirectLight_impl.cpp"
+#include "Pathtrace_impl.cpp"

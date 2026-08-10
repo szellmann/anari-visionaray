@@ -63,12 +63,12 @@ struct RendererState
   texture_ref<vector<4, unorm<8>>, 2> bgImage;
 #endif
   RenderMode renderMode{RenderMode::Default};
+  int maxBounce{7};
   float4 *clipPlanes{nullptr};
   unsigned numClipPlanes{0};
   int sampleLimit{1024};
   int pixelSamples{1};
   int accumID{0};
-  int envID{-1};
   // TAA
   bool taaEnabled{false};
   float taaAlpha{0.3f};
@@ -786,6 +786,10 @@ inline mat3 getNormalTransform(const dco::Instance &inst, const Ray &ray)
   return {};
 }
 
+//=========================================================
+// BSDF eval
+//=========================================================
+
 VSNRAY_FUNC
 inline float pow2(float f)
 {
@@ -836,8 +840,15 @@ VSNRAY_FUNC
 inline float D_GGX(float NdotH, float roughness, float EPS)
 {
   float alpha = roughness;
-  return (alpha*alpha*heaviside(NdotH))
-    / (constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f));
+  float alpha2 = alpha * alpha;
+
+  float d = (NdotH * alpha2 - NdotH) * NdotH + 1.f;
+  float denom = constants::pi<float>() * d * d;
+  return alpha2 / fmaxf(EPS, denom);
+  //float denom
+  //  = constants::pi<float>()*pow2(NdotH*NdotH*(alpha*alpha-1.f)+1.f);
+  //if (denom==0.f) denom = EPS;
+  //return (alpha*alpha*heaviside(NdotH)) / denom;
 }
 
 VSNRAY_FUNC
@@ -894,6 +905,12 @@ inline float V_Kelemen(float LdotH, const float EPS)
 }
 
 VSNRAY_FUNC
+inline float mapRoughness(float roughness)
+{
+  return fmaxf(0.045f, roughness);
+}
+
+VSNRAY_FUNC
 inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                                         const DeviceObjectRegistry &onDevice,
                                         const dco::AttributeRec &attribs,
@@ -920,6 +937,9 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float clearcoatRoughness = getF(
       mat.asPhysicallyBased.clearcoatRoughness, onDevice, attribs, objPos, primID);
 
+  const float transmission = getF(
+      mat.asPhysicallyBased.transmission, onDevice, attribs, objPos, primID);
+
   const float ior = mat.asPhysicallyBased.ior;
 
   vec3 sheenColor = getRGBA(
@@ -927,8 +947,12 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   const float sheenRoughness = getF(
       mat.asPhysicallyBased.sheenRoughness, onDevice, attribs, objPos, primID);
 
-  const float alpha = roughness * roughness;
-  const float clearcoatAlpha = clearcoatRoughness * clearcoatRoughness;
+  const float perceptualRoughness = mapRoughness(roughness);
+  const float perceptualClearcoatRoughness = mapRoughness(clearcoatRoughness);
+  const float perceptualSheenRoughness = mapRoughness(sheenRoughness);
+
+  const float alpha = perceptualRoughness * perceptualRoughness;
+  const float clearcoatAlpha = perceptualClearcoatRoughness * perceptualClearcoatRoughness;
 
   // anisotropic basis:
   const float2 rotation(cosf(anisotropyRotation), sinf(anisotropyRotation));
@@ -965,9 +989,11 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
 
   // GGX microfacet distribution
   float D = 0.f;
-  if (length(anisotropicT) > EPS && length(anisotropicB) > EPS) {
-    float at = max(alpha * (1.f + anisotropyStrength), 0.001f);
-    float ab = max(alpha * (1.f - anisotropyStrength), 0.001f);
+  if (anisotropyStrength > 0.f && length(anisotropicT) > EPS
+        && length(anisotropicB) > EPS) {
+    float aspect = sqrtf(1.f - anisotropyStrength * 0.9f);
+    float at = max(alpha / aspect, 0.001f);
+    float ab = max(alpha * aspect, 0.001f);
     D = D_GGX_Anisotropic(NdotH, TdotH, BdotH, at, ab);
   } else {
     D = D_GGX(NdotH, alpha, EPS);
@@ -994,9 +1020,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float Frc = (Dc * Vc) * Fc;
 
   // (Charlie) sheen
-  float sheenAlphaInv = 0.f;
-  if (sheenRoughness > 0.f)
-    sheenAlphaInv = 1.f/sheenRoughness;
+  float sheenAlphaInv = 1.f/perceptualSheenRoughness;
   float cos2h = NdotH * NdotH;
   float sin2h = fmaxf(1.f - cos2h, 0.0078125f);
   vec3 Ds = sheenColor *
@@ -1035,10 +1059,370 @@ inline vec3 evalMaterial(const dco::Material &mat,
   return materialColor;
 }
 
-struct LightSample : light_sample<float>
+//=========================================================
+// BSDF sampling
+//=========================================================
+
+struct BSDFSample
+{
+  float3 dir;
+  float3 f;
+  float pdf;
+  float cosT;
+};
+
+// Heitz 2018: Sampling the GGX Distribution of Visible Normals
+VSNRAY_FUNC
+inline float3 sampleGGXVNDF(float3 viewDir, // in local coordinates (0,0,1)
+                            float alpha_x,
+                            float alpha_y,
+                            float U1,
+                            float U2)
+{
+  // transforming the view direction to the hemisphere configuration
+  float3 Vh = normalize(viewDir*float3(alpha_x,alpha_y,1.f));
+  // orthonormal basis (with special case if cross product is zero)
+  float lensq = Vh.x*Vh.x + Vh.y*Vh.y;
+  float3 T1 = lensq > 0.f ? float3(-Vh.y,Vh.x,0.f)/sqrtf(lensq) : float3(1,0,0);
+  float3 T2 = cross(Vh,T1);
+  // parameterization of the projected area
+  float r = sqrtf(U1);
+  float phi = constants::two_pi<float>() * U2;
+  float t1 = r * cosf(phi);
+  float t2 = r * sinf(phi);
+  float s = 0.5f * (1.f + Vh.z);
+  t2 = (1.f-s) * sqrtf(fmaxf(0.f,1.f-t1*t1)) + s * t2;
+  // reprojection onto hemisphere
+  float3 Nh = t1*T1 + t2*T2 + sqrtf(1.f-t1*t1-t2*t2) * Vh;
+  // transforming the normal back to the ellipsoid configuration
+  float3 Ne = normalize(float3(Nh.x*alpha_x,Nh.y*alpha_y,fmaxf(0.f,Nh.z)));
+  return Ne;
+}
+
+VSNRAY_FUNC
+inline void pdfGGXVNDF(const float3 &lightDir,
+                       const float3 &viewDir,
+                       bool anisotropicSpecular,
+                       float alpha_x, float alpha_y,
+                       float eta_i, float eta_t,
+                       const vec3 Ng, const vec3 Ns,
+                       // tangent/bitangent transformed by anisotropic direction:
+                       const vec3 anisotropicT, const vec3 anisotropicB,
+                       float &pdfSpec,
+                       float &pdfTrans)
+{
+  constexpr float EPS = 1e-14f;
+
+  // calculate specular PDF:
+  pdfSpec = 0.f, pdfTrans = 0.f;
+  const float NdotL = dot(Ns,lightDir);
+  const float NdotV = fmaxf(EPS,dot(Ns,viewDir));
+
+  if (NdotL > 0.f) {
+    float3 H = viewDir+lightDir;
+    float lenH = length(H);
+
+    if (lenH > 1e-4f) {
+      H /= lenH;
+
+      float NdotH = fmaxf(EPS,dot(Ns,H));
+      float VdotH = fmaxf(EPS,dot(viewDir,H));
+
+      float D, G1;
+
+      if (!anisotropicSpecular) {
+        const float alpha_x2 = alpha_x * alpha_x;
+        D = D_GGX(NdotH, alpha_x, EPS);
+        G1 = 2.f*NdotV / (NdotV+sqrtf(alpha_x2 + (1.f-alpha_x2) * NdotV * NdotV));
+      } else {
+        const float alpha_x2 = alpha_x * alpha_x;
+        const float alpha_y2 = alpha_y * alpha_y;
+        const float TdotH = dot(anisotropicT,H);
+        const float BdotH = dot(anisotropicB,H);
+        D = D_GGX_Anisotropic(NdotH, TdotH, BdotH, alpha_x, alpha_y);
+
+        const float TdotV = dot(anisotropicT,viewDir);
+        const float BdotV = dot(anisotropicB,viewDir);
+
+        const float alpha_v = sqrtf(TdotV * TdotV * alpha_x2 + BdotV * BdotV * alpha_y2);
+        const float alpha_v2 = alpha_v * alpha_v;
+        G1 = 2.f*NdotV / (NdotV+sqrtf(alpha_v2 + (1.f-alpha_v2) * NdotV * NdotV));
+      }
+
+      pdfSpec = (D*G1) / (4.f*NdotV);
+    }
+  }
+
+  // calculate transmissive PDF:
+  else if (NdotL < 0.f) {
+    float3 H = -(viewDir * eta_i + lightDir * eta_t);
+    float lenH = length(H);
+
+    if (lenH > 1e-4f) {
+      H /= lenH;
+
+      if (dot(Ns,H) < 0.f) H = -H;
+
+      const float alpha = alpha_x; // TODO!
+      const float alpha2 = alpha * alpha;
+
+      float NdotH = fmaxf(EPS,dot(Ns,H));
+      float LdotH = fabsf(dot(lightDir,H));
+      float VdotH = fabsf(dot(viewDir,H));
+
+      if (VdotH > 0.f && LdotH > 0.f) {
+        float D = D_GGX(NdotH, alpha, EPS);
+        float G1 = 2.f*NdotV / (NdotV+sqrtf(alpha2 + (1.f-alpha2) * NdotV * NdotV));
+        float pdfNe = (D*G1 * VdotH) / NdotV;
+
+        float denom = (eta_i * VdotH + eta_t * LdotH);
+        float jacobian = (eta_t * eta_t * LdotH) / (denom * denom);
+
+        pdfTrans = pdfNe * jacobian;
+      }
+    }
+  }
+}
+
+VSNRAY_FUNC
+inline void pdfGGXVNDF(const float3 &lightDir,
+                       const float3 &viewDir,
+                       float alpha, float eta_i, float eta_t,
+                       const vec3 Ng, const vec3 Ns,
+                       float &pdfSpec)
+{
+  // convenience overload, isotropic and w/o transmissive pdf:
+  float pdfTrans{0.f};
+  float3 T{0.f}, B{0.f};
+  pdfGGXVNDF(lightDir,
+             viewDir,
+             false,
+             alpha, alpha,
+             eta_i, eta_t,
+             Ng, Ns,
+             T, B,
+             pdfSpec,
+             pdfTrans);
+}
+
+VSNRAY_FUNC
+inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
+                                                const DeviceObjectRegistry &onDevice,
+                                                const dco::AttributeRec &attribs,
+                                                vec3f objPos,
+                                                unsigned primID,
+                                                const vec3 Ng, const vec3 Ns,
+                                                const vec3 T, const vec3 B,
+                                                const vec3 viewDir,
+                                                Random &rnd)
+{
+  const float metallic = getF(
+      mat.asPhysicallyBased.metallic, onDevice, attribs, objPos, primID);
+  const float roughness = getF(
+      mat.asPhysicallyBased.roughness, onDevice, attribs, objPos, primID);
+
+  const float anisotropyStrength = getF(
+      mat.asPhysicallyBased.anisotropyStrength, onDevice, attribs, objPos, primID);
+  const float2 anisotropyDirection = getUV(
+      mat.asPhysicallyBased.anisotropyDirection, onDevice, attribs, objPos, primID);
+  const float anisotropyRotation = getF(
+      mat.asPhysicallyBased.anisotropyRotation, onDevice, attribs, objPos, primID);
+
+  const float clearcoat = getF(
+      mat.asPhysicallyBased.clearcoat, onDevice, attribs, objPos, primID);
+  const float clearcoatRoughness = getF(
+      mat.asPhysicallyBased.clearcoatRoughness, onDevice, attribs, objPos, primID);
+
+  const float transmission = getF(
+      mat.asPhysicallyBased.transmission, onDevice, attribs, objPos, primID);
+
+  const float ior = mat.asPhysicallyBased.ior;
+
+  vec3 sheenColor = getRGBA(
+      mat.asPhysicallyBased.sheenColor, onDevice, attribs, objPos, primID).xyz();
+  const float sheenRoughness = getF(
+      mat.asPhysicallyBased.sheenRoughness, onDevice, attribs, objPos, primID);
+
+  const float perceptualRoughness = mapRoughness(roughness);
+  const float perceptualClearcoatRoughness = mapRoughness(clearcoatRoughness);
+
+  const float alpha = perceptualRoughness * perceptualRoughness;
+  const float clearcoatAlpha = perceptualClearcoatRoughness * perceptualClearcoatRoughness;
+
+  // anisotropic basis:
+  const float2 rotation(cosf(anisotropyRotation), sinf(anisotropyRotation));
+  float2 direction = anisotropyDirection;
+  direction = mat2(rotation.x, rotation.y, -rotation.y, rotation.x) * normalize(direction);
+  const mat3 TBN(T,B,Ns);
+  const float3 anisotropicT = normalize(TBN * float3(direction, 0.f));
+  const float3 anisotropicB = normalize(cross(Ns, anisotropicT));
+
+  constexpr float EPS = 1e-14f;
+  const float NdotV = fmaxf(EPS,dot(Ns,viewDir));
+
+  // Get baseColor:
+  vec3 baseColor = getRGBA(
+      mat.asPhysicallyBased.baseColor, onDevice, attribs, objPos, primID).xyz();
+
+  // Metallic materials don't reflect diffusely:
+  vec3 diffuseColor = lerp_r(baseColor, vec3f(0.f), metallic);
+
+  // Fresnel
+  vec3 f0 = lerp_r(vec3(pow2((1.f-ior)/(1.f+ior))), baseColor, metallic);
+  vec3 F = F_Schlick(NdotV, f0);
+
+  BSDFSample result;
+
+  const float fClear = clearcoat * 0.04f;
+  const float baseEnergy = 1.f-fClear;
+
+  const float fSpec = rgb_to_luminance(F);
+  const float remainingEnergy = baseEnergy * (1.f-fSpec);
+
+  float wDiff  = rgb_to_luminance(diffuseColor) * remainingEnergy * (1.f-transmission);
+  float wSpec  = baseEnergy * fSpec;
+  float wTrans = remainingEnergy * transmission;
+  float wClear = fClear;
+  float wSum   = wDiff + wSpec + wTrans + wClear;
+
+  // TODO: CDF sampling if we have multiple lobes
+  float pDiff  = wSum > 0.f ? wDiff  / wSum : 0.0f;
+  float pSpec  = wSum > 0.f ? wSpec  / wSum : 0.333f;
+  float pTrans = wSum > 0.f ? wTrans / wSum : 0.667f;
+  float pClear = 1.f - pDiff - pSpec - pTrans;
+
+  auto w = faceforward(Ns, viewDir, Ng);
+  auto v = fabsf(w.x) > fabsf(w.y) ? normalize(vec3(-w.z,0.f,w.x))
+                                   : normalize(vec3(0.f,w.z,-w.y));
+  auto u = cross(v,w);
+
+  float lobe = rnd();
+
+  // transform viewDir into local coordinate system
+  mat3 basis(u,v,w);
+  float3 V = transpose(basis)*viewDir;
+
+  bool entering = dot(Ns,viewDir) > 0.f;
+  float eta_i = entering ? 1.0f : ior;
+  float eta_t = entering ? ior : 1.0f;
+
+  float eta = entering ? 1.f/ior : ior;
+
+  bool anisotropicSpecular = false;
+  float at = alpha, ab = alpha;
+  if (anisotropyStrength > 0.f && length(anisotropicT) > EPS
+        && length(anisotropicB) > EPS) {
+    anisotropicSpecular = true;
+    float aspect = sqrtf(1.f - anisotropyStrength * 0.9f);
+    at = max(alpha / aspect, 0.001f);
+    ab = max(alpha * aspect, 0.001f);
+  }
+
+  if (lobe < pDiff) {
+    auto sp = cosine_sample_hemisphere(rnd(),rnd());
+    result.dir = normalize(sp.x*u+sp.y*v+sp.z*w);
+  } else if (lobe < pDiff + pSpec) {
+    // GGX sampling (Heitz 2018):
+    float3 Ne = sampleGGXVNDF(V,at,ab,rnd(),rnd());
+    // reflect along the microfacet normal transformed back to global space:
+    result.dir = reflect(viewDir,basis*Ne);
+  } else if (lobe < pDiff + pSpec + pTrans) {
+    float3 Ne = sampleGGXVNDF(V,alpha,alpha,rnd(),rnd());
+    if (dot(V,Ne) < 0.f) Ne = -Ne;
+    result.dir = refract(viewDir,basis*Ne,eta_t/eta_i);
+    if (length(result.dir) < 1e-4f) { // TIR
+      result.dir = reflect(viewDir,basis*Ne);
+    }
+  } else {
+    float3 Ne = sampleGGXVNDF(V,clearcoatAlpha,clearcoatAlpha,rnd(),rnd());
+    result.dir = reflect(viewDir,basis*Ne);
+  }
+
+  float pdfDiff = fmaxf(0.f,dot(Ns,result.dir)) * constants::inv_pi<float>();
+
+  float pdfSpec = 0.f, pdfTrans = 0.f;
+  pdfGGXVNDF(result.dir,
+             viewDir,
+             anisotropicSpecular,
+             at, ab,
+             eta_i, eta_t,
+             Ng, Ns,
+             anisotropicT, anisotropicB,
+             pdfSpec,
+             pdfTrans);
+
+  float pdfClear = 0.f;
+  float ceta_i = entering ? 1.0f : 1.5f;
+  float ceta_t = entering ? 1.5f : 1.0f;
+  pdfGGXVNDF(result.dir,
+             viewDir,
+             clearcoatAlpha,
+             ceta_i,
+             ceta_t,
+             Ng, Ns,
+             pdfClear);
+
+  result.pdf = pDiff*pdfDiff + pSpec*pdfSpec + pTrans*pdfTrans + pClear*pdfClear;
+
+  return result;
+}
+
+VSNRAY_FUNC
+inline BSDFSample sampleMaterial(const dco::Material &mat,
+                                 const DeviceObjectRegistry &onDevice,
+                                 const dco::AttributeRec &attribs,
+                                 vec3f objPos,
+                                 unsigned primID,
+                                 const vec3 Ng, const vec3 Ns,
+                                 const vec3 T, const vec3 B,
+                                 const vec3 viewDir,
+                                 Random &rnd)
+{
+  BSDFSample result;
+  if (mat.type == dco::Material::Matte) {
+    auto w = faceforward(Ns, viewDir, Ng);
+    auto v = fabsf(w.x) > fabsf(w.y) ? normalize(vec3(-w.z,0.f,w.x))
+                                     : normalize(vec3(0.f,w.z,-w.y));
+    auto u = cross(v,w);
+    auto sp = cosine_sample_hemisphere(rnd(), rnd());
+    result.dir = normalize(sp.x*u+sp.y*v+sp.z*w);
+    result.pdf = fmaxf(0.f,dot(Ns,result.dir)) * constants::inv_pi<float>();
+  } else if (mat.type == dco::Material::PhysicallyBased) {
+    result = samplePhysicallyBasedMaterial(mat,
+                                           onDevice,
+                                           attribs,
+                                           objPos,
+                                           primID,
+                                           Ng, Ns,
+                                           T, B,
+                                           viewDir,
+                                           rnd);
+  }
+
+  result.cosT = fmaxf(0.f,dot(Ns,result.dir));
+
+  result.f = evalMaterial(mat,
+                          onDevice,
+                          attribs,
+                          objPos,
+                          primID,
+                          Ng, Ns,
+                          T, B,
+                          viewDir,
+                          result.dir);
+
+  return result;
+}
+
+//=========================================================
+// Light sampling
+//=========================================================
+
+struct LightSample
 {
   float3 intensity;
   float3 dir;
+  float3 f;
   float pdf;
   float dist;
   float dist2;
@@ -1101,6 +1485,7 @@ struct HitRecLight
 {
   bool hit{false};
   float t{FLT_MAX};
+  bool lightVisible{false};
   unsigned lightID{UINT_MAX};
 };
 
@@ -1179,17 +1564,37 @@ inline dco::Light getLight(const dco::LightRef *lightRefs, unsigned lightID,
 
 VSNRAY_FUNC
 inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const DeviceObjectRegistry &onDevice)
+    const DeviceObjectRegistry &onDevice, unsigned bounceID)
 {
   HitRecLight hr;
   dco::World world = onDevice.worlds[worldID];
   for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
     const dco::Light &light = getLight(world.allLights, lightID, onDevice);
-    if (light.type == dco::Light::Quad && light.visible) {
+    if (bounceID == 0 && !light.visible) continue;
+    if (light.type == dco::Light::HDRI) {
+      HitRecLight hrl = {};
+      hrl.hit = true;
+      hrl.t = FLT_MAX;
+      hrl.lightVisible = light.visible;
+      if (hrl.hit && hrl.t < hr.t
+          || !hr.hit
+          // if we have more than one HDRI, we have to pick an arbitrary
+          // one but prefer visible over invisible lights:
+          || (hrl.t == hr.t &&  (light.visible && !hr.lightVisible))) {
+        hr.hit = true;
+        hr.lightVisible = light.visible;
+        hr.t = FLT_MAX;
+        hr.lightID = lightID;
+      }
+    } else if (light.type == dco::Light::Quad) {
       auto hrl = intersect(ray, light.asQuad.geometry());
+      float3 Nl = get_normal(hrl,light.asQuad.geometry());
+      if (light.asQuad.side == dco::Light::Front && dot(Nl,ray.dir) > 0.f) continue;
+      if (light.asQuad.side == dco::Light::Back && dot(Nl,ray.dir) < 0.f) continue;
       if (hrl.hit && hrl.t < hr.t) {
         hr.hit = true;
         hr.t = hrl.t;
+        hr.lightVisible = light.visible;
         hr.lightID = lightID;
       }
     }
@@ -1199,11 +1604,11 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
 
 VSNRAY_FUNC
 inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const DeviceObjectRegistry &onDevice, bool shadow)
+    const DeviceObjectRegistry &onDevice, unsigned bounceID, bool shadow)
 {
   HitRec hr;
   hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID, shadow);
-  hr.light   = intersectLights(ss, ray, worldID, onDevice/*, shadow*/);
+  hr.light   = intersectLights(ss, ray, worldID, onDevice, bounceID/*, shadow*/);
   hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice/*, shadow*/);
   hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
   // light-hit takes precedence over surface and volume (<=)

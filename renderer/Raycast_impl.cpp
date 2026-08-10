@@ -155,11 +155,19 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     }
   }
 
+  auto hrl = intersectLights(ss, ray, worldID, onDevice, 0);
+
   // Background
-  if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
-    auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-    result.color = over(float4(surfaceColor, surfaceAlpha),
-                        float4(hdri.intensity(ray.dir), 1.0f));
+  if (hrl.hit) {
+    auto &light = onDevice.lights[hrl.lightID];
+    float4 intensity(0.f);
+    if (light.type == dco::Light::HDRI) {
+      intensity = float4(light.asHDRI.intensity(ray.dir), 1.f);
+    } else if (light.type == dco::Light::Quad) {
+      const float3 pos = ray.ori + hrl.t * ray.dir;
+      intensity = float4(light.asQuad.intensity(pos), 1.f);
+    }
+    result.color = over(float4(surfaceColor, surfaceAlpha), intensity);
   } else {
     result.color = over(float4(surfaceColor, surfaceAlpha), bgColor);
   }

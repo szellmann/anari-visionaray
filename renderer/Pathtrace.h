@@ -7,14 +7,15 @@
 
 namespace visionaray {
 
-struct DirectLight : public Renderer
+struct Pathtrace : public Renderer
 {
-  DirectLight(VisionarayGlobalState *s);
-  ~DirectLight() override;
+  Pathtrace(VisionarayGlobalState *s);
+  ~Pathtrace() override;
 
   void commitParameters() override;
   void finalize() override;
  private:
+  int m_maxBounce{7};
   float m_occlusionDistance{1e20f};
   int m_ambientSamples{1};
   int m_pixelSamples{1};

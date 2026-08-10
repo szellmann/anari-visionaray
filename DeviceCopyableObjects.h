@@ -2276,6 +2276,8 @@ inline vec3 sample_surface(const Quad &q, const vec3 reference_point, RNG &rng)
 struct Light
 {
   enum Type { Directional, Point, Quad, Spot, HDRI, Unknown, };
+  enum Side { Front, Back, Both, };
+
   Type type;
   unsigned lightID;
   bool visible;
@@ -2317,7 +2319,36 @@ struct Light
         return color * lightIntensity * spot;
       }
     } asSpot;
-    area_light<float,dco::Quad> asQuad;
+    struct {
+      area_light<float,dco::Quad> internal;
+      Side side;
+
+      VSNRAY_FUNC
+      inline dco::Quad &geometry()
+      { return internal.geometry(); }
+
+      VSNRAY_FUNC
+      inline const dco::Quad &geometry() const
+      { return internal.geometry(); }
+
+      VSNRAY_FUNC
+      inline void set_cl(const float3 &cl)
+      { internal.set_cl(cl); }
+
+      VSNRAY_FUNC
+      inline void set_kl(float kl)
+      { internal.set_kl(kl); }
+
+      template<typename RNG>
+      VSNRAY_FUNC
+      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      { return internal.sample(refPoint,rng); }
+
+      VSNRAY_FUNC
+      inline float3 intensity(const float3 lightDir) const
+      { return internal.intensity(lightDir); }
+
+    } asQuad;
     struct {
 #ifdef WITH_CUDA
       cuda_texture_ref<float4, 2> radiance;

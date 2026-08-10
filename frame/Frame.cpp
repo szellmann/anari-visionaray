@@ -312,8 +312,6 @@ void Frame::renderFrame()
     }
 
     if (rend.rendererState.accumID < rend.sampleLimit()) {
-      rend.rendererState.envID = HDRI::backgroundID;
-
       if (cam.type == dco::Camera::Pinhole) {
         rend.rendererState.currMV = cam.asPinholeCam.get_view_matrix();
         rend.rendererState.currPR = cam.asPinholeCam.get_proj_matrix();

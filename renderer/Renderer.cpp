@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "Raycast.h"
-#include "DirectLight.h"
+#include "Pathtrace.h"
 #include "Renderer.h"
 #include "scene/surface/material/sampler/common.h" // for imageSamplerUpdateData (TODO!)
 
@@ -24,8 +24,8 @@ void VisionarayRenderer::renderFrame(const dco::Frame &frame,
     asRaycast.renderFrame(
         onDevicePtr, rendererStatePtr, framePtr, camPtr, size,
         state->syncContext, worldID, frameID);
-  } else if (type == DirectLight) {
-    asDirectLight.renderFrame(
+  } else if (type == Pathtrace) {
+    asPathtrace.renderFrame(
         onDevicePtr, rendererStatePtr, framePtr, camPtr, size,
         state->syncContext, worldID, frameID);
   }
@@ -143,8 +143,8 @@ void Renderer::finalize()
 
 Renderer *Renderer::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
-  if (subtype == "direct_light" || subtype == "default")
-    return new DirectLight(s);
+  if (subtype == "pathtrace" || subtype == "default")
+    return new Pathtrace(s);
   else if (subtype == "raycast")
     return new Raycast(s);
   else

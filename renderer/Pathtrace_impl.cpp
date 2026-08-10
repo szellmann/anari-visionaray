@@ -1,32 +1,36 @@
 // Copyright 2023-2026 Stefan Zellmann
 // SPDX-License-Identifier: Apache-2.0
 
-#include "DirectLight_impl.h"
+#include "Pathtrace_impl.h"
 #include "for_each.h"
 
 namespace visionaray {
 
-enum RayType { Radiance, Shadow, AO, None };
+enum RayType { Radiance, Shadow, AO, Miss, None, };
+
+VSNRAY_FUNC
+inline float safe_rcp(float f)
+{ return f > 0.f ? 1.f/f : 0.f; }
 
 struct ShadeState
 {
   float3 baseColor{0.f};
   float3 shadedColor{0.f};
-  float3 bsdfWeight{0.f};
   float3 gn{0.f};
   float3 sn{0.f};
   float3 tng{0.f};
   float3 btng{0.f};
-  float3 viewDir{0.f};
   float3 hitPos{0.f};
   dco::AttributeRec attribs;
-  bool hdriMiss{false};
   float eps{1e-4f};
   int aoSamples{0};
   float aoWeights{0.f};
   float aoCount{0.f};
+  BSDFSample bsdfSample{};
+  LightSample lightSample{};
+  float misWeightNEE{0.f};
   struct {
-    RayType rayType;
+    RayType rayType{None};
     Ray ray;
   } next;
   struct {
@@ -40,12 +44,13 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
                                        ScreenSample &ss,
                                        const Ray &ray,
                                        const RendererState &rendererState,
-                                       const dco::World &world,
-                                       const LightSample &ls)
+                                       const dco::World &world)
 {
   auto &sn = shadeState.sn;
   auto &eps = shadeState.eps;
   auto &hitPos = shadeState.hitPos;
+  auto &bsdfSample = shadeState.bsdfSample;
+  auto &lightSample = shadeState.lightSample;
   auto &next = shadeState.next;
 
   next.rayType = Type;
@@ -53,9 +58,9 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
   if constexpr (Type == Shadow) {
     Ray &shadowRay = next.ray;
     shadowRay.ori = hitPos + sn * eps;
-    shadowRay.dir = normalize(ls.dir);
+    shadowRay.dir = normalize(lightSample.dir);
     shadowRay.tmin = 0.f;
-    shadowRay.tmax = ls.dist;//-1e-4f; // TODO: bias sample point
+    shadowRay.tmax = lightSample.dist;//-1e-4f; // TODO: bias sample point
     shadowRay.time = ray.time;
     shadowRay.dbg = ray.dbg;
     next.rayType = Shadow;
@@ -75,6 +80,19 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
     aoRay.dbg = ray.dbg;
     next.rayType = AO;
   }
+  else if constexpr (Type == Radiance) {
+    Ray &bsdfRay = next.ray;
+    if (dot(bsdfSample.dir,sn) > 0.f)
+      bsdfRay.ori = hitPos + sn * eps;
+    else
+      bsdfRay.ori = hitPos - sn * eps;
+    bsdfRay.dir = normalize(bsdfSample.dir);
+    bsdfRay.tmin = 0.f;
+    bsdfRay.tmax = 1e31f;
+    bsdfRay.time = ray.time;
+    bsdfRay.dbg = ray.dbg;
+    next.rayType = Radiance;
+  }
 }
 
 VSNRAY_FUNC
@@ -82,23 +100,24 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     const DeviceObjectRegistry &onDevice, const RendererState &rendererState,
     const HitRec &hitRec,
     ShadeState &shadeState,
-    PixelSample &result)
+    PixelSample &result,
+    unsigned bounceID)
 {
   auto &baseColor = shadeState.baseColor;
   auto &shadedColor = shadeState.shadedColor;
-  auto &bsdfWeight = shadeState.bsdfWeight;
   auto &gn = shadeState.gn;
   auto &sn = shadeState.sn;
   auto &tng = shadeState.tng;
   auto &btng = shadeState.btng;
-  auto &viewDir = shadeState.viewDir;
   auto &hitPos = shadeState.hitPos;
   auto &attribs = shadeState.attribs;
-  auto &hdriMiss = shadeState.hdriMiss;
   auto &eps = shadeState.eps;
   auto &aoSamples = shadeState.aoSamples;
   auto &aoWeights = shadeState.aoWeights;
   auto &aoCount = shadeState.aoCount;
+  auto &bsdfSample = shadeState.bsdfSample;
+  auto &lightSample = shadeState.lightSample;
+  auto &misWeightNEE = shadeState.misWeightNEE ;
   auto &next = shadeState.next;
   auto &visibility = shadeState.visibility;
 
@@ -106,20 +125,22 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
   auto &hrv = hitRec.volume;
   auto &hrl = hitRec.light;
 
-  next.rayType = None;
+  next.rayType = Miss;
 
   dco::World world = onDevice.worlds[worldID];
 
   if (rayType == Radiance) {
 
+    baseColor = float3{0.f};
+    visibility.light = 1.f;
+    visibility.ao = 1.f;
+    aoSamples = 0;
+    aoWeights = 0.f;
+    aoCount = 0.f;
+
     if (!hitRec.hit) {
-      if (rendererState.envID >= 0 && onDevice.lights[rendererState.envID].visible) {
-        auto hdri = onDevice.lights[rendererState.envID].asHDRI;
-        shadedColor = hdri.intensity(ray.dir);
-        hdriMiss = true;
-      } else {
-        shadedColor = float3{0.f};
-      }
+      shadedColor = float3{0.f};
+      next.rayType = Miss;
       return;
     }
 
@@ -129,9 +150,45 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     if (hitRec.lightHit) {
       hitPos = ray.ori + hrl.t * ray.dir;
       const dco::Light &light = getLight(world.allLights, hrl.lightID, onDevice);
-      if (light.type == dco::Light::Quad)
+      if (light.type == dco::Light::Quad) {
         shadedColor = light.asQuad.intensity(hitPos);
-      hdriMiss = true; // TODO?!
+      } else if (light.type == dco::Light::HDRI) {
+        shadedColor = light.asHDRI.intensity(ray.dir);
+      }
+      misWeightNEE = 1.f;
+
+      // Multiply by MIS weight:
+      if (bounceID > 0) {
+        float lightPDF = 0.f;
+        if (light.type == dco::Light::Quad) {
+          float A = area(light.asQuad.geometry());
+          float ld = length(hitPos-ray.ori);
+          float3 L = normalize(hitPos-ray.ori);
+          float3 Nl = get_normal(hitRec,light.asQuad.geometry());
+          float LdotNl = fabsf(dot(-L,Nl));
+          float solidAngle = (LdotNl*A) / (ld*ld);
+          lightPDF = 1.f/solidAngle;
+        } else if (light.type == dco::Light::HDRI) {
+          float3 dir = light.asHDRI.toLocal*ray.dir;
+          float2 uv = toUV(dir);
+          CDFSample sample = sampleCDF(light.asHDRI.cdf.rows, light.asHDRI.cdf.lastCol,
+                                       light.asHDRI.cdf.width, light.asHDRI.cdf.height,
+                                       uv.x, uv.y);
+          float theta = acosf(clamp(dir.y, -1.0f, 1.0f));
+          float sinTheta = sinf(theta);
+          if (sinTheta != 0.f) {
+            lightPDF = (sample.pdfx * sample.pdfy)
+                * (light.asHDRI.cdf.width * light.asHDRI.cdf.height)
+                / (2.0f * constants::pi<float>() * constants::pi<float>() * sinTheta);
+          }
+        }
+
+        float misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights);
+
+        shadedColor *= misWeightBSDF;
+      }
+
+      next.rayType = Miss;
       return;
     }
 
@@ -139,7 +196,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     const dco::Instance &inst = onDevice.instances[instID];
     const dco::Group &group = onDevice.groups[inst.groupID];
 
-    viewDir = -ray.dir;
+    float3 viewDir = -normalize(ray.dir);
 
     if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
@@ -173,19 +230,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       color.xyz() = hrv.albedo;
 
-      result.depth = hrv.t;
-      result.primId = hrv.primID;
-      result.objId = group.objIds[hrv.localID];
-      result.instId = inst.userID;
+      if (bounceID==0) {
+        result.depth = hrv.t;
+        result.primId = hrv.primID;
+        result.objId = group.objIds[hrv.localID];
+        result.instId = inst.userID;
+      }
     } else {
-      result.depth = hr.t;
-      result.primId = hr.prim_id;
-
       const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
-
-      result.objId = group.objIds[hr.geom_id];
-      result.instId = inst.userID;
 
       hitPos = ray.ori + hr.t * ray.dir;
       eps = epsilonFrom(hitPos, ray.dir, hr.t);
@@ -219,6 +272,13 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
             mat, onDevice, attribs, localHitPos, hr.prim_id, tng, btng, sn);
       }
       color = getColor(mat, onDevice, attribs, localHitPos, hr.prim_id);
+
+      if (bounceID==0) {
+        result.depth = hr.t;
+        result.primId = hr.prim_id;
+        result.objId = group.objIds[hr.geom_id];
+        result.instId = inst.userID;
+      }
     }
 
     result.Ng = gn;
@@ -233,17 +293,19 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    LightSample ls;
-    memset(&ls, 0, sizeof(ls));
+    int lightID = -1;
 
     if (world.numLights > 0) {
-      int lightID = uniformSampleOneLight(ss.random, world.numLights);
+      lightID = uniformSampleOneLight(ss.random, world.numLights);
       const dco::Light &light = getLight(world.allLights, lightID, onDevice);
-      ls = sampleLight(light, hitPos, ss.random);
+      lightSample = sampleLight(light, hitPos, ss.random);
     }
 
     if (rendererState.renderMode == RenderMode::Default) {
-      auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
+      vec3 lightDir = normalize(lightSample.dir);
+      vec3 lightIntensity = lightSample.intensity * safe_rcp(lightSample.dist2);
+      const float NdotL = fmaxf(0.f,dot(sn,lightDir));
+
       if (hitRec.volumeHit) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
           dco::Material mat = dco::createMaterial();
@@ -251,45 +313,64 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           mat.asMatte.color = dco::createMaterialParamRGB();
           mat.asMatte.color.rgb = hrv.albedo;
 
-          vec3 lightDir = normalize(ls.dir);
-          vec3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
-          const float NdotL = fmaxf(0.f,dot(gn,lightDir));
-
-          vec3 bsdf = evalMaterial(mat,
-                                   onDevice,
-                                   {}, // attribs, not used..
-                                   float3(0.f), // objPos, not used..
-                                   UINT_MAX, // primID, not used..
-                                   gn, gn,
-                                   tng, btng,
-                                   normalize(viewDir),
-                                   lightDir);
-          shadedColor = bsdf * lightIntensity * NdotL
-            * safe_rcp(ls.pdf) * float(world.numLights);
-          bsdfWeight = bsdf;
+          lightSample.f = evalMaterial(mat,
+                                       onDevice,
+                                       {}, // attribs, not used..
+                                       float3(0.f), // objPos, not used..
+                                       UINT_MAX, // primID, not used..
+                                       gn, gn,
+                                       tng, btng,
+                                       viewDir,
+                                       lightDir);
+          shadedColor = lightSample.f * lightIntensity * NdotL
+            * safe_rcp(lightSample.pdf) * float(world.numLights);
+        } else {
+          shadedColor = hrv.albedo * lightIntensity
+            * safe_rcp(lightSample.pdf) * safe_rcp(lightSample.dist2);
         }
-        else
-          shadedColor = hrv.albedo * ls.intensity * safe_rcp(ls.pdf) * safe_rcp(ls.dist2);
+
+        // isotropic phase function
+        bsdfSample.dir = uniform_sample_sphere(ss.random(), ss.random());
+        bsdfSample.f = hrv.albedo * float3(1.f);//over 4 PI (cancels)
+        bsdfSample.pdf = 1.f;//over 4 PI (cancels)
+        bsdfSample.cosT = 1.f;
       } else {
         const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
-        vec3 lightDir = normalize(ls.dir);
-        vec3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
-        const float NdotL = fmaxf(0.f,dot(sn,lightDir));
+        lightSample.f = evalMaterial(mat,
+                                     onDevice,
+                                     attribs,
+                                     hr.isect_pos,
+                                     hr.prim_id,
+                                     gn, sn,
+                                     tng, btng,
+                                     viewDir,
+                                     lightDir);
+        shadedColor = lightSample.f * lightIntensity * NdotL
+          * safe_rcp(lightSample.pdf) * float(world.numLights);
 
-        vec3 bsdf = evalMaterial(mat,
-                                 onDevice,
-                                 attribs,
-                                 hr.isect_pos,
-                                 hr.prim_id,
-                                 gn, sn,
-                                 tng, btng,
-                                 normalize(viewDir),
-                                 lightDir);
-        shadedColor = bsdf * lightIntensity * NdotL
-          * safe_rcp(ls.pdf) * float(world.numLights);
-        bsdfWeight = bsdf;
+        bsdfSample = sampleMaterial(mat,
+                                    onDevice,
+                                    attribs,
+                                    hr.isect_pos,
+                                    hr.prim_id,
+                                    gn, sn,
+                                    tng, btng,
+                                    viewDir, ss.random);
+      }
+
+      misWeightNEE = 0.f;
+      if (world.numLights > 0) {
+        const dco::Light &light = getLight(world.allLights, lightID, onDevice);
+        if (light.type == dco::Light::Quad || light.type == dco::Light::HDRI) {
+          misWeightNEE
+            = power_heuristic(lightSample.pdf/world.numLights,bsdfSample.pdf);
+        }
+        else {
+          // sampled a delta light source:
+          misWeightNEE = 1.f;
+        }
       }
     }
     else if (rendererState.renderMode == RenderMode::PrimitiveId)
@@ -331,19 +412,27 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       baseColor = color.xyz();
     else
       baseColor = shadedColor;
+  }
 
+  // Advance state machine:
+  if (rayType == Radiance) {
     // Is there a light? test if we're in shadow:
-    if (world.numLights > 0) {
-      prepareNextRay<Shadow>(shadeState,ss,ray,rendererState,world,ls);
+    if (lightSample.pdf >= 0) {
+      prepareNextRay<Shadow>(shadeState,ss,ray,rendererState,world);
       return;
     }
 
     // No light? test for AO:
     if (aoSamples < rendererState.ambientSamples) {
-      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world,{});
+      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world);
       return;
     }
 
+    // Visibility accounted for? Try doing a bounce:
+    if (bsdfSample.pdf >= 0.f) {
+      prepareNextRay<Radiance>(shadeState,ss,ray,rendererState,world);
+      return;
+    }
     return;
   } else if (rayType == Shadow) {
     // Shadow ray? Finalize light visibility term:
@@ -354,10 +443,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     // Test AO after shadow rays:
     if (aoSamples < rendererState.ambientSamples) {
-      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world,{});
+      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world);
       return;
     }
 
+    // Visibility accounted for? Try doing a bounce:
+    if (bsdfSample.pdf >= 0.f) {
+      prepareNextRay<Radiance>(shadeState,ss,ray,rendererState,world);
+      return;
+    }
     return;
   } else if (rayType == AO) {
     aoSamples++;
@@ -370,7 +464,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     // Tested for AO? Check if there are samples left:
     if (aoSamples < rendererState.ambientSamples) {
-      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world,{});
+      prepareNextRay<AO>(shadeState,ss,ray,rendererState,world);
       return;
     }
 
@@ -381,17 +475,22 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     }
     visibility.ao *= aoV;
 
+    // Visibility accounted for? Try doing a bounce:
+    if (bsdfSample.pdf >= 0.f) {
+      prepareNextRay<Radiance>(shadeState,ss,ray,rendererState,world);
+      return;
+    }
     return;
   }
 }
 
-void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegistry> onDevicePtr,
-                                                DevicePointer<RendererState> rendererStatePtr,
-                                                DevicePointer<dco::Frame> framePtr,
-                                                DevicePointer<dco::Camera> camPtr,
-                                                uint2 size,
-                                                SyncContext::SP syncContext,
-                                                unsigned worldID, int frameID)
+void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry> onDevicePtr,
+                                              DevicePointer<RendererState> rendererStatePtr,
+                                              DevicePointer<dco::Frame> framePtr,
+                                              DevicePointer<dco::Camera> camPtr,
+                                              uint2 size,
+                                              SyncContext::SP syncContext,
+                                              unsigned worldID, int frameID)
 {
 #ifdef WITH_CUDA
   cuda::for_each(syncContext->renderingStream, 0, size.x, 0, size.y,
@@ -457,7 +556,7 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
             for (unsigned passID=0, bounceID=0;true;++passID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
               bool shadow = rayType == Shadow || rayType == AO;
-              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, shadow);
+              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, bounceID, shadow);
               // 1. radiance
               // 2. shadow (optional)
               // 3. AO (optional)
@@ -465,7 +564,7 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
                     rendererState,
                     hitRec,
                     shadeState,
-                    ps);
+                    ps, bounceID);
 
               if (passID == 0 && bounceID == 0) {
                 firstHit = hitRec;
@@ -474,22 +573,28 @@ void VisionarayRendererDirectLight::renderFrame(DevicePointer<DeviceObjectRegist
               ray = shadeState.next.ray;
               rayType = shadeState.next.rayType;
 
-              if (rayType == None) {
-                float3 direct = (shadeState.shadedColor * shadeState.visibility.light)
-                      + (shadeState.baseColor * rendererState.ambientColor
+              if (rayType == Miss || rayType == Radiance) {
+                float3 direct = (shadeState.shadedColor * shadeState.visibility.light);
+                float3 ambient= (shadeState.baseColor * rendererState.ambientColor
                         * rendererState.ambientRadiance * shadeState.visibility.ao);
-                intensity += throughput * direct;
-                throughput *= shadeState.bsdfWeight;
+                intensity += throughput * shadeState.misWeightNEE * direct;
+                intensity += throughput * ambient;
+                throughput *= shadeState.bsdfSample.f
+                    * shadeState.bsdfSample.cosT * safe_rcp(shadeState.bsdfSample.pdf);
                 bounceID++;
               }
 
-              if (bounceID >= 1) {
+              if (rayType == Miss || bounceID > rendererState.maxBounce) {
                 break;
               }
             }
 
-            if (firstHit.hit || shadeState.hdriMiss) {
-              ps.color = float4(intensity,1.f);
+            if (firstHit.hit) {
+              // if we hit an invisible light with a primary ray we render
+              // the background color:
+              if (!(firstHit.lightHit && !firstHit.light.lightVisible)) {
+                ps.color = float4(intensity,1.f);
+              }
             }
 
             // if (ss.x == ss.frameSize.x/2 || ss.y == ss.frameSize.y/2) {

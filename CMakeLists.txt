@@ -74,7 +74,7 @@ set(SOURCES
     camera/Omnidirectional.cpp
     camera/Orthographic.cpp
     camera/Perspective.cpp
-    renderer/DirectLight.cpp
+    renderer/Pathtrace.cpp
     renderer/Raycast.cpp
     renderer/Renderer.cpp
     scene/light/Light.cpp
@@ -122,7 +122,7 @@ set(SOURCES
 target_sources(${PROJECT_NAME} PRIVATE ${SOURCES})
 target_sources(${PROJECT_NAME} PRIVATE
   frame/Frame.cpp
-  renderer/DirectLight_impl.cpp
+  renderer/Pathtrace_impl.cpp
   renderer/Raycast_impl.cpp
   scene/volume/spatial_field/BlockStructuredField.cpp
   scene/volume/spatial_field/GridAccel.cpp
@@ -165,7 +165,7 @@ if (cuda)
   target_sources(${PROJECT_NAME}_cuda PRIVATE ${SOURCES})
   target_sources(${PROJECT_NAME}_cuda PRIVATE
     frame/Frame.cu
-    renderer/DirectLight_impl.cu
+    renderer/Pathtrace_impl.cu
     renderer/Raycast_impl.cu
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/GridAccel.cu
@@ -174,7 +174,7 @@ if (cuda)
   )
   set_source_files_properties(
     frame/Frame.cu
-    renderer/DirectLight_impl.cu
+    renderer/Pathtrace_impl.cu
     renderer/Raycast_impl.cu
     scene/volume/spatial_field/BlockStructuredField.cu
     scene/volume/spatial_field/GridAccel.cu
@@ -222,7 +222,7 @@ if (hip)
   target_sources(${PROJECT_NAME}_hip PRIVATE ${SOURCES})
   target_sources(${PROJECT_NAME}_hip PRIVATE
     frame/Frame.hip
-    renderer/DirectLight_impl.hip
+    renderer/Pathtrace_impl.hip
     renderer/Raycast_impl.hip
     scene/VisionarayScene.hip
   )
