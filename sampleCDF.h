@@ -45,11 +45,9 @@ inline float sample_cdf(const float* data, unsigned int n, float x, unsigned int
   if (*idx == 0) {
     *pdf = data[0];
     scaled_sample = x / data[0];
-  } else {
-    if (*idx < n) {
+  } else if (*idx < n) {
     *pdf = data[*idx] - data[*idx - 1];
     scaled_sample = (x - data[*idx - 1]) / (data[*idx] - data[*idx - 1]);
-    }
   }
   // keep result in [0,1)
   return min(scaled_sample, 0.99999994f);

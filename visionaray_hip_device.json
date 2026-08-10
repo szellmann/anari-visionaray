@@ -49,7 +49,7 @@
   "objects": [
     {
       "type": "ANARI_RENDERER",
-      "name": "default",
+      "name": "pathtrace",
       "parameters": [
         {
           "name": "clipPlane",
@@ -62,6 +62,18 @@
           "tags": [],
           "default": [],
           "description": "list of clip planes applied to surfaces and volumes"
+        },
+        {
+         "name": "maxBounce",
+         "types": [
+          "ANARI_INT32"
+         ],
+         "tags": [],
+         "default": [
+          7
+         ],
+         "minimum": 0,
+         "description": "total maximum number of light bounces; 0 gives direct lighting only"
         },
         {
           "name": "mode",

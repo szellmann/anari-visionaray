@@ -11,13 +11,13 @@
 #include "scene/volume/Volume.h"
 // impls
 #include "Raycast_impl.h"
-#include "DirectLight_impl.h"
+#include "Pathtrace_impl.h"
 
 namespace visionaray {
 
 struct VisionarayRenderer
 {
-  enum Type { Raycast, DirectLight, };
+  enum Type { Raycast, Pathtrace, };
   Type type;
 
   void renderFrame(const dco::Frame &frame,
@@ -30,15 +30,15 @@ struct VisionarayRenderer
   constexpr bool stochasticRendering() const {
     if (type == Raycast) {
       return asRaycast.stochasticRendering;
-    } else if (type == DirectLight) {
-      return asDirectLight.stochasticRendering;
+    } else if (type == Pathtrace) {
+      return asPathtrace.stochasticRendering;
     }
     return type != Raycast;
   }
 
   VSNRAY_FUNC
   bool taa() const {
-    return type == DirectLight && rendererState.taaEnabled;
+    return type == Pathtrace && rendererState.taaEnabled;
   }
 
   VSNRAY_FUNC
@@ -47,8 +47,8 @@ struct VisionarayRenderer
   }
 
   union {
-    VisionarayRendererRaycast     asRaycast;
-    VisionarayRendererDirectLight asDirectLight;
+    VisionarayRendererRaycast   asRaycast;
+    VisionarayRendererPathtrace asPathtrace;
   };
 
   RendererState rendererState;

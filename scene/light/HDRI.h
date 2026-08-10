@@ -19,9 +19,6 @@ struct HDRI : public Light
   void commitParameters() override;
   void finalize() override;
 
-  // -1 indicates that neither HDRI is
-  // used to retrieve background colors
-  static int backgroundID;
  private:
   float3 m_up{0.f, 0.f, 1.f};
   float3 m_direction{1.f, 0.f, 0.f};

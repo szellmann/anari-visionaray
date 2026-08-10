@@ -19,6 +19,7 @@ struct QuadLight : public Light
   vec3 m_position{0.f, 0.f, 0.f};
   vec3 m_edge1{1.f, 0.f, 0.f};
   vec3 m_edge2{0.f, 1.f, 0.f};
+  std::string m_side{"front"};
   float m_intensity{1.f};
 };
 
