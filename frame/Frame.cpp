@@ -47,16 +47,16 @@ Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStart));
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStop));
 
-  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart));
-  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, deviceState()->renderingStream));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop, deviceState()->renderingStream));
 #elif defined(WITH_HIP)
   HIP_SAFE_CALL(hipStreamCreate(&taa.stream));
 
   HIP_SAFE_CALL(hipEventCreate(&m_eventStart));
   HIP_SAFE_CALL(hipEventCreate(&m_eventStop));
 
-  HIP_SAFE_CALL(hipEventRecord(m_eventStart));
-  HIP_SAFE_CALL(hipEventRecord(m_eventStop));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStart, deviceState()->renderingStream));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStop, deviceState()->renderingStream));
 #else
   m_eventStart = std::chrono::steady_clock::now();
   m_eventStop = std::chrono::steady_clock::now();
@@ -241,9 +241,9 @@ void Frame::renderFrame()
   state->currentFrame = this;
 
 #ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, state->renderingStream));
 #elif defined(WITH_HIP)
-  HIP_SAFE_CALL(hipEventRecord(m_eventStart));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStart, state->renderingStream));
 #else
   m_future = async<void>(m_task, [&, state]() {
     m_eventStart = std::chrono::steady_clock::now();
@@ -400,9 +400,9 @@ void Frame::renderFrame()
       m_callback(m_callbackUserPtr, state->anariDevice, (ANARIFrame)this);
 
 #ifdef WITH_CUDA
-    CUDA_SAFE_CALL(cudaEventRecord(m_eventStop));
+    CUDA_SAFE_CALL(cudaEventRecord(m_eventStop, state->renderingStream));
 #elif defined(WITH_HIP)
-    HIP_SAFE_CALL(hipEventRecord(m_eventStop));
+    HIP_SAFE_CALL(hipEventRecord(m_eventStop, state->renderingStream));
 #else
     state->renderingSemaphore.frameEnd();
     m_eventStop = std::chrono::steady_clock::now();
