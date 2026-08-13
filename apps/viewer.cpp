@@ -911,10 +911,10 @@ static anari::Surface makePlane(anari::Device d, box3_t bounds)
 {
   anari::math::float3 vertices[4];
   float f = length(bounds[1]-bounds[0]);
-  vertices[0] = { bounds[0][0] - f, bounds[0][1] - (0.1 * f), bounds[1][2] + f };
-  vertices[1] = { bounds[1][0] + f, bounds[0][1] - (0.1 * f), bounds[1][2] + f };
-  vertices[2] = { bounds[1][0] + f, bounds[0][1] - (0.1 * f), bounds[0][2] - f };
-  vertices[3] = { bounds[0][0] - f, bounds[0][1] - (0.1 * f), bounds[0][2] - f };
+  vertices[0] = { bounds[0][0] - f, bounds[0][1] - (0.1f * f), bounds[1][2] + f };
+  vertices[1] = { bounds[1][0] + f, bounds[0][1] - (0.1f * f), bounds[1][2] + f };
+  vertices[2] = { bounds[1][0] + f, bounds[0][1] - (0.1f * f), bounds[0][2] - f };
+  vertices[3] = { bounds[0][0] - f, bounds[0][1] - (0.1f * f), bounds[0][2] - f };
 
   anari::math::float2 texcoords[4] = {
       {0.f, 0.f},
