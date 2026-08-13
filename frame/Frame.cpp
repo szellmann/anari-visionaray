@@ -490,9 +490,9 @@ void *Frame::mapDepthBuffer()
 bool Frame::ready() const
 {
 #ifdef WITH_CUDA
-  return cudaEventSynchronize(m_eventStop) == cudaSuccess;
+  return cudaEventQuery(m_eventStop) == cudaSuccess;
 #elif WITH_HIP
-  return hipEventSynchronize(m_eventStop) == hipSuccess;
+  return hipEventQuery(m_eventStop) == hipSuccess;
 #else
   return is_ready(m_future);
 #endif
