@@ -61,6 +61,7 @@
             "ANARI_FLOAT32_VEC4"
           ],
           "tags": [],
+          "default": [],
           "description": "list of clip planes applied to surfaces and volumes"
         },
         {
