@@ -369,13 +369,14 @@ struct DeviceArray
 
 // ==================================================================
 // for use with device lambdas, to avoid per-thread copy of
-// larger objects (cuda/hip versions, plus host emulation):
+// larger objects (cuda/hip versions, plus host emulation).
+// NOTE: Host->device copies are shallow!
 // ==================================================================
 
 template <typename T>
 struct DevicePointer
 {
-  explicit DevicePointer(const T *input)
+  VSNRAY_CPU_FUNC explicit DevicePointer(const T *input)
   {
 #ifdef WITH_CUDA
     CUDA_SAFE_CALL(cudaMalloc(&pointer, sizeof(T)));
@@ -387,11 +388,16 @@ struct DevicePointer
     pointer = (T *)std::malloc(sizeof(T));
     std::memcpy(pointer, input, sizeof(T));
 #endif
+    refCount = (size_t*)std::malloc(sizeof(size_t));
+    *refCount = 1ull;
   }
 
-  ~DevicePointer()
+  VSNRAY_FUNC ~DevicePointer()
   {
-    if (refCount-- == 0) {
+    if (isOnDevice())
+      return;
+
+    if (--(*refCount) == 0) {
 #ifdef WITH_CUDA
       CUDA_SAFE_CALL(cudaFree(pointer));
 #elif defined(WITH_HIP)
@@ -402,19 +408,22 @@ struct DevicePointer
     }
   }
 
-  DevicePointer(DevicePointer &rhs)
+  VSNRAY_FUNC DevicePointer(DevicePointer &rhs)
+    : pointer(rhs.pointer), refCount(rhs.refCount)
   {
-    pointer = rhs.pointer;
-    refCount = rhs.refCount;
-    rhs.refCount++;
+    if (isOnDevice())
+      return;
+
+    (*rhs.refCount)++;
   }
 
-  DevicePointer &operator=(DevicePointer &rhs)
+  VSNRAY_FUNC DevicePointer &operator=(DevicePointer &rhs)
   {
     if (&rhs != this) {
       pointer = rhs.pointer;
       refCount = rhs.refCount;
-      rhs.refCount++;
+      if (!isOnDevice())
+        (*refCount)++;
     }
     return *this;
   }
@@ -440,7 +449,17 @@ struct DevicePointer
 
  private:
   T *pointer{nullptr};
-  size_t refCount{0ull};
+  size_t *refCount{nullptr};
+
+  constexpr bool isOnDevice() const {
+#ifdef __CUDA_ARCH__
+    return true;
+#elif defined(__HIP_DEVICE_COMPILE__)
+    return true;
+#else
+    return false;
+#endif
+  }
 };
 
 // ==================================================================
