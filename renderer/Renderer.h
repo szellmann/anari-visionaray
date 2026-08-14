@@ -24,7 +24,6 @@ struct VisionarayRenderer
                    const dco::Camera &cam,
                    uint2 size,
                    VisionarayGlobalState *state,
-                   const DeviceObjectRegistry &DD,
                    unsigned worldID, int frameID);
 
   VSNRAY_FUNC

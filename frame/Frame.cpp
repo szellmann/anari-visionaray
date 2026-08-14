@@ -338,9 +338,8 @@ void Frame::renderFrame()
 
       int frameID = (int)vframe.frameCounter++; // modify the member here!
       auto worldID = scene->m_worldID;
-      auto onDevice = state->onDevice;
 
-      rend.renderFrame(frame, cam, size, state, onDevice, worldID, frameID);
+      rend.renderFrame(frame, cam, size, state, worldID, frameID);
 
       if (cam.type == dco::Camera::Pinhole)
         cam.asPinholeCam.end_frame();

@@ -14,10 +14,9 @@ void VisionarayRenderer::renderFrame(const dco::Frame &frame,
                                      const dco::Camera &cam,
                                      uint2 size,
                                      VisionarayGlobalState *state,
-                                     const DeviceObjectRegistry &DD,
                                      unsigned worldID, int frameID)
 {
-  DevicePointer<DeviceObjectRegistry> onDevicePtr(&DD);
+  DevicePointer<DeviceObjectRegistry> onDevicePtr(&state->onDevice);
   DevicePointer<RendererState> rendererStatePtr(&rendererState);
   DevicePointer<dco::Frame> framePtr(&frame);
   DevicePointer<dco::Camera> camPtr(&cam);
