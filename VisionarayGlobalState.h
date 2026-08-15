@@ -30,6 +30,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   DeviceObjectRegistry onDevice;
 
 #ifdef WITH_CUDA
+  cudaDeviceProp deviceProps;
   cudaStream_t renderingStream;
 #elif defined(WITH_HIP)
   hipStream_t renderingStream;

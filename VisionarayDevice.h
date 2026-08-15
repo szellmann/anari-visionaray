@@ -76,6 +76,10 @@ struct VisionarayDevice : public helium::BaseDevice
       uint64_t size,
       uint32_t mask) override;
 
+  void renderFrame(ANARIFrame) override;
+  int frameReady(ANARIFrame, ANARIWaitMask) override;
+  void discardFrame(ANARIFrame) override;
+
   /////////////////////////////////////////////////////////////////////////////
   // Helper/other functions and data members
   /////////////////////////////////////////////////////////////////////////////
@@ -91,8 +95,23 @@ struct VisionarayDevice : public helium::BaseDevice
       const char *name, ANARIDataType type, void *mem, uint64_t size, uint32_t mask) override;
 
  private:
+  struct CUDADeviceScope
+  {
+    CUDADeviceScope(VisionarayDevice *d);
+    ~CUDADeviceScope();
+
+   private:
+    VisionarayDevice *m_device{nullptr};
+  };
+
+  void setCUDADevice();
+  void revertCUDADevice();
+
   VisionarayGlobalState *deviceState() const;
 
+  int m_gpuID{-1};
+  int m_desiredGpuID{-1};
+  int m_appGpuID{-1};
   bool m_initialized{false};
 };
 

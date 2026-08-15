@@ -32,7 +32,7 @@ namespace visionaray {
 void *VisionarayDevice::mapArray(ANARIArray a)
 {
 #ifdef WITH_CUDA
-  // TODO: set device
+  CUDADeviceScope ds(this);
 #elif defined(WITH_HIP)
   // TODO: set device
 #else
@@ -43,12 +43,13 @@ void *VisionarayDevice::mapArray(ANARIArray a)
 
 void VisionarayDevice::unmapArray(ANARIArray a)
 {
-  helium::BaseDevice::unmapArray(a);
 #ifdef WITH_CUDA
-  // TODO: set device
+  CUDADeviceScope ds(this);
 #elif defined(WITH_HIP)
   // TODO: set device
-#else
+#endif
+  helium::BaseDevice::unmapArray(a);
+#if !defined(WITH_CUDA) && !defined(WITH_HIP)
   deviceState()->renderingSemaphore.arrayMapRelease();
 #endif
 }
@@ -62,6 +63,7 @@ ANARIArray1D VisionarayDevice::newArray1D(const void *appMemory,
     uint64_t numItems)
 {
   initDevice();
+  CUDADeviceScope ds(this);
 
   Array1DMemoryDescriptor md;
   md.appMemory = appMemory;
@@ -84,6 +86,7 @@ ANARIArray2D VisionarayDevice::newArray2D(const void *appMemory,
     uint64_t numItems2)
 {
   initDevice();
+  CUDADeviceScope ds(this);
 
   Array2DMemoryDescriptor md;
   md.appMemory = appMemory;
@@ -105,6 +108,7 @@ ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
     uint64_t numItems3)
 {
   initDevice();
+  CUDADeviceScope ds(this);
 
   Array3DMemoryDescriptor md;
   md.appMemory = appMemory;
@@ -121,78 +125,91 @@ ANARIArray3D VisionarayDevice::newArray3D(const void *appMemory,
 ANARICamera VisionarayDevice::newCamera(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARICamera)Camera::createInstance(subtype, deviceState());
 }
 
 ANARIFrame VisionarayDevice::newFrame()
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIFrame) new Frame(deviceState());
 }
 
 ANARIGeometry VisionarayDevice::newGeometry(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIGeometry)Geometry::createInstance(subtype, deviceState());
 }
 
 ANARIGroup VisionarayDevice::newGroup()
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIGroup) new Group(deviceState());
 }
 
 ANARIInstance VisionarayDevice::newInstance(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIInstance)Instance::createInstance(subtype, deviceState());
 }
 
 ANARILight VisionarayDevice::newLight(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARILight)Light::createInstance(subtype, deviceState());
 }
 
 ANARIMaterial VisionarayDevice::newMaterial(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIMaterial)Material::createInstance(subtype, deviceState());
 }
 
 ANARIRenderer VisionarayDevice::newRenderer(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIRenderer)Renderer::createInstance(subtype, deviceState());
 }
 
 ANARISampler VisionarayDevice::newSampler(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARISampler)Sampler::createInstance(subtype, deviceState());
 }
 
 ANARISpatialField VisionarayDevice::newSpatialField(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARISpatialField)SpatialField::createInstance(subtype, deviceState());
 }
 
 ANARISurface VisionarayDevice::newSurface()
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARISurface) new Surface(deviceState());
 }
 
 ANARIVolume VisionarayDevice::newVolume(const char *subtype)
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIVolume)Volume::createInstance(subtype, deviceState());
 }
 
 ANARIWorld VisionarayDevice::newWorld()
 {
   initDevice();
+  CUDADeviceScope ds(this);
   return (ANARIWorld) new World(deviceState());
 }
 
@@ -234,12 +251,36 @@ int VisionarayDevice::getProperty(ANARIObject object,
     uint64_t size,
     uint32_t mask)
 {
+  CUDADeviceScope ds(this);
+
   if (mask == ANARI_WAIT) {
     auto lock = scopeLockObject();
     deviceState()->waitOnCurrentFrame();
   }
 
   return helium::BaseDevice::getProperty(object, name, type, mem, size, mask);
+}
+
+
+void VisionarayDevice::renderFrame(ANARIFrame f)
+{
+  initDevice();
+  CUDADeviceScope ds(this);
+  helium::BaseDevice::renderFrame(f);
+}
+
+int VisionarayDevice::frameReady(ANARIFrame f, ANARIWaitMask m)
+{
+  initDevice();
+  CUDADeviceScope ds(this);
+  return helium::BaseDevice::frameReady(f, m);
+}
+
+void VisionarayDevice::discardFrame(ANARIFrame f)
+{
+  initDevice();
+  CUDADeviceScope ds(this);
+  return helium::BaseDevice::discardFrame(f);
 }
 
 // Other VisionarayDevice definitions /////////////////////////////////////////
@@ -278,6 +319,31 @@ void VisionarayDevice::initDevice()
 
   state.anariDevice = (anari::Device)this;
 
+#if defined(WITH_CUDA)
+  int numDevices = 0;
+  CUDA_SAFE_CALL(cudaGetDeviceCount(&numDevices));
+  if (numDevices == 0) {
+    reportMessage(ANARI_SEVERITY_FATAL_ERROR, "no CUDA capable devices found!");
+    return;
+  }
+
+  if (m_desiredGpuID >= numDevices) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "desired GPU selection (%i) is not a valid ID as only "
+        "%i GPUs were found, defaulting to GPU 0",
+        m_desiredGpuID,
+        numDevices);
+    m_desiredGpuID = 0;
+  }
+  m_gpuID = m_desiredGpuID;
+
+  CUDA_SAFE_CALL(cudaGetDeviceProperties(&state.deviceProps, m_gpuID));
+  reportMessage(ANARI_SEVERITY_DEBUG,
+      "running on GPU %i (%s)\n",
+      m_gpuID,
+      state.deviceProps.name);
+#endif
+
   m_initialized = true;
 }
 
@@ -296,6 +362,28 @@ void VisionarayDevice::deviceCommitParameters()
   //   state.objectUpdates.lastBLSReconstructSceneRequest = helium::newTimeStamp();
 
   helium::BaseDevice::deviceCommitParameters();
+  m_desiredGpuID = getParam<int>("cudaDevice", -1);
+
+#if defined(WITH_CUDA)
+  if (m_desiredGpuID < 0) {
+    if (auto *env = std::getenv("VISIONARAY_CUDA_DEVICE"); env) {
+      reportMessage(ANARI_SEVERITY_DEBUG,
+          "overriding cudaDevice param with VISIONARAY_CUDA_DEVICE env var: %s",
+          env);
+      m_desiredGpuID = std::atoi(env);
+    } else {
+      m_desiredGpuID = 0;
+    }
+  }
+
+  if (m_gpuID >= 0 && m_desiredGpuID != m_gpuID) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "visionaray was already initialized to use GPU %i"
+        ": new device number %i is ignored.",
+        m_gpuID,
+        m_desiredGpuID);
+  }
+#endif
 }
 
 int VisionarayDevice::deviceGetProperty(
@@ -312,9 +400,34 @@ int VisionarayDevice::deviceGetProperty(
   return 0;
 }
 
+void VisionarayDevice::setCUDADevice()
+{
+#if defined(WITH_CUDA)
+  CUDA_SAFE_CALL(cudaGetDevice(&m_appGpuID));
+  CUDA_SAFE_CALL(cudaSetDevice(m_gpuID));
+#endif
+}
+
+void VisionarayDevice::revertCUDADevice()
+{
+#if defined(WITH_CUDA)
+  CUDA_SAFE_CALL(cudaSetDevice(m_appGpuID));
+#endif
+}
+
 VisionarayGlobalState *VisionarayDevice::deviceState() const
 {
   return (VisionarayGlobalState *)helium::BaseDevice::m_state.get();
+}
+
+VisionarayDevice::CUDADeviceScope::CUDADeviceScope(VisionarayDevice *d) : m_device(d)
+{
+  m_device->setCUDADevice();
+}
+
+VisionarayDevice::CUDADeviceScope::~CUDADeviceScope()
+{
+  m_device->revertCUDADevice();
 }
 
 } // namespace visionaray
