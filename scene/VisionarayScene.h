@@ -16,7 +16,7 @@
 
 namespace visionaray {
 
-struct VisionaraySceneImpl
+struct VisionarayScene
 {
   enum Type { World, Group, };
   Type type;
@@ -49,9 +49,10 @@ struct VisionaraySceneImpl
   VisionarayGlobalState *m_state{nullptr};
 
   // Interface //
-  VisionaraySceneImpl(Type type, VisionarayGlobalState *state);
-  ~VisionaraySceneImpl();
+  VisionarayScene(Type type, VisionarayGlobalState *state);
+  ~VisionarayScene();
   void commit();
+  void reset();
   void release();
   bool isValid() const;
 
@@ -67,9 +68,5 @@ struct VisionaraySceneImpl
 
   VisionarayGlobalState *deviceState();
 };
-
-typedef std::shared_ptr<VisionaraySceneImpl> VisionarayScene;
-VisionarayScene newVisionarayScene(
-    VisionaraySceneImpl::Type type, VisionarayGlobalState *state);
 
 } // namespace visionaray

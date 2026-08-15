@@ -24,7 +24,7 @@ struct World : public Object
 
   const std::vector<Instance *> &instances() const;
 
-  VisionarayScene visionarayScene() const;
+  const VisionarayScene &visionarayScene() const;
   void visionaraySceneUpdate();
 
  private:
@@ -56,7 +56,7 @@ struct World : public Object
     helium::TimeStamp lastBLSCommitCheck{0};
   } m_objectUpdates;
 //
-  VisionarayScene vscene{nullptr};
+  VisionarayScene vscene;
 };
 
 } // namespace visionaray

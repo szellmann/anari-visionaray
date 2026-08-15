@@ -30,7 +30,8 @@ struct Group : public Object
   const std::vector<Volume *> &volumes() const;
   const std::vector<Light *> &lights() const;
 
-  VisionarayScene visionarayScene() const;
+  VisionarayScene &visionarayScene();
+  const VisionarayScene &visionarayScene() const;
   void visionaraySceneConstruct();
   void visionaraySceneCommit();
 
@@ -60,7 +61,7 @@ struct Group : public Object
     helium::TimeStamp lastSceneCommit{0};
   } m_objectUpdates;
 
-  VisionarayScene vscene{nullptr};
+  VisionarayScene vscene;
 };
 
 } // namespace visionaray

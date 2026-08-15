@@ -268,7 +268,7 @@ void Frame::renderFrame()
     const auto &size = frame.size;
     dco::Camera cam = m_camera->visionarayCamera();
     VisionarayRenderer &rend = m_renderer->visionarayRenderer();
-    VisionarayScene scene = m_world->visionarayScene();
+    const VisionarayScene &scene = m_world->visionarayScene();
 
     if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.begin_frame();
@@ -314,7 +314,7 @@ void Frame::renderFrame()
       }
 
       int frameID = (int)vframe.frameCounter++; // modify the member here!
-      auto worldID = scene->m_worldID;
+      auto worldID = scene.m_worldID;
 
       rend.renderFrame(frame, cam, size, state, worldID, frameID);
 

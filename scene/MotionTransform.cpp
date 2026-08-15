@@ -44,9 +44,9 @@ void MotionTransform::finalize()
 void MotionTransform::visionarayInstanceUpdate()
 {
   vinstance.userID = m_id;
-  vinstance.groupID = group()->visionarayScene()->m_groupID;
+  vinstance.groupID = group()->visionarayScene().m_groupID;
 
-  vinstance.theBVH = group()->visionarayScene()->refBVH();
+  vinstance.theBVH = group()->visionarayScene().refBVH();
   vinstance.xfms = m_xfms.devicePtr();
   vinstance.normalXfms = m_normalXfms.devicePtr();
   vinstance.affineInv = m_affineInv.devicePtr();

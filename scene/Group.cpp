@@ -12,6 +12,7 @@ Group::Group(VisionarayGlobalState *s)
   , m_surfaceData(this)
   , m_volumeData(this)
   , m_lightData(this)
+  , vscene(VisionarayScene::Group, deviceState())
 {
 }
 
@@ -28,8 +29,8 @@ bool Group::getProperty(
       visionaraySceneConstruct();
       visionaraySceneCommit();
     }
-    if (vscene && vscene->isValid()) {
-      auto bounds = vscene->getBounds();
+    if (vscene.isValid()) {
+      auto bounds = vscene.getBounds();
       std::memcpy(ptr, &bounds, sizeof(bounds));
       return true;
     }
@@ -72,7 +73,12 @@ const std::vector<Light *> &Group::lights() const
   return m_lights;
 }
 
-VisionarayScene Group::visionarayScene() const
+VisionarayScene &Group::visionarayScene()
+{
+  return vscene;
+}
+
+const VisionarayScene &Group::visionarayScene() const
 {
   return vscene;
 }
@@ -87,9 +93,7 @@ void Group::visionaraySceneConstruct()
   reportMessage(
       ANARI_SEVERITY_DEBUG, "visionaray::Group rebuilding visionaray scene");
 
-  if (vscene)
-    vscene->release();
-  vscene = newVisionarayScene(VisionaraySceneImpl::Group, deviceState());
+  vscene.reset();
 
   uint32_t surfID = 0;
   if (m_surfaceData) {
@@ -99,7 +103,7 @@ void Group::visionaraySceneConstruct()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
-            vscene->attachSurface(
+            vscene.attachSurface(
                 s->visionaraySurface(), s->visionarayBLS(), surfID++, s->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
@@ -127,7 +131,7 @@ void Group::visionaraySceneConstruct()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
-            vscene->attachVolume(
+            vscene.attachVolume(
                 v->visionarayVolume(), v->visionarayBLS(), volID++, v->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
@@ -145,7 +149,7 @@ void Group::visionaraySceneConstruct()
           auto *l = (Light *)o;
           if (l && l->isValid()) {
             m_lights.push_back(l);
-            vscene->attachLight(l->visionarayLight(), lightID++);
+            vscene.attachLight(l->visionarayLight(), lightID++);
           } else {
             reportMessage(
                 ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");
@@ -168,7 +172,7 @@ void Group::visionaraySceneCommit()
   reportMessage(
       ANARI_SEVERITY_DEBUG, "visionaray::Group committing visionaray scene");
 
-  vscene->commit();
+  vscene.commit();
   m_objectUpdates.lastSceneCommit = helium::newTimeStamp();
 }
 
@@ -181,9 +185,7 @@ void Group::cleanup()
   m_objectUpdates.lastSceneConstruction = 0;
   m_objectUpdates.lastSceneCommit = 0;
 
-  if (vscene)
-    vscene->release();
-  vscene = nullptr;
+  vscene.release();
 }
 
 } // namespace visionaray

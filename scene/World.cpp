@@ -10,7 +10,8 @@ World::World(VisionarayGlobalState *s)
       m_zeroSurfaceData(this),
       m_zeroVolumeData(this),
       m_zeroLightData(this),
-      m_instanceData(this)
+      m_instanceData(this),
+      vscene(VisionarayScene::World, deviceState())
 {
   m_zeroGroup = new Group(s);
   m_zeroInstance = new Instance(s);
@@ -33,8 +34,8 @@ bool World::getProperty(
     if (flags & ANARI_WAIT) {
       visionaraySceneUpdate();
     }
-    if (vscene && vscene->isValid()) {
-      auto bounds = vscene->getBounds();
+    if (vscene.isValid()) {
+      auto bounds = vscene.getBounds();
       std::memcpy(ptr, &bounds, sizeof(bounds));
       return true;
     }
@@ -114,7 +115,7 @@ const std::vector<Instance *> &World::instances() const
   return m_instances;
 }
 
-VisionarayScene World::visionarayScene() const
+ const VisionarayScene &World::visionarayScene() const
 {
   return vscene;
 }
@@ -177,9 +178,7 @@ void World::rebuildTLS()
       "visionaray::World rebuilding TLS over %zu instances",
       m_instances.size());
 
-  if (vscene)
-    vscene->release();
-  vscene = newVisionarayScene(VisionaraySceneImpl::World, deviceState());
+  vscene.reset();
 
   uint32_t id = 0;
   uint32_t lightID = 0;
@@ -188,7 +187,7 @@ void World::rebuildTLS()
         && (!i->group()->surfaces().empty() || !i->group()->volumes().empty()
             || !i->group()->lights().empty())) {
       i->visionarayInstanceUpdate();
-      vscene->attachInstance(i->visionarayInstance(), id, i->id());
+      vscene.attachInstance(i->visionarayInstance(), id, i->id());
     } else if (i->group()->surfaces().empty() && i->group()->volumes().empty()
         && !i->group()->lights().empty()) {
       // Only lights - these will not end up on a valid instance
@@ -199,7 +198,7 @@ void World::rebuildTLS()
           [&](auto *o) {
             auto *l = (Light *)o;
             if (l && l->isValid()) {
-              vscene->attachLight(l->visionarayLight(), lightID++);
+              vscene.attachLight(l->visionarayLight(), lightID++);
             } else {
               reportMessage(
                   ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");
@@ -221,15 +220,13 @@ void World::rebuildTLS()
     id++;
   });
 
-  vscene->commit();
+  vscene.commit();
   m_objectUpdates.lastTLSBuild = helium::newTimeStamp();
 }
 
 void World::cleanup()
 {
-  if (vscene)
-    vscene->release();
-  vscene = nullptr;
+  vscene.release();
 }
 
 } // namespace visionaray

@@ -48,23 +48,14 @@ static aabb getPrimBounds(const Obj &obj)
 #endif
 }
 
-VisionaraySceneImpl::VisionaraySceneImpl(
-    VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
-  : m_state(state), m_TLS(state), m_worldTLS(state)
+VisionarayScene::VisionarayScene(
+    VisionarayScene::Type type, VisionarayGlobalState *state)
+  : type(type), m_state(state), m_TLS(state), m_worldTLS(state)
 {
-  this->type = type;
-
-  m_bounds[0].invalidate();
-  m_bounds[1].invalidate();
-
-  if (type == World) {
-    m_worldID = deviceState()->dcos.TLSs.alloc({});
-    deviceState()->dcos.worlds.alloc(dco::createWorld());
-  }
-  m_groupID = deviceState()->dcos.groups.alloc(dco::createGroup());
+  reset();
 }
 
-VisionaraySceneImpl::~VisionaraySceneImpl()
+VisionarayScene::~VisionarayScene()
 {
   if (type == World) {
     deviceState()->dcos.TLSs.free(m_worldID);
@@ -73,7 +64,7 @@ VisionaraySceneImpl::~VisionaraySceneImpl()
   deviceState()->dcos.groups.free(m_groupID);
 }
 
-void VisionaraySceneImpl::commit()
+void VisionarayScene::commit()
 {
   boundsID = !boundsID;
   m_bounds[boundsID] = m_bounds[!boundsID];
@@ -153,7 +144,7 @@ void VisionaraySceneImpl::commit()
   dispatch();
 }
 
-void VisionaraySceneImpl::release()
+void VisionarayScene::release()
 {
   m_instances.clear();
   m_geometries.clear();
@@ -163,7 +154,21 @@ void VisionaraySceneImpl::release()
   m_lights.clear();
 }
 
-bool VisionaraySceneImpl::isValid() const
+void VisionarayScene::reset()
+{
+  release();
+
+  m_bounds[0].invalidate();
+  m_bounds[1].invalidate();
+
+  if (type == World) {
+    m_worldID = deviceState()->dcos.TLSs.alloc({});
+    deviceState()->dcos.worlds.alloc(dco::createWorld());
+  }
+  m_groupID = deviceState()->dcos.groups.alloc(dco::createGroup());
+}
+
+bool VisionarayScene::isValid() const
 {
   if (type == World)
     return m_worldTLS.lastRebuildTime() > m_worldTLS.lastUpdateTime();
@@ -171,13 +176,13 @@ bool VisionaraySceneImpl::isValid() const
     return m_TLS.lastRebuildTime() > m_TLS.lastUpdateTime();
 }
 
-aabb VisionaraySceneImpl::getBounds() const
+aabb VisionarayScene::getBounds() const
 {
   // bounds that were valid when commit was called:
   return m_bounds[boundsID];
 }
 
-void VisionaraySceneImpl::attachInstance(
+void VisionarayScene::attachInstance(
     dco::Instance inst, unsigned instID, unsigned userID)
 {
   m_instances.set(instID, inst.instID);
@@ -191,7 +196,7 @@ void VisionaraySceneImpl::attachInstance(
   m_worldBLSs.alloc(inst);
 }
 
-void VisionaraySceneImpl::attachSurface(
+void VisionarayScene::attachSurface(
     dco::Surface surf, dco::BLS bls, unsigned surfID, unsigned userID)
 {
   if (!dco::validHandle(surf.geomID))
@@ -221,7 +226,7 @@ void VisionaraySceneImpl::attachSurface(
   m_materials.set(surfID, mat.matID);
 }
 
-void VisionaraySceneImpl::attachVolume(
+void VisionarayScene::attachVolume(
     dco::Volume vol, dco::BLS bls, unsigned volID, unsigned userID)
 {
   // use bounds member, that way we don't need to reach for the GPU:
@@ -237,18 +242,18 @@ void VisionaraySceneImpl::attachVolume(
   bls.blsID = m_BLSs.alloc(bls);
 }
 
-void VisionaraySceneImpl::attachLight(dco::Light light, unsigned id)
+void VisionarayScene::attachLight(dco::Light light, unsigned id)
 {
   m_lights.set(id, light.lightID);
 }
 
-index_bvh_ref_t<dco::BLS> VisionaraySceneImpl::refBVH()
+index_bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
 {
   assert(type == Group);
   return m_TLS.deviceIndexBVH2();
 }
 
-void VisionaraySceneImpl::dispatch()
+void VisionarayScene::dispatch()
 {
   // Dispatch world
   if (type == World) {
@@ -287,15 +292,9 @@ void VisionaraySceneImpl::dispatch()
   }
 }
 
-VisionarayGlobalState *VisionaraySceneImpl::deviceState()
+VisionarayGlobalState *VisionarayScene::deviceState()
 {
   return m_state;
-}
-
-VisionarayScene newVisionarayScene(
-    VisionaraySceneImpl::Type type, VisionarayGlobalState *state)
-{
-  return std::make_shared<VisionaraySceneImpl>(type, state);
 }
 
 } // namespace visionaray

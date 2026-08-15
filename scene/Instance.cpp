@@ -143,7 +143,7 @@ dco::Instance Instance::visionarayInstance() const
 void Instance::visionarayInstanceUpdate()
 {
   vinstance.userID = m_id;
-  vinstance.groupID = group()->visionarayScene()->m_groupID;
+  vinstance.groupID = group()->visionarayScene().m_groupID;
 
   for (int i=0; i<5; ++i) {
     if (m_uniformAttributes[i]) {
@@ -152,7 +152,7 @@ void Instance::visionarayInstanceUpdate()
     }
   }
 
-  vinstance.theBVH = group()->visionarayScene()->refBVH();
+  vinstance.theBVH = group()->visionarayScene().refBVH();
   vinstance.xfms = m_xfms.devicePtr();
   vinstance.normalXfms = m_normalXfms.devicePtr();
   vinstance.affineInv = m_affineInv.devicePtr();
