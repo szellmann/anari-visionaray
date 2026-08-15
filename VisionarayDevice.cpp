@@ -297,6 +297,9 @@ VisionarayDevice::~VisionarayDevice()
 {
   auto &state = *deviceState();
 
+#if !(defined(WITH_CUDA) || defined(WITH_HIP))
+  state.taskQueue.flush();
+#endif
   state.commitBuffer.clear();
 
   reportMessage(ANARI_SEVERITY_DEBUG, "destroying visionaray device (%p)", this);

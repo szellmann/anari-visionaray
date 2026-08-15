@@ -5,6 +5,7 @@
 
 // helium
 #include "helium/BaseGlobalDeviceState.h"
+#include "helium/TaskQueue.h"
 // visionaray
 #include "visionaray/detail/thread_pool.h"
 // ours
@@ -35,6 +36,7 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 #elif defined(WITH_HIP)
   hipStream_t renderingStream;
 #else
+  helium::tasking::TaskQueue taskQueue{64};
   RenderingSemaphore renderingSemaphore;
 #endif
 

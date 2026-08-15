@@ -13,28 +13,6 @@
 
 namespace visionaray {
 
-template <typename R, typename TASK_T>
-static std::future<R> async(std::packaged_task<R()> &task, TASK_T &&fcn)
-{
-#if 1
-  return std::async(fcn);
-#else
-  auto task = std::packaged_task<R()>(std::forward<TASK_T>(fcn));
-  auto future = task.get_future();
-
-  std::thread([task = std::move(task)]() mutable { task(); }).detach();
-
-  return future;
-#endif
-}
-
-template <typename R>
-static bool is_ready(const std::future<R> &f)
-{
-  return !f.valid()
-      || f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-}
-
 // Frame definitions //////////////////////////////////////////////////////////
 
 Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
@@ -235,20 +213,20 @@ void Frame::renderFrame()
   auto *state = deviceState();
   wait();
 
-#if !defined(WITH_CUDA) && !defined(WITH_HIP)
-  this->refInc(helium::RefType::INTERNAL);
-#endif
-
 #ifdef WITH_CUDA
+  state->commitBuffer.flush();
   CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, state->renderingStream));
 #elif defined(WITH_HIP)
+  state->commitBuffer.flush();
   HIP_SAFE_CALL(hipEventRecord(m_eventStart, state->renderingStream));
 #else
-  m_future = async<void>(m_task, [&, state]() {
+  this->refInc(helium::RefType::INTERNAL);
+  state->taskQueue.enqueue([state]() { state->commitBuffer.flush(); });
+
+  m_future = state->taskQueue.enqueue([&, state]() {
     m_eventStart = std::chrono::steady_clock::now();
     state->renderingSemaphore.frameStart();
 #endif
-    state->commitBuffer.flush();
 
     if (!isValid()) {
       reportMessage(
@@ -492,7 +470,7 @@ bool Frame::ready() const
 #elif WITH_HIP
   return hipEventQuery(m_eventStop) == hipSuccess;
 #else
-  return is_ready(m_future);
+  return helium::tasking::isReady(m_future);
 #endif
 }
 
