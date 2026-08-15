@@ -3,8 +3,6 @@
 
 #pragma once
 
-// std
-#include <memory>
 // visionaray
 #include "visionaray/bvh.h"
 // ours
