@@ -1407,8 +1407,10 @@ struct BLS
 VSNRAY_FUNC
 inline aabb get_bounds(const BLS &bls)
 {
-#ifdef WITH_HIP
-  // with HIP we currenlty assume that TLSs are built on the host:
+#if defined(WITH_HIP) && !defined(__HIP_DEVICE_COMPILE__)
+  // with HIP we currently assume that TLSs are built on the host, so the
+  // device-resident root node is staged back via hipMemcpy on the host pass;
+  // the device pass falls through to the direct node access below.
   bvh_node hip_root;
   if (bls.type == BLS::Triangle && bls.asTriangle.num_nodes())
     HIP_SAFE_CALL(hipMemcpy(

@@ -38,6 +38,9 @@ struct UnstructuredField : public SpatialField
 #ifdef WITH_CUDA
   cuda_index_bvh<dco::UElem> m_elementBVH;
   cuda_index_bvh<dco::UElemGrid> m_gridBVH;
+#elif defined(WITH_HIP)
+  hip_index_bvh<dco::UElem> m_elementBVH;
+  hip_index_bvh<dco::UElemGrid> m_gridBVH;
 #else
   bvh4<dco::UElem> m_elementBVH;
   bvh4<dco::UElemGrid> m_gridBVH;
@@ -48,6 +51,10 @@ struct UnstructuredField : public SpatialField
   // must be an *index* BVH so we can access the
   // triangles based on their prim_id in the shader:
   cuda_index_bvh<basic_triangle<3,float>> m_shellBVH;
+#elif defined(WITH_HIP)
+  // must be an *index* BVH so we can access the
+  // triangles based on their prim_id in the shader:
+  hip_index_bvh<basic_triangle<3,float>> m_shellBVH;
 #else
   // must be an *index* BVH so we can access the
   // triangles based on their prim_id in the shader:

@@ -35,9 +35,11 @@ follow. You need to install
 Visionaray installs as header-only if you deactivate all the features as in the
 CI script (you don't even need CUDA).
 
-`anari-visionaray` compiles into separate devices for CPU, CUDA, and an
-experimental but seldom tested HIP version. The latter two must be enabled with
-CMake for them to compile.
+`anari-visionaray` compiles into separate devices for CPU, CUDA, and HIP (for
+AMD GPUs via ROCm). The HIP device implements the same surface and volume
+spatial-field paths as the CUDA device (structured, unstructured, AMR, and
+NanoVDB fields). The CUDA and HIP devices must be enabled with CMake for them
+to compile.
 
 List of Proprietary ANARI Extensions
 ------------------------------------

@@ -73,15 +73,9 @@ void VisionarayScene::commit()
   if (type == World) {
     // Build TLS
     if (!m_worldBLSs.empty()) {
-#if defined(WITH_HIP)
-      m_worldTLS.update(m_worldBLSs.devicePtr(),
-                        m_worldBLSs.size(),
-                        0); // no device LBVH builder on hip yet!
-#else
       m_worldTLS.update(m_worldBLSs.devicePtr(),
                         m_worldBLSs.size(),
                         BVH_FLAG_PREFER_FAST_BUILD);
-#endif
     }
 
     // Build flat list of lights

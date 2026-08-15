@@ -1,4 +1,5 @@
 // Copyright 2023-2026 Stefan Zellmann
+// Copyright (c) 2026 Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "BlockStructuredField.h"
@@ -108,6 +109,13 @@ void BlockStructuredField::finalize()
   m_samplingBVH = cuda_index_bvh<dco::Block>(hostBVH);
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
+#elif defined(WITH_HIP)
+  auto hostBVH = builder.build(
+    index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
+
+  m_samplingBVH = hip_index_bvh<dco::Block>(hostBVH);
+
+  vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 #else
   auto samplingBVH2 = builder.build(
     index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
@@ -141,7 +149,7 @@ aabb BlockStructuredField::bounds() const
   return m_bounds;
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
                                                   const dco::Block *blocks,
                                                   size_t            numBlocks)
@@ -174,6 +182,24 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
 void BlockStructuredField::buildGrid()
 {
 #ifdef WITH_CUDA
+  box3f worldBounds = {bounds().min,bounds().max};
+  worldBounds.min = vfield.pointToVoxelSpace(worldBounds.min);
+  worldBounds.max = vfield.pointToVoxelSpace(worldBounds.max);
+  int3 dims{
+    div_up(int(worldBounds.max.x-worldBounds.min.x),8),
+    div_up(int(worldBounds.max.y-worldBounds.min.y),8),
+    div_up(int(worldBounds.max.z-worldBounds.min.z),8)
+  };
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(dims, worldBounds, gridBounds);
+
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
+  size_t numThreads = 1024;
+  size_t numBlocks = m_blocks.size();
+  BlockStructuredField_buildGridGPU<<<div_up(numBlocks, numThreads), numThreads>>>(
+    vaccel, m_blocks.devicePtr(), numBlocks);
+#elif defined(WITH_HIP)
   box3f worldBounds = {bounds().min,bounds().max};
   worldBounds.min = vfield.pointToVoxelSpace(worldBounds.min);
   worldBounds.max = vfield.pointToVoxelSpace(worldBounds.max);

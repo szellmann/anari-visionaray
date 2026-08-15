@@ -1,4 +1,5 @@
 // Copyright 2023-2026 Stefan Zellmann
+// Copyright (c) 2026 Advanced Micro Devices, Inc.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "array/Array3D.h"
@@ -231,6 +232,8 @@ void UnstructuredField::finalize()
 
 #ifdef WITH_CUDA
     m_shellBVH = cuda_index_bvh<basic_triangle<3,float>>(shellBVH2);
+#elif defined(WITH_HIP)
+    m_shellBVH = hip_index_bvh<basic_triangle<3,float>>(shellBVH2);
 #else
     bvh_collapser collapser;
     collapser.collapse(shellBVH2, m_shellBVH, deviceState()->threadPool);
@@ -254,6 +257,18 @@ void UnstructuredField::finalize()
   if (!m_grids.empty()) {
     m_gridBVH = builder.build(
       cuda_index_bvh<dco::UElemGrid>{}, m_grids.devicePtr(), m_grids.size());
+  }
+#elif defined(WITH_HIP)
+  lbvh_builder builder; // the only GPU builder Visionaray has (for now..)
+
+  if (!m_elements.empty()) {
+    m_elementBVH = builder.build(
+      hip_index_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
+  }
+
+  if (!m_grids.empty()) {
+    m_gridBVH = builder.build(
+      hip_index_bvh<dco::UElemGrid>{}, m_grids.devicePtr(), m_grids.size());
   }
 #else
   binned_sah_builder builder;
@@ -316,6 +331,24 @@ aabb UnstructuredField::bounds() const
                                 cudaMemcpyDeviceToHost));
       bounds.insert(rootNode.get_bounds());
     }
+#elif defined(WITH_HIP)
+    if (m_elementBVH.num_nodes()) {
+      bvh_node rootNode;
+      HIP_SAFE_CALL(hipMemcpy(&rootNode,
+                              m_elementBVH.nodes().data(),
+                              sizeof(rootNode),
+                              hipMemcpyDeviceToHost));
+      bounds.insert(rootNode.get_bounds());
+    }
+
+    if (m_gridBVH.num_nodes()) {
+      bvh_node rootNode;
+      HIP_SAFE_CALL(hipMemcpy(&rootNode,
+                              m_gridBVH.nodes().data(),
+                              sizeof(rootNode),
+                              hipMemcpyDeviceToHost));
+      bounds.insert(rootNode.get_bounds());
+    }
 #else
     if (m_elementBVH.num_nodes())
       bounds.insert(m_elementBVH.node(0).get_bounds());
@@ -331,7 +364,7 @@ aabb UnstructuredField::bounds() const
   return {};
 }
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA) || defined(WITH_HIP)
 __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
                                                const vec4f      *vertices,
                                                const dco::UElem *elements,
@@ -364,6 +397,19 @@ __global__ void UnstructuredField_buildGridGPU(dco::GridAccel    vaccel,
 void UnstructuredField::buildGrid()
 {
 #ifdef WITH_CUDA
+  int3 dims{64, 64, 64};
+  box3f worldBounds = {bounds().min,bounds().max};
+  box3f gridBounds = worldBounds;
+  m_gridAccel.init(dims, worldBounds, gridBounds);
+
+  dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
+
+  size_t numThreads = 1024;
+  size_t numElems = m_elements.size();
+  UnstructuredField_buildGridGPU<<<div_up(numElems, numThreads), numThreads>>>(
+    vaccel, m_vertices.devicePtr(), m_elements.devicePtr(), numElems, vfield.cellSize);
+  // TODO: stitcher gridlets
+#elif defined(WITH_HIP)
   int3 dims{64, 64, 64};
   box3f worldBounds = {bounds().min,bounds().max};
   box3f gridBounds = worldBounds;
