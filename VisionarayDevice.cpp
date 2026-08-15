@@ -251,13 +251,8 @@ int VisionarayDevice::getProperty(ANARIObject object,
     uint64_t size,
     uint32_t mask)
 {
+  initDevice();
   CUDADeviceScope ds(this);
-
-  if (mask == ANARI_WAIT) {
-    auto lock = scopeLockObject();
-    deviceState()->waitOnCurrentFrame();
-  }
-
   return helium::BaseDevice::getProperty(object, name, type, mem, size, mask);
 }
 

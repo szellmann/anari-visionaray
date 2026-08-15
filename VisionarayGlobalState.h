@@ -37,7 +37,6 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 #else
   RenderingSemaphore renderingSemaphore;
 #endif
-  Frame *currentFrame{nullptr};
 
   anari::Device anariDevice{nullptr}; // public handle of _this_ helide instance
 
@@ -45,7 +44,6 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 
   VisionarayGlobalState(ANARIDevice d);
   ~VisionarayGlobalState();
-  void waitOnCurrentFrame() const;
 };
 
 // Helper functions/macros ////////////////////////////////////////////////////

@@ -25,10 +25,4 @@ VisionarayGlobalState::~VisionarayGlobalState()
 #endif
 }
 
-void VisionarayGlobalState::waitOnCurrentFrame() const
-{
-  if (currentFrame)
-    currentFrame->wait();
-}
-
 } // namespace visionaray

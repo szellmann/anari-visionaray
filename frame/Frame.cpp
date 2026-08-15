@@ -232,13 +232,12 @@ bool Frame::getProperty(
 
 void Frame::renderFrame()
 {
+  auto *state = deviceState();
+  wait();
+
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
   this->refInc(helium::RefType::INTERNAL);
 #endif
-
-  auto *state = deviceState();
-  state->waitOnCurrentFrame();
-  state->currentFrame = this;
 
 #ifdef WITH_CUDA
   CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, state->renderingStream));
@@ -507,8 +506,6 @@ void Frame::wait()
   if (m_future.valid()) {
     m_future.get();
     this->refDec(helium::RefType::INTERNAL);
-    if (deviceState()->currentFrame == this)
-      deviceState()->currentFrame = nullptr;
   }
 #endif
 }
