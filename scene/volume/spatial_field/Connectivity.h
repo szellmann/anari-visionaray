@@ -14,42 +14,37 @@ namespace visionaray {
 
 namespace conn {
 
-#if defined(WITH_CUDA) || defined(WITH_HIP)
-# define CONST_DEVICE_ARRAY __device__ __constant__ static constexpr
-#else
-# define CONST_DEVICE_ARRAY static constexpr
-#endif
-
-CONST_DEVICE_ARRAY int Tet[4][3] {
-  { 1, 3, 2 },
-  { 0, 2, 3 },
-  { 0, 3, 1 },
-  { 0, 1, 2 },
-};
-
-CONST_DEVICE_ARRAY int Pyr[5][4] {
-  { 0, 1, 3, 2 },
-  { 0, 4, 1, -1 },
-  { 2, 4, 3, -1 },
-  { 0, 3, 4, -1 },
-  { 1, 4, 2, -1 },
-};
-
-CONST_DEVICE_ARRAY int Wed[5][4] {
-  { 0, 1, 3, 4 },
-  { 0, 2, 1, -1 },
-  { 3, 4, 5, -1 },
-  { 0, 3, 2, 5 },
-  { 1, 2, 4, 5 },
-};
-
-CONST_DEVICE_ARRAY int Hex[6][4] {
-  { 0, 4, 1, 5 },
-  { 3, 2, 7, 6 },
-  { 0, 3, 4, 7 },
-  { 1, 5, 2, 6 },
-  { 4, 7, 5, 6 },
-  { 0, 1, 3, 2 },
+#define DECL_ELEMENT_ARRAYS                                                    \
+constexpr int Tet[4][3] {                                                      \
+  { 1, 3, 2 },                                                                 \
+  { 0, 2, 3 },                                                                 \
+  { 0, 3, 1 },                                                                 \
+  { 0, 1, 2 },                                                                 \
+};                                                                             \
+                                                                               \
+constexpr int Pyr[5][4] {                                                      \
+  { 0, 1, 3, 2 },                                                              \
+  { 0, 4, 1, -1 },                                                             \
+  { 2, 4, 3, -1 },                                                             \
+  { 0, 3, 4, -1 },                                                             \
+  { 1, 4, 2, -1 },                                                             \
+};                                                                             \
+                                                                               \
+constexpr int Wed[5][4] {                                                      \
+  { 0, 1, 3, 4 },                                                              \
+  { 0, 2, 1, -1 },                                                             \
+  { 3, 4, 5, -1 },                                                             \
+  { 0, 3, 2, 5 },                                                              \
+  { 1, 2, 4, 5 },                                                              \
+};                                                                             \
+                                                                               \
+constexpr int Hex[6][4] {                                                      \
+  { 0, 4, 1, 5 },                                                              \
+  { 3, 2, 7, 6 },                                                              \
+  { 0, 3, 4, 7 },                                                              \
+  { 1, 5, 2, 6 },                                                              \
+  { 4, 7, 5, 6 },                                                              \
+  { 0, 1, 3, 2 },                                                              \
 };
 
 struct UniqueFace {
@@ -187,6 +182,7 @@ struct UElem
   __host__ __device__
   inline Face face(int i) const
   {
+    DECL_ELEMENT_ARRAYS
     if (numVertices == 4) {
       return Face(vertices,Tet[i][0],Tet[i][1],Tet[i][2]);
     } else if (numVertices == 5) {
@@ -203,6 +199,7 @@ struct UElem
   __host__
   inline UniqueFace uniqueFace(int i) const
   {
+    DECL_ELEMENT_ARRAYS
     uint64_t I[4];
     if (numVertices == 4) {
       I[0] = indices[Tet[i][0]];
