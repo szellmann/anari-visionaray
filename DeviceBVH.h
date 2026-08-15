@@ -8,8 +8,14 @@
 // visionaray
 #if defined(WITH_CUDA)
 #include "visionaray/cuda/safe_call.h"
+#if defined(__CUDACC__)
+#include "visionaray/detail/bvh/cuda_lbvh.h"
+#endif
 #elif defined(WITH_HIP)
 #include "visionaray/hip/safe_call.h"
+#if defined(__HIPCC__)
+#include "visionaray/detail/bvh/hip_lbvh.h"
+#endif
 #endif
 #include "visionaray/bvh.h"
 // ours
@@ -274,7 +280,13 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
 #else
     dPrimitives = (P *)m_primitives;
 #endif
+#if defined(__CUDACC__)
+    cuda::lbvh_builder builder;
+#elif defined(__HIPCC__)
+    hip::lbvh_builder builder;
+#else
     lbvh_builder builder;
+#endif
     m_deviceIndexBVH2 = builder.build(DeviceIndexBVH2{},
                                       dPrimitives,
                                       m_numPrimitives);
