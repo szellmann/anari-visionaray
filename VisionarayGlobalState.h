@@ -14,8 +14,6 @@
 
 namespace visionaray {
 
-struct Frame;
-
 struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 {
   thread_pool threadPool;
