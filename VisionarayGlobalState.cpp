@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "VisionarayGlobalState.h"
-#include "frame/Frame.h"
 
 namespace visionaray {
 
