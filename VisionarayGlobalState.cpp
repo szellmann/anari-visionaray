@@ -6,7 +6,9 @@
 namespace visionaray {
 
 VisionarayGlobalState::VisionarayGlobalState(ANARIDevice d)
-    : helium::BaseGlobalDeviceState(d), syncContext(std::make_shared<SyncContext>())
+    : helium::BaseGlobalDeviceState(d),
+      syncContext(std::make_shared<SyncContext>()),
+      dcos(syncContext)
 {}
 
 VisionarayGlobalState::~VisionarayGlobalState()

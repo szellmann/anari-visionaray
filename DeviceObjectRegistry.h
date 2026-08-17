@@ -5,11 +5,27 @@
 
 #include "DeviceArray.h"
 #include "DeviceCopyableObjects.h"
+#include "SyncContext.h"
 
 namespace visionaray
 {
 struct DeviceCopyableObjects
 {
+  DeviceCopyableObjects(SyncContext::SP syncContext)
+    : TLSs(syncContext),
+      worlds(syncContext),
+      groups(syncContext),
+      surfaces(syncContext),
+      instances(syncContext),
+      geometries(syncContext),
+      materials(syncContext),
+      samplers(syncContext),
+      volumes(syncContext),
+      spatialFields(syncContext),
+      lights(syncContext),
+      frames(syncContext)
+  {}
+
   // One TLS per world
   DeviceObjectArray<dco::TLS> TLSs;
   DeviceObjectArray<dco::World> worlds; // TODO: move TLSs and EPS in here!

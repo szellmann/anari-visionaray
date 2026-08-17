@@ -8,6 +8,7 @@
 #include <vector>
 // ours
 #include "DeviceCopyableObjects.h"
+#include "SyncContext.h"
 
 #ifdef WITH_CUDA
 // cuda
@@ -622,7 +623,9 @@ struct DeviceObjectArray : private std::vector<T>
   typedef typename std::vector<T>::value_type value_type;
   typedef std::vector<T> Base;
 
-  DeviceObjectArray() = default;
+  DeviceObjectArray(SyncContext::SP syncContext) : syncContext(syncContext)
+  {}
+
   ~DeviceObjectArray() = default;
 
   DeviceObjectHandle alloc(const T &obj)
@@ -689,15 +692,17 @@ struct DeviceObjectArray : private std::vector<T>
       std::unique_lock<std::mutex> l(mtx);
       deviceData.resize(Base::size());
 #ifdef WITH_CUDA
-      CUDA_SAFE_CALL(cudaMemcpy(deviceData.data(),
-                     Base::data(),
-                     Base::size() * sizeof(T),
-                     cudaMemcpyHostToDevice));
+      CUDA_SAFE_CALL(cudaMemcpyAsync(deviceData.data(),
+                                     Base::data(),
+                                     Base::size() * sizeof(T),
+                                     cudaMemcpyHostToDevice,
+                                     syncContext->copyStream));
 #elif defined(WITH_HIP)
-      HIP_SAFE_CALL(hipMemcpy(deviceData.data(),
-                    Base::data(),
-                    Base::size() * sizeof(T),
-                    hipMemcpyHostToDevice));
+      HIP_SAFE_CALL(hipMemcpyAsync(deviceData.data(),
+                                   Base::data(),
+                                   Base::size() * sizeof(T),
+                                   hipMemcpyHostToDevice,
+                                   syncContext->copyStream));
 #else
       // TODO: assert trivially copyable
       memcpy(deviceData.data(), Base::data(), Base::size() * sizeof(T));
@@ -706,6 +711,8 @@ struct DeviceObjectArray : private std::vector<T>
     }
     return deviceData.data();
   }
+
+  SyncContext::SP syncContext;
 
   std::vector<DeviceObjectHandle> freeHandles;
   DeviceArray<T> deviceData;

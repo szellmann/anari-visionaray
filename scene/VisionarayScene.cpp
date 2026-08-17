@@ -50,7 +50,9 @@ static aabb getPrimBounds(const Obj &obj)
 
 VisionarayScene::VisionarayScene(
     VisionarayScene::Type type, VisionarayGlobalState *state)
-  : type(type), m_state(state), m_TLS(state), m_worldTLS(state)
+  : type(type), m_state(state), m_TLS(state), m_worldTLS(state),
+    m_allLights(state->syncContext), m_BLSs(state->syncContext),
+    m_worldBLSs(state->syncContext)
 {
   reset();
 }
@@ -97,30 +99,34 @@ void VisionarayScene::commit()
 
 #if defined(WITH_CUDA)
       dco::Instance inst;
-      CUDA_SAFE_CALL(cudaMemcpy(&inst, deviceState()->onDevice.instances+instID,
-                                sizeof(inst), cudaMemcpyDefault));
+      CUDA_SAFE_CALL(cudaMemcpyAsync(&inst, deviceState()->onDevice.instances+instID,
+                                     sizeof(inst), cudaMemcpyDefault,
+                                     deviceState()->syncContext->copyStream));
 
       if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
       std::vector<dco::Handle> groupLights(group.numLights);
-      CUDA_SAFE_CALL(cudaMemcpy(groupLights.data(), group.lights,
-                                group.numLights*sizeof(dco::Handle),
-                                cudaMemcpyDefault));
+      CUDA_SAFE_CALL(cudaMemcpyAsync(groupLights.data(), group.lights,
+                                     group.numLights*sizeof(dco::Handle),
+                                     cudaMemcpyDefault,
+                                     deviceState()->syncContext->copyStream));
       for (unsigned i=0; i<group.numLights; ++i)
         m_allLights.alloc({groupLights[i], inst.instID});
 #elif defined(WITH_HIP)
       dco::Instance inst;
-      HIP_SAFE_CALL(hipMemcpy(&inst, deviceState()->onDevice.instances+instID,
-                              sizeof(inst), hipMemcpyDefault));
+      HIP_SAFE_CALL(hipMemcpyAsync(&inst, deviceState()->onDevice.instances+instID,
+                                   sizeof(inst), hipMemcpyDefault,
+                                   deviceState()->syncContext->copyStream));
 
       if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
       std::vector<dco::Handle> groupLights(group.numLights);
-      HIP_SAFE_CALL(hipMemcpy(groupLights.data(), group.lights,
-                                group.numLights*sizeof(dco::Handle),
-                                hipMemcpyDefault));
+      HIP_SAFE_CALL(hipMemcpyAsync(groupLights.data(), group.lights,
+                                   group.numLights*sizeof(dco::Handle),
+                                   hipMemcpyDefault,
+                                   deviceState()->syncContext->copyStream));
       for (unsigned i=0; i<group.numLights; ++i)
         m_allLights.alloc({groupLights[i], inst.instID});
 #else
