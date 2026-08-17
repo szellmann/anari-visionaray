@@ -5,18 +5,15 @@
 
 // helium
 #include "helium/BaseGlobalDeviceState.h"
-#include "helium/TaskQueue.h"
-// visionaray
-#include "visionaray/detail/thread_pool.h"
 // ours
 #include "DeviceObjectRegistry.h"
-#include "RenderingSemaphore.h"
+#include "SyncContext.h"
 
 namespace visionaray {
 
 struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 {
-  thread_pool threadPool;
+  SyncContext::SP syncContext;
 
   struct ObjectUpdates
   {
@@ -28,16 +25,8 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
   DeviceCopyableObjects dcos;
   DeviceObjectRegistry onDevice;
 
-#ifdef WITH_CUDA
+#if defined(WITH_CUDA)
   cudaDeviceProp deviceProps;
-  cudaStream_t renderingStream;
-  cudaStream_t copyStream;
-#elif defined(WITH_HIP)
-  hipStream_t renderingStream;
-  hipStream_t copyStream;
-#else
-  helium::tasking::TaskQueue taskQueue{64};
-  RenderingSemaphore renderingSemaphore;
 #endif
 
   anari::Device anariDevice{nullptr}; // public handle of _this_ helide instance

@@ -22,10 +22,12 @@ void VisionarayRenderer::renderFrame(const dco::Frame &frame,
   DevicePointer<dco::Camera> camPtr(&cam);
   if (type == Raycast) {
     asRaycast.renderFrame(
-        onDevicePtr, rendererStatePtr, framePtr, camPtr, size, state, worldID, frameID);
+        onDevicePtr, rendererStatePtr, framePtr, camPtr, size,
+        state->syncContext, worldID, frameID);
   } else if (type == DirectLight) {
     asDirectLight.renderFrame(
-        onDevicePtr, rendererStatePtr, framePtr, camPtr, size, state, worldID, frameID);
+        onDevicePtr, rendererStatePtr, framePtr, camPtr, size,
+        state->syncContext, worldID, frameID);
   }
 }
 

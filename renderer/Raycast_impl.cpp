@@ -239,15 +239,15 @@ void VisionarayRendererRaycast::renderFrame(DevicePointer<DeviceObjectRegistry> 
                                             DevicePointer<dco::Frame> framePtr,
                                             DevicePointer<dco::Camera> camPtr,
                                             uint2 size,
-                                            VisionarayGlobalState *state,
+                                            SyncContext::SP syncContext,
                                             unsigned worldID, int frameID)
 {
 #ifdef WITH_CUDA
-  cuda::for_each(state->renderingStream, 0, size.x, 0, size.y,
+  cuda::for_each(syncContext->renderingStream, 0, size.x, 0, size.y,
 #elif defined(WITH_HIP)
-  hip::for_each(state->renderingStream, 0, size.x, 0, size.y,
+  hip::for_each(syncContext->renderingStream, 0, size.x, 0, size.y,
 #else
-  parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
+  parallel::for_each(syncContext->threadPool, 0, size.x, 0, size.y,
 #endif
       [=] VSNRAY_GPU_FUNC (int x, int y) {
 

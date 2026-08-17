@@ -5,7 +5,7 @@
 
 #include "renderer/common.h"
 #include "renderer/VolumeIntegration.h"
-#include "VisionarayGlobalState.h"
+#include "SyncContext.h"
 
 namespace visionaray {
 
@@ -16,7 +16,7 @@ struct VisionarayRendererRaycast
                    DevicePointer<dco::Frame> framePtr,
                    DevicePointer<dco::Camera> camPtr,
                    uint2 size,
-                   VisionarayGlobalState *state,
+                   SyncContext::SP syncContext,
                    unsigned worldID, int frameID);
 
   constexpr static bool stochasticRendering{false};

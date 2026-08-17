@@ -113,7 +113,7 @@ void BlockStructuredField::finalize()
     index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
 
   bvh_collapser collapser;
-  collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->threadPool);
+  collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->syncContext->threadPool);
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 #endif
@@ -206,7 +206,7 @@ void BlockStructuredField::buildGrid()
   dco::GridAccel &vaccel = m_gridAccel.visionarayAccel();
 
   size_t numBlocks = m_blocks.size();
-  parallel::for_each(deviceState()->threadPool, 0, numBlocks,
+  parallel::for_each(deviceState()->syncContext->threadPool, 0, numBlocks,
     [&](size_t blockID) {
       const auto &block = m_blocks[blockID];
       int cellSize = block.cellSize();

@@ -112,6 +112,7 @@ set(SOURCES
     scene/MotionTransform.cpp
     scene/World.cpp
     Object.cpp
+    SyncContext.cpp
     TimeStamp.cpp
     VisionarayDevice.cpp
     VisionarayGlobalState.cpp

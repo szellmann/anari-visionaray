@@ -6,26 +6,10 @@
 namespace visionaray {
 
 VisionarayGlobalState::VisionarayGlobalState(ANARIDevice d)
-    : helium::BaseGlobalDeviceState(d), threadPool(std::thread::hardware_concurrency())
-{
-#ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaStreamCreate(&renderingStream));
-  CUDA_SAFE_CALL(cudaStreamCreate(&copyStream));
-#elif defined(WITH_HIP)
-  HIP_SAFE_CALL(hipStreamCreate(&renderingStream));
-  HIP_SAFE_CALL(hipStreamCreate(&copyStream));
-#endif
-}
+    : helium::BaseGlobalDeviceState(d), syncContext(std::make_shared<SyncContext>())
+{}
 
 VisionarayGlobalState::~VisionarayGlobalState()
-{
-#ifdef WITH_CUDA
-  CUDA_SAFE_CALL(cudaStreamDestroy(renderingStream));
-  CUDA_SAFE_CALL(cudaStreamDestroy(copyStream));
-#elif defined(WITH_HIP)
-  HIP_SAFE_CALL(hipStreamDestroy(renderingStream));
-  HIP_SAFE_CALL(hipStreamDestroy(copyStream));
-#endif
-}
+{}
 
 } // namespace visionaray

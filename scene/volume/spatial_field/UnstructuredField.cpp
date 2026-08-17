@@ -233,7 +233,7 @@ void UnstructuredField::finalize()
     m_shellBVH = cuda_index_bvh<basic_triangle<3,float>>(shellBVH2);
 #else
     bvh_collapser collapser;
-    collapser.collapse(shellBVH2, m_shellBVH, deviceState()->threadPool);
+    collapser.collapse(shellBVH2, m_shellBVH, deviceState()->syncContext->threadPool);
 #endif
 
     vfield.asUnstructured.shellBVH = m_shellBVH.ref();
@@ -264,13 +264,13 @@ void UnstructuredField::finalize()
   if (!m_elements.empty()) {
     auto elemBVH2 = builder.build(
       bvh<dco::UElem>{}, m_elements.data(), m_elements.size());
-    collapser.collapse(elemBVH2, m_elementBVH, deviceState()->threadPool);
+    collapser.collapse(elemBVH2, m_elementBVH, deviceState()->syncContext->threadPool);
   }
 
   if (!m_grids.empty()) {
     auto gridBVH2 = builder.build(
       bvh<dco::UElemGrid>{}, m_grids.data(), m_grids.size());
-    collapser.collapse(gridBVH2, m_gridBVH, deviceState()->threadPool);
+    collapser.collapse(gridBVH2, m_gridBVH, deviceState()->syncContext->threadPool);
   }
 #endif
 

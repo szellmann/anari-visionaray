@@ -36,7 +36,7 @@ void *VisionarayDevice::mapArray(ANARIArray a)
 #elif defined(WITH_HIP)
   // TODO: set device
 #else
-  deviceState()->renderingSemaphore.arrayMapAcquire();
+  deviceState()->syncContext->renderingSemaphore.arrayMapAcquire();
 #endif
   return helium::BaseDevice::mapArray(a);
 }
@@ -50,7 +50,7 @@ void VisionarayDevice::unmapArray(ANARIArray a)
 #endif
   helium::BaseDevice::unmapArray(a);
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
-  deviceState()->renderingSemaphore.arrayMapRelease();
+  deviceState()->syncContext->renderingSemaphore.arrayMapRelease();
 #endif
 }
 
@@ -298,7 +298,7 @@ VisionarayDevice::~VisionarayDevice()
   auto &state = *deviceState();
 
 #if !(defined(WITH_CUDA) || defined(WITH_HIP))
-  state.taskQueue.flush();
+  state.syncContext->taskQueue.flush();
 #endif
   state.commitBuffer.clear();
 

@@ -184,7 +184,8 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
   if (attributes.devicePointer) {
     hPrimitives = (P *)std::malloc(sizeof(P)*m_numPrimitives);
     CUDA_SAFE_CALL(cudaMemcpyAsync(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                                   cudaMemcpyDeviceToHost, deviceState()->copyStream));
+                                   cudaMemcpyDeviceToHost,
+                                   deviceState()->syncContext->copyStream));
   } else {
     hPrimitives = (P *)m_primitives;
   }
@@ -194,7 +195,8 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
   if (attributes.memoryType == hipMemoryTypeDevice) {
     hPrimitives = (P *)std::malloc(sizeof(P)*m_numPrimitives);
     HIP_SAFE_CALL(hipMemcpyAsync(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                                 hipMemcpyDeviceToHost, deviceState()->copyStream));
+                                 hipMemcpyDeviceToHost,
+                                 deviceState()->syncContext->copyStream));
   }
 #else
   hPrimitives = (P *)m_primitives;
@@ -226,9 +228,9 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
   // Only synchronize if app won't do it for us!
   if (!(m_flags & BVH_FLAG_NO_STREAM_SYNCHRONIZE)) {
 #if defined(WITH_CUDA)
-    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
 #elif defined(WITH_CUDA)
-    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
 #endif
   }
   m_hostRebuild.IndexBVH2 = newTimeStamp();
@@ -244,7 +246,7 @@ void DeviceBVH<P>::rebuildHostBVH4() {
 
   if (m_hostBVH2.num_nodes() && m_hostBVH2.nodes()[0].get_bounds().valid()) {
     bvh_collapser collapser;
-    collapser.collapse(m_hostBVH2, m_hostBVH4, deviceState()->threadPool);
+    collapser.collapse(m_hostBVH2, m_hostBVH4, deviceState()->syncContext->threadPool);
   } else {
     m_hostBVH4 = {};
   }
@@ -277,7 +279,8 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
     } else {
       CUDA_SAFE_CALL(cudaMalloc(&dPrimitives,sizeof(P)*m_numPrimitives));
       CUDA_SAFE_CALL(cudaMemcpyAsync(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                                     cudaMemcpyHostToDevice, deviceState()->copyStream));
+                                     cudaMemcpyHostToDevice,
+                                     deviceState()->syncContext->copyStream));
     }
 #elif defined(WITH_HIP)
     hipPointerAttribute_t attributes = {};
@@ -287,7 +290,8 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
     } else {
       HIP_SAFE_CALL(hipMalloc(&dPrimitives,sizeof(P)*m_numPrimitives));
       HIP_SAFE_CALL(hipMemcpyAsync(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                                   hipMemcpyHostToDevice, deviceState()->copyStream));
+                                   hipMemcpyHostToDevice,
+                                   deviceState()->syncContext->copyStream));
     }
 #else
     dPrimitives = (P *)m_primitives;
@@ -322,9 +326,9 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
   if (!(m_flags & BVH_FLAG_NO_STREAM_SYNCHRONIZE)) {
     std::cout << "sync\n";
 #if defined(WITH_CUDA)
-    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
 #elif defined(WITH_CUDA)
-    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
 #endif
   }
   m_deviceRebuild.IndexBVH2 = newTimeStamp();
@@ -354,13 +358,16 @@ inline void DeviceBVH<P>::copyBVH(DST_T &dst, const SRC_T &src) {
 
     CUDA_SAFE_CALL(cudaMemcpyAsync(dst.nodes().data(), src.nodes().data(),
                                    sizeof(src.nodes()[0])*src.nodes().size(),
-                                   cudaMemcpyDefault, deviceState()->copyStream));
+                                   cudaMemcpyDefault,
+                                   deviceState()->syncContext->copyStream));
     CUDA_SAFE_CALL(cudaMemcpyAsync(dst.primitives().data(), src.primitives().data(),
                                    sizeof(src.primitives()[0])*src.primitives().size(),
-                                   cudaMemcpyDefault, deviceState()->copyStream));
+                                   cudaMemcpyDefault,
+                                   deviceState()->syncContext->copyStream));
     CUDA_SAFE_CALL(cudaMemcpyAsync(dst.indices().data(), src.indices().data(),
                                    sizeof(src.indices()[0])*src.indices().size(),
-                                   cudaMemcpyDefault, deviceState()->copyStream));
+                                   cudaMemcpyDefault,
+                                   deviceState()->syncContext->copyStream));
   } else {
 #endif
     dst = DST_T(src);

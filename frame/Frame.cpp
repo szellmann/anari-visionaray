@@ -25,16 +25,20 @@ Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStart));
   CUDA_SAFE_CALL(cudaEventCreate(&m_eventStop));
 
-  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, deviceState()->renderingStream));
-  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop, deviceState()->renderingStream));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart,
+                                 deviceState()->syncContext->renderingStream));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStop,
+                                 deviceState()->syncContext->renderingStream));
 #elif defined(WITH_HIP)
   HIP_SAFE_CALL(hipStreamCreate(&taa.stream));
 
   HIP_SAFE_CALL(hipEventCreate(&m_eventStart));
   HIP_SAFE_CALL(hipEventCreate(&m_eventStop));
 
-  HIP_SAFE_CALL(hipEventRecord(m_eventStart, deviceState()->renderingStream));
-  HIP_SAFE_CALL(hipEventRecord(m_eventStop, deviceState()->renderingStream));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStart,
+                               deviceState()->syncContext->renderingStream));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStop,
+                               deviceState()->syncContext->renderingStream));
 #else
   m_eventStart = std::chrono::steady_clock::now();
   m_eventStop = std::chrono::steady_clock::now();
@@ -216,20 +220,20 @@ void Frame::renderFrame()
 #ifdef WITH_CUDA
   state->commitBuffer.flush();
   // synchronize copy stream for BVH h2d copies:
-  CUDA_SAFE_CALL(cudaStreamSynchronize(state->copyStream));
-  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, state->renderingStream));
+  CUDA_SAFE_CALL(cudaStreamSynchronize(state->syncContext->copyStream));
+  CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, state->syncContext->renderingStream));
 #elif defined(WITH_HIP)
   state->commitBuffer.flush();
   // synchronize copy stream for BVH h2d copies:
-  HIP_SAFE_CALL(hipStreamSynchronize(state->copyStream));
-  HIP_SAFE_CALL(hipEventRecord(m_eventStart, state->renderingStream));
+  HIP_SAFE_CALL(hipStreamSynchronize(state->syncContext->copyStream));
+  HIP_SAFE_CALL(hipEventRecord(m_eventStart, state->syncContext->renderingStream));
 #else
   this->refInc(helium::RefType::INTERNAL);
-  state->taskQueue.enqueue([state]() { state->commitBuffer.flush(); });
+  state->syncContext->taskQueue.enqueue([state]() { state->commitBuffer.flush(); });
 
-  m_future = state->taskQueue.enqueue([&, state]() {
+  m_future = state->syncContext->taskQueue.enqueue([&, state]() {
     m_eventStart = std::chrono::steady_clock::now();
-    state->renderingSemaphore.frameStart();
+    state->syncContext->renderingSemaphore.frameStart();
 #endif
 
     if (!isValid()) {
@@ -241,7 +245,7 @@ void Frame::renderFrame()
       // TODO: outside this function!
 #else
       std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
-      state->renderingSemaphore.frameEnd();
+      state->syncContext->renderingSemaphore.frameEnd();
 #endif
       return;
     }
@@ -249,7 +253,7 @@ void Frame::renderFrame()
 #if !defined(WITH_CUDA) && !defined(WITH_HIP)
     if (state->commitBuffer.lastObjectFinalization() <= m_frameLastRendered) {
       if (!m_renderer->stochasticRendering()) {
-        state->renderingSemaphore.frameEnd();
+        state->syncContext->renderingSemaphore.frameEnd();
         return;
       }
     }
@@ -281,7 +285,7 @@ void Frame::renderFrame()
 
     if (m_nextFrameReset) {
 #ifdef WITH_CUDA
-      cuda::for_each(state->renderingStream, 0, size.x, 0, size.y,
+      cuda::for_each(state->syncContext->renderingStream, 0, size.x, 0, size.y,
         [=] VSNRAY_GPU_FUNC (int x, int y) {
           frame.accumBuffer[x+size.x*y] = vec4{0.f};
           if (frame.depthBuffer) {
@@ -289,7 +293,7 @@ void Frame::renderFrame()
           }
       });
 #elif WITH_HIP
-      hip::for_each(state->renderingStream, 0, size.x, 0, size.y,
+      hip::for_each(state->syncContext->renderingStream, 0, size.x, 0, size.y,
         [=] VSNRAY_GPU_FUNC (int x, int y) {
           frame.accumBuffer[x+size.x*y] = vec4{0.f};
           if (frame.depthBuffer) {
@@ -350,7 +354,7 @@ void Frame::renderFrame()
 #elif WITH_HIP
       hip::for_each(taa.stream, 0, size.x, 0, size.y,
 #else
-      parallel::for_each(state->threadPool, 0, size.x, 0, size.y,
+      parallel::for_each(state->syncContext->threadPool, 0, size.x, 0, size.y,
 #endif
           [=] VSNRAY_GPU_FUNC (int x, int y) {
             frame.toneMap(
@@ -362,13 +366,13 @@ void Frame::renderFrame()
       CUDA_SAFE_CALL(cudaMemcpyAsync(taa.prevBuffer.devicePtr(),
                                      taa.currBuffer.devicePtr(),
                                      sizeof(taa.currBuffer[0]) * taa.currBuffer.size(),
-                                     cudaMemcpyDefault, state->copyStream));
+                                     cudaMemcpyDefault, state->syncContext->copyStream));
       CUDA_SAFE_CALL(cudaMemcpyAsync(taa.prevAlbedoBuffer.devicePtr(),
                                      taa.currAlbedoBuffer.devicePtr(),
                                      sizeof(taa.currAlbedoBuffer[0])
                                         * taa.currAlbedoBuffer.size(),
-                                     cudaMemcpyDefault, state->copyStream));
-      CUDA_SAFE_CALL(cudaStreamSynchronize(state->copyStream));
+                                     cudaMemcpyDefault, state->syncContext->copyStream));
+      CUDA_SAFE_CALL(cudaStreamSynchronize(state->syncContext->copyStream));
 #else
       memcpy(taa.prevBuffer.devicePtr(), taa.currBuffer.devicePtr(),
           sizeof(taa.currBuffer[0]) * taa.currBuffer.size());
@@ -381,11 +385,11 @@ void Frame::renderFrame()
       m_callback(m_callbackUserPtr, state->anariDevice, (ANARIFrame)this);
 
 #ifdef WITH_CUDA
-    CUDA_SAFE_CALL(cudaEventRecord(m_eventStop, state->renderingStream));
+    CUDA_SAFE_CALL(cudaEventRecord(m_eventStop, state->syncContext->renderingStream));
 #elif defined(WITH_HIP)
-    HIP_SAFE_CALL(hipEventRecord(m_eventStop, state->renderingStream));
+    HIP_SAFE_CALL(hipEventRecord(m_eventStop, state->syncContext->renderingStream));
 #else
-    state->renderingSemaphore.frameEnd();
+    state->syncContext->renderingSemaphore.frameEnd();
     m_eventStop = std::chrono::steady_clock::now();
     // CPU: calculate directly in async function
     m_duration = std::chrono::duration<float>(m_eventStop - m_eventStart).count();
