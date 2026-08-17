@@ -15,7 +15,14 @@ World::World(VisionarayGlobalState *s)
 {
   m_zeroGroup = new Group(s);
   m_zeroInstance = new Instance(s);
+
   m_zeroInstance->setParamDirect("group", m_zeroGroup.ptr);
+  // Internal objects never pass through anariCommitParameters(): mirror
+  // staging into the committed snapshot so a later buffered re-commit
+  // (running under a ReadCommittedScope) doesn't read an empty one.
+  m_zeroInstance->snapshotParameters();
+  m_zeroInstance->commitParameters();
+  m_zeroInstance->finalize();
 
   // never any public ref to these objects
   m_zeroGroup->refDec(helium::RefType::PUBLIC);
@@ -86,10 +93,17 @@ void World::finalize()
   } else
     m_zeroGroup->removeParam("light");
 
-  m_zeroGroup->commitParameters();
+  m_zeroInstance->setParam("id", getParam<uint32_t>("id", ~0u));
+  m_zeroInstance->snapshotParameters(); // internal object, see World()
+  // Re-commit explicitly: the zero instance observes nothing, so no buffered
+  // re-commit would ever consume the staged id (it stayed at the ctor default
+  // before this).
   m_zeroInstance->commitParameters();
-  m_zeroGroup->finalize();
   m_zeroInstance->finalize();
+
+  m_zeroGroup->snapshotParameters(); // internal object, see World()
+  m_zeroGroup->commitParameters();
+  m_zeroGroup->finalize();
 
   m_instances.clear();
 
