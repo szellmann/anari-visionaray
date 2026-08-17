@@ -40,21 +40,21 @@ struct DeviceArray
 
   ~DeviceArray()
   {
-    CUDA_SAFE_CALL(cudaFree(devicePtr));
+    CUDA_SAFE_CALL(cudaFreeHost(devicePtr));
     devicePtr = nullptr;
     len = 0;
   }
 
   DeviceArray(size_t n)
   {
-    CUDA_SAFE_CALL(cudaMalloc(&devicePtr, n*sizeof(T)));
+    CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, n*sizeof(T), cudaHostAllocDefault));
     len = n;
   }
 
   DeviceArray(const DeviceArray &rhs)
   {
     if (&rhs != this) {
-      CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
+      CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, rhs.len*sizeof(T), cudaHostAllocDefault));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
@@ -65,11 +65,11 @@ struct DeviceArray
   DeviceArray(DeviceArray &&rhs)
   {
     if (&rhs != this) {
-      CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
+      CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, rhs.len*sizeof(T), cudaHostAllocDefault));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
-      CUDA_SAFE_CALL(cudaFree(rhs.devicePtr));
+      CUDA_SAFE_CALL(cudaFreeHost(rhs.devicePtr));
       len = rhs.len;
       rhs.devicePtr = nullptr;
       rhs.len = 0;
@@ -79,7 +79,7 @@ struct DeviceArray
   DeviceArray &operator=(const DeviceArray &rhs)
   {
     if (&rhs != this) {
-      CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
+      CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, rhs.len*sizeof(T), cudaHostAllocDefault));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
@@ -91,11 +91,11 @@ struct DeviceArray
   DeviceArray &operator=(DeviceArray &&rhs)
   {
     if (&rhs != this) {
-      CUDA_SAFE_CALL(cudaMalloc(&devicePtr, rhs.len*sizeof(T)));
+      CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, rhs.len*sizeof(T), cudaHostAllocDefault));
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, rhs.devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
-      CUDA_SAFE_CALL(cudaFree(rhs.devicePtr));
+      CUDA_SAFE_CALL(cudaFreeHost(rhs.devicePtr));
       rhs.devicePtr = nullptr;
       rhs.len = 0;
     }
@@ -118,20 +118,20 @@ struct DeviceArray
 
     T *temp{nullptr};
     if (devicePtr && len > 0) {
-      CUDA_SAFE_CALL(cudaMalloc(&temp, len*sizeof(T)));
+      CUDA_SAFE_CALL(cudaHostAlloc(&temp, len*sizeof(T), cudaHostAllocDefault));
       CUDA_SAFE_CALL(cudaMemcpy(temp, devicePtr, len*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
-      CUDA_SAFE_CALL(cudaFree(devicePtr));
+      CUDA_SAFE_CALL(cudaFreeHost(devicePtr));
     }
 
-    CUDA_SAFE_CALL(cudaMalloc(&devicePtr, n*sizeof(T)));
+    CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, n*sizeof(T), cudaHostAllocDefault));
 
     if (temp) {
       CUDA_SAFE_CALL(cudaMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
                                 cudaMemcpyDeviceToDevice));
       CUDA_SAFE_CALL(cudaDeviceSynchronize());
-      CUDA_SAFE_CALL(cudaFree(temp));
+      CUDA_SAFE_CALL(cudaFreeHost(temp));
     }
 
     len = n;

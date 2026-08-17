@@ -277,7 +277,8 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
     if (attributes.devicePointer) {
       dPrimitives = (P *)m_primitives;
     } else {
-      CUDA_SAFE_CALL(cudaMalloc(&dPrimitives,sizeof(P)*m_numPrimitives));
+      CUDA_SAFE_CALL(cudaHostAlloc(&dPrimitives,sizeof(P)*m_numPrimitives,
+                                   cudaHostAllocDefault));
       CUDA_SAFE_CALL(cudaMemcpyAsync(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
                                      cudaMemcpyHostToDevice,
                                      deviceState()->syncContext->copyStream));
@@ -308,7 +309,7 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
                                       m_numPrimitives);
 #if defined(WITH_CUDA)
     if (!attributes.devicePointer) {
-      CUDA_SAFE_CALL(cudaFree(dPrimitives));
+      CUDA_SAFE_CALL(cudaFreeHost(dPrimitives));
     }
 #elif defined(WITH_HIP)
     if (attributes.memoryType == hipMemoryTypeHost) {
@@ -324,7 +325,6 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
 
   // Only synchronize if app won't do it for us!
   if (!(m_flags & BVH_FLAG_NO_STREAM_SYNCHRONIZE)) {
-    std::cout << "sync\n";
 #if defined(WITH_CUDA)
     CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
 #elif defined(WITH_CUDA)
