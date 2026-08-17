@@ -121,7 +121,7 @@ void BezierCurve::finalize()
 
   m_BVH.update((const dco::BezierCurve *)vgeom.primitives.data,
                vgeom.primitives.len,
-               0); // no spatial splits for bez. curves yet!
+               BVH_FLAG_NO_STREAM_SYNCHRONIZE); // no spatial splits for bez. curves yet!
 
   vBLS.type = dco::BLS::BezierCurve;
 #if defined(WITH_CUDA) || defined(WITH_HIP)

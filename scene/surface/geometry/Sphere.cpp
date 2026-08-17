@@ -102,7 +102,7 @@ void Sphere::finalize()
 
   m_BVH.update((const dco::Sphere *)vgeom.primitives.data,
                vgeom.primitives.len,
-               BVH_FLAG_ENABLE_SPATIAL_SPLITS);
+               BVH_FLAG_ENABLE_SPATIAL_SPLITS | BVH_FLAG_NO_STREAM_SYNCHRONIZE);
 
   vBLS.type = dco::BLS::Sphere;
 #if defined(WITH_CUDA) || defined(WITH_HIP)

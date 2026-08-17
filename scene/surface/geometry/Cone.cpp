@@ -114,7 +114,7 @@ void Cone::finalize()
 
   m_BVH.update((const dco::Cone *)vgeom.primitives.data,
                vgeom.primitives.len,
-               0); // no spatial splits for cones yet!
+               BVH_FLAG_NO_STREAM_SYNCHRONIZE); // no spatial splits for cones yet!
 
   vBLS.type = dco::BLS::Cone;
 #if defined(WITH_CUDA) || defined(WITH_HIP)

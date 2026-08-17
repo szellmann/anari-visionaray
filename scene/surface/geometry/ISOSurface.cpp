@@ -62,7 +62,7 @@ void ISOSurface::finalize()
 
   m_BVH.update((const dco::ISOSurface *)vgeom.primitives.data,
                vgeom.primitives.len,
-               0); // no spatial splits for ISOs 
+               BVH_FLAG_NO_STREAM_SYNCHRONIZE); // no spatial splits for ISOs 
 
   vBLS.type = dco::BLS::ISOSurface;
 #if defined(WITH_CUDA) || defined(WITH_HIP)

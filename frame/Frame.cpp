@@ -215,9 +215,13 @@ void Frame::renderFrame()
 
 #ifdef WITH_CUDA
   state->commitBuffer.flush();
+  // synchronize copy stream for BVH h2d copies:
+  CUDA_SAFE_CALL(cudaStreamSynchronize(state->copyStream));
   CUDA_SAFE_CALL(cudaEventRecord(m_eventStart, state->renderingStream));
 #elif defined(WITH_HIP)
   state->commitBuffer.flush();
+  // synchronize copy stream for BVH h2d copies:
+  HIP_SAFE_CALL(hipStreamSynchronize(state->copyStream));
   HIP_SAFE_CALL(hipEventRecord(m_eventStart, state->renderingStream));
 #else
   this->refInc(helium::RefType::INTERNAL);
@@ -334,10 +338,8 @@ void Frame::renderFrame()
       taa.history.reset(taa.prevBuffer.devicePtr());
 #ifdef WITH_CUDA
       frame.taa.history = cuda_texture_ref<float4, 2>(taa.history);
-      cudaDeviceSynchronize();
 #elif defined(WITH_HIP)
       frame.taa.history = hip_texture_ref<float4, 2>(taa.history);
-      hipDeviceSynchronize();
 #else
       frame.taa.history = texture_ref<float4, 2>(taa.history);
 #endif
@@ -357,13 +359,16 @@ void Frame::renderFrame()
 
       // Copy buffers for next pass
 #ifdef WITH_CUDA
-      cudaMemcpy(taa.prevBuffer.devicePtr(), taa.currBuffer.devicePtr(),
-          sizeof(taa.currBuffer[0]) * taa.currBuffer.size(),
-          cudaMemcpyDefault);
-      cudaMemcpy(taa.prevAlbedoBuffer.devicePtr(), taa.currAlbedoBuffer.devicePtr(),
-          sizeof(taa.currAlbedoBuffer[0]) * taa.currAlbedoBuffer.size(),
-          cudaMemcpyDefault);
-      cudaDeviceSynchronize();
+      CUDA_SAFE_CALL(cudaMemcpyAsync(taa.prevBuffer.devicePtr(),
+                                     taa.currBuffer.devicePtr(),
+                                     sizeof(taa.currBuffer[0]) * taa.currBuffer.size(),
+                                     cudaMemcpyDefault, state->copyStream));
+      CUDA_SAFE_CALL(cudaMemcpyAsync(taa.prevAlbedoBuffer.devicePtr(),
+                                     taa.currAlbedoBuffer.devicePtr(),
+                                     sizeof(taa.currAlbedoBuffer[0])
+                                        * taa.currAlbedoBuffer.size(),
+                                     cudaMemcpyDefault, state->copyStream));
+      CUDA_SAFE_CALL(cudaStreamSynchronize(state->copyStream));
 #else
       memcpy(taa.prevBuffer.devicePtr(), taa.currBuffer.devicePtr(),
           sizeof(taa.currBuffer[0]) * taa.currBuffer.size());

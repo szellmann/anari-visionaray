@@ -214,7 +214,7 @@ void Quad::finalize()
 
   m_BVH.update((const dco::Triangle *)vgeom.primitives.data,
                vgeom.primitives.len,
-               BVH_FLAG_ENABLE_SPATIAL_SPLITS);
+               BVH_FLAG_ENABLE_SPATIAL_SPLITS | BVH_FLAG_NO_STREAM_SYNCHRONIZE);
 
   vBLS.type = dco::BLS::Quad;
 #if defined(WITH_CUDA) || defined(WITH_HIP)

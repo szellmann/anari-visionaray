@@ -80,7 +80,7 @@ void VisionarayScene::commit()
 #else
       m_worldTLS.update(m_worldBLSs.devicePtr(),
                         m_worldBLSs.size(),
-                        BVH_FLAG_PREFER_FAST_BUILD);
+                        BVH_FLAG_PREFER_FAST_BUILD | BVH_FLAG_NO_STREAM_SYNCHRONIZE);
 #endif
     }
 
@@ -137,11 +137,12 @@ void VisionarayScene::commit()
     // Build TLS
     if (!m_BLSs.empty()) {
       m_TLS.update(m_BLSs.devicePtr(),m_BLSs.size(),
-                   BVH_FLAG_PREFER_FAST_BUILD);
+                   BVH_FLAG_PREFER_FAST_BUILD | BVH_FLAG_NO_STREAM_SYNCHRONIZE);
     }
   }
 
   dispatch();
+  double after = getCurrentTime();
 }
 
 void VisionarayScene::release()

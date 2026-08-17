@@ -31,8 +31,10 @@ struct VisionarayGlobalState : public helium::BaseGlobalDeviceState
 #ifdef WITH_CUDA
   cudaDeviceProp deviceProps;
   cudaStream_t renderingStream;
+  cudaStream_t copyStream;
 #elif defined(WITH_HIP)
   hipStream_t renderingStream;
+  hipStream_t copyStream;
 #else
   helium::tasking::TaskQueue taskQueue{64};
   RenderingSemaphore renderingSemaphore;

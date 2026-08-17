@@ -24,6 +24,7 @@
 
 #define BVH_FLAG_ENABLE_SPATIAL_SPLITS 1
 #define BVH_FLAG_PREFER_FAST_BUILD     2
+#define BVH_FLAG_NO_STREAM_SYNCHRONIZE 4
 
 namespace visionaray {
 
@@ -64,6 +65,9 @@ struct DeviceBVH
   void rebuildDeviceBVH2();
   void rebuildDeviceIndexBVH2();
   void rebuildDeviceBVH4();
+
+  template<typename DST_T, typename SRC_T>
+  inline void copyBVH(DST_T &dst, const SRC_T &src);
 
   VisionarayGlobalState *deviceState();
 
@@ -179,8 +183,8 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
   CUDA_SAFE_CALL(cudaPointerGetAttributes(&attributes,m_primitives));
   if (attributes.devicePointer) {
     hPrimitives = (P *)std::malloc(sizeof(P)*m_numPrimitives);
-    CUDA_SAFE_CALL(cudaMemcpy(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                              cudaMemcpyDeviceToHost));
+    CUDA_SAFE_CALL(cudaMemcpyAsync(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
+                                   cudaMemcpyDeviceToHost, deviceState()->copyStream));
   } else {
     hPrimitives = (P *)m_primitives;
   }
@@ -189,8 +193,8 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
   HIP_SAFE_CALL(hipPointerGetAttributes(&attributes,m_primitives));
   if (attributes.memoryType == hipMemoryTypeDevice) {
     hPrimitives = (P *)std::malloc(sizeof(P)*m_numPrimitives);
-    HIP_SAFE_CALL(hipMemcpy(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                            hipMemcpyDeviceToHost));
+    HIP_SAFE_CALL(hipMemcpyAsync(hPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
+                                 hipMemcpyDeviceToHost, deviceState()->copyStream));
   }
 #else
   hPrimitives = (P *)m_primitives;
@@ -219,6 +223,14 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
   }
 #endif
 
+  // Only synchronize if app won't do it for us!
+  if (!(m_flags & BVH_FLAG_NO_STREAM_SYNCHRONIZE)) {
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->copyStream));
+#elif defined(WITH_CUDA)
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->copyStream));
+#endif
+  }
   m_hostRebuild.IndexBVH2 = newTimeStamp();
 }
 
@@ -264,8 +276,8 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
       dPrimitives = (P *)m_primitives;
     } else {
       CUDA_SAFE_CALL(cudaMalloc(&dPrimitives,sizeof(P)*m_numPrimitives));
-      CUDA_SAFE_CALL(cudaMemcpy(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                                cudaMemcpyHostToDevice));
+      CUDA_SAFE_CALL(cudaMemcpyAsync(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
+                                     cudaMemcpyHostToDevice, deviceState()->copyStream));
     }
 #elif defined(WITH_HIP)
     hipPointerAttribute_t attributes = {};
@@ -274,8 +286,8 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
       dPrimitives = (P *)m_primitives;
     } else {
       HIP_SAFE_CALL(hipMalloc(&dPrimitives,sizeof(P)*m_numPrimitives));
-      HIP_SAFE_CALL(hipMemcpy(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
-                              hipMemcpyHostToDevice));
+      HIP_SAFE_CALL(hipMemcpyAsync(dPrimitives,m_primitives,sizeof(P)*m_numPrimitives,
+                                   hipMemcpyHostToDevice, deviceState()->copyStream));
     }
 #else
     dPrimitives = (P *)m_primitives;
@@ -303,9 +315,18 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
     // Until we have a high-quality GPU builder, do that on the CPU!
     rebuildHostIndexBVH2(); 
 
-    m_deviceIndexBVH2 = DeviceIndexBVH2(m_hostIndexBVH2);
+    copyBVH(m_deviceIndexBVH2, m_hostIndexBVH2);
   }
 
+  // Only synchronize if app won't do it for us!
+  if (!(m_flags & BVH_FLAG_NO_STREAM_SYNCHRONIZE)) {
+    std::cout << "sync\n";
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->copyStream));
+#elif defined(WITH_CUDA)
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->copyStream));
+#endif
+  }
   m_deviceRebuild.IndexBVH2 = newTimeStamp();
 }
 
@@ -320,6 +341,32 @@ void DeviceBVH<P>::rebuildDeviceBVH4() {
   m_deviceBVH4 = m_hostBVH4;
 
   m_deviceRebuild.BVH4 = newTimeStamp();
+}
+
+template<typename P>
+template<typename DST_T, typename SRC_T>
+inline void DeviceBVH<P>::copyBVH(DST_T &dst, const SRC_T &src) {
+#if defined(WITH_CUDA)
+  if constexpr (std::is_same_v<DST_T,cuda_index_bvh<P>>) {
+    dst.nodes().resize(src.nodes().size());
+    dst.primitives().resize(src.primitives().size());
+    dst.indices().resize(src.indices().size());
+
+    CUDA_SAFE_CALL(cudaMemcpyAsync(dst.nodes().data(), src.nodes().data(),
+                                   sizeof(src.nodes()[0])*src.nodes().size(),
+                                   cudaMemcpyDefault, deviceState()->copyStream));
+    CUDA_SAFE_CALL(cudaMemcpyAsync(dst.primitives().data(), src.primitives().data(),
+                                   sizeof(src.primitives()[0])*src.primitives().size(),
+                                   cudaMemcpyDefault, deviceState()->copyStream));
+    CUDA_SAFE_CALL(cudaMemcpyAsync(dst.indices().data(), src.indices().data(),
+                                   sizeof(src.indices()[0])*src.indices().size(),
+                                   cudaMemcpyDefault, deviceState()->copyStream));
+  } else {
+#endif
+    dst = DST_T(src);
+#if defined(WITH_CUDA)
+  }
+#endif
 }
 
 template<typename P>

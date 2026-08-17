@@ -107,7 +107,7 @@ void Cylinder::finalize()
 
   m_BVH.update((const dco::Cylinder *)vgeom.primitives.data,
                vgeom.primitives.len,
-               0); // no spatial splits for cyls yet!
+               BVH_FLAG_NO_STREAM_SYNCHRONIZE); // no spatial splits for cyls yet!
 
   vBLS.type = dco::BLS::Cylinder;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
@@ -118,24 +118,5 @@ void Cylinder::finalize()
 
   dispatch();
 }
-
-// float4 Cylinder::getAttributeValue(const Attribute &attr, const Ray &ray) const
-// {
-//   if (attr == Attribute::NONE)
-//     return DEFAULT_ATTRIBUTE_VALUE;
-// 
-//   auto attrIdx = static_cast<int>(attr);
-//   auto *attributeArray = m_vertexAttributes[attrIdx].ptr;
-//   if (!attributeArray)
-//     return Geometry::getAttributeValue(attr, ray);
-// 
-//   auto idx = m_index ? *(m_index->dataAs<uint2>() + ray.primID)
-//                      : 2 * ray.primID + uint2(0, 1);
-// 
-//   auto a = readAttributeValue(attributeArray, idx.x);
-//   auto b = readAttributeValue(attributeArray, idx.y);
-// 
-//   return a + (b - a) * ray.u;
-// }
 
 } // namespace visionaray
