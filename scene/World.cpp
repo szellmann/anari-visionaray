@@ -129,7 +129,12 @@ const std::vector<Instance *> &World::instances() const
   return m_instances;
 }
 
- const VisionarayScene &World::visionarayScene() const
+VisionarayScene &World::visionarayScene()
+{
+  return vscene;
+}
+
+const VisionarayScene &World::visionarayScene() const
 {
   return vscene;
 }

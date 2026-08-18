@@ -24,6 +24,7 @@ struct World : public Object
 
   const std::vector<Instance *> &instances() const;
 
+  VisionarayScene &visionarayScene();
   const VisionarayScene &visionarayScene() const;
   void visionaraySceneUpdate();
 

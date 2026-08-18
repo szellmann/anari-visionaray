@@ -54,9 +54,6 @@ dco::Sampler Sampler::visionaraySampler() const
 void Sampler::dispatch()
 {
   deviceState()->dcos.samplers.update(vsampler.samplerID, vsampler);
-
-  // Upload/set accessible pointers
-  deviceState()->onDevice.samplers = deviceState()->dcos.samplers.devicePtr();
 }
 
 } // namespace visionaray

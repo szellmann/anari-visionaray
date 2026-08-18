@@ -97,39 +97,6 @@ void VisionarayScene::commit()
     for (const dco::Handle &instID : m_instances) {
       if (!dco::validHandle(instID)) continue;
 
-#if defined(WITH_CUDA)
-      dco::Instance inst;
-      CUDA_SAFE_CALL(cudaMemcpyAsync(&inst, deviceState()->onDevice.instances+instID,
-                                     sizeof(inst), cudaMemcpyDefault,
-                                     deviceState()->syncContext->copyStream));
-
-      if (!dco::validHandle(inst.groupID)) continue;
-      dco::Group group = deviceState()->dcos.groups[inst.groupID];
-
-      std::vector<dco::Handle> groupLights(group.numLights);
-      CUDA_SAFE_CALL(cudaMemcpyAsync(groupLights.data(), group.lights,
-                                     group.numLights*sizeof(dco::Handle),
-                                     cudaMemcpyDefault,
-                                     deviceState()->syncContext->copyStream));
-      for (unsigned i=0; i<group.numLights; ++i)
-        m_allLights.alloc({groupLights[i], inst.instID});
-#elif defined(WITH_HIP)
-      dco::Instance inst;
-      HIP_SAFE_CALL(hipMemcpyAsync(&inst, deviceState()->onDevice.instances+instID,
-                                   sizeof(inst), hipMemcpyDefault,
-                                   deviceState()->syncContext->copyStream));
-
-      if (!dco::validHandle(inst.groupID)) continue;
-      dco::Group group = deviceState()->dcos.groups[inst.groupID];
-
-      std::vector<dco::Handle> groupLights(group.numLights);
-      HIP_SAFE_CALL(hipMemcpyAsync(groupLights.data(), group.lights,
-                                   group.numLights*sizeof(dco::Handle),
-                                   hipMemcpyDefault,
-                                   deviceState()->syncContext->copyStream));
-      for (unsigned i=0; i<group.numLights; ++i)
-        m_allLights.alloc({groupLights[i], inst.instID});
-#else
       const dco::Instance &inst = deviceState()->dcos.instances[instID];
 
       if (!dco::validHandle(inst.groupID)) continue;
@@ -137,7 +104,6 @@ void VisionarayScene::commit()
 
       for (unsigned i=0; i<group.numLights; ++i)
         m_allLights.alloc({group.lights[i], inst.instID});
-#endif
     }
   } else {
     // Build TLS
@@ -148,7 +114,6 @@ void VisionarayScene::commit()
   }
 
   dispatch();
-  double after = getCurrentTime();
 }
 
 void VisionarayScene::release()
@@ -260,6 +225,22 @@ index_bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
   return m_TLS.deviceIndexBVH2();
 }
 
+void VisionarayScene::copyToDevice()
+{
+  // Upload/set accessible pointers
+  m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();
+  m_state->onDevice.worlds = m_state->dcos.worlds.devicePtr();
+  m_state->onDevice.groups = m_state->dcos.groups.devicePtr();
+  m_state->onDevice.surfaces = m_state->dcos.surfaces.devicePtr();
+  m_state->onDevice.instances = m_state->dcos.instances.devicePtr();
+  m_state->onDevice.geometries = m_state->dcos.geometries.devicePtr();
+  m_state->onDevice.materials = m_state->dcos.materials.devicePtr();
+  m_state->onDevice.samplers = m_state->dcos.samplers.devicePtr();
+  m_state->onDevice.volumes = m_state->dcos.volumes.devicePtr();
+  m_state->onDevice.spatialFields = m_state->dcos.spatialFields.devicePtr();
+  m_state->onDevice.lights = m_state->dcos.lights.devicePtr();
+}
+
 void VisionarayScene::dispatch()
 {
   // Dispatch world
@@ -289,13 +270,6 @@ void VisionarayScene::dispatch()
     group.objIds = m_objIds.devicePtr();
     group.numObjIds = m_objIds.size();
     m_state->dcos.groups.update(m_groupID, group);
-  }
-
-  // Upload/set accessible pointers
-  m_state->onDevice.TLSs = m_state->dcos.TLSs.devicePtr();
-  m_state->onDevice.groups = m_state->dcos.groups.devicePtr();
-  if (type == World) {
-    m_state->onDevice.worlds = m_state->dcos.worlds.devicePtr();
   }
 }
 

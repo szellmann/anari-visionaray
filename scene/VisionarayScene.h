@@ -60,6 +60,7 @@ struct VisionarayScene
   void attachLight(dco::Light light, unsigned id);
   aabb getBounds() const;
   index_bvh_ref_t<dco::BLS> refBVH();
+  void copyToDevice();
 
  private:
   void dispatch();

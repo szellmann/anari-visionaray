@@ -276,7 +276,8 @@ void Frame::renderFrame()
     const auto &size = frame.size;
     dco::Camera cam = m_camera->visionarayCamera();
     VisionarayRenderer &rend = m_renderer->visionarayRenderer();
-    const VisionarayScene &scene = m_world->visionarayScene();
+    VisionarayScene &scene = m_world->visionarayScene();
+    scene.copyToDevice();
 
     if (cam.type == dco::Camera::Pinhole)
       cam.asPinholeCam.begin_frame();
