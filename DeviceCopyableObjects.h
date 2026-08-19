@@ -2684,21 +2684,18 @@ struct Frame
   inline void toneMap(int x, int y, PixelSample s) const
   {
     const auto idx = y * size.x + x;
-    auto *color = pixelBuffer + (idx * perPixelBytes);
 
     switch (colorType) {
     case ANARI_UFIXED8_VEC4: {
-      auto c = cvt_uint32(s.color);
-      memcpy(color, &c, sizeof(c));
+      ((uint32_t *)pixelBuffer)[idx] = cvt_uint32(s.color);
       break;
     }
     case ANARI_UFIXED8_RGBA_SRGB: {
-      auto c = cvt_uint32_srgb(s.color);
-      memcpy(color, &c, sizeof(c));
+      ((uint32_t *)pixelBuffer)[idx] = cvt_uint32_srgb(s.color);
       break;
     }
     case ANARI_FLOAT32_VEC4: {
-      memcpy(color, &s.color, sizeof(s.color));
+      ((float4 *)pixelBuffer)[idx] = s.color;
       break;
     }
     default:
