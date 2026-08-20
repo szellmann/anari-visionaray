@@ -12,13 +12,14 @@ namespace visionaray {
 
 static bool imageSamplerFormatSupported(ANARIDataType type)
 {
-  return type == ANARI_FLOAT32       ||
-         type == ANARI_FLOAT32_VEC3  ||
-         type == ANARI_FLOAT32_VEC4  ||
-         type == ANARI_UFIXED8       ||
-         type == ANARI_UFIXED8_VEC3  ||
-         type == ANARI_UFIXED8_VEC4  ||
-         type == ANARI_UFIXED16_VEC4 ||
+  return type == ANARI_FLOAT32           ||
+         type == ANARI_FLOAT32_VEC3      ||
+         type == ANARI_FLOAT32_VEC4      ||
+         type == ANARI_UFIXED8           ||
+         type == ANARI_UFIXED8_VEC3      ||
+         type == ANARI_UFIXED8_VEC4      ||
+         type == ANARI_UFIXED8_RGBA_SRGB ||
+         type == ANARI_UFIXED16_VEC4     ||
          type == ANARI_UFIXED16_VEC4;
 }
 
@@ -43,6 +44,8 @@ inline bool imageSamplerUpdateData(Texture &tex, const Image &img)
               PF_RGB8, PF_RGBA8, AlphaIsOne);
   else if (img->elementType() == ANARI_UFIXED8_VEC4)
     tex.reset((const vector<4, unorm<8>> *)img->data());
+  else if (img->elementType() == ANARI_UFIXED8_RGBA_SRGB)
+    tex.reset((const vector<4, unorm<8>> *)img->data(), PF_RGBA8_SRGB, PF_RGBA8);
   else if (img->elementType() == ANARI_UFIXED16_VEC3)
     tex.reset((const vector<3, unorm<16>> *)img->data(),
               PF_RGB16UI, PF_RGBA8, AlphaIsOne);
