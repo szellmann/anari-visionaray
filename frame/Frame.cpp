@@ -128,8 +128,8 @@ void Frame::finalize()
   if (m_renderer)
     vframe.stochasticRendering = m_renderer->stochasticRendering();
 
-  vframe.perPixelBytes = 4 * (vframe.colorType == ANARI_FLOAT32_VEC4 ? 4 : 1);
-  m_pixelBuffer.resize(numPixels * vframe.perPixelBytes);
+  m_pixelBuffer.resize(
+      vframe.colorType == ANARI_FLOAT32_VEC4 ? numPixels * 4 : numPixels );
 
   m_depthBuffer.resize(vframe.depthType == ANARI_FLOAT32 ? numPixels : 0);
   m_accumBuffer.resize(numPixels, vec4{0.f});
@@ -574,7 +574,7 @@ bool Frame::checkTAAReset()
 
 void Frame::mapBuffersOnDevice()
 {
-  vframe.pixelBuffer  = (uint8_t *)m_pixelBuffer.mapDevice();
+  vframe.pixelBuffer  = (uint32_t *)m_pixelBuffer.mapDevice();
   vframe.depthBuffer  = (float *)m_depthBuffer.mapDevice();
   vframe.normalBuffer = (float3 *)m_normalBuffer.mapDevice();
   vframe.albedoBuffer = (float3 *)m_albedoBuffer.mapDevice();

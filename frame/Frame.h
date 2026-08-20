@@ -94,7 +94,7 @@ struct Frame : public helium::BaseFrame
 #endif
   }
 
-  HostDeviceArray<uint8_t> m_pixelBuffer;
+  HostDeviceArray<uint32_t> m_pixelBuffer;
   HostDeviceArray<float> m_depthBuffer;
   HostDeviceArray<float3> m_normalBuffer;
   HostDeviceArray<float3> m_albedoBuffer;

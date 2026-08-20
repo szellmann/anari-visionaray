@@ -2578,7 +2578,6 @@ struct Frame
   unsigned frameCounter;
   uint2 size;
   float2 invSize;
-  int perPixelBytes;
   bool stochasticRendering;
 
   anari::DataType colorType;
@@ -2589,7 +2588,7 @@ struct Frame
   anari::DataType objIdType;
   anari::DataType instIdType;
 
-  uint8_t *pixelBuffer;
+  uint32_t *pixelBuffer;
   float *depthBuffer;
   float3 *normalBuffer;
   float3 *albedoBuffer;
@@ -2687,11 +2686,11 @@ struct Frame
 
     switch (colorType) {
     case ANARI_UFIXED8_VEC4: {
-      ((uint32_t *)pixelBuffer)[idx] = cvt_uint32(s.color);
+      pixelBuffer[idx] = cvt_uint32(s.color);
       break;
     }
     case ANARI_UFIXED8_RGBA_SRGB: {
-      ((uint32_t *)pixelBuffer)[idx] = cvt_uint32_srgb(s.color);
+      pixelBuffer[idx] = cvt_uint32_srgb(s.color);
       break;
     }
     case ANARI_FLOAT32_VEC4: {
@@ -2747,7 +2746,6 @@ inline Frame createFrame()
   Frame frame;
   memset(&frame,0,sizeof(frame));
   frame.frameID = UINT_MAX;
-  frame.perPixelBytes = 1;
   frame.colorType = ANARI_UNKNOWN;
   frame.depthType = ANARI_UNKNOWN;
   frame.normalType = ANARI_UNKNOWN;
