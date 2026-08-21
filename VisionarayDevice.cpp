@@ -317,6 +317,12 @@ void VisionarayDevice::initDevice()
 
   state.anariDevice = (anari::Device)this;
 
+  const char *numThreadsFromEnv = getenv("VISIONARAY_NUM_THREADS");
+  if (numThreadsFromEnv) {
+    int numThreads = std::atoi(numThreadsFromEnv);
+    state.syncContext->threadPool.reset(numThreads);
+  }
+
 #if defined(WITH_CUDA)
   int numDevices = 0;
   CUDA_SAFE_CALL(cudaGetDeviceCount(&numDevices));
