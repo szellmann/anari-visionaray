@@ -589,6 +589,14 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
               if (rayType == Miss || bounceID > rendererState.maxBounce) {
                 break;
               }
+
+              // Russian roulette
+              if (bounceID > 1) {
+                float prob = max_element(throughput);
+                if (rng.next() > prob)
+                  break;
+                throughput /= prob;
+              }
             }
 
             if (firstHit.hit) {
