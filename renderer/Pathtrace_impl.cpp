@@ -16,13 +16,8 @@ struct ShadeState
 {
   float3 baseColor{0.f};
   float3 shadedColor{0.f};
-  float3 gn{0.f};
+  float3 hitPosOff{0.f};
   float3 sn{0.f};
-  float3 tng{0.f};
-  float3 btng{0.f};
-  float3 hitPos{0.f};
-  dco::AttributeRec attribs;
-  float eps{1e-4f};
   int aoSamples{0};
   float aoWeights{0.f};
   float aoCount{0.f};
@@ -46,9 +41,8 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
                                        const RendererState &rendererState,
                                        const dco::World &world)
 {
+  auto &hitPosOff = shadeState.hitPosOff;
   auto &sn = shadeState.sn;
-  auto &eps = shadeState.eps;
-  auto &hitPos = shadeState.hitPos;
   auto &bsdfSample = shadeState.bsdfSample;
   auto &lightSample = shadeState.lightSample;
   auto &next = shadeState.next;
@@ -57,7 +51,7 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
 
   if constexpr (Type == Shadow) {
     Ray &shadowRay = next.ray;
-    shadowRay.ori = hitPos + sn * eps;
+    shadowRay.ori = hitPosOff;
     shadowRay.dir = normalize(lightSample.dir);
     shadowRay.tmin = 0.f;
     shadowRay.tmax = lightSample.dist;//-1e-4f; // TODO: bias sample point
@@ -72,7 +66,7 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
     vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
 
     Ray &aoRay = next.ray;
-    aoRay.ori = hitPos + sn * eps;
+    aoRay.ori = hitPosOff;
     aoRay.dir = dir;
     aoRay.tmin = 0.f;
     aoRay.tmax = rendererState.occlusionDistance;
@@ -83,9 +77,9 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
   else if constexpr (Type == Radiance) {
     Ray &bsdfRay = next.ray;
     if (dot(bsdfSample.dir,sn) > 0.f)
-      bsdfRay.ori = hitPos + sn * eps;
+      bsdfRay.ori = hitPosOff;
     else
-      bsdfRay.ori = hitPos - sn * eps;
+      bsdfRay.ori = hitPosOff;
     bsdfRay.dir = normalize(bsdfSample.dir);
     bsdfRay.tmin = 0.f;
     bsdfRay.tmax = 1e31f;
@@ -105,13 +99,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 {
   auto &baseColor = shadeState.baseColor;
   auto &shadedColor = shadeState.shadedColor;
-  auto &gn = shadeState.gn;
+  auto &hitPosOff = shadeState.hitPosOff;
   auto &sn = shadeState.sn;
-  auto &tng = shadeState.tng;
-  auto &btng = shadeState.btng;
-  auto &hitPos = shadeState.hitPos;
-  auto &attribs = shadeState.attribs;
-  auto &eps = shadeState.eps;
   auto &aoSamples = shadeState.aoSamples;
   auto &aoWeights = shadeState.aoWeights;
   auto &aoCount = shadeState.aoCount;
@@ -144,8 +133,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       return;
     }
 
+    float3 hitPos{0.f};
     float4 color{1.f};
-    float2 uv{hr.u,hr.v};
 
     if (hitRec.lightHit) {
       hitPos = ray.ori + hrl.t * ray.dir;
@@ -196,13 +185,19 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     const dco::Instance &inst = onDevice.instances[instID];
     const dco::Group &group = onDevice.groups[inst.groupID];
 
+    dco::AttributeRec attribs = {};
+
+    float3 localHitPos{0.f}, gn{0.f}, tng{0.f}, btng{0.f};
+    int primID = -1;
+    float eps = 1e-4f;
+
     float3 viewDir = -normalize(ray.dir);
 
     if (hitRec.volumeHit) {
       hitPos = ray.ori + hrv.t * ray.dir;
+      localHitPos = hrv.isect_pos;
+      primID = hrv.primID;
       eps = epsilonFrom(hitPos, ray.dir, hrv.t);
-
-      float3 localHitPos = hrv.isect_pos;
 
       const dco::Volume &vol = onDevice.volumes[group.volumes[hrv.localID]];
 
@@ -237,13 +232,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         result.instId = inst.userID;
       }
     } else {
+      hitPos = ray.ori + hr.t * ray.dir;
+      localHitPos = hr.isect_pos;
+      primID = hr.prim_id;
+      eps = epsilonFrom(hitPos, ray.dir, hr.t);
+
       const dco::Geometry &geom = onDevice.geometries[group.geoms[hr.geom_id]];
       const dco::Material &mat = onDevice.materials[group.materials[hr.geom_id]];
 
-      hitPos = ray.ori + hr.t * ray.dir;
-      eps = epsilonFrom(hitPos, ray.dir, hr.t);
-
-      float3 localHitPos = hr.isect_pos;
+      float2 uv{hr.u,hr.v};
       getNormals(geom, hr.prim_id, localHitPos, uv, gn, sn);
 
       float3 worldNormal = gn;
@@ -281,9 +278,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       }
     }
 
-    result.Ng = gn;
-    result.Ns = sn;
-    result.albedo = color.xyz();
+    if (bounceID==0) {
+      result.Ng = gn;
+      result.Ns = sn;
+      result.albedo = color.xyz();
+    }
+
+    // Compute new origin for future rays spawned from this hit pos,
+    // biased by eps:
+    hitPosOff = hitPos + sn * eps;
 
     // Compute motion vector; assume for now the hit was diffuse!
     recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
@@ -315,9 +318,9 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
           lightSample.f = evalMaterial(mat,
                                        onDevice,
-                                       {}, // attribs, not used..
-                                       float3(0.f), // objPos, not used..
-                                       UINT_MAX, // primID, not used..
+                                       attribs,
+                                       localHitPos,
+                                       primID,
                                        gn, gn,
                                        tng, btng,
                                        viewDir,
@@ -335,14 +338,13 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         bsdfSample.pdf = 1.f;//over 4 PI (cancels)
         bsdfSample.cosT = 1.f;
       } else {
-        const auto &geom = onDevice.geometries[group.geoms[hr.geom_id]];
         const auto &mat = onDevice.materials[group.materials[hr.geom_id]];
 
         lightSample.f = evalMaterial(mat,
                                      onDevice,
                                      attribs,
-                                     hr.isect_pos,
-                                     hr.prim_id,
+                                     localHitPos,
+                                     primID,
                                      gn, sn,
                                      tng, btng,
                                      viewDir,
