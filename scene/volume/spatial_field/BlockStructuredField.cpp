@@ -101,22 +101,16 @@ void BlockStructuredField::finalize()
   binned_sah_builder builder;
   builder.enable_spatial_splits(false);
 
+  auto samplingBVH2 = builder.build(bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
+
 #ifdef WITH_CUDA
-  auto hostBVH = builder.build(
-    index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
-
-  m_samplingBVH = cuda_index_bvh<dco::Block>(hostBVH);
-
-  vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
+  m_samplingBVH = cuda_bvh<dco::Block>(samplingBVH2);
 #else
-  auto samplingBVH2 = builder.build(
-    index_bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
-
   bvh_collapser collapser;
   collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->syncContext->threadPool);
+#endif
 
   vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
-#endif
 
   mat3 S = mat3::scaling(voxelBounds.size()/m_bounds.size());
   vec3 T = voxelBounds.min-m_bounds.min;

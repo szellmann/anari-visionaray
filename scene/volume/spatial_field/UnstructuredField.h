@@ -36,8 +36,8 @@ struct UnstructuredField : public SpatialField
 
   // sampling accels
 #ifdef WITH_CUDA
-  cuda_index_bvh<dco::UElem> m_elementBVH;
-  cuda_index_bvh<dco::UElemGrid> m_gridBVH;
+  cuda_bvh<dco::UElem> m_elementBVH;
+  cuda_bvh<dco::UElemGrid> m_gridBVH;
 #else
   bvh4<dco::UElem> m_elementBVH;
   bvh4<dco::UElemGrid> m_gridBVH;
@@ -45,7 +45,7 @@ struct UnstructuredField : public SpatialField
 
   // shell accel
 #ifdef WITH_CUDA
-  cuda_index_bvh<basic_triangle<3,float>> m_shellBVH;
+  cuda_bvh<basic_triangle<3,float>> m_shellBVH;
 #else
   bvh4<basic_triangle<3,float>> m_shellBVH;
 #endif

@@ -232,14 +232,13 @@ void UnstructuredField::finalize()
     binned_sah_builder builder;
     builder.enable_spatial_splits(false);
 
-#ifdef WITH_CUDA
-    auto shellBVH2 = builder.build(
-      index_bvh<basic_triangle<3,float>>{}, m_shell.hostPtr(), m_shell.size());
-    m_shellBVH = cuda_index_bvh<basic_triangle<3,float>>(shellBVH2);
-#else
-    bvh_collapser collapser;
     auto shellBVH2 = builder.build(
       bvh<basic_triangle<3,float>>{}, m_shell.hostPtr(), m_shell.size());
+
+#ifdef WITH_CUDA
+    m_shellBVH = cuda_bvh<basic_triangle<3,float>>(shellBVH2);
+#else
+    bvh_collapser collapser;
     collapser.collapse(shellBVH2, m_shellBVH, deviceState()->syncContext->threadPool);
 #endif
 
@@ -256,12 +255,12 @@ void UnstructuredField::finalize()
 
   if (!m_elements.empty()) {
     m_elementBVH = builder.build(
-      cuda_index_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
+      cuda_bvh<dco::UElem>{}, m_elements.devicePtr(), m_elements.size());
   }
 
   if (!m_grids.empty()) {
     m_gridBVH = builder.build(
-      cuda_index_bvh<dco::UElemGrid>{}, m_grids.devicePtr(), m_grids.size());
+      cuda_bvh<dco::UElemGrid>{}, m_grids.devicePtr(), m_grids.size());
   }
 #else
   binned_sah_builder builder;

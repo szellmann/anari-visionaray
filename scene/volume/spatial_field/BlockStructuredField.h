@@ -28,9 +28,9 @@ struct BlockStructuredField : public SpatialField
   HostDeviceArray<float> m_scalars;
   // sampling accel
 #ifdef WITH_CUDA
-  cuda_index_bvh<dco::Block> m_samplingBVH;
+  cuda_bvh<dco::Block> m_samplingBVH;
 #else
-  index_bvh4<dco::Block> m_samplingBVH;
+  bvh4<dco::Block> m_samplingBVH;
 #endif
 
   aabb m_bounds;

@@ -416,20 +416,20 @@ struct SpatialField
     struct {
       // Sampling BVHs, in _voxel_ space (make sure to xform ray first):
 #ifdef WITH_CUDA
-      cuda_index_bvh<UElem>::bvh_ref elemBVH;
-      cuda_index_bvh<UElemGrid>::bvh_ref gridBVH;
+      cuda_bvh<UElem>::bvh_ref elemBVH;
+      cuda_bvh<UElemGrid>::bvh_ref gridBVH;
 #elif defined(WITH_HIP)
-      hip_index_bvh<UElem>::bvh_ref elemBVH;
-      hip_index_bvh<UElemGrid>::bvh_ref gridBVH;
+      hip_bvh<UElem>::bvh_ref elemBVH;
+      hip_bvh<UElemGrid>::bvh_ref gridBVH;
 #else
       bvh4<UElem>::bvh_ref elemBVH;
       bvh4<UElemGrid>::bvh_ref gridBVH;
 #endif
       // for marcher:
 #ifdef WITH_CUDA
-      cuda_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
+      cuda_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
 #elif defined(WITH_HIP)
-      hip_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
+      hip_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
 #else
       bvh4<basic_triangle<3,float>>::bvh_ref shellBVH;
 #endif
@@ -439,11 +439,11 @@ struct SpatialField
     } asUnstructured;
     struct {
 #ifdef WITH_CUDA
-      cuda_index_bvh<Block>::bvh_ref samplingBVH;
+      cuda_bvh<Block>::bvh_ref samplingBVH;
 #elif defined(WITH_HIP)
-      hip_index_bvh<Block>::bvh_ref samplingBVH;
+      hip_bvh<Block>::bvh_ref samplingBVH;
 #else
-      index_bvh4<Block>::bvh_ref samplingBVH;
+      bvh4<Block>::bvh_ref samplingBVH;
 #endif
     } asBlockStructured;
 #ifdef WITH_NANOVDB
