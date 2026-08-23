@@ -220,6 +220,8 @@ void UnstructuredField::finalize()
   m_faceNeighbors.reset(fn.data());
 
   auto shell = computeShell(connMesh,fn.data());
+  m_shell.resize(shell.size());
+  m_shell.reset(shell.data());
 
   // build shell BVH, init marcher:
   if (shell.size() > 0) {
@@ -227,7 +229,7 @@ void UnstructuredField::finalize()
     builder.enable_spatial_splits(false);
 
     auto shellBVH2 = builder.build(
-      index_bvh<basic_triangle<3,float>>{}, shell.data(), shell.size());
+      bvh<basic_triangle<3,float>>{}, m_shell.hostPtr(), m_shell.size());
 
 #ifdef WITH_CUDA
     m_shellBVH = cuda_index_bvh<basic_triangle<3,float>>(shellBVH2);
@@ -237,8 +239,9 @@ void UnstructuredField::finalize()
 #endif
 
     vfield.asUnstructured.shellBVH = m_shellBVH.ref();
-    vfield.asUnstructured.elems = m_elements.devicePtr(); // devicePtr() here but the data isn't on the device......
+    vfield.asUnstructured.elems = m_elements.devicePtr();
     vfield.asUnstructured.faceNeighbors = m_faceNeighbors.devicePtr();
+    vfield.asUnstructured.shell = m_shell.devicePtr();
   }
 
   // sampling BVHs

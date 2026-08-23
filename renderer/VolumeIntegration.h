@@ -267,7 +267,7 @@ inline float elementMarchVolume(ScreenSample &ss,
 
     if (!hr.hit || hr.t>=ray.tmax) break;
 
-    const auto *triangles = sf.asUnstructured.shellBVH.primitives();
+    const auto *triangles = sf.asUnstructured.shell;
     auto tri = triangles[hr.prim_id];
     auto n = cross(tri.e1,tri.e2);
 

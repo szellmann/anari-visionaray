@@ -45,16 +45,13 @@ struct UnstructuredField : public SpatialField
 
   // shell accel
 #ifdef WITH_CUDA
-  // must be an *index* BVH so we can access the
-  // triangles based on their prim_id in the shader:
   cuda_index_bvh<basic_triangle<3,float>> m_shellBVH;
 #else
-  // must be an *index* BVH so we can access the
-  // triangles based on their prim_id in the shader:
-  index_bvh4<basic_triangle<3,float>> m_shellBVH;
+  bvh4<basic_triangle<3,float>> m_shellBVH;
 #endif
   // for marching
   HostDeviceArray<uint64_t> m_faceNeighbors;
+  HostDeviceArray<basic_triangle<3,float>> m_shell;
 
   struct Parameters
   {

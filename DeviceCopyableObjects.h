@@ -431,10 +431,11 @@ struct SpatialField
 #elif defined(WITH_HIP)
       hip_index_bvh<basic_triangle<3,float>>::bvh_ref shellBVH;
 #else
-      index_bvh4<basic_triangle<3,float>>::bvh_ref shellBVH;
+      bvh4<basic_triangle<3,float>>::bvh_ref shellBVH;
 #endif
       const UElem *elems;
       const uint64_t *faceNeighbors;
+      const basic_triangle<3,float> *shell;
     } asUnstructured;
     struct {
 #ifdef WITH_CUDA
