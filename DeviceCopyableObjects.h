@@ -638,6 +638,7 @@ inline Volume createVolume()
 {
   Volume vol;
   memset(&vol,0,sizeof(vol));
+  vol.type = Volume::Unknown;
   vol.volID  = UINT_MAX;
   vol.bounds.invalidate();
   return vol;
