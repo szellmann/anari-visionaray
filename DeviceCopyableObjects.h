@@ -26,8 +26,6 @@ namespace visionaray {
 // visionaray only defines these when compiling with nvcc:
 template <typename P>
 using cuda_bvh          = bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>>;
-template <typename P>
-using cuda_index_bvh    = index_bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>, cuda::device_vector<unsigned>>;
 } // namespace visionaray
 #endif
 
@@ -37,8 +35,6 @@ namespace visionaray {
 // visionaray only defines these when compiling with hipcc:
 template <typename P>
 using hip_bvh           = bvh_t<hip::device_vector<P>, hip::device_vector<bvh_node>>;
-template <typename P>
-using hip_index_bvh     = index_bvh_t<hip::device_vector<P>, hip::device_vector<bvh_node>, hip::device_vector<unsigned>>;
 } // namespace visionaray
 #endif
 
@@ -1380,25 +1376,25 @@ struct BLS
   unsigned localID;
 #ifdef WITH_CUDA
   union {
-    cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    cuda_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    cuda_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    cuda_index_bvh<dco::Cone>::bvh_ref asCone;
-    cuda_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    cuda_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    cuda_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    cuda_index_bvh<dco::Volume>::bvh_ref asVolume;
+    cuda_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    cuda_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    cuda_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    cuda_bvh<dco::Cone>::bvh_ref asCone;
+    cuda_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    cuda_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
+    cuda_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    cuda_bvh<dco::Volume>::bvh_ref asVolume;
   };
 #elif defined(WITH_HIP)
   union {
-    hip_index_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    hip_index_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    hip_index_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    hip_index_bvh<dco::Cone>::bvh_ref asCone;
-    hip_index_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    hip_index_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    hip_index_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    hip_index_bvh<dco::Volume>::bvh_ref asVolume;
+    hip_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    hip_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    hip_bvh<basic_sphere<float>>::bvh_ref asSphere;
+    hip_bvh<dco::Cone>::bvh_ref asCone;
+    hip_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    hip_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
+    hip_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    hip_bvh<dco::Volume>::bvh_ref asVolume;
   };
 #else
   union {
@@ -1614,11 +1610,11 @@ struct Instance
   unsigned groupID;
   Uniform uniformAttributes[5];
 #ifdef WITH_CUDA
-  cuda_index_bvh<BLS>::bvh_ref theBVH;
+  cuda_bvh<BLS>::bvh_ref theBVH;
 #elif defined(WITH_HIP)
-  hip_index_bvh<BLS>::bvh_ref theBVH;
+  hip_bvh<BLS>::bvh_ref theBVH;
 #else
-  index_bvh<BLS>::bvh_ref theBVH;
+  bvh<BLS>::bvh_ref theBVH;
 #endif
   mat4 *xfms;
   mat3 *normalXfms;
@@ -1727,11 +1723,11 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 // TLS //
 
 #ifdef WITH_CUDA
-typedef cuda_index_bvh<Instance>::bvh_ref TLS;
+typedef cuda_bvh<Instance>::bvh_ref TLS;
 #elif defined(WITH_HIP)
-typedef hip_index_bvh<Instance>::bvh_ref TLS;
+typedef hip_bvh<Instance>::bvh_ref TLS;
 #else
-typedef index_bvh<Instance>::bvh_ref TLS;
+typedef bvh<Instance>::bvh_ref TLS;
 #endif
 
 VSNRAY_FUNC

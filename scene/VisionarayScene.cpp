@@ -166,10 +166,10 @@ void VisionarayScene::attachLight(dco::Light light, unsigned id)
   m_lights.set(id, light.lightID);
 }
 
-index_bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
+bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
 {
   assert(type == Group);
-  return m_TLS.deviceIndexBVH2();
+  return m_TLS.deviceBVH2();
 }
 
 void VisionarayScene::copyToDevice()
@@ -192,7 +192,7 @@ void VisionarayScene::dispatch()
 {
   // Dispatch world
   if (type == World) {
-    deviceState()->dcos.TLSs.update(m_worldID, m_worldTLS.deviceIndexBVH2());
+    deviceState()->dcos.TLSs.update(m_worldID, m_worldTLS.deviceBVH2());
 
     dco::World world = dco::createWorld(); // TODO: move TLS and EPS in here!
     world.numLights = m_allLights.size();

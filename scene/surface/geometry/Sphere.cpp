@@ -106,7 +106,7 @@ void Sphere::finalize()
 
   vBLS.type = dco::BLS::Sphere;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asSphere = m_BVH.deviceIndexBVH2();
+  vBLS.asSphere = m_BVH.deviceBVH2();
 #else
   vBLS.asSphere = m_BVH.deviceBVH4();
 #endif

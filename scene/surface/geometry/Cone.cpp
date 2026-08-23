@@ -118,7 +118,7 @@ void Cone::finalize()
 
   vBLS.type = dco::BLS::Cone;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asCone = m_BVH.deviceIndexBVH2();
+  vBLS.asCone = m_BVH.deviceBVH2();
 #else
   vBLS.asCone = m_BVH.deviceBVH4();
 #endif

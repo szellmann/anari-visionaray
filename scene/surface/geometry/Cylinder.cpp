@@ -111,7 +111,7 @@ void Cylinder::finalize()
 
   vBLS.type = dco::BLS::Cylinder;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asCylinder = m_BVH.deviceIndexBVH2();
+  vBLS.asCylinder = m_BVH.deviceBVH2();
 #else
   vBLS.asCylinder = m_BVH.deviceBVH4();
 #endif

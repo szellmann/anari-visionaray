@@ -34,15 +34,12 @@ struct DeviceBVH
  public:
 #if defined(WITH_CUDA)
   typedef cuda_bvh<P> DeviceBVH2;
-  typedef cuda_index_bvh<P> DeviceIndexBVH2;
   typedef bvh4<P> DeviceBVH4;
 #elif defined(WITH_HIP)
   typedef hip_bvh<P> DeviceBVH2;
-  typedef hip_index_bvh<P> DeviceIndexBVH2;
   typedef bvh4<P> DeviceBVH4;
 #else
   typedef bvh<P> DeviceBVH2;
-  typedef index_bvh<P> DeviceIndexBVH2;
   typedef bvh4<P> DeviceBVH4;
 #endif
 
@@ -54,7 +51,6 @@ struct DeviceBVH
   // get device refs, *rebuild BVHs* if outdated
   //=======================================================
   typename DeviceBVH2::bvh_ref deviceBVH2();
-  typename DeviceIndexBVH2::bvh_ref deviceIndexBVH2();
   typename DeviceBVH4::bvh_ref deviceBVH4();
 
   //=======================================================
@@ -67,11 +63,9 @@ struct DeviceBVH
 
  private:
   void rebuildHostBVH2();
-  void rebuildHostIndexBVH2();
   void rebuildHostBVH4();
 
   void rebuildDeviceBVH2();
-  void rebuildDeviceIndexBVH2();
   void rebuildDeviceBVH4();
 
   template<typename DST_T, typename SRC_T>
@@ -80,11 +74,9 @@ struct DeviceBVH
   VisionarayGlobalState *deviceState();
 
   bvh<P>          m_hostBVH2;
-  index_bvh<P>    m_hostIndexBVH2;
   bvh4<P>         m_hostBVH4;
 
   DeviceBVH2      m_deviceBVH2;
-  DeviceIndexBVH2 m_deviceIndexBVH2;
   DeviceBVH4      m_deviceBVH4;
 
   const P        *m_primitives{nullptr};
@@ -96,7 +88,6 @@ struct DeviceBVH
   TimeStamp m_lastUpdate{0};
   struct {
     TimeStamp BVH2{0};
-    TimeStamp IndexBVH2{0};
     TimeStamp BVH4{0};
   } m_hostRebuild, m_deviceRebuild;
 };
@@ -127,12 +118,6 @@ typename DeviceBVH<P>::DeviceBVH2::bvh_ref DeviceBVH<P>::deviceBVH2() {
 }
 
 template<typename P>
-typename DeviceBVH<P>::DeviceIndexBVH2::bvh_ref DeviceBVH<P>::deviceIndexBVH2() {
-  rebuildDeviceIndexBVH2();
-  return m_deviceIndexBVH2.ref();
-}
-
-template<typename P>
 typename DeviceBVH<P>::DeviceBVH4::bvh_ref DeviceBVH<P>::deviceBVH4() {
   rebuildDeviceBVH4();
   return m_deviceBVH4.ref();
@@ -142,8 +127,6 @@ template<typename P>
 aabb DeviceBVH<P>::getBounds() {
   if (m_hostBVH2.num_nodes()) {
     return m_hostBVH2.node(0).get_bounds();
-  } else if (m_hostIndexBVH2.num_nodes()) {
-    return m_hostIndexBVH2.node(0).get_bounds();
   } else if (m_hostBVH4.num_nodes()) {
     return m_hostBVH4.node(0).get_bounds();
   }
@@ -162,23 +145,6 @@ aabb DeviceBVH<P>::getBounds() {
     HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
 #else
     memcpy(&n,m_deviceBVH2.nodes().data(),sizeof(n));
-#endif
-    return n.get_bounds();
-  } else if (m_deviceIndexBVH2.num_nodes()) {
-    bvh_node n;
-#if defined(WITH_CUDA)
-    CUDA_SAFE_CALL(cudaMemcpyAsync(&n,m_deviceIndexBVH2.nodes().data(),sizeof(n),
-                                   cudaMemcpyDeviceToHost,
-                                   deviceState()->syncContext->copyStream));
-    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
-    return n.get_bounds();
-#elif defined(WITH_HIP)
-    HIP_SAFE_CALL(hipMemcpyAsync(&n,m_deviceIndexBVH2.nodes().data(),sizeof(n),
-                                 hipMemcpyDeviceToHost,
-                                 deviceState()->syncContext->copyStream));
-    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
-#else
-    memcpy(&n,m_deviceIndexBVH2.nodes().data(),sizeof(n));
 #endif
     return n.get_bounds();
   } else if (m_deviceBVH4.num_nodes()) {
@@ -216,38 +182,14 @@ TimeStamp DeviceBVH<P>::lastRebuildTime() const {
   // yet with different low-level types, which is rather
   // unlikely as of now..)
   return std::max(m_hostRebuild.BVH2,std::max(
-                  m_hostRebuild.IndexBVH2,std::max(
                   m_hostRebuild.BVH4,std::max(
-                  m_deviceRebuild.BVH2,std::max(
-                  m_deviceRebuild.IndexBVH2,
-                  m_deviceRebuild.BVH4)))));
+                  m_deviceRebuild.BVH2,
+                  m_deviceRebuild.BVH4)));
 }
 
 template<typename P>
 void DeviceBVH<P>::rebuildHostBVH2() {
   if (m_hostRebuild.BVH2 >= m_lastUpdate) {
-    return;
-  }
-
-  if (m_flags & BVH_FLAG_PREFER_FAST_BUILD) {
-    lbvh_builder builder;
-    m_hostBVH2 = builder.build(bvh<P>{},
-                               m_primitives,
-                               m_numPrimitives);
-  } else {
-    binned_sah_builder builder;
-    builder.enable_spatial_splits(m_flags & BVH_FLAG_ENABLE_SPATIAL_SPLITS);
-    m_hostBVH2 = builder.build(bvh<P>{},
-                               m_primitives,
-                               m_numPrimitives);
-  }
-
-  m_hostRebuild.BVH2 = newTimeStamp();
-}
-
-template<typename P>
-void DeviceBVH<P>::rebuildHostIndexBVH2() {
-  if (m_hostRebuild.IndexBVH2 >= m_lastUpdate) {
     return;
   }
 
@@ -278,15 +220,11 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
 
   if (m_flags & BVH_FLAG_PREFER_FAST_BUILD) {
     lbvh_builder builder;
-    m_hostIndexBVH2 = builder.build(index_bvh<P>{},
-                                    hPrimitives,
-                                    m_numPrimitives);
+    m_hostBVH2 = builder.build(bvh<P>{},hPrimitives,m_numPrimitives);
   } else {
     binned_sah_builder builder;
     builder.enable_spatial_splits(m_flags & BVH_FLAG_ENABLE_SPATIAL_SPLITS);
-    m_hostIndexBVH2 = builder.build(index_bvh<P>{},
-                                    hPrimitives,
-                                    m_numPrimitives);
+    m_hostBVH2 = builder.build(bvh<P>{},hPrimitives,m_numPrimitives);
   }
 
 #if defined(WITH_CUDA)
@@ -307,7 +245,7 @@ void DeviceBVH<P>::rebuildHostIndexBVH2() {
     HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
 #endif
   }
-  m_hostRebuild.IndexBVH2 = newTimeStamp();
+  m_hostRebuild.BVH2 = newTimeStamp();
 }
 
 template<typename P>
@@ -331,15 +269,6 @@ void DeviceBVH<P>::rebuildHostBVH4() {
 template<typename P>
 void DeviceBVH<P>::rebuildDeviceBVH2() {
   if (m_deviceRebuild.BVH2 >= m_lastUpdate) {
-    return;
-  }
-
-  m_deviceRebuild.BVH2 = newTimeStamp();
-}
-
-template<typename P>
-void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
-  if (m_deviceRebuild.IndexBVH2 >= m_lastUpdate) {
     return;
   }
 
@@ -378,9 +307,7 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
 #else
     lbvh_builder builder;
 #endif
-    m_deviceIndexBVH2 = builder.build(DeviceIndexBVH2{},
-                                      dPrimitives,
-                                      m_numPrimitives);
+    m_deviceBVH2 = builder.build(DeviceBVH2{},dPrimitives,m_numPrimitives);
 #if defined(WITH_CUDA)
     if (!attributes.devicePointer) {
       CUDA_SAFE_CALL(cudaFreeHost(dPrimitives));
@@ -392,9 +319,9 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
 #endif
   } else {
     // Until we have a high-quality GPU builder, do that on the CPU!
-    rebuildHostIndexBVH2(); 
+    rebuildHostBVH2();
 
-    copyBVH(m_deviceIndexBVH2, m_hostIndexBVH2);
+    copyBVH(m_deviceBVH2, m_hostBVH2);
   }
 
   // Only synchronize if app won't do it for us!
@@ -405,7 +332,7 @@ void DeviceBVH<P>::rebuildDeviceIndexBVH2() {
     HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
 #endif
   }
-  m_deviceRebuild.IndexBVH2 = newTimeStamp();
+  m_deviceRebuild.BVH2 = newTimeStamp();
 }
 
 template<typename P>
@@ -425,10 +352,9 @@ template<typename P>
 template<typename DST_T, typename SRC_T>
 inline void DeviceBVH<P>::copyBVH(DST_T &dst, const SRC_T &src) {
 #if defined(WITH_CUDA)
-  if constexpr (std::is_same_v<DST_T,cuda_index_bvh<P>>) {
+  if constexpr (std::is_same_v<DST_T,cuda_bvh<P>>) {
     dst.nodes().resize(src.nodes().size());
     dst.primitives().resize(src.primitives().size());
-    dst.indices().resize(src.indices().size());
 
     CUDA_SAFE_CALL(cudaMemcpyAsync(dst.nodes().data(), src.nodes().data(),
                                    sizeof(src.nodes()[0])*src.nodes().size(),
@@ -436,10 +362,6 @@ inline void DeviceBVH<P>::copyBVH(DST_T &dst, const SRC_T &src) {
                                    deviceState()->syncContext->copyStream));
     CUDA_SAFE_CALL(cudaMemcpyAsync(dst.primitives().data(), src.primitives().data(),
                                    sizeof(src.primitives()[0])*src.primitives().size(),
-                                   cudaMemcpyDefault,
-                                   deviceState()->syncContext->copyStream));
-    CUDA_SAFE_CALL(cudaMemcpyAsync(dst.indices().data(), src.indices().data(),
-                                   sizeof(src.indices()[0])*src.indices().size(),
                                    cudaMemcpyDefault,
                                    deviceState()->syncContext->copyStream));
   } else {

@@ -150,7 +150,7 @@ void TransferFunction1D::finalize()
 
   vBLS.type = dco::BLS::Volume;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asVolume = m_BVH.deviceIndexBVH2();
+  vBLS.asVolume = m_BVH.deviceBVH2();
 #else
   vBLS.asVolume = m_BVH.deviceBVH4();
 #endif

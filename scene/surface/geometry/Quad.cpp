@@ -218,7 +218,7 @@ void Quad::finalize()
 
   vBLS.type = dco::BLS::Quad;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asQuad = m_BVH.deviceIndexBVH2();
+  vBLS.asQuad = m_BVH.deviceBVH2();
 #else
   vBLS.asQuad = m_BVH.deviceBVH4();
 #endif

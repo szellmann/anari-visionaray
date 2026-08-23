@@ -66,7 +66,7 @@ void ISOSurface::finalize()
 
   vBLS.type = dco::BLS::ISOSurface;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asISOSurface = m_BVH.deviceIndexBVH2();
+  vBLS.asISOSurface = m_BVH.deviceBVH2();
 #else
   vBLS.asISOSurface = m_BVH.deviceBVH4();
 #endif
