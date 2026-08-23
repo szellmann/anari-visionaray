@@ -228,13 +228,14 @@ void UnstructuredField::finalize()
     binned_sah_builder builder;
     builder.enable_spatial_splits(false);
 
-    auto shellBVH2 = builder.build(
-      bvh<basic_triangle<3,float>>{}, m_shell.hostPtr(), m_shell.size());
-
 #ifdef WITH_CUDA
+    auto shellBVH2 = builder.build(
+      index_bvh<basic_triangle<3,float>>{}, m_shell.hostPtr(), m_shell.size());
     m_shellBVH = cuda_index_bvh<basic_triangle<3,float>>(shellBVH2);
 #else
     bvh_collapser collapser;
+    auto shellBVH2 = builder.build(
+      bvh<basic_triangle<3,float>>{}, m_shell.hostPtr(), m_shell.size());
     collapser.collapse(shellBVH2, m_shellBVH, deviceState()->syncContext->threadPool);
 #endif
 
