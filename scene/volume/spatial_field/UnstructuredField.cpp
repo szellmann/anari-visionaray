@@ -5,6 +5,10 @@
 #include "Connectivity.h"
 #include "UnstructuredField.h"
 
+#if defined(__CUDACC__)
+#include "visionaray/detail/bvh/cuda_lbvh.h"
+#endif
+
 namespace visionaray {
 
 UnstructuredField::UnstructuredField(VisionarayGlobalState *d)
@@ -248,7 +252,7 @@ void UnstructuredField::finalize()
   // sampling BVHs
 
 #ifdef WITH_CUDA
-  lbvh_builder builder; // the only GPU builder Visionaray has (for now..)
+  cuda::lbvh_builder builder; // the only GPU builder Visionaray has (for now..)
 
   if (!m_elements.empty()) {
     m_elementBVH = builder.build(
