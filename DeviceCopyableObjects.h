@@ -1541,58 +1541,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(
 }
 
 
-// bounds from primitives; node bounds might be more
-// conservative, due to quantization, etc.
-VSNRAY_FUNC
-inline aabb get_prim_bounds(const BLS &bls)
-{
-  aabb result;
-  result.invalidate();
-
-  if (bls.type == BLS::Triangle) {
-    for (unsigned i=0; i<bls.asTriangle.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asTriangle.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::Quad) {
-    for (unsigned i=0; i<bls.asQuad.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asQuad.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::Sphere) {
-    for (unsigned i=0; i<bls.asSphere.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asSphere.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::Cone) {
-    for (unsigned i=0; i<bls.asCone.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asCone.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::Cylinder) {
-    for (unsigned i=0; i<bls.asCylinder.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asCylinder.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::BezierCurve) {
-    for (unsigned i=0; i<bls.asBezierCurve.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asBezierCurve.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::ISOSurface) {
-    for (unsigned i=0; i<bls.asISOSurface.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asISOSurface.primitive(i)));
-    }
-  }
-  else if (bls.type == BLS::Volume) {
-    for (unsigned i=0; i<bls.asVolume.num_primitives(); ++i) {
-      result.insert(get_bounds(bls.asVolume.primitive(i)));
-    }
-  }
-
-  return result;
-}
-
 // Uniform //
 
 struct Uniform
@@ -1730,44 +1678,6 @@ inline void split_primitive(
     aabb &L, aabb &R, float plane, int axis, const Instance &inst)
 {
   assert(0);
-}
-
-// bounds from primitives; node bounds might be more
-// conservative, due to quantization, etc.
-VSNRAY_FUNC
-inline aabb get_prim_bounds(const Instance &inst)
-{
-  aabb result;
-  result.invalidate();
-
-  if (inst.type == Instance::Transform && inst.theBVH.num_nodes()) {
-
-    for (unsigned i=0; i<inst.theBVH.num_primitives(); ++i) {
-      aabb bound = get_prim_bounds(inst.theBVH.primitive(i));
-      mat3f rot = inverse(inst.affineInv[0]);
-      vec3f trans = -inst.transInv[0];
-      auto verts = compute_vertices(bound);
-      for (vec3 v : verts) {
-        v = rot * v + trans;
-        result.insert(v);
-      }
-    }
-  } else if (inst.type == Instance::MotionTransform && inst.len) {
-    for (unsigned i=0; i<inst.theBVH.num_primitives(); ++i) {
-      for (unsigned j = 0; j < inst.len; ++j) {
-        aabb bound = get_prim_bounds(inst.theBVH.primitive(i));
-        mat3f rot = inverse(inst.affineInv[j]);
-        vec3f trans = -inst.transInv[j];
-        auto verts = compute_vertices(bound);
-        for (vec3 v : verts) {
-          v = rot * v + trans;
-          result.insert(v);
-        }
-      }
-    }
-  }
-
-  return result;
 }
 
 template <typename RayType>

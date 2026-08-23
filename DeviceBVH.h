@@ -50,9 +50,17 @@ struct DeviceBVH
 
   void update(const P *prims, unsigned numPrims, unsigned flags);
 
+  //=======================================================
+  // get device refs, *rebuild BVHs* if outdated
+  //=======================================================
   typename DeviceBVH2::bvh_ref deviceBVH2();
   typename DeviceIndexBVH2::bvh_ref deviceIndexBVH2();
   typename DeviceBVH4::bvh_ref deviceBVH4();
+
+  //=======================================================
+  // get BVH bounds, *no BVH rebuilds*
+  //=======================================================
+  aabb getBounds();
 
   TimeStamp lastUpdateTime() const;
   TimeStamp lastRebuildTime() const;
@@ -128,6 +136,72 @@ template<typename P>
 typename DeviceBVH<P>::DeviceBVH4::bvh_ref DeviceBVH<P>::deviceBVH4() {
   rebuildDeviceBVH4();
   return m_deviceBVH4.ref();
+}
+
+template<typename P>
+aabb DeviceBVH<P>::getBounds() {
+  if (m_hostBVH2.num_nodes()) {
+    return m_hostBVH2.node(0).get_bounds();
+  } else if (m_hostIndexBVH2.num_nodes()) {
+    return m_hostIndexBVH2.node(0).get_bounds();
+  } else if (m_hostBVH4.num_nodes()) {
+    return m_hostBVH4.node(0).get_bounds();
+  }
+
+  if (m_deviceBVH2.num_nodes()) {
+    bvh_node n;
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaMemcpyAsync(&n,m_deviceBVH2.nodes().data(),sizeof(n),
+                                   cudaMemcpyDeviceToHost,
+                                   deviceState()->syncContext->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpyAsync(&n,m_deviceBVH2.nodes().data(),sizeof(n),
+                                 hipMemcpyDeviceToHost,
+                                 deviceState()->syncContext->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
+#else
+    memcpy(&n,m_deviceBVH2.nodes().data(),sizeof(n));
+#endif
+    return n.get_bounds();
+  } else if (m_deviceIndexBVH2.num_nodes()) {
+    bvh_node n;
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaMemcpyAsync(&n,m_deviceIndexBVH2.nodes().data(),sizeof(n),
+                                   cudaMemcpyDeviceToHost,
+                                   deviceState()->syncContext->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
+    return n.get_bounds();
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpyAsync(&n,m_deviceIndexBVH2.nodes().data(),sizeof(n),
+                                 hipMemcpyDeviceToHost,
+                                 deviceState()->syncContext->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
+#else
+    memcpy(&n,m_deviceIndexBVH2.nodes().data(),sizeof(n));
+#endif
+    return n.get_bounds();
+  } else if (m_deviceBVH4.num_nodes()) {
+    bvh_multi_node<4> n;
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaMemcpyAsync(&n,m_deviceBVH4.nodes().data(),sizeof(n),
+                                   cudaMemcpyDeviceToHost,
+                                   deviceState()->syncContext->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpyAsync(&n,m_deviceBVH4.nodes().data(),sizeof(n),
+                                 hipMemcpyDeviceToHost,
+                                 deviceState()->syncContext->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
+#else
+    memcpy(&n,m_deviceBVH4.nodes().data(),sizeof(n));
+#endif
+    return n.get_bounds();
+  }
+
+  aabb inval;
+  inval.invalidate();
+  return inval;
 }
 
 template<typename P>

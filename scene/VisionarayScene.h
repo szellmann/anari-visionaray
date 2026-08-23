@@ -58,7 +58,7 @@ struct VisionarayScene
   void attachSurface(dco::Surface surf, dco::BLS bls, unsigned geomID, unsigned userID=~0u);
   void attachVolume(dco::Volume vol, dco::BLS bls, unsigned geomID, unsigned userID=~0u);
   void attachLight(dco::Light light, unsigned id);
-  aabb getBounds() const;
+  aabb getBounds();
   index_bvh_ref_t<dco::BLS> refBVH();
   void copyToDevice();
 

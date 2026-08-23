@@ -5,48 +5,6 @@
 #include "VisionarayScene.h"
 
 namespace visionaray {
-namespace dco {
-template<typename P> VSNRAY_FUNC
-inline aabb get_prim_bounds(const P &p)
-{ return get_bounds(p); }
-} // namespace dco
-
-#if defined(WITH_CUDA) || defined(WITH_HIP)
-template <typename Obj>
-__global__ static void getPrimBoundsGPU(Obj obj, aabb *bounds)
-{
-  if (blockIdx.x != 0 || threadIdx.x != 0)
-    return;
-
-  *bounds = get_prim_bounds(obj);
-}
-#endif
-
-template <typename Obj>
-static aabb getPrimBounds(const Obj &obj)
-{
-#if defined(WITH_CUDA)
-  aabb *bounds;
-  CUDA_SAFE_CALL(cudaMalloc(&bounds, sizeof(aabb)));
-  getPrimBoundsGPU<<<1,1>>>(obj, bounds);
-  aabb hostBounds;
-  CUDA_SAFE_CALL(
-      cudaMemcpy(&hostBounds, bounds, sizeof(aabb), cudaMemcpyDeviceToHost));
-  CUDA_SAFE_CALL(cudaFree(bounds));
-  return hostBounds;
-#elif defined(WITH_HIP)
-  aabb *bounds;
-  HIP_SAFE_CALL(hipMalloc(&bounds, sizeof(aabb)));
-  getPrimBoundsGPU<<<1,1>>>(obj, bounds);
-  aabb hostBounds;
-  HIP_SAFE_CALL(
-      hipMemcpy(&hostBounds, bounds, sizeof(aabb), hipMemcpyDeviceToHost));
-  HIP_SAFE_CALL(hipFree(bounds));
-  return hostBounds;
-#else
-  return get_prim_bounds(obj);
-#endif
-}
 
 VisionarayScene::VisionarayScene(
     VisionarayScene::Type type, VisionarayGlobalState *state)
@@ -68,10 +26,6 @@ VisionarayScene::~VisionarayScene()
 
 void VisionarayScene::commit()
 {
-  boundsID = !boundsID;
-  m_bounds[boundsID] = m_bounds[!boundsID];
-  m_bounds[!boundsID].invalidate();
-
   if (type == World) {
     // Build TLS
     if (!m_worldBLSs.empty()) {
@@ -130,9 +84,6 @@ void VisionarayScene::reset()
 {
   release();
 
-  m_bounds[0].invalidate();
-  m_bounds[1].invalidate();
-
   if (type == World) {
     m_worldID = deviceState()->dcos.TLSs.alloc({});
     deviceState()->dcos.worlds.alloc(dco::createWorld());
@@ -148,10 +99,13 @@ bool VisionarayScene::isValid() const
     return m_TLS.lastRebuildTime() > m_TLS.lastUpdateTime();
 }
 
-aabb VisionarayScene::getBounds() const
+aabb VisionarayScene::getBounds()
 {
   // bounds that were valid when commit was called:
-  return m_bounds[boundsID];
+  if (type == World)
+    return m_worldTLS.getBounds();
+  else
+    return m_TLS.getBounds();
 }
 
 void VisionarayScene::attachInstance(
@@ -162,8 +116,6 @@ void VisionarayScene::attachInstance(
 
   if (inst.theBVH.num_nodes() == 0)
     return;
-
-  m_bounds[boundsID].insert(getPrimBounds(inst));
 
   m_worldBLSs.alloc(inst);
 }
@@ -178,8 +130,6 @@ void VisionarayScene::attachSurface(
 
   if (geom.primitives.len == 0)
     return;
-
-  m_bounds[boundsID].insert(getPrimBounds(geom));
 
   m_geometries.set(surfID, geom.geomID);
   m_objIds.set(surfID, userID);
@@ -201,9 +151,6 @@ void VisionarayScene::attachSurface(
 void VisionarayScene::attachVolume(
     dco::Volume vol, dco::BLS bls, unsigned volID, unsigned userID)
 {
-  // use bounds member, that way we don't need to reach for the GPU:
-  m_bounds[boundsID].insert(vol.bounds);
-
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
 
