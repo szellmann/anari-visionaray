@@ -149,19 +149,6 @@ vec3 hsv2rgb(vec3 in)
     return out;
 }
 
-inline VSNRAY_FUNC
-float fresnel_dielectric(float etai, float etat, float cosi, float cost) {
-    // approximation for s-polarized light (perpendicular)
-    auto rs = ( etai * cosi - etat * cost )
-            / ( etai * cosi + etat * cost );
-
-    // approximation for p-polarized light (parallel)
-    auto rp = ( etat * cosi - etai * cost )
-            / ( etat * cosi + etai * cost );
-
-    return (rs * rs + rp * rp) / 2.f;
-}
-
 inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 {
   int which = int(rnd() * numLights); if (which == numLights) which = 0;
@@ -893,8 +880,9 @@ inline float V_SmithGGXCorrelated(float NdotV, float NdotL, float roughness)
   // height-correlated Smith function - accorcing to Heitz
   // correlating masking and shading is a bit more accurate:
   float alpha = roughness;
-  float GGXV = NdotL / (NdotV + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotV*NdotV));
-  float GGXL = NdotV / (NdotL + sqrtf(alpha*alpha + (1.f-alpha*alpha) * NdotL*NdotL));
+  float a2 = alpha * alpha;
+  float GGXV = NdotL * sqrtf(a2 + (1.f - a2) * NdotV * NdotV);
+  float GGXL = NdotV * sqrtf(a2 + (1.f - a2) * NdotL * NdotL);
   return 0.5f / (GGXV + GGXL);
 }
 
@@ -908,6 +896,21 @@ VSNRAY_FUNC
 inline float mapRoughness(float roughness)
 {
   return fmaxf(0.045f, roughness);
+}
+
+VSNRAY_FUNC
+inline vec3 evalMatteMaterial(const dco::Material &mat,
+                              const DeviceObjectRegistry &onDevice,
+                              const dco::AttributeRec &attribs,
+                              float3 objPos,
+                              unsigned primID,
+                              const vec3 Ng, const vec3 Ns,
+                              const vec3 T, const vec3 B,
+                              const vec3 viewDir, const vec3 lightDir)
+{
+  const vec3 color = getColorMatte(mat, onDevice, attribs, objPos, primID).xyz();
+  vec3 diffuseBRDF = color * Fd_Lambert();
+  return diffuseBRDF;
 }
 
 VSNRAY_FUNC
@@ -984,8 +987,8 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   vec3 F = F_Schlick(VdotH, f0);
 
   // Diffuse:
-//vec3 diffuseBRDF = diffuseColor * Fd_Lambert();
-  vec3 diffuseBRDF = diffuseColor * Fd_Burley(NdotV, NdotL, LdotH, alpha);
+//vec3 diffuseBRDF = (1.f-F) * diffuseColor * Fd_Lambert();
+  vec3 diffuseBRDF = (1.f-F) * diffuseColor * Fd_Burley(NdotV, NdotL, LdotH, alpha);
 
   // GGX microfacet distribution
   float D = 0.f;
@@ -999,19 +1002,11 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
     D = D_GGX(NdotH, alpha, EPS);
   }
 
-#if 1
   // Masking-shadowing term integrated (and simplified into) V
   // also allows us to toy with different variants of V
 //float V = V_SmithGGX(NdotV, NdotL, alpha);
   float V = V_SmithGGXCorrelated(NdotV, NdotL, alpha);
   vec3 specularBRDF = F * D * V;
-#else
-  // Masking-shadowing term
-  float G = G_SmithGGX(NdotL, NdotV, alpha);
-
-  float denom = 4.f * NdotV * NdotL;
-  vec3 specularBRDF = (F * D * G) / max(EPS,denom);
-#endif
 
   // Clearcoat
   float Dc = D_GGX(NdotH, clearcoatAlpha, EPS);
@@ -1041,11 +1036,14 @@ inline vec3 evalMaterial(const dco::Material &mat,
 {
   vec3 materialColor{0.f, 0.f, 0.f};
   if (mat.type == dco::Material::Matte) {
-    vec3 color = getColor(mat, onDevice, attribs, objPos, primID).xyz();
-
-    vec3 diffuseBRDF = color * Fd_Lambert();
-
-    materialColor = diffuseBRDF;
+    materialColor = evalMatteMaterial(mat,
+                                      onDevice,
+                                      attribs,
+                                      objPos,
+                                      primID,
+                                      Ng, Ns,
+                                      T, B,
+                                      viewDir, lightDir);
   } else if (mat.type == dco::Material::PhysicallyBased) {
     materialColor = evalPhysicallyBasedMaterial(mat,
                                                 onDevice,
@@ -1069,6 +1067,7 @@ struct BSDFSample
   float3 f;
   float pdf;
   float cosT;
+  bool isSpecular;
 };
 
 // Heitz 2018: Sampling the GGX Distribution of Visible Normals
@@ -1318,6 +1317,7 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
     ab = max(alpha * aspect, 0.001f);
   }
 
+  result.isSpecular = false;
   if (lobe < pDiff) {
     auto sp = cosine_sample_hemisphere(rnd(),rnd());
     result.dir = normalize(sp.x*u+sp.y*v+sp.z*w);
@@ -1364,6 +1364,17 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
 
   result.pdf = pDiff*pdfDiff + pSpec*pdfSpec + pTrans*pdfTrans + pClear*pdfClear;
 
+  result.f = evalPhysicallyBasedMaterial(mat,
+                                         onDevice,
+                                         attribs,
+                                         objPos,
+                                         primID,
+                                         Ng, Ns,
+                                         T, B,
+                                         viewDir, result.dir);
+
+  result.cosT = fmaxf(0.f,dot(Ns,result.dir));
+
   return result;
 }
 
@@ -1387,6 +1398,16 @@ inline BSDFSample sampleMaterial(const dco::Material &mat,
     auto sp = cosine_sample_hemisphere(rnd(), rnd());
     result.dir = normalize(sp.x*u+sp.y*v+sp.z*w);
     result.pdf = fmaxf(0.f,dot(Ns,result.dir)) * constants::inv_pi<float>();
+    result.f = evalMatteMaterial(mat,
+                                 onDevice,
+                                 attribs,
+                                 objPos,
+                                 primID,
+                                 Ng, Ns,
+                                 T, B,
+                                 viewDir,
+                                 result.dir);
+    result.cosT = fmaxf(0.f,dot(Ns,result.dir));
   } else if (mat.type == dco::Material::PhysicallyBased) {
     result = samplePhysicallyBasedMaterial(mat,
                                            onDevice,
@@ -1398,18 +1419,6 @@ inline BSDFSample sampleMaterial(const dco::Material &mat,
                                            viewDir,
                                            rnd);
   }
-
-  result.cosT = fmaxf(0.f,dot(Ns,result.dir));
-
-  result.f = evalMaterial(mat,
-                          onDevice,
-                          attribs,
-                          objPos,
-                          primID,
-                          Ng, Ns,
-                          T, B,
-                          viewDir,
-                          result.dir);
 
   return result;
 }

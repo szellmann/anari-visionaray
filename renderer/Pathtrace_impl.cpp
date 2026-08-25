@@ -309,6 +309,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       vec3 lightIntensity = lightSample.intensity * safe_rcp(lightSample.dist2);
       const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
+      bool prevBSDFSAmpleWasSpecular = bsdfSample.isSpecular;
+
       if (hitRec.volumeHit) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
           dco::Material mat = dco::createMaterial();
@@ -363,7 +365,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       }
 
       misWeightNEE = 0.f;
-      if (world.numLights > 0) {
+      if (world.numLights > 0 && !prevBSDFSAmpleWasSpecular) {
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
         if (light.type == dco::Light::Quad || light.type == dco::Light::HDRI) {
           misWeightNEE
