@@ -2250,7 +2250,105 @@ struct Light
       template<typename RNG>
       VSNRAY_FUNC
       inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
-      { return internal.sample(refPoint,rng); }
+      {
+        // Quad light sampling technique by Urena et al. (2013)
+        // An Area-Preserving Parametrization for Spherical Rectangles
+
+        light_sample<float> ls{};
+
+        struct {
+          float3 o, x, y, z;      // local reference system 'R'
+          float z0, z0sq;
+          float x0, y0, y0sq;        //
+          float x1, y1, y1sq;        // rectangle coords in 'R'
+          float x2, y2, y2sq;        //
+          float b0, b1, b0sq, k;  // misc precomputed constants
+          float S;                // solid angle of 'Q'
+        } squad;
+
+        // --- init squad -------------
+        {
+        squad.o = refPoint;
+        float exl = length(geometry().e1), eyl = length(geometry().e2);
+        // compute local reference system 'R'
+        squad.x = geometry().e1 / exl;
+        squad.y = geometry().e2 / eyl;
+        squad.z = cross(squad.x, squad.y);
+        // compute rectangle coords in local reference system
+        float3 d = geometry().v1 - refPoint;
+        squad.z0 = dot(d, squad.z);
+        // flip 'z' to make it point against 'Q'
+        if (squad.z0 > 0) {
+          squad.z  *= -1.f;
+          squad.z0 *= -1.f;
+        }
+        squad.z0sq = squad.z0 * squad.z0;
+        squad.x0 = dot(d, squad.x);
+        squad.y0 = dot(d, squad.y);
+        squad.x1 = squad.x0 + exl;
+        squad.y1 = squad.y0 + eyl;
+        squad.y0sq = squad.y0 * squad.y0;
+        squad.y1sq = squad.y1 * squad.y1;
+        // create vectors to four vertices
+        float3 v00(squad.x0, squad.y0, squad.z0);
+        float3 v01(squad.x0, squad.y1, squad.z0);
+        float3 v10(squad.x1, squad.y0, squad.z0);
+        float3 v11(squad.x1, squad.y1, squad.z0);
+        // compute normals to edges
+        float3 n0 = normalize(cross(v00, v10));
+        float3 n1 = normalize(cross(v10, v11));
+        float3 n2 = normalize(cross(v11, v01));
+        float3 n3 = normalize(cross(v01, v00));
+        // compute internal angles (gamma_i)
+        float g0 = acosf(-dot(n0,n1));
+        float g1 = acosf(-dot(n1,n2));
+        float g2 = acosf(-dot(n2,n3));
+        float g3 = acosf(-dot(n3,n0));
+        // compute predefined constants
+        squad.b0 = n0.z;
+        squad.b1 = n2.z;
+        squad.b0sq = squad.b0 * squad.b0;
+        squad.k = constants::two_pi<float>() - g2 - g3;
+        // compute solid angle from internal angles
+        squad.S = g0 + g1 - squad.k;
+        }
+
+        // --- sampling ---------------
+
+        float u = rng(), v = rng();
+        float eps = 1e-10f;
+
+        // 1. compute 'cu'
+        float au = u * squad.S + squad.k;
+        float fu = (cosf(au) * squad.b0 - squad.b1) / sinf(au);
+        float cu = 1/sqrtf(fu*fu + squad.b0sq) * (fu>0 ? +1 : -1);
+              cu = clamp(cu, -1.f, 1.f); // avoid NaNs
+        // 2. compute 'xu'
+        float xu = -(cu * squad.z0) / sqrtf(1 - cu*cu);
+              xu = clamp(xu, squad.x0, squad.x1); // avoid Infs
+        // 3. compute 'yv'
+        float d  = sqrtf(xu*xu + squad.z0sq);
+        float h0 = squad.y0 / sqrtf(d*d + squad.y0sq);
+        float h1 = squad.y1 / sqrtf(d*d + squad.y1sq);
+        float hv = h0 + v * (h1-h0), hv2 = hv*hv;
+        float yv = (hv2 < 1-eps) ? (hv*d)/sqrtf(1-hv2) : squad.y1;
+        // 4. transform (xu,yv,z0) to world coors
+        float3 p(squad.o + xu*squad.x + yv*squad.y + squad.z0*squad.z);
+
+        // Satisfy get_normal() interface
+        struct { float3 isect_pos; } hr;
+        hr.isect_pos = p;
+
+        ls.dir = p - refPoint;
+        ls.dist = length(ls.dir);
+        ls.intensity = intensity(p);
+        ls.normal = get_normal(hr, geometry());
+        ls.area = area(geometry());
+        ls.delta_light = false;
+        ls.pdf = 1.f/squad.S;
+
+        return ls;
+      }
 
       VSNRAY_FUNC
       inline float3 intensity(const float3 lightDir) const
