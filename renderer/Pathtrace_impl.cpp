@@ -310,6 +310,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
       bool prevBSDFSAmpleWasSpecular = bsdfSample.isSpecular;
+      float bsdfPDF = 0.f;
 
       if (hitRec.volumeHit) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
@@ -326,7 +327,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                        gn, gn,
                                        tng, btng,
                                        viewDir,
-                                       lightDir);
+                                       lightDir,
+                                       &bsdfPDF);
           shadedColor = lightSample.f * lightIntensity * NdotL
             * safe_rcp(lightSample.pdf) * float(world.numLights);
         } else {
@@ -350,7 +352,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                      gn, sn,
                                      tng, btng,
                                      viewDir,
-                                     lightDir);
+                                     lightDir,
+                                     &bsdfPDF);
         shadedColor = lightSample.f * lightIntensity * NdotL
           * safe_rcp(lightSample.pdf) * float(world.numLights);
 
@@ -369,7 +372,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
         if (light.type == dco::Light::Quad || light.type == dco::Light::HDRI) {
           misWeightNEE
-            = power_heuristic(lightSample.pdf/world.numLights,bsdfSample.pdf);
+            = power_heuristic(lightSample.pdf/world.numLights,bsdfPDF);
         }
         else {
           // sampled a delta light source:
