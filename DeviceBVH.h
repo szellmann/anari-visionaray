@@ -41,6 +41,7 @@ struct DeviceBVH
 #else
   typedef bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
+  typedef bvh8<P> DeviceBVH8;
 #endif
 
   DeviceBVH(VisionarayGlobalState *s);
@@ -52,6 +53,7 @@ struct DeviceBVH
   //=======================================================
   typename DeviceBVH2::bvh_ref deviceBVH2();
   typename DeviceBVH4::bvh_ref deviceBVH4();
+  typename DeviceBVH8::bvh_ref deviceBVH8();
 
   //=======================================================
   // get BVH bounds, *no BVH rebuilds*
@@ -64,9 +66,11 @@ struct DeviceBVH
  private:
   void rebuildHostBVH2();
   void rebuildHostBVH4();
+  void rebuildHostBVH8();
 
   void rebuildDeviceBVH2();
   void rebuildDeviceBVH4();
+  void rebuildDeviceBVH8();
 
   template<typename DST_T, typename SRC_T>
   inline void copyBVH(DST_T &dst, const SRC_T &src);
@@ -75,9 +79,11 @@ struct DeviceBVH
 
   bvh<P>          m_hostBVH2;
   bvh4<P>         m_hostBVH4;
+  bvh8<P>         m_hostBVH8;
 
   DeviceBVH2      m_deviceBVH2;
   DeviceBVH4      m_deviceBVH4;
+  DeviceBVH8      m_deviceBVH8;
 
   const P        *m_primitives{nullptr};
   unsigned        m_numPrimitives{0};
@@ -89,6 +95,7 @@ struct DeviceBVH
   struct {
     TimeStamp BVH2{0};
     TimeStamp BVH4{0};
+    TimeStamp BVH8{0};
   } m_hostRebuild, m_deviceRebuild;
 };
 
@@ -124,11 +131,19 @@ typename DeviceBVH<P>::DeviceBVH4::bvh_ref DeviceBVH<P>::deviceBVH4() {
 }
 
 template<typename P>
+typename DeviceBVH<P>::DeviceBVH8::bvh_ref DeviceBVH<P>::deviceBVH8() {
+  rebuildDeviceBVH8();
+  return m_deviceBVH8.ref();
+}
+
+template<typename P>
 aabb DeviceBVH<P>::getBounds() {
   if (m_hostBVH2.num_nodes()) {
     return m_hostBVH2.node(0).get_bounds();
   } else if (m_hostBVH4.num_nodes()) {
     return m_hostBVH4.node(0).get_bounds();
+  } else if (m_hostBVH8.num_nodes()) {
+    return m_hostBVH8.node(0).get_bounds();
   }
 
   if (m_deviceBVH2.num_nodes()) {
@@ -163,6 +178,22 @@ aabb DeviceBVH<P>::getBounds() {
     memcpy(&n,m_deviceBVH4.nodes().data(),sizeof(n));
 #endif
     return n.get_bounds();
+  } else if (m_deviceBVH8.num_nodes()) {
+    bvh_multi_node<8> n;
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaMemcpyAsync(&n,m_deviceBVH8.nodes().data(),sizeof(n),
+                                   cudaMemcpyDeviceToHost,
+                                   deviceState()->syncContext->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpyAsync(&n,m_deviceBVH8.nodes().data(),sizeof(n),
+                                 hipMemcpyDeviceToHost,
+                                 deviceState()->syncContext->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
+#else
+    memcpy(&n,m_deviceBVH8.nodes().data(),sizeof(n));
+#endif
+    return n.get_bounds();
   }
 
   aabb inval;
@@ -183,8 +214,10 @@ TimeStamp DeviceBVH<P>::lastRebuildTime() const {
   // unlikely as of now..)
   return std::max(m_hostRebuild.BVH2,std::max(
                   m_hostRebuild.BVH4,std::max(
-                  m_deviceRebuild.BVH2,
-                  m_deviceRebuild.BVH4)));
+                  m_hostRebuild.BVH8,std::max(
+                  m_deviceRebuild.BVH2,std::max(
+                  m_deviceRebuild.BVH4,
+                  m_deviceRebuild.BVH8)))));
 }
 
 template<typename P>
@@ -267,6 +300,24 @@ void DeviceBVH<P>::rebuildHostBVH4() {
 }
 
 template<typename P>
+void DeviceBVH<P>::rebuildHostBVH8() {
+  if (m_hostRebuild.BVH8 >= m_lastUpdate) {
+    return;
+  }
+
+  rebuildHostBVH2();
+
+  if (m_hostBVH2.num_nodes() && m_hostBVH2.nodes()[0].get_bounds().valid()) {
+    bvh_collapser collapser;
+    collapser.collapse(m_hostBVH2, m_hostBVH8, deviceState()->syncContext->threadPool);
+  } else {
+    m_hostBVH8 = {};
+  }
+
+  m_hostRebuild.BVH8 = newTimeStamp();
+}
+
+template<typename P>
 void DeviceBVH<P>::rebuildDeviceBVH2() {
   if (m_deviceRebuild.BVH2 >= m_lastUpdate) {
     return;
@@ -346,6 +397,19 @@ void DeviceBVH<P>::rebuildDeviceBVH4() {
   m_deviceBVH4 = m_hostBVH4;
 
   m_deviceRebuild.BVH4 = newTimeStamp();
+}
+
+template<typename P>
+void DeviceBVH<P>::rebuildDeviceBVH8() {
+  if (m_deviceRebuild.BVH8 >= m_lastUpdate) {
+    return;
+  }
+
+  rebuildHostBVH8();
+
+  m_deviceBVH8 = m_hostBVH8;
+
+  m_deviceRebuild.BVH8 = newTimeStamp();
 }
 
 template<typename P>
