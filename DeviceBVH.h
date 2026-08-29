@@ -35,9 +35,11 @@ struct DeviceBVH
 #if defined(WITH_CUDA)
   typedef cuda_bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
+  typedef bvh8<P> DeviceBVH8;
 #elif defined(WITH_HIP)
   typedef hip_bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
+  typedef bvh8<P> DeviceBVH8;
 #else
   typedef bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
