@@ -126,7 +126,7 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
   if (!dco::validHandle(surf.geomID))
     return;
 
-  size_t objID = m_objIds.size();
+  size_t objID = m_geometries.size();
 
   dco::Geometry geom = deviceState()->dcos.geometries[surf.geomID];
 
@@ -152,7 +152,7 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
 
 void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID)
 {
-  size_t objID = m_objIds.size();
+  size_t objID = m_volumes.size();
 
   m_volumes.set(objID, vol.volID, ~0u);
   m_objIds.set(objID, userID, ~0u);
@@ -176,9 +176,8 @@ void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userI
 
 void VisionarayScene::attachLight(dco::Light light, unsigned userID)
 {
-  size_t objID = m_objIds.size();
+  size_t objID = m_lights.size();
   m_lights.set(objID, light.lightID, ~0u);
-  m_objIds.set(objID, userID, ~0u);
 }
 
 bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
