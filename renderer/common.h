@@ -1559,16 +1559,6 @@ struct HitRecLight
   unsigned lightID{UINT_MAX};
 };
 
-struct HitRec
-{
-  hit_record<Ray, primitive<unsigned>> surface;
-  dco::HitRecordVolume volume;
-  HitRecLight light;
-  bool hit{false};
-  bool volumeHit{false};
-  bool lightHit{false};
-};
-
 template <bool EvalOpacity>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
@@ -1672,20 +1662,73 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
   return hr;
 }
 
+//=========================================================
+// Main closest intersection function
+//=========================================================
+
+struct HitRec
+{
+  enum Type { Surface, Volume, Light, } type;
+  bool hit;
+  float t;
+  float3 localHitPos;
+  union { unsigned primID, lightID; };
+  union { unsigned geomID, volID; };
+  unsigned instID;
+  union {
+    struct {
+      float u, v;
+    } asSurface;
+    struct {
+      float Tr;
+      float3 albedo;
+    } asVolume;
+    struct {
+      bool visible;
+    } asLight;
+  };
+};
+
 VSNRAY_FUNC
 inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
     const DeviceObjectRegistry &onDevice, unsigned bounceID, bool shadow)
 {
+  auto surface = intersectSurfaces<1>(ss, ray, onDevice, worldID, shadow);
+  auto light   = intersectLights(ss, ray, worldID, onDevice, bounceID/*, shadow*/);
+  auto volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice/*, shadow*/);
+
   HitRec hr;
-  hr.surface = intersectSurfaces<1>(ss, ray, onDevice, worldID, shadow);
-  hr.light   = intersectLights(ss, ray, worldID, onDevice, bounceID/*, shadow*/);
-  hr.volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice/*, shadow*/);
-  hr.hit = hr.surface.hit || hr.volume.hit || hr.light.hit;
+  hr.hit = surface.hit || volume.hit || light.hit;
   // light-hit takes precedence over surface and volume (<=)
-  hr.lightHit = hr.light.hit && (!hr.surface.hit || hr.light.t <= hr.surface.t)
-                             && (!hr.volume.hit || hr.light.t <= hr.volume.t);
-  hr.volumeHit = hr.volume.hit && (!hr.surface.hit || hr.volume.t < hr.surface.t)
-                               && (!hr.light.hit || hr.volume.t < hr.light.t);
+  if (light.hit && (!surface.hit || light.t <= surface.t)
+              && (!volume.hit || light.t <= volume.t)) {
+    hr.type             = HitRec::Light;
+    hr.t                = light.t;
+    hr.localHitPos      = {}; // (TODO)
+    hr.lightID          = light.lightID;
+    hr.instID           = UINT_MAX; // (TODO)
+    hr.asLight.visible  = light.lightVisible;
+  } else if (volume.hit && (!surface.hit || volume.t < surface.t)
+              && (!light.hit || volume.t < light.t)) {
+    hr.type             = HitRec::Volume;
+    hr.t                = volume.t;
+    hr.localHitPos      = volume.isect_pos;
+    hr.primID           = volume.primID;
+    hr.volID            = volume.localID;
+    hr.instID           = volume.instID;
+    hr.asVolume.Tr      = volume.Tr;
+    hr.asVolume.albedo  = volume.albedo;
+  } else if (surface.hit) {
+    hr.type             = HitRec::Surface;
+    hr.t                = surface.t;
+    hr.localHitPos      = surface.isect_pos;
+    hr.primID           = surface.prim_id;
+    hr.geomID           = surface.geom_id;
+    hr.instID           = surface.inst_id;
+    hr.asSurface.u      = surface.u;
+    hr.asSurface.v      = surface.v;
+  }
+
   return hr;
 }
 
