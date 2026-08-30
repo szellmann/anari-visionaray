@@ -174,10 +174,11 @@ void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userI
   m_materials.set(objID, mat.matID);
 }
 
-void VisionarayScene::attachLight(dco::Light light)
+void VisionarayScene::attachLight(dco::Light light, unsigned userID)
 {
   size_t objID = m_objIds.size();
   m_lights.set(objID, light.lightID);
+  m_objIds.set(objID, userID);
 }
 
 bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
