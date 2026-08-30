@@ -2354,6 +2354,18 @@ struct Light
       inline float3 intensity(const float3 lightDir) const
       { return internal.intensity(lightDir); }
 
+      VSNRAY_FUNC
+      inline float pdf(const Ray &ray, const float3 hitPos) const
+      {
+        float A = area(geometry());
+        float ld = length(hitPos-ray.ori);
+        float3 L = normalize(hitPos-ray.ori);
+        float3 Nl = get_normal(hit_record<Ray,primitive<unsigned>>{},geometry());
+        float LdotNl = fabsf(dot(-L,Nl));
+        float solidAngle = (LdotNl*A) / (ld*ld);
+        return 1.f/solidAngle;
+      }
+
     } asQuad;
     struct {
 #ifdef WITH_CUDA
@@ -2391,6 +2403,24 @@ struct Light
       inline float3 intensity(const float3 dir) const
       {
         return tex2D(radiance, toUV(toLocal*dir)).xyz()*scale;
+      }
+
+      VSNRAY_FUNC
+      inline float pdf(const Ray &ray, const float3 hitPos) const
+      {
+        float3 dir = toLocal*ray.dir;
+        float2 uv = toUV(dir);
+        CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol,
+                                     cdf.width, cdf.height,
+                                     uv.x, uv.y);
+        float theta = acosf(clamp(dir.y, -1.0f, 1.0f));
+        float sinTheta = sinf(theta);
+        if (sinTheta != 0.f) {
+          return (sample.pdfx * sample.pdfy) * (cdf.width * cdf.height)
+              / (2.0f * constants::pi<float>() * constants::pi<float>() * sinTheta);
+        } else {
+          return 0.f;
+        }
       }
 
     } asHDRI;

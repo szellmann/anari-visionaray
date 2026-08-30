@@ -144,26 +144,9 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       if (bounceID > 0) {
         float lightPDF = 0.f;
         if (light.type == dco::Light::Quad) {
-          float A = area(light.asQuad.geometry());
-          float ld = length(hitPos-ray.ori);
-          float3 L = normalize(hitPos-ray.ori);
-          float3 Nl = get_normal(hitRec,light.asQuad.geometry());
-          float LdotNl = fabsf(dot(-L,Nl));
-          float solidAngle = (LdotNl*A) / (ld*ld);
-          lightPDF = 1.f/solidAngle;
+          lightPDF = light.asQuad.pdf(ray,hitPos);
         } else if (light.type == dco::Light::HDRI) {
-          float3 dir = light.asHDRI.toLocal*ray.dir;
-          float2 uv = toUV(dir);
-          CDFSample sample = sampleCDF(light.asHDRI.cdf.rows, light.asHDRI.cdf.lastCol,
-                                       light.asHDRI.cdf.width, light.asHDRI.cdf.height,
-                                       uv.x, uv.y);
-          float theta = acosf(clamp(dir.y, -1.0f, 1.0f));
-          float sinTheta = sinf(theta);
-          if (sinTheta != 0.f) {
-            lightPDF = (sample.pdfx * sample.pdfy)
-                * (light.asHDRI.cdf.width * light.asHDRI.cdf.height)
-                / (2.0f * constants::pi<float>() * constants::pi<float>() * sinTheta);
-          }
+          lightPDF = light.asHDRI.pdf(ray,hitPos);
         }
 
         float misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights);
@@ -269,11 +252,13 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
     int lightID = -1;
+    float lWeight = 1.f;
 
     if (world.numLights > 0) {
       lightID = uniformSampleOneLight(ss.random, world.numLights);
       const dco::Light &light = getLight(world.allLights, lightID, onDevice);
       lightSample = sampleLight(light, hitPos, ss.random);
+      lWeight = safe_rcp(world.numLights);
     }
 
     if (rendererState.renderMode == RenderMode::Default) {
@@ -283,6 +268,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       bool prevBSDFSAmpleWasSpecular = bsdfSample.isSpecular;
       float bsdfPDF = 0.f;
+
+      const float lightPDF = lightSample.pdf * lWeight;
 
       if (hitRec.type == HitRec::Volume) {
         if (rendererState.gradientShading && length(gn) > 1e-10f) {
@@ -301,8 +288,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                        viewDir,
                                        lightDir,
                                        &bsdfPDF);
-          shadedColor = lightSample.f * lightIntensity * NdotL
-            * safe_rcp(lightSample.pdf) * float(world.numLights);
+          shadedColor = lightSample.f * lightIntensity * NdotL * safe_rcp(lightPDF);
         } else {
           shadedColor = hitRec.asVolume.albedo * lightIntensity
             * safe_rcp(lightSample.pdf) * safe_rcp(lightSample.dist2);
@@ -326,8 +312,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                      viewDir,
                                      lightDir,
                                      &bsdfPDF);
-        shadedColor = lightSample.f * lightIntensity * NdotL
-          * safe_rcp(lightSample.pdf) * float(world.numLights);
+        shadedColor = lightSample.f * lightIntensity * NdotL * safe_rcp(lightPDF);
 
         bsdfSample = sampleMaterial(mat,
                                     onDevice,
@@ -343,8 +328,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       if (world.numLights > 0 && !prevBSDFSAmpleWasSpecular) {
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
         if (light.type == dco::Light::Quad || light.type == dco::Light::HDRI) {
-          misWeightNEE
-            = power_heuristic(lightSample.pdf/world.numLights,bsdfPDF);
+          misWeightNEE = power_heuristic(lightPDF,bsdfPDF);
         }
         else {
           // sampled a delta light source:
