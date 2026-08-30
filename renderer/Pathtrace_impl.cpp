@@ -165,8 +165,6 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     float4 color{1.f};
     float3 gn{0.f}, tng{0.f}, btng{0.f};
-    float eps = epsilonFrom(hitPos, ray.dir, hitRec.t);
-
     float3 viewDir = -normalize(ray.dir);
 
     if (hitRec.type == HitRec::Volume) {
@@ -182,6 +180,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           gn = normalize(gn);
       }
 
+      // TODO: this overwrites the (gradient shading) normal?!
       if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
         gn = uniform_sample_sphere(ss.random(), ss.random());
 
@@ -220,10 +219,10 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       color = getColor(mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID);
 
-      float4 tng4 = getTangent(geom, hitRec.primID, hitRec.localHitPos, uv);
-      if (length(sn) > 0.f && length(tng4.xyz()) > 0.f) {
-        tng = tng4.xyz();
-        btng = cross(sn, tng) * tng4.w;
+      float4 tangent = getTangent(geom, hitRec.primID, hitRec.localHitPos, uv);
+      if (length(sn) > 0.f && length(tangent.xyz()) > 0.f) {
+        tng = tangent.xyz();
+        btng = cross(sn, tng) * tangent.w;
         sn = getPerturbedNormal(
             mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID, tng, btng, sn);
       }
@@ -241,6 +240,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     // Compute new origin for future rays spawned from this hit pos,
     // biased by eps:
+    float eps = epsilonFrom(hitPos, ray.dir, hitRec.t);
     hitPosOff = hitPos + sn * eps;
 
     // Compute motion vector; assume for now the hit was diffuse!
