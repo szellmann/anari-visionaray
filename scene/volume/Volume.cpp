@@ -23,7 +23,7 @@ Volume::~Volume()
 void Volume::commitParameters()
 {
   m_id = getParam<uint32_t>("id", ~0u);
-  m_gradientShading = getParam<bool>("gradientShading", true);
+  m_gradientShading = getParam<bool>("gradientShading", false);
 }
 
 void Volume::finalize()

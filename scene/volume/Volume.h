@@ -25,7 +25,7 @@ struct Volume : public Object
   DeviceBVH<dco::Volume> m_BVH;
 
   uint32_t m_id{~0u};
-  bool m_gradientShading{true};
+  bool m_gradientShading{false};
   dco::Volume vvol;
   dco::BLS vBLS;
 };
