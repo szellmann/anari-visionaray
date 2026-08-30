@@ -749,6 +749,27 @@ inline vec3 getPerturbedNormal(const dco::Material &mat,
 }
 
 VSNRAY_FUNC
+inline mat4 getTransform(const dco::Instance &inst, const Ray &ray)
+{
+  if (inst.type == dco::Instance::Transform) {
+    return inst.xfms[0];
+  } else if (inst.type == dco::Instance::MotionTransform) {
+    float rayTime = clamp(ray.time, inst.time.min, inst.time.max);
+
+    float time01 = rayTime - inst.time.min / (inst.time.max - inst.time.min);
+
+    unsigned ID1 = unsigned(float(inst.len-1) * time01);
+    unsigned ID2 = min((unsigned)inst.len-1, ID1+1);
+
+    float frac = time01 * (inst.len-1) - ID1;
+
+    return lerp_r(inst.xfms[ID1], inst.xfms[ID2], frac);
+  }
+
+  return {};
+}
+
+VSNRAY_FUNC
 inline mat3 getNormalTransform(const dco::Instance &inst, const Ray &ray)
 {
   if (inst.type == dco::Instance::Transform) {
