@@ -126,19 +126,19 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
   if (!dco::validHandle(surf.geomID))
     return;
 
-  size_t surfID = m_geometries.size();
+  size_t objID = m_objIds.size();
 
   dco::Geometry geom = deviceState()->dcos.geometries[surf.geomID];
 
   if (geom.primitives.len == 0)
     return;
 
-  m_geometries.set(surfID, geom.geomID);
-  m_objIds.set(surfID, userID);
+  m_geometries.set(objID, geom.geomID);
+  m_objIds.set(objID, userID);
 
   // That's the ID local to the group the volume is in
   // (this object):
-  bls.localID = surfID;
+  bls.localID = objID;
   // now add the BLS to our group:
   bls.blsID = m_BLSs.alloc(bls);
 
@@ -147,12 +147,12 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
 
   dco::Material mat = deviceState()->dcos.materials[surf.matID];
 
-  m_materials.set(surfID, mat.matID);
+  m_materials.set(objID, mat.matID);
 }
 
 void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID)
 {
-  size_t volID = m_volumes.size();
+  size_t volID = m_objIds.size();
 
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
@@ -166,7 +166,7 @@ void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userI
 
 void VisionarayScene::attachLight(dco::Light light)
 {
-  size_t lightID = m_lights.size();
+  size_t lightID = m_objIds.size();
 
   m_lights.set(lightID, light.lightID);
 }
