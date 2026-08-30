@@ -132,7 +132,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     float3 hitPos = ray.ori + hitRec.t * ray.dir;
 
     if (hitRec.type == HitRec::Light) {
-      const dco::Light &light = getLight(world.allLights, hitRec.lightID, onDevice);
+      const dco::Light &light = getLight(world.allLights, hitRec.objID, onDevice);
       if (light.type == dco::Light::Quad) {
         shadedColor = light.asQuad.intensity(hitPos);
       } else if (light.type == dco::Light::HDRI) {
@@ -170,9 +170,9 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     float3 viewDir = -normalize(ray.dir);
 
     if (hitRec.type == HitRec::Volume) {
-      const dco::Volume &vol = onDevice.volumes[group.volumes[hitRec.volID]];
+      const dco::Volume &vol = onDevice.volumes[group.volumes[hitRec.objID]];
 
-      if (rendererState.gradientShading) {
+      if (vol.gradientShading) {
         float3 P = vol.field.pointToVoxelSpace(hitRec.localHitPos);
         float3 delta(vol.field.cellSize, vol.field.cellSize, vol.field.cellSize);
         delta *= float3(vol.field.voxelSpaceTransform(0,0),
@@ -195,8 +195,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       color.xyz() = hitRec.asVolume.albedo;
     } else {
-      const dco::Geometry &geom = onDevice.geometries[group.geoms[hitRec.geomID]];
-      const dco::Material &mat = onDevice.materials[group.materials[hitRec.geomID]];
+      const dco::Geometry &geom = onDevice.geometries[group.geoms[hitRec.objID]];
+      const dco::Material &mat = onDevice.materials[group.materials[hitRec.objID]];
 
       float2 uv{hitRec.asSurface.u,hitRec.asSurface.v};
       getNormals(geom, hitRec.primID, hitRec.localHitPos, uv, gn, sn);
@@ -232,7 +232,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     if (bounceID==0) {
       result.depth = hitRec.t;
       result.primId = hitRec.primID;
-      result.objId = group.objIds[hitRec.geomID];
+      result.objId = group.objIds[hitRec.objID];
       result.instId = inst.userID;
       result.Ng = gn;
       result.Ns = sn;
@@ -271,37 +271,13 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       const float lightPDF = lightSample.pdf * lWeight;
 
-      if (hitRec.type == HitRec::Volume) {
-        if (rendererState.gradientShading && length(gn) > 1e-10f) {
-          dco::Material mat = dco::createMaterial();
-          mat.type = dco::Material::Matte;
-          mat.asMatte.color = dco::createMaterialParamRGB();
-          mat.asMatte.color.rgb = hitRec.asVolume.albedo;
+      if (hitRec.type == HitRec::Volume)
+        shadedColor = hitRec.asVolume.albedo;
+      else
+        shadedColor = float3(1,1,1);
 
-          lightSample.f = evalMaterial(mat,
-                                       onDevice,
-                                       attribs,
-                                       hitRec.localHitPos,
-                                       hitRec.primID,
-                                       gn, gn,
-                                       tng, btng,
-                                       viewDir,
-                                       lightDir,
-                                       &bsdfPDF);
-          shadedColor = lightSample.f * lightIntensity * NdotL * safe_rcp(lightPDF);
-        } else {
-          shadedColor = hitRec.asVolume.albedo * lightIntensity
-            * safe_rcp(lightSample.pdf) * safe_rcp(lightSample.dist2);
-        }
-
-        // isotropic phase function
-        bsdfSample.dir = uniform_sample_sphere(ss.random(), ss.random());
-        bsdfSample.f = hitRec.asVolume.albedo * float3(1.f);//over 4 PI (cancels)
-        bsdfSample.pdf = 1.f;//over 4 PI (cancels)
-        bsdfSample.cosT = 1.f;
-      } else {
-        const auto &mat = onDevice.materials[group.materials[hitRec.geomID]];
-
+      const auto &mat = onDevice.materials[group.materials[hitRec.objID]];
+      if (mat.type != dco::Material::Unknown) {
         lightSample.f = evalMaterial(mat,
                                      onDevice,
                                      attribs,
@@ -312,8 +288,17 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                      viewDir,
                                      lightDir,
                                      &bsdfPDF);
-        shadedColor = lightSample.f * lightIntensity * NdotL * safe_rcp(lightPDF);
+        shadedColor *= lightSample.f;
+      }
+      shadedColor *= lightIntensity * NdotL * safe_rcp(lightPDF);
 
+      if (hitRec.type == HitRec::Volume) {
+        // isotropic phase function
+        bsdfSample.dir = uniform_sample_sphere(ss.random(), ss.random());
+        bsdfSample.f = hitRec.asVolume.albedo * float3(1.f);//over 4 PI (cancels)
+        bsdfSample.pdf = 1.f;//over 4 PI (cancels)
+        bsdfSample.cosT = 1.f;
+      } else {
         bsdfSample = sampleMaterial(mat,
                                     onDevice,
                                     attribs,

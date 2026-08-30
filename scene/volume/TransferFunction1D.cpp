@@ -49,6 +49,8 @@ void TransferFunction1D::commitParameters()
 
 void TransferFunction1D::finalize()
 {
+  Volume::finalize();
+
   if (!m_field) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "no spatial field provided to transferFunction1D volume");

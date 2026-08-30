@@ -201,7 +201,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                             rendererState.volumeSamplingRateInv,
                             color,
                             alpha);
-    } else if (rendererState.gradientShading) {
+    } else if (vol.gradientShading) {
       // All other field types, gradient shading on:
       rayMarchVolume<1>(ss,
                         onDevice,

@@ -625,6 +625,7 @@ struct Volume
   // ID in the device's global volume array
   unsigned volID{UINT_MAX};
   float unitDistance;
+  bool gradientShading{false};
 
   SpatialField field;
   union {

@@ -175,15 +175,6 @@
           "default": 1e20,
           "minimum": 0,
           "description": "ambient occlusion distance"
-        },
-        {
-          "name": "gradientShading",
-          "types": [
-            "ANARI_BOOL"
-          ],
-          "tags": [],
-          "default": false,
-          "description": "gradient-based shading for volumes"
         }
       ]
     },
@@ -242,15 +233,6 @@
           "tags": [],
           "default": 0.1,
           "description": "heat map scaling factor"
-        },
-        {
-          "name": "gradientShading",
-          "types": [
-            "ANARI_BOOL"
-          ],
-          "tags": [],
-          "default": false,
-          "description": "gradient-based shading for volumes"
         },
         {
           "name": "volumeSamplingRate",

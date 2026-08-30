@@ -77,7 +77,6 @@ struct RendererState
   mat4 currMV{mat4::identity()};
   mat4 currPR{mat4::identity()};
   // Volume
-  bool gradientShading{false};
   float volumeSamplingRateInv{2.0f};
   // AO
   float3 ambientColor{1.f, 1.f, 1.f};
@@ -1672,8 +1671,8 @@ struct HitRec
   bool hit;
   float t;
   float3 localHitPos;
-  union { unsigned primID, lightID; };
-  union { unsigned geomID, volID; };
+  unsigned primID;
+  unsigned objID;
   unsigned instID;
   union {
     struct {
@@ -1705,7 +1704,8 @@ inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
     hr.type             = HitRec::Light;
     hr.t                = light.t;
     hr.localHitPos      = {}; // (TODO)
-    hr.lightID          = light.lightID;
+    hr.primID           = 0u; // (TODO)
+    hr.objID            = light.lightID;
     hr.instID           = UINT_MAX; // (TODO)
     hr.asLight.visible  = light.lightVisible;
   } else if (volume.hit && (!surface.hit || volume.t < surface.t)
@@ -1714,7 +1714,7 @@ inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
     hr.t                = volume.t;
     hr.localHitPos      = volume.isect_pos;
     hr.primID           = volume.primID;
-    hr.volID            = volume.localID;
+    hr.objID            = volume.localID;
     hr.instID           = volume.instID;
     hr.asVolume.Tr      = volume.Tr;
     hr.asVolume.albedo  = volume.albedo;
@@ -1723,7 +1723,7 @@ inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
     hr.t                = surface.t;
     hr.localHitPos      = surface.isect_pos;
     hr.primID           = surface.prim_id;
-    hr.geomID           = surface.geom_id;
+    hr.objID            = surface.geom_id;
     hr.instID           = surface.inst_id;
     hr.asSurface.u      = surface.u;
     hr.asSurface.v      = surface.v;

@@ -47,7 +47,6 @@ void Renderer::commitParameters()
   m_ambientColor = getParam<vec3>("ambientColor", vec3(1.f));
   m_ambientRadiance = getParam<float>("ambientRadiance", 0.2f);
   m_renderMode = getParamString("mode", "default");
-  m_gradientShading = getParam<bool>("gradientShading", false);
   m_heatMapEnabled = getParam<bool>("heatMapEnabled", false);
   m_heatMapScale = getParam<float>("heatMapScale", 0.1f);
 }
@@ -136,7 +135,6 @@ void Renderer::finalize()
     vrend.rendererState.renderMode = RenderMode::GeometryAttribute3;
   else if (m_renderMode == "geometry.color")
     vrend.rendererState.renderMode = RenderMode::GeometryColor;
-  vrend.rendererState.gradientShading = m_gradientShading;
   vrend.rendererState.heatMapEnabled = m_heatMapEnabled;
   vrend.rendererState.heatMapScale = m_heatMapScale;
 }

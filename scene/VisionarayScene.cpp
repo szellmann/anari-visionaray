@@ -152,23 +152,32 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
 
 void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID)
 {
-  size_t volID = m_objIds.size();
+  size_t objID = m_objIds.size();
 
-  m_volumes.set(volID, vol.volID);
-  m_objIds.set(volID, userID);
+  m_volumes.set(objID, vol.volID);
+  m_objIds.set(objID, userID);
 
   // That's the ID local to the group the volume is in
   // (this object):
-  bls.localID = volID;
+  bls.localID = objID;
   // now add the BLS to our group:
   bls.blsID = m_BLSs.alloc(bls);
+
+  dco::Material mat = dco::createMaterial(); // invalid!
+  if (vol.gradientShading) {
+    mat.type = dco::Material::Matte;
+    mat.asMatte.color = dco::createMaterialParamRGB();
+    mat.asMatte.color.rgb = float3(1,1,1);
+  }
+  mat.matID = deviceState()->dcos.materials.alloc(mat);
+
+  m_materials.set(objID, mat.matID);
 }
 
 void VisionarayScene::attachLight(dco::Light light)
 {
-  size_t lightID = m_objIds.size();
-
-  m_lights.set(lightID, light.lightID);
+  size_t objID = m_objIds.size();
+  m_lights.set(objID, light.lightID);
 }
 
 bvh_ref_t<dco::BLS> VisionarayScene::refBVH()

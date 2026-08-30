@@ -22,7 +22,13 @@ Volume::~Volume()
 
 void Volume::commitParameters()
 {
-   m_id = getParam<uint32_t>("id", ~0u);
+  m_id = getParam<uint32_t>("id", ~0u);
+  m_gradientShading = getParam<bool>("gradientShading", true);
+}
+
+void Volume::finalize()
+{
+  vvol.gradientShading = m_gradientShading;
 }
 
 uint32_t Volume::id() const

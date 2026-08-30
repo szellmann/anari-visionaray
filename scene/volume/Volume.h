@@ -14,6 +14,7 @@ struct Volume : public Object
   Volume(VisionarayGlobalState *d);
   virtual ~Volume();
   virtual void commitParameters() override;
+  virtual void finalize() override;
   uint32_t id() const;
   static Volume *createInstance(std::string_view subtype, VisionarayGlobalState *d);
   virtual aabb bounds() const = 0;
@@ -24,6 +25,7 @@ struct Volume : public Object
   DeviceBVH<dco::Volume> m_BVH;
 
   uint32_t m_id{~0u};
+  bool m_gradientShading{true};
   dco::Volume vvol;
   dco::BLS vBLS;
 };
