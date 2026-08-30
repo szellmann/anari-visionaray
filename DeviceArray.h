@@ -490,14 +490,20 @@ struct HostDeviceArray : public std::vector<T>
     deviceMapped = false;
   }
 
-  void set(size_t index, const T &value)
+  void set(size_t index, const T &value, T init = T{})
   {
+    size_t prevSize = Base::size();
+
     if (index >= Base::size())
       resize(index+1);
 
     std::unique_lock<std::mutex> l(mtx);
-    updated = true;
+    for (size_t i=prevSize; i<Base::size()-1; ++i) {
+      Base::operator[](i) = init;
+    }
+
     Base::operator[](index) = value;
+    updated = true;
   }
 
   void resize(size_t n)

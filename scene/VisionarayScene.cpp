@@ -112,8 +112,8 @@ void VisionarayScene::attachInstance(dco::Instance inst, unsigned userID)
 {
   size_t instID = m_instances.size();
 
-  m_instances.set(instID, inst.instID);
-  m_objIds.set(instID, userID); // TODO: separate inst/geom
+  m_instances.set(instID, inst.instID, ~0u);
+  m_objIds.set(instID, userID, ~0u); // TODO: separate inst/geom
 
   if (inst.theBVH.num_nodes() == 0)
     return;
@@ -133,8 +133,8 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
   if (geom.primitives.len == 0)
     return;
 
-  m_geometries.set(objID, geom.geomID);
-  m_objIds.set(objID, userID);
+  m_geometries.set(objID, geom.geomID, ~0u);
+  m_objIds.set(objID, userID, ~0u);
 
   // That's the ID local to the group the volume is in
   // (this object):
@@ -147,15 +147,15 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
 
   dco::Material mat = deviceState()->dcos.materials[surf.matID];
 
-  m_materials.set(objID, mat.matID);
+  m_materials.set(objID, mat.matID, ~0u);
 }
 
 void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID)
 {
   size_t objID = m_objIds.size();
 
-  m_volumes.set(objID, vol.volID);
-  m_objIds.set(objID, userID);
+  m_volumes.set(objID, vol.volID, ~0u);
+  m_objIds.set(objID, userID, ~0u);
 
   // That's the ID local to the group the volume is in
   // (this object):
@@ -171,14 +171,14 @@ void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userI
   }
   mat.matID = deviceState()->dcos.materials.alloc(mat);
 
-  m_materials.set(objID, mat.matID);
+  m_materials.set(objID, mat.matID, ~0u);
 }
 
 void VisionarayScene::attachLight(dco::Light light, unsigned userID)
 {
   size_t objID = m_objIds.size();
-  m_lights.set(objID, light.lightID);
-  m_objIds.set(objID, userID);
+  m_lights.set(objID, light.lightID, ~0u);
+  m_objIds.set(objID, userID, ~0u);
 }
 
 bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
