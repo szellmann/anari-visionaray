@@ -221,7 +221,6 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       sn = nxfm * sn;
 
       sn = faceforward(sn, viewDir, gn);
-      gn = faceforward(gn, viewDir, gn);
 
       color.xyz() = hrv.albedo;
 
@@ -250,7 +249,6 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       sn = normalize(nxfm * sn);
 
       sn = faceforward(sn, viewDir, gn);
-      gn = faceforward(gn, viewDir, gn);
 
       attribs = getAttributes(geom,
                               inst,

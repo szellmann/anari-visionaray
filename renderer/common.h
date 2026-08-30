@@ -953,7 +953,7 @@ inline void pdfGGXVNDF(const float3 &lightDir,
   }
 
   // calculate transmissive PDF:
-  else if (NdotL < 0.f) {
+  if (NdotL < 0.f) {
     float3 H = -(viewDir * eta_i + lightDir * eta_t);
     float lenH = length(H);
 
@@ -1101,7 +1101,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
 //vec3 diffuseBRDF = (1.f-F) * diffuseColor * Fd_Lambert();
   vec3 diffuseBRDF = (1.f-F) * diffuseColor * Fd_Burley(NdotV, NdotL, LdotH, alpha);
 
-  bool entering = dot(Ns,viewDir) > 0.f;
+  bool entering = dot(Ng,viewDir) > 0.f;
   float eta_i = entering ? 1.0f : ior;
   float eta_t = entering ? ior : 1.0f;
 
@@ -1362,7 +1362,7 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
   mat3 basis(u,v,w);
   float3 V = transpose(basis)*viewDir;
 
-  bool entering = dot(Ns,viewDir) > 0.f;
+  bool entering = dot(Ng,viewDir) > 0.f;
   float eta_i = entering ? 1.0f : ior;
   float eta_t = entering ? ior : 1.0f;
 
