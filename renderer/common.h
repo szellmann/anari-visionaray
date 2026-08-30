@@ -1087,6 +1087,7 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
 
   const float alpha = perceptualRoughness * perceptualRoughness;
   const float clearcoatAlpha = perceptualClearcoatRoughness * perceptualClearcoatRoughness;
+  const float sheenAlpha = perceptualSheenRoughness * perceptualSheenRoughness;
 
   // anisotropic basis:
   const float2 rotation(cosf(anisotropyRotation), sinf(anisotropyRotation));
@@ -1153,30 +1154,36 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float Frc = (Dc * Vc) * Fc;
 
   // (Charlie) sheen
-  float sheenAlphaInv = 1.f/perceptualSheenRoughness;
+  float sheenAlphaInv = 1.f/sheenAlpha;
   float cos2h = NdotH * NdotH;
   float sin2h = fmaxf(1.f - cos2h, 0.0078125f);
-  vec3 Ds = sheenColor *
+  float Ds =
       ((2.f + sheenAlphaInv) * powf(sin2h, sheenAlphaInv * 0.5f) / (constants::two_pi<float>()));
+  vec3 sheenBRDF = sheenColor * Ds;
 
   if (pdf != nullptr) {
     const float fClear = clearcoat * 0.04f;
     const float baseEnergy = 1.f-fClear;
 
+    const float fSheen = rgb_to_luminance(sheenColor);
+    const float sheenEnergy = baseEnergy * (1.f-fSheen);
+
     const float fSpec = rgb_to_luminance(F);
-    const float remainingEnergy = baseEnergy * (1.f-fSpec);
+    const float remainingEnergy = sheenEnergy * (1.f-fSpec);
 
     float wDiff  = rgb_to_luminance(diffuseColor) * remainingEnergy * (1.f-transmission);
-    float wSpec  = baseEnergy * fSpec;
+    float wSheen = baseEnergy * fSheen;
+    float wSpec  = sheenEnergy * fSpec;
     float wTrans = remainingEnergy * transmission;
     float wClear = fClear;
-    float wSum   = wDiff + wSpec + wTrans + wClear;
+    float wSum   = wDiff + wSpec + wTrans + wClear + wSheen;
 
     // TODO: CDF sampling if we have multiple lobes
     float pDiff  = wSum > 0.f ? wDiff  / wSum : 0.0f;
-    float pSpec  = wSum > 0.f ? wSpec  / wSum : 0.333f;
-    float pTrans = wSum > 0.f ? wTrans / wSum : 0.667f;
-    float pClear = 1.f - pDiff - pSpec - pTrans;
+    float pSpec  = wSum > 0.f ? wSpec  / wSum : 0.25f;
+    float pTrans = wSum > 0.f ? wTrans / wSum : 0.5f;
+    float pClear = wSum > 0.f ? wClear / wSum : 0.75f;
+    float pSheen = 1.f - pDiff - pSpec - pTrans - pClear;
 
     float pdfDiff = fmaxf(0.f,dot(Ns,lightDir)) * constants::inv_pi<float>();
 
@@ -1202,10 +1209,13 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                Ng, Ns,
                pdfClear);
 
-    *pdf = pDiff*pdfDiff + pSpec*pdfSpec + pTrans*pdfTrans + pClear*pdfClear;
+    float pdfSheen = Ds / (4.f * VdotH);
+
+    *pdf = pDiff*pdfDiff + pSpec*pdfSpec + pTrans*pdfTrans + pClear*pdfClear
+                + pSheen*pdfSheen;
   }
 
-  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) + Ds;
+  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) + sheenBRDF;
 }
 
 VSNRAY_FUNC
@@ -1325,9 +1335,11 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
 
   const float perceptualRoughness = mapRoughness(roughness);
   const float perceptualClearcoatRoughness = mapRoughness(clearcoatRoughness);
+  const float perceptualSheenRoughness = mapRoughness(sheenRoughness);
 
   const float alpha = perceptualRoughness * perceptualRoughness;
   const float clearcoatAlpha = perceptualClearcoatRoughness * perceptualClearcoatRoughness;
+  const float sheenAlpha = perceptualSheenRoughness * perceptualSheenRoughness;
 
   // anisotropic basis:
   const float2 rotation(cosf(anisotropyRotation), sinf(anisotropyRotation));
@@ -1356,20 +1368,25 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
   const float fClear = clearcoat * 0.04f;
   const float baseEnergy = 1.f-fClear;
 
+  const float fSheen = rgb_to_luminance(sheenColor);
+  const float sheenEnergy = baseEnergy * (1.f-fSheen);
+
   const float fSpec = rgb_to_luminance(F);
-  const float remainingEnergy = baseEnergy * (1.f-fSpec);
+  const float remainingEnergy = sheenEnergy * (1.f-fSpec);
 
   float wDiff  = rgb_to_luminance(diffuseColor) * remainingEnergy * (1.f-transmission);
-  float wSpec  = baseEnergy * fSpec;
+  float wSheen = baseEnergy * fSheen;
+  float wSpec  = sheenEnergy * fSpec;
   float wTrans = remainingEnergy * transmission;
   float wClear = fClear;
-  float wSum   = wDiff + wSpec + wTrans + wClear;
+  float wSum   = wDiff + wSpec + wTrans + wClear + wSheen;
 
   // TODO: CDF sampling if we have multiple lobes
   float pDiff  = wSum > 0.f ? wDiff  / wSum : 0.0f;
-  float pSpec  = wSum > 0.f ? wSpec  / wSum : 0.333f;
-  float pTrans = wSum > 0.f ? wTrans / wSum : 0.667f;
-  float pClear = 1.f - pDiff - pSpec - pTrans;
+  float pSpec  = wSum > 0.f ? wSpec  / wSum : 0.25f;
+  float pTrans = wSum > 0.f ? wTrans / wSum : 0.5f;
+  float pClear = wSum > 0.f ? wClear / wSum : 0.75f;
+  float pSheen = 1.f - pDiff - pSpec - pTrans - pClear;
 
   auto w = faceforward(Ns, viewDir, Ng);
   auto v = fabsf(w.x) > fabsf(w.y) ? normalize(vec3(-w.z,0.f,w.x))
@@ -1399,6 +1416,7 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
   }
 
   result.isSpecular = false;
+  float pdfSheen = 0.f;
   if (lobe < pDiff) {
     auto sp = cosine_sample_hemisphere(rnd(),rnd());
     result.dir = normalize(sp.x*u+sp.y*v+sp.z*w);
@@ -1413,6 +1431,28 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
     result.dir = refract(viewDir,basis*Ne,eta_t/eta_i);
     if (length(result.dir) < 1e-4f) { // TIR
       result.dir = reflect(viewDir,basis*Ne);
+    }
+  } else if (lobe < pDiff + pSpec + pTrans + pSheen) {
+    float e = sheenAlpha / (1.f + 2.f * sheenAlpha);
+    float sint = powf(rnd(), e);
+    float cost = sqrtf(fmaxf(0.f, 1.f-sint*sint));
+    float phi  = constants::two_pi<float>() * rnd();
+    float3 H(sint * cosf(phi),
+             sint * sinf(phi),
+             cost);
+    // in local (0,0,1) coordinates:
+    float3 L = 2.f * dot(V,H) * H-V;
+    float NdotL = L.z;
+    float NdotV = V.z;
+    if (NdotL <= 0.f || NdotV <= 0.f) {
+      result.dir = float3(0.f);
+    } else {
+      result.dir = basis*L;
+      float VdotH = fmaxf(EPS,dot(V,H));
+      float invSheenAlpha = 1.f/sheenAlpha;
+      float D
+          = (2.f+invSheenAlpha) / constants::two_pi<float>() * powf(sint,invSheenAlpha);
+      pdfSheen = D / (4.f * VdotH);
     }
   } else {
     float3 Ne = sampleGGXVNDF(V,clearcoatAlpha,clearcoatAlpha,rnd(),rnd());
@@ -1443,7 +1483,8 @@ inline BSDFSample samplePhysicallyBasedMaterial(const dco::Material &mat,
              Ng, Ns,
              pdfClear);
 
-  result.pdf = pDiff*pdfDiff + pSpec*pdfSpec + pTrans*pdfTrans + pClear*pdfClear;
+  result.pdf = pDiff*pdfDiff + pSpec*pdfSpec + pTrans*pdfTrans + pClear*pdfClear
+                + pSheen*pdfSheen;
 
   result.f = evalPhysicallyBasedMaterial(mat,
                                          onDevice,
