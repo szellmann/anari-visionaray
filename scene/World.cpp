@@ -199,14 +199,12 @@ void World::rebuildTLS()
 
   vscene.reset();
 
-  uint32_t id = 0;
-  uint32_t lightID = 0;
   std::for_each(m_instances.begin(), m_instances.end(), [&](auto *i) {
     if (i && i->isValid()
         && (!i->group()->surfaces().empty() || !i->group()->volumes().empty()
             || !i->group()->lights().empty())) {
       i->visionarayInstanceUpdate();
-      vscene.attachInstance(i->visionarayInstance(), id, i->id());
+      vscene.attachInstance(i->visionarayInstance(), i->id());
     } else if (i->group()->surfaces().empty() && i->group()->volumes().empty()
         && !i->group()->lights().empty()) {
       // Only lights - these will not end up on a valid instance
@@ -217,7 +215,7 @@ void World::rebuildTLS()
           [&](auto *o) {
             auto *l = (Light *)o;
             if (l && l->isValid()) {
-              vscene.attachLight(l->visionarayLight(), lightID++);
+              vscene.attachLight(l->visionarayLight());
             } else {
               reportMessage(
                   ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");
@@ -236,7 +234,6 @@ void World::rebuildTLS()
             i);
       }
     }
-    id++;
   });
 
   vscene.commit();

@@ -49,10 +49,10 @@ struct VisionarayScene
   void release();
   bool isValid() const;
 
-  void attachInstance(dco::Instance inst, unsigned instID, unsigned userID=~0u);
-  void attachSurface(dco::Surface surf, dco::BLS bls, unsigned geomID, unsigned userID=~0u);
-  void attachVolume(dco::Volume vol, dco::BLS bls, unsigned geomID, unsigned userID=~0u);
-  void attachLight(dco::Light light, unsigned id);
+  void attachInstance(dco::Instance inst, unsigned userID=~0u);
+  void attachSurface(dco::Surface surf, dco::BLS bls, unsigned userID=~0u);
+  void attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID=~0u);
+  void attachLight(dco::Light light);
   aabb getBounds();
   bvh_ref_t<dco::BLS> refBVH();
   void copyToDevice();

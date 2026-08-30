@@ -95,7 +95,6 @@ void Group::visionaraySceneConstruct()
 
   vscene.reset();
 
-  uint32_t surfID = 0;
   if (m_surfaceData) {
     std::for_each(m_surfaceData->handlesBegin(),
         m_surfaceData->handlesEnd(),
@@ -103,8 +102,7 @@ void Group::visionaraySceneConstruct()
           auto *s = (Surface *)o;
           if (s && s->isValid()) {
             m_surfaces.push_back(s);
-            vscene.attachSurface(
-                s->visionaraySurface(), s->visionarayBLS(), surfID++, s->id());
+            vscene.attachSurface(s->visionaraySurface(), s->visionarayBLS(), s->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid surface(%p) in building BLS",
@@ -123,7 +121,6 @@ void Group::visionaraySceneConstruct()
         });
   }
 
-  uint32_t volID = 0;
   if (m_volumeData) {
     std::for_each(m_volumeData->handlesBegin(),
         m_volumeData->handlesEnd(),
@@ -131,8 +128,7 @@ void Group::visionaraySceneConstruct()
           auto *v = (Volume *)o;
           if (v && v->isValid()) {
             m_volumes.push_back(v);
-            vscene.attachVolume(
-                v->visionarayVolume(), v->visionarayBLS(), volID++, v->id());
+            vscene.attachVolume(v->visionarayVolume(), v->visionarayBLS(), v->id());
           } else {
             reportMessage(ANARI_SEVERITY_DEBUG,
                 "visionaray::Group rejecting invalid volume(%p) in building BLS",
@@ -141,7 +137,6 @@ void Group::visionaraySceneConstruct()
         });
   }
 
-  uint32_t lightID = 0;
   if (m_lightData) {
     std::for_each(m_lightData->handlesBegin(),
         m_lightData->handlesEnd(),
@@ -149,7 +144,7 @@ void Group::visionaraySceneConstruct()
           auto *l = (Light *)o;
           if (l && l->isValid()) {
             m_lights.push_back(l);
-            vscene.attachLight(l->visionarayLight(), lightID++);
+            vscene.attachLight(l->visionarayLight());
           } else {
             reportMessage(
                 ANARI_SEVERITY_DEBUG, "    visionaray::Light is invalid");

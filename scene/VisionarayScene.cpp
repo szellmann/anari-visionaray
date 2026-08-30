@@ -108,9 +108,10 @@ aabb VisionarayScene::getBounds()
     return m_TLS.getBounds();
 }
 
-void VisionarayScene::attachInstance(
-    dco::Instance inst, unsigned instID, unsigned userID)
+void VisionarayScene::attachInstance(dco::Instance inst, unsigned userID)
 {
+  size_t instID = m_instances.size();
+
   m_instances.set(instID, inst.instID);
   m_objIds.set(instID, userID); // TODO: separate inst/geom
 
@@ -120,11 +121,12 @@ void VisionarayScene::attachInstance(
   m_worldBLSs.alloc(inst);
 }
 
-void VisionarayScene::attachSurface(
-    dco::Surface surf, dco::BLS bls, unsigned surfID, unsigned userID)
+void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned userID)
 {
   if (!dco::validHandle(surf.geomID))
     return;
+
+  size_t surfID = m_geometries.size();
 
   dco::Geometry geom = deviceState()->dcos.geometries[surf.geomID];
 
@@ -148,9 +150,10 @@ void VisionarayScene::attachSurface(
   m_materials.set(surfID, mat.matID);
 }
 
-void VisionarayScene::attachVolume(
-    dco::Volume vol, dco::BLS bls, unsigned volID, unsigned userID)
+void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID)
 {
+  size_t volID = m_volumes.size();
+
   m_volumes.set(volID, vol.volID);
   m_objIds.set(volID, userID);
 
@@ -161,9 +164,11 @@ void VisionarayScene::attachVolume(
   bls.blsID = m_BLSs.alloc(bls);
 }
 
-void VisionarayScene::attachLight(dco::Light light, unsigned id)
+void VisionarayScene::attachLight(dco::Light light)
 {
-  m_lights.set(id, light.lightID);
+  size_t lightID = m_lights.size();
+
+  m_lights.set(lightID, light.lightID);
 }
 
 bvh_ref_t<dco::BLS> VisionarayScene::refBVH()
