@@ -534,13 +534,16 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
                 bounceID++;
               }
 
-              if (rayType == Miss || bounceID > rendererState.maxBounce) {
+              float tpmax = max_element(throughput);
+
+              if (rayType == Miss || bounceID > rendererState.maxBounce ||
+                          tpmax < FLT_MIN) {
                 break;
               }
 
               // Russian roulette
               if (bounceID > 1) {
-                float prob = max_element(throughput);
+                float prob = tpmax;
                 if (rng.next() > prob)
                   break;
                 throughput /= prob;
