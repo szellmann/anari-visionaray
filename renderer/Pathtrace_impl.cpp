@@ -137,6 +137,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         shadedColor = light.asQuad.intensity(hitPos);
       } else if (light.type == dco::Light::HDRI) {
         shadedColor = light.asHDRI.intensity(ray.dir);
+      } else if (light.type == dco::Light::Point) {
+        shadedColor = light.asPoint.intensity(ray.dir);
       }
       misWeightNEE = 1.f;
 
@@ -147,6 +149,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           lightPDF = light.asQuad.pdf(ray,hitPos);
         } else if (light.type == dco::Light::HDRI) {
           lightPDF = light.asHDRI.pdf(ray,hitPos);
+        } else if (light.type == dco::Light::Point) {
+          lightPDF = light.asPoint.pdf(ray,hitPos);
         }
 
         float misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights);
@@ -310,9 +314,9 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       }
 
       misWeightNEE = 0.f;
-      if (world.numLights > 0 && !prevBSDFSAmpleWasSpecular) {
+      if (world.numLights > 0 && !prevBSDFSAmpleWasSpecular && lightPDF > 0.f) {
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
-        if (light.type == dco::Light::Quad || light.type == dco::Light::HDRI) {
+        if (light.isAreaLight()) {
           misWeightNEE = power_heuristic(lightPDF,bsdfPDF);
         }
         else {

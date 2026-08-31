@@ -18,6 +18,7 @@ struct Point : public Light
  private:
   vec3 m_position{0.f, 0.f, 0.f};
   float m_intensity{1.f};
+  float m_radius{0.f};
 };
 
 } // namespace visionaray

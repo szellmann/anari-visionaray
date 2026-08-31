@@ -1718,6 +1718,16 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
         hr.lightVisible = light.visible;
         hr.lightID = lightID;
       }
+    } else if (light.type == dco::Light::Point) {
+      if (light.asPoint.radius < FLT_MIN) continue; // delta light
+      basic_sphere<float> sph(light.asPoint.position,light.asPoint.radius);
+      auto hrl = intersect(ray, sph);
+      if (hrl.hit && hrl.t < hr.t) {
+        hr.hit = true;
+        hr.t = hrl.t;
+        hr.lightVisible = light.visible;
+        hr.lightID = lightID;
+      }
     }
   }
   return hr;

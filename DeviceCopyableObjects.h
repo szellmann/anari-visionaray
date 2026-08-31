@@ -8,8 +8,6 @@
 #include "visionaray/directional_light.h"
 #include "visionaray/matrix_camera.h"
 #include "visionaray/area_light.h"
-#include "visionaray/point_light.h"
-#include "visionaray/spot_light.h"
 #include "visionaray/thin_lens_camera.h"
 // ours
 #include "frame/common.h"
@@ -2190,9 +2188,135 @@ struct Light
   Type type;
   unsigned lightID;
   bool visible;
+
+  VSNRAY_FUNC
+  inline bool isAreaLight() const {
+    return type == Quad ||
+           type == HDRI ||
+           (type == Directional && asDirectional.angular_diameter() > 0.f) ||
+           (type == Point && asPoint.radius > 0.f);
+  }
   union {
     directional_light<float> asDirectional;
-    point_light<float> asPoint;
+    // point light:
+    struct {
+      float3 position;
+      float3 color;
+      float lightIntensity;
+      float radius;
+
+      template <typename RNG>
+      VSNRAY_FUNC
+      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      {
+        light_sample<float> result;
+        if (radius < FLT_MIN) {
+          result.dir = position-refPoint;
+          result.dist = length(result.dir);
+          result.normal = normalize(
+              float3(rng() * 2.f - 1.f, rng() * 2.f - 1.f, rng() * 2.f - 1.f));
+          result.area = 1.f;
+          result.delta_light = true;
+          result.pdf = 1.f;
+        } else {
+#if 1
+          float3 Nl = uniform_sample_sphere(rng(),rng()); // sampled unit dir / normal
+          float3 pos = Nl * radius + position;
+          result.dir = pos-refPoint;
+          result.dist = length(result.dir);
+          result.normal = normalize(-result.dir);
+          result.area = 4.f*constants::pi<float>()*radius*radius;
+          result.delta_light = false;
+
+          float VdotNl = dot(normalize(result.dir),Nl);
+
+          if (VdotNl <= 0.f) {
+            // sample point on the back side of the light
+            result.pdf = 0.f;
+          } else {
+            float areaPDF = 1.f / (4.f*constants::pi<float>()*radius*radius);
+
+            // in solid angle form:
+            result.pdf = areaPDF * (result.dist*result.dist/VdotNl);
+          }
+#else
+          // TODO: sample visible cone (there's some issues with NaN's and
+          // fireflies left that we need to investigate first):
+          float3 centerDir = position-refPoint;
+          float d2 = norm2(centerDir);
+          float r2 = radius*radius;
+
+          if (d2 <= r2) {
+            // case that ref-point is inside the sphere or on the boundary
+            float3 Nl = uniform_sample_sphere(rng(),rng()); // sampled unit dir / normal
+            float3 pos = Nl * radius + position;
+            result.dir = pos-refPoint;
+            result.dist = length(result.dir);
+            result.pdf = 1.f / (4.f*constants::pi<float>());
+          } else {
+            float3 u, v;
+            float3 w = normalize(centerDir);
+            make_orthonormal_basis(u, v, w);
+
+            float sintMax = r2/d2;
+            float costMax = sqrtf(fmaxf(0.f, 1.f-sintMax));
+
+            float u1 = rng(), u2 = rng();
+
+            // sample direction within subtended cone:
+            float cost = (1.f-u1) + u1*costMax;
+            float sint = sqrtf(fmaxf(0.f, 1.f-cost*cost));
+            float phi  = constants::two_pi<float>() * u2;
+
+            float3 localDir(cosf(phi) * sint, sinf(phi) * sint, cost);
+
+            result.dir = localDir.x*u + localDir.y*v + localDir.z*w;
+            result.dist = length(result.dir);
+            result.pdf = 1.f / (constants::two_pi<float>() * (1.f-cost));
+          }
+#endif
+          result.normal = normalize(-result.dir);
+          result.area = 4.f*constants::pi<float>()*radius*radius;
+          result.delta_light = false;
+        }
+        return result;
+      }
+
+      VSNRAY_FUNC
+      inline float3 intensity(const float3 &/*refPoint*/) const
+      {
+        // constant attenuation - ignore distance to refPoint!
+        if (radius < FLT_MIN)
+          return color * lightIntensity;
+
+        float disc_area = constants::pi<float>() * radius * radius;
+        return (color * lightIntensity) / disc_area;
+      }
+
+      VSNRAY_FUNC
+      inline float pdf(const Ray &ray, const float3 hitPos) const
+      {
+        if (radius < FLT_MIN)
+          return 0.f;
+
+        float ld = length(hitPos-ray.ori);
+
+        float3 Nl = (hitPos - position) / radius;
+        float VdotNl = dot(-ray.dir,Nl);
+
+        if (VdotNl)
+          return 0.f;
+
+        if (ld < radius) // inside the sphere
+          return 1.f/(4.f*constants::pi<float>());
+
+        float areaPDF = 1.f / (4.f*constants::pi<float>()*radius*radius);
+
+        // in solid angle form:
+        return areaPDF * (ld*ld/VdotNl);
+      }
+    } asPoint;
+    // spot light:
     struct {
       float3 position;
       float3 direction;
@@ -2228,6 +2352,7 @@ struct Light
         return color * lightIntensity * spot;
       }
     } asSpot;
+    // quad light:
     struct {
       area_light<float,dco::Quad> internal;
       Side side;
@@ -2368,6 +2493,7 @@ struct Light
       }
 
     } asQuad;
+    // HDRI:
     struct {
 #ifdef WITH_CUDA
       cuda_texture_ref<float4, 2> radiance;
@@ -2433,9 +2559,9 @@ inline Light xfmLight(const Light &light, const mat4 &xfm)
 {
   Light result = light;
   if (light.type == Light::Point) {
-    float4 pos(light.asPoint.position(),1.f);
+    float4 pos(light.asPoint.position,1.f);
     pos = xfm * pos;
-    result.asPoint.set_position(pos.xyz());
+    result.asPoint.position = pos.xyz();
   } else if (light.type == Light::Directional) {
     float3 dir = light.asDirectional.direction();
     mat3 LU = top_left(xfm);

@@ -21,17 +21,18 @@ void Point::commitParameters()
   m_intensity = std::clamp(getParam<float>("intensity", 1.f),
       0.f,
       std::numeric_limits<float>::max());
+  m_radius = std::clamp(getParam<float>("radius", 0.f),
+      0.f,
+      std::numeric_limits<float>::max());
 }
 
 void Point::finalize()
 {
   Light::finalize();
-  vlight.asPoint.set_position(m_position);
-  vlight.asPoint.set_cl(m_color);
-  vlight.asPoint.set_kl(m_intensity);
-  vlight.asPoint.set_constant_attenuation(1.f);
-  vlight.asPoint.set_linear_attenuation(0.f);
-  vlight.asPoint.set_quadratic_attenuation(0.f);
+  vlight.asPoint.position = m_position;
+  vlight.asPoint.color = m_color;
+  vlight.asPoint.lightIntensity = m_intensity;
+  vlight.asPoint.radius = m_radius;
 
   dispatch();
 }
