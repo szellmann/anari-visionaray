@@ -148,12 +148,6 @@ vec3 hsv2rgb(vec3 in)
     return out;
 }
 
-inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
-{
-  int which = int(rnd() * numLights); if (which == numLights) which = 0;
-  return which;
-}
-
 VSNRAY_FUNC
 inline uint32_t getSphereIndex(const dco::Array &indexArray, unsigned primID)
 {
@@ -1717,7 +1711,7 @@ inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned wo
 {
   HitRecLight hr;
   dco::World world = onDevice.worlds[worldID];
-  for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
+  for (unsigned lightID=0; lightID<world.numLights(); ++lightID) {
     const dco::Light &light = getLight(world.allLights, lightID, onDevice);
     if (bounceID == 0 && !light.visible) continue;
     if (light.type == dco::Light::HDRI) {

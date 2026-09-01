@@ -54,11 +54,13 @@ void VisionarayScene::commit()
       const dco::Instance &inst = deviceState()->dcos.instances[instID];
 
       if (!dco::validHandle(inst.groupID)) continue;
-      dco::Group group = m_state->dcos.groups[inst.groupID];
+      dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
       for (unsigned j=0; j<group.numLights; ++j)
         m_allLights.alloc({group.lights[j], inst.instID});
     }
+
+    initLightSampler();
   } else {
     // Build TLS
     if (!m_BLSs.empty()) {
@@ -74,10 +76,13 @@ void VisionarayScene::release()
 {
   m_instances.clear();
   m_geometries.clear();
+  m_materials.clear();
+  m_volumes.clear();
+  m_lights.clear();
+  m_objIds.clear();
   m_BLSs.clear();
   m_worldBLSs.clear();
-  m_materials.clear();
-  m_lights.clear();
+  m_allLights.clear();
 }
 
 void VisionarayScene::reset()
@@ -209,8 +214,11 @@ void VisionarayScene::dispatch()
     deviceState()->dcos.TLSs.update(m_worldID, m_worldTLS.deviceBVH2());
 
     dco::World world = dco::createWorld(); // TODO: move TLS and EPS in here!
-    world.numLights = m_allLights.size();
     world.allLights = m_allLights.devicePtr();
+
+    world.lightSampler.type = dco::LightSampler::Uniform;
+    world.lightSampler.asUniform.numLights = (unsigned)m_allLights.size();
+
     m_state->dcos.worlds.update(m_worldID, world);
   }
 
@@ -232,6 +240,11 @@ void VisionarayScene::dispatch()
     group.numObjIds = m_objIds.size();
     m_state->dcos.groups.update(m_groupID, group);
   }
+}
+
+void VisionarayScene::initLightSampler()
+{
+  // TODO: more advanced light samplers
 }
 
 VisionarayGlobalState *VisionarayScene::deviceState()

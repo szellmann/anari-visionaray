@@ -149,7 +149,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           lightPDF = light.asPoint.pdf(ray,hitPos);
         }
 
-        float misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights);
+        float misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
 
         shadedColor *= misWeightBSDF;
       }
@@ -251,14 +251,13 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    int lightID = -1;
-    float lWeight = 1.f;
+    auto pickedLight = world.lightSampler.sample(ss.random);
+    unsigned lightID = pickedLight.lightID;
+    float lWeight = pickedLight.pdf;
 
-    if (world.numLights > 0) {
-      lightID = uniformSampleOneLight(ss.random, world.numLights);
+    if (dco::validHandle(lightID)) {
       const dco::Light &light = getLight(world.allLights, lightID, onDevice);
       lightSample = sampleLight(light, hitPos, ss.random);
-      lWeight = safe_rcp(world.numLights);
     }
 
     if (rendererState.renderMode == RenderMode::Default) {
@@ -312,7 +311,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       }
 
       misWeightNEE = 0.f;
-      if (world.numLights > 0 && !prevBSDFSAmpleWasSpecular && lightPDF > 0.f) {
+      if (dco::validHandle(lightID) && !prevBSDFSAmpleWasSpecular && lightPDF > 0.f) {
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
         if (light.isAreaLight()) {
           misWeightNEE = power_heuristic(lightPDF,bsdfPDF);

@@ -4,10 +4,11 @@
 #pragma once
 
 // visionaray
+#include "visionaray/area_light.h"
 #include "visionaray/bvh.h"
 #include "visionaray/directional_light.h"
 #include "visionaray/matrix_camera.h"
-#include "visionaray/area_light.h"
+#include "visionaray/sampling.h"
 #include "visionaray/thin_lens_camera.h"
 // ours
 #include "frame/common.h"
@@ -2602,6 +2603,67 @@ struct LightRef
   unsigned instID;
 };
 
+// Light source samplers //
+
+// Simple uniform sampler
+struct UniformLightSampler
+{
+  struct Sample { unsigned lightID; float pdf; };
+
+  VSNRAY_FUNC
+  inline Sample sample(Random &rnd)
+  {
+    if (numLights == 0)
+      return { UINT_MAX, 0.f };
+
+    unsigned which = unsigned(rnd() * numLights); if (which == numLights) which = 0;
+    return { which, 1.f/numLights };
+  }
+
+  unsigned numLights;
+};
+
+
+// 'polymorphic', so we can switch at runtime (TODO: do we need that?)
+struct LightSampler
+{
+  enum Type { Uniform, Unknown, } type;
+  struct Sample { unsigned lightID; float pdf; };
+
+  VSNRAY_FUNC
+  inline unsigned numLights() const
+  {
+    if (type == Uniform) {
+      return asUniform.numLights;
+    }
+
+    return 0u;
+  }
+
+  VSNRAY_FUNC
+  inline Sample sample(Random &rnd)
+  {
+    if (type == Uniform) {
+      auto s = asUniform.sample(rnd);
+      return {s.lightID,s.pdf};
+    }
+
+    return { UINT_MAX, 0.f };
+  }
+
+  union {
+    UniformLightSampler asUniform;
+  };
+};
+
+inline LightSampler createLightSampler()
+{
+  LightSampler lightSampler;
+  lightSampler.type = LightSampler::Unknown;
+  return lightSampler;
+}
+
+
 // Group //
 
 struct Group
@@ -2636,17 +2698,22 @@ struct World
 {
   unsigned worldID;
 
-  unsigned numLights;
   // flat list of lights with instances associated
   LightRef *allLights;
+
+  LightSampler lightSampler;
+
+  VSNRAY_FUNC
+  inline unsigned numLights() const
+  { return lightSampler.numLights(); };
 };
 
 inline World createWorld()
 {
   World world;
   world.worldID = UINT_MAX;
-  world.numLights = 0;
   world.allLights = nullptr;
+  world.lightSampler = createLightSampler();
   return world;
 }
 
