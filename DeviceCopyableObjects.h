@@ -2196,6 +2196,22 @@ struct Light
            (type == Directional && asDirectional.angular_diameter() > 0.f) ||
            (type == Point && asPoint.radius > 0.f);
   }
+
+  VSNRAY_FUNC
+  inline float3 radiance(float3 pos, float3 dir) const {
+    if (type == Directional)
+      return asDirectional.intensity(pos);
+    else if (type == Point)
+      return asPoint.radiance(pos);
+    else if (type == Quad)
+      return asQuad.radiance(dir);
+    else if (type == Spot)
+      return asSpot.intensity(dir);
+    else if (type == HDRI)
+      return asHDRI.radiance(dir);
+
+    return {};
+  }
   union {
     directional_light<float> asDirectional;
     // point light:
@@ -2263,7 +2279,7 @@ struct Light
       }
 
       VSNRAY_FUNC
-      inline float3 intensity(const float3 &/*refPoint*/) const
+      inline float3 radiance(const float3 &/*refPoint*/) const
       {
         // constant attenuation - ignore distance to refPoint!
         if (radius < FLT_MIN)
@@ -2443,7 +2459,7 @@ struct Light
 
         ls.dir = p - refPoint;
         ls.dist = length(ls.dir);
-        ls.intensity = intensity(p);
+        ls.intensity = radiance(ls.dir);
         ls.normal = get_normal(hr, geometry());
         ls.area = area(geometry());
         ls.delta_light = false;
@@ -2453,8 +2469,8 @@ struct Light
       }
 
       VSNRAY_FUNC
-      inline float3 intensity(const float3 lightDir) const
-      { return internal.intensity(lightDir); }
+      inline float3 radiance(const float3 &lightDir) const
+      { return internal.intensity(lightDir) / area(geometry()); }
 
       VSNRAY_FUNC
       inline float pdf(const Ray &ray, const float3 hitPos) const
@@ -2472,11 +2488,11 @@ struct Light
     // HDRI:
     struct {
 #ifdef WITH_CUDA
-      cuda_texture_ref<float4, 2> radiance;
+      cuda_texture_ref<float4, 2> radianceTexture;
 #elif defined(WITH_HIP)
-      hip_texture_ref<float4, 2> radiance;
+      hip_texture_ref<float4, 2> radianceTexture;
 #else
-      texture_ref<float4, 2> radiance;
+      texture_ref<float4, 2> radianceTexture;
 #endif
       float scale;
       mat3 toWorld;
@@ -2503,9 +2519,9 @@ struct Light
       }
 
       VSNRAY_FUNC
-      inline float3 intensity(const float3 dir) const
+      inline float3 radiance(const float3 dir) const
       {
-        return tex2D(radiance, toUV(toLocal*dir)).xyz()*scale;
+        return tex2D(radianceTexture, toUV(toLocal*dir)).xyz()*scale;
       }
 
       VSNRAY_FUNC

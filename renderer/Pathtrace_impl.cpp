@@ -133,13 +133,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     if (hitRec.type == HitRec::Light) {
       const dco::Light &light = getLight(world.allLights, hitRec.objID, onDevice);
-      if (light.type == dco::Light::Quad) {
-        shadedColor = light.asQuad.intensity(hitPos);
-      } else if (light.type == dco::Light::HDRI) {
-        shadedColor = light.asHDRI.intensity(ray.dir);
-      } else if (light.type == dco::Light::Point) {
-        shadedColor = light.asPoint.intensity(ray.dir);
-      }
+      shadedColor = light.radiance(hitPos,ray.dir);
       misWeightNEE = 1.f;
 
       // Multiply by MIS weight:
@@ -267,7 +261,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     if (rendererState.renderMode == RenderMode::Default) {
       vec3 lightDir = normalize(lightSample.dir);
-      vec3 lightIntensity = lightSample.intensity * safe_rcp(lightSample.dist2);
+      vec3 lightIntensity = lightSample.Le * safe_rcp(lightSample.dist2);
       const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
       bool prevBSDFSAmpleWasSpecular = bsdfSample.isSpecular;

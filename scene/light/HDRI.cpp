@@ -141,11 +141,11 @@ void HDRI::finalize()
 #endif
 
 #ifdef WITH_CUDA
-  vlight.asHDRI.radiance = cuda_texture_ref<float4, 2>(m_radianceTexture);
+  vlight.asHDRI.radianceTexture = cuda_texture_ref<float4, 2>(m_radianceTexture);
 #elif defined(WITH_HIP)
-  vlight.asHDRI.radiance = hip_texture_ref<float4, 2>(m_radianceTexture);
+  vlight.asHDRI.radianceTexture = hip_texture_ref<float4, 2>(m_radianceTexture);
 #else
-  vlight.asHDRI.radiance = texture_ref<float4, 2>(m_radianceTexture);
+  vlight.asHDRI.radianceTexture = texture_ref<float4, 2>(m_radianceTexture);
 #endif
   vlight.asHDRI.scale = m_scale;
   vlight.asHDRI.toWorld.col1 = -normalize(m_up);

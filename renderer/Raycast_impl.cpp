@@ -82,7 +82,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
         LightSample ls = sampleLight(light, hitPos, ss.random);
 
         float3 lightDir = normalize(ls.dir);
-        float3 lightIntensity = ls.intensity * safe_rcp(ls.dist2);
+        float3 lightIntensity = ls.Le * safe_rcp(ls.dist2);
         const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
         float3 bsdf = evalMaterial(mat,
@@ -162,10 +162,10 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     auto &light = onDevice.lights[hrl.lightID];
     float4 intensity(0.f);
     if (light.type == dco::Light::HDRI) {
-      intensity = float4(light.asHDRI.intensity(ray.dir), 1.f);
+      intensity = float4(light.asHDRI.radiance(ray.dir), 1.f);
     } else if (light.type == dco::Light::Quad) {
       const float3 pos = ray.ori + hrl.t * ray.dir;
-      intensity = float4(light.asQuad.intensity(pos), 1.f);
+      intensity = float4(light.asQuad.radiance(pos), 1.f);
     }
     result.color = over(float4(surfaceColor, surfaceAlpha), intensity);
   } else {

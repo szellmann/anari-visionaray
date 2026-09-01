@@ -1551,7 +1551,7 @@ inline BSDFSample sampleMaterial(const dco::Material &mat,
 
 struct LightSample
 {
-  float3 intensity;
+  float3 Le;
   float3 dir;
   float3 f;
   float pdf;
@@ -1564,24 +1564,25 @@ inline LightSample sampleLight(const dco::Light &light, vec3f hitPos, Random &rn
 {
   LightSample result;
   light_sample<float> ls;
+  float3 Le{0.f};
   if (light.type == dco::Light::Point) {
     ls = light.asPoint.sample(hitPos, rnd);
-    ls.intensity = light.asPoint.intensity(hitPos);
+    Le = light.asPoint.radiance(hitPos);
   } else if (light.type == dco::Light::Quad) {
     ls = light.asQuad.sample(hitPos, rnd);
-    ls.intensity = light.asQuad.intensity(hitPos);
+    Le = light.asQuad.radiance(ls.dir);
   } else if (light.type == dco::Light::Directional) {
     ls = light.asDirectional.sample(hitPos, rnd);
-    ls.intensity = light.asDirectional.intensity(hitPos);
+    Le = light.asDirectional.intensity(hitPos);
   } else if (light.type == dco::Light::Spot) {
     ls = light.asSpot.sample(hitPos, rnd);
-    ls.intensity = light.asSpot.intensity(ls.dir);
+    Le = light.asSpot.intensity(ls.dir);
   } else if (light.type == dco::Light::HDRI) {
     ls = light.asHDRI.sample(hitPos, rnd);
-    ls.intensity = light.asHDRI.intensity(ls.dir);
+    Le = light.asHDRI.radiance(ls.dir);
   }
 
-  result.intensity = ls.intensity;
+  result.Le = Le;
   result.dir = ls.dir;
   result.pdf = ls.pdf;
   result.dist = ls.dist;
