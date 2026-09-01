@@ -2480,8 +2480,9 @@ struct Light
         float3 L = normalize(hitPos-ray.ori);
         float3 Nl = get_normal(hit_record<Ray,primitive<unsigned>>{},geometry());
         float LdotNl = fabsf(dot(-L,Nl));
-        float solidAngle = (LdotNl*A) / (ld*ld);
-        return 1.f/solidAngle;
+        //float solidAngle = (LdotNl*A) / (ld*ld);
+        //return 1.f/solidAngle;
+        return (ld*ld) / (LdotNl*A);
       }
 
     } asQuad;
