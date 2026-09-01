@@ -263,7 +263,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     if (rendererState.renderMode == RenderMode::Default) {
       vec3 lightDir = normalize(lightSample.dir);
-      vec3 lightIntensity = lightSample.Le * safe_rcp(lightSample.dist2);
+      vec3 lightIntensity = lightSample.Le;
       const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
       bool prevBSDFSAmpleWasSpecular = bsdfSample.isSpecular;

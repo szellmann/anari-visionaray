@@ -2280,11 +2280,12 @@ struct Light
       }
 
       VSNRAY_FUNC
-      inline float3 radiance(const float3 &/*refPoint*/) const
+      inline float3 radiance(const float3 &refPoint) const
       {
-        // constant attenuation - ignore distance to refPoint!
-        if (radius < FLT_MIN)
-          return color * lightIntensity;
+        if (radius < FLT_MIN) {
+          float ld2 = norm2(refPoint-position);
+          return (color * lightIntensity) / ld2;
+        }
 
         float disc_area = constants::pi<float>() * radius * radius;
         return (color * lightIntensity) / disc_area;
@@ -2464,12 +2465,7 @@ struct Light
         ls.normal = get_normal(hr, geometry());
         ls.area = area(geometry());
         ls.delta_light = false;
-
-        // compute pdf
-        float3 L = normalize(ls.dir);
-        float LdotNl = fabsf(dot(-L,ls.normal));
-        float ld2 = ls.dist*ls.dist;
-        ls.pdf = (1.f/squad.S) * (LdotNl / ld2);
+        ls.pdf = 1.f/squad.S;
 
         return ls;
       }
