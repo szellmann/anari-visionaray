@@ -1219,9 +1219,14 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                 + pSheen*pdfSheen;
   }
 
+  // outer layer: clear coat reflects Frc, transmits (1-Fc) into the
+  //              clear coat layer, _and_ transmits (1-Fc) back out
+  //              after internal reflection (hence, pow2(1-Fc) ! )
+  // sheen layer: reflects Es and passes (1-Es) through the base
+  // inner layer: receives remaining energy for standard diffuse/specular
   vec3 baseLayer = (diffuseBRDF + specularBRDF) * (1.f - Es);
   vec3 innerLayer = sheenBRDF + baseLayer;
-  return innerLayer * (1.f - Fc) + Frc;
+  return innerLayer * pow2(1.f - Fc) + Frc;
 }
 
 VSNRAY_FUNC
