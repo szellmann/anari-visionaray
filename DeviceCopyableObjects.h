@@ -2463,7 +2463,12 @@ struct Light
         ls.normal = get_normal(hr, geometry());
         ls.area = area(geometry());
         ls.delta_light = false;
-        ls.pdf = 1.f/squad.S;
+
+        // compute pdf
+        float3 L = normalize(ls.dir);
+        float LdotNl = fabsf(dot(-L,ls.normal));
+        float ld2 = ls.dist*ls.dist;
+        ls.pdf = (1.f/squad.S) * (LdotNl / ld2);
 
         return ls;
       }
