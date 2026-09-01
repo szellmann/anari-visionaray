@@ -1159,7 +1159,11 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
   float sin2h = fmaxf(1.f - cos2h, 0.0078125f);
   float Ds =
       ((2.f + sheenAlphaInv) * powf(sin2h, sheenAlphaInv * 0.5f) / (constants::two_pi<float>()));
-  vec3 sheenBRDF = sheenColor * Ds;
+  float Vs = 1.f / (4.f * (NdotL + NdotV - NdotL * NdotV));
+  vec3 sheenBRDF = sheenColor * Ds * Vs;
+  // estimate directional sheen albedo to attenuate the base layer
+  // (energy conservation)
+  float Es = rgb_to_luminance(sheenColor) * pow5(1-NdotV);
 
   if (pdf != nullptr) {
     const float fClear = clearcoat * 0.04f;
@@ -1215,7 +1219,9 @@ inline vec3 evalPhysicallyBasedMaterial(const dco::Material &mat,
                 + pSheen*pdfSheen;
   }
 
-  return ((diffuseBRDF + specularBRDF) * (1.f - Fc) + Frc) + sheenBRDF;
+  vec3 baseLayer = (diffuseBRDF + specularBRDF) * (1.f - Es);
+  vec3 innerLayer = sheenBRDF + baseLayer;
+  return innerLayer * (1.f - Fc) + Frc;
 }
 
 VSNRAY_FUNC
