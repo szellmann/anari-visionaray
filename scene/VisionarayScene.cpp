@@ -56,8 +56,8 @@ void VisionarayScene::commit()
       if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = m_state->dcos.groups[inst.groupID];
 
-      for (unsigned i=0; i<group.numLights; ++i)
-        m_allLights.alloc({group.lights[i], inst.instID});
+      for (unsigned j=0; j<group.numLights; ++j)
+        m_allLights.alloc({group.lights[j], inst.instID});
     }
   } else {
     // Build TLS
