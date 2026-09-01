@@ -2049,6 +2049,7 @@ struct Material
       struct {
         unsigned samplerID;
       } normal;
+      MaterialParamRGB emissive;
       AlphaMode alphaMode;
       float alphaCutoff;
       MaterialParamF clearcoat;

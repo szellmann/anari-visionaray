@@ -16,6 +16,7 @@ struct ShadeState
 {
   float3 baseColor{0.f};
   float3 shadedColor{0.f};
+  float3 emission{0.f};
   float3 hitPosOff{0.f};
   float3 sn{0.f};
   int aoSamples{0};
@@ -99,6 +100,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 {
   auto &baseColor = shadeState.baseColor;
   auto &shadedColor = shadeState.shadedColor;
+  auto &emission = shadeState.emission;
   auto &hitPosOff = shadeState.hitPosOff;
   auto &sn = shadeState.sn;
   auto &aoSamples = shadeState.aoSamples;
@@ -289,6 +291,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         shadedColor *= lightSample.f;
       }
       shadedColor *= lightIntensity * NdotL * safe_rcp(lightPDF);
+
+      emission = getEmission(mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID);
 
       if (hitRec.type == HitRec::Volume) {
         // isotropic phase function
@@ -526,6 +530,7 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
                 float3 ambient= (shadeState.baseColor * rendererState.ambientColor
                         * rendererState.ambientRadiance * shadeState.visibility.ao);
                 intensity += throughput * shadeState.misWeightNEE * direct;
+                intensity += throughput * shadeState.emission;
                 intensity += throughput * ambient;
                 throughput *= shadeState.bsdfSample.f
                     * shadeState.bsdfSample.cosT * safe_rcp(shadeState.bsdfSample.pdf);

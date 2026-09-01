@@ -698,6 +698,22 @@ inline float getOpacity(const dco::Material &mat,
 }
 
 VSNRAY_FUNC
+inline float3 getEmission(const dco::Material &mat,
+                          const DeviceObjectRegistry &onDevice,
+                          const dco::AttributeRec &attribs,
+                          float3 objPos,
+                          unsigned primID)
+{
+  if (mat.type == dco::Material::PhysicallyBased) {
+    vec3 emissive = getRGBA(
+        mat.asPhysicallyBased.emissive, onDevice, attribs, objPos, primID).xyz();
+    return emissive;
+  }
+
+  return float3(0.f);
+}
+
+VSNRAY_FUNC
 inline float getTransmission(const dco::Material &mat,
                              const DeviceObjectRegistry &onDevice,
                              const dco::AttributeRec &attribs,

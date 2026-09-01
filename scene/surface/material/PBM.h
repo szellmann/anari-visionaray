@@ -24,7 +24,7 @@ struct PBM : public Material
     float3 value{0.f, 0.f, 0.f};
     helium::IntrusivePtr<Sampler> sampler;
     dco::Attribute attribute;
-  } m_sheenColor;
+  } m_emissive, m_sheenColor;
 
   struct {
     float value{1.f};

@@ -58,6 +58,11 @@ void PBM::commitParameters()
 
   m_normal.sampler = getParamObject<Sampler>("normal");
 
+  m_emissive.value = float3(0.f, 0.f, 0.f);
+  getParam("emissive", ANARI_FLOAT32_VEC3, &m_emissive.value);
+  m_emissive.sampler = getParamObject<Sampler>("emissive");
+  m_emissive.attribute = toAttribute(getParamString("emissive", "none"));
+
   m_clearcoat.value = 0.f;
   getParam("clearcoat", ANARI_FLOAT32, &m_clearcoat.value);
   m_clearcoat.sampler = getParamObject<Sampler>("clearcoat");
@@ -167,6 +172,15 @@ void PBM::finalize()
         = m_normal.sampler->visionaraySampler().samplerID;
   } else {
     vmat.asPhysicallyBased.normal.samplerID = UINT_MAX;
+  }
+
+  vmat.asPhysicallyBased.emissive.rgb = m_emissive.value;
+  vmat.asPhysicallyBased.emissive.attribute = m_emissive.attribute;
+  if (m_emissive.sampler && m_emissive.sampler->isValid()) {
+    vmat.asPhysicallyBased.emissive.samplerID
+        = m_emissive.sampler->visionaraySampler().samplerID;
+  } else {
+    vmat.asPhysicallyBased.emissive.samplerID = UINT_MAX;
   }
 
   vmat.asPhysicallyBased.clearcoat.f = m_clearcoat.value;
