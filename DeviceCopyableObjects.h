@@ -2219,29 +2219,6 @@ struct Light
           result.delta_light = true;
           result.pdf = 1.f;
         } else {
-#if 1
-          float3 Nl = uniform_sample_sphere(rng(),rng()); // sampled unit dir / normal
-          float3 pos = Nl * radius + position;
-          result.dir = pos-refPoint;
-          result.dist = length(result.dir);
-          result.normal = normalize(-result.dir);
-          result.area = 4.f*constants::pi<float>()*radius*radius;
-          result.delta_light = false;
-
-          float VdotNl = dot(normalize(result.dir),Nl);
-
-          if (VdotNl <= 0.f) {
-            // sample point on the back side of the light
-            result.pdf = 0.f;
-          } else {
-            float areaPDF = 1.f / (4.f*constants::pi<float>()*radius*radius);
-
-            // in solid angle form:
-            result.pdf = areaPDF * (result.dist*result.dist/VdotNl);
-          }
-#else
-          // TODO: sample visible cone (there's some issues with NaN's and
-          // fireflies left that we need to investigate first):
           float3 centerDir = position-refPoint;
           float d2 = norm2(centerDir);
           float r2 = radius*radius;
@@ -2258,23 +2235,26 @@ struct Light
             float3 w = normalize(centerDir);
             make_orthonormal_basis(u, v, w);
 
-            float sintMax = r2/d2;
-            float costMax = sqrtf(fmaxf(0.f, 1.f-sintMax));
+            float sintSqMax = fminf(r2/d2,1.f);
+            float costMax = sqrtf(fmaxf(0.f, 1.f-sintSqMax));
+            float oneMinusCostMax = sintSqMax / (1.f+costMax);
 
             float u1 = rng(), u2 = rng();
 
             // sample direction within subtended cone:
-            float cost = (1.f-u1) + u1*costMax;
-            float sint = sqrtf(fmaxf(0.f, 1.f-cost*cost));
+            float oneMinusCost = u1 * oneMinusCostMax;
+            float cost = 1.f-oneMinusCost;
+            float sint = sqrtf(fmaxf(0.f, oneMinusCost * (1.f+cost)));
             float phi  = constants::two_pi<float>() * u2;
 
             float3 localDir(cosf(phi) * sint, sinf(phi) * sint, cost);
 
             result.dir = localDir.x*u + localDir.y*v + localDir.z*w;
             result.dist = length(result.dir);
-            result.pdf = 1.f / (constants::two_pi<float>() * (1.f-cost));
+            float solidAngle = constants::two_pi<float>() * oneMinusCostMax;
+            result.pdf = (solidAngle > 1e-12f) ? (1.f / solidAngle) : 0.f;
           }
-#endif
+
           result.normal = normalize(-result.dir);
           result.area = 4.f*constants::pi<float>()*radius*radius;
           result.delta_light = false;
@@ -2299,21 +2279,17 @@ struct Light
         if (radius < FLT_MIN)
           return 0.f;
 
-        float ld = length(hitPos-ray.ori);
+        float d2 = norm2(ray.ori - hitPos);
+        float r2 = radius * radius;
 
-        float3 Nl = (hitPos - position) / radius;
-        float VdotNl = dot(-ray.dir,Nl);
+        if (d2 <= r2) return 1.f / (4.f * constants::pi<float>());
 
-        if (VdotNl)
-          return 0.f;
+        float sintSqMax = fminf(r2/d2, 1.f);
+        float costMax = sqrtf(fmaxf(0.f, 1.f - sintSqMax));
 
-        if (ld < radius) // inside the sphere
-          return 1.f/(4.f*constants::pi<float>());
-
-        float areaPDF = 1.f / (4.f*constants::pi<float>()*radius*radius);
-
-        // in solid angle form:
-        return areaPDF * (ld*ld/VdotNl);
+        float oneMinusCostMax = sintSqMax / (1.f + costMax);
+        float solidAngle = constants::two_pi<float>() * oneMinusCostMax;
+        return (solidAngle > 1e-12f) ? (1.f / solidAngle) : 0.f;
       }
     } asPoint;
     // spot light:
