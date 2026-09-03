@@ -95,6 +95,8 @@ void PBM::finalize()
 {
   vmat.type = dco::Material::PhysicallyBased;
 
+  auto emissive = vmat.asPhysicallyBased.emissive;
+
   vmat.asPhysicallyBased.baseColor.rgb = m_baseColor.value.xyz();
   vmat.asPhysicallyBased.baseColor.attribute = m_baseColor.attribute;
   if (m_baseColor.sampler && m_baseColor.sampler->isValid()) {
@@ -223,6 +225,13 @@ void PBM::finalize()
 
   vmat.asPhysicallyBased.alphaMode = m_alphaMode;
   vmat.asPhysicallyBased.alphaCutoff = m_alphaCutoff;
+
+  if (emissive.rgb != vmat.asPhysicallyBased.emissive.rgb ||
+      emissive.attribute != vmat.asPhysicallyBased.emissive.attribute ||
+      emissive.samplerID != vmat.asPhysicallyBased.emissive.samplerID) {
+    // Trigger a BLAS rebuild (instances):
+    deviceState()->objectUpdates.lastBLSReconstructSceneRequest = helium::newTimeStamp();
+  }
 
   dispatch();
 }

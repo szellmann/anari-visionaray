@@ -20,6 +20,11 @@ Triangle::Triangle(VisionarayGlobalState *s)
   vgeom.type = dco::Geometry::Triangle;
 }
 
+float Triangle::surfaceArea() const
+{
+  return m_surfaceArea;
+}
+
 void Triangle::commitParameters()
 {
   Geometry::commitParameters();
@@ -54,6 +59,7 @@ void Triangle::finalize()
   }
 
   m_triangles.clear();
+  m_surfaceArea = 0.f;
 
   unsigned nextID = 0;
   auto addTriangle = [&](dco::Triangle &tri) {
@@ -64,6 +70,7 @@ void Triangle::finalize()
     if (true) {
       tri.prim_id = nextID++;
       m_triangles.push_back(tri);
+      m_surfaceArea += area(tri);
     }
   };
 

@@ -77,12 +77,11 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
       float3 viewDir = -ray.dir;
       auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
       for (unsigned lightID=0; lightID<world.numLights(); ++lightID) {
-        const dco::Light &light = getLight(world.allLights, lightID, onDevice);
+        const dco::LightRef &lightRef = world.allLights[lightID];
 
-        LightSample ls = sampleLight(light, hitPos, ss.random);
+        LightSample ls = sampleLight(onDevice, lightRef, hitPos, ss.random);
 
         float3 lightDir = normalize(ls.dir);
-        float3 lightIntensity = ls.Le * safe_rcp(ls.dist2);
         const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
         float3 bsdf = evalMaterial(mat,
@@ -94,7 +93,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    tng, btng,
                                    normalize(viewDir),
                                    lightDir);
-        shadedColor += bsdf * lightIntensity * NdotL * safe_rcp(ls.pdf);
+        shadedColor += bsdf * ls.Le * NdotL * safe_rcp(ls.pdf);
       }
 
       shadedColor +=

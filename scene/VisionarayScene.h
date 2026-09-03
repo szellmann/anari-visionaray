@@ -30,6 +30,10 @@ struct VisionarayScene
   // flat list of lights (only used if type is World!)
   DeviceObjectArray<dco::LightRef> m_allLights;
 
+  // managed lights (geometry lights the scene created itself
+  // and needs to make sure are properly freed when no longer needed)
+  std::vector<dco::Light> m_managedLights;
+
   // Accels //
   DeviceBVH<dco::BLS> m_TLS;
   DeviceBVH<dco::Instance> m_worldTLS;

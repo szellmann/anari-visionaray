@@ -17,13 +17,14 @@ struct ShadeState
   float3 baseColor{0.f};
   float3 shadedColor{0.f};
   float3 emission{0.f};
-  float3 hitPosOff{0.f};
-  float3 sn{0.f};
+  float3 hitPos{0.f};
+  float3 gn{0.f}, sn{0.f}, ln{0.f};
   int aoSamples{0};
   float aoWeights{0.f};
   float aoCount{0.f};
   BSDFSample bsdfSample{};
   LightSample lightSample{};
+  float misWeightBSDF{1.f};
   float misWeightNEE{0.f};
   struct {
     RayType rayType{None};
@@ -42,20 +43,31 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
                                        const RendererState &rendererState,
                                        const dco::World &world)
 {
-  auto &hitPosOff = shadeState.hitPosOff;
+  auto &hitPos = shadeState.hitPos;
+  auto &gn = shadeState.gn;
   auto &sn = shadeState.sn;
+  auto &ln = shadeState.ln;
   auto &bsdfSample = shadeState.bsdfSample;
   auto &lightSample = shadeState.lightSample;
   auto &next = shadeState.next;
 
   next.rayType = Type;
+  next.ray.ori = offsetRayOrigin(hitPos, gn);
 
   if constexpr (Type == Shadow) {
+    float3 Nl = ln;
+    // orient light normal towards shadow ray origin
+    if (dot(Nl,-lightSample.dir) < 0.f) Nl = -Nl;
+
+    float3 lightPos = hitPos+lightSample.dir;
+    float3 offsetLightPos = offsetRayOrigin(lightPos, Nl);
+    float3 lightDir = offsetLightPos-next.ray.ori;
+    float d = length(lightDir);
+
     Ray &shadowRay = next.ray;
-    shadowRay.ori = hitPosOff;
-    shadowRay.dir = normalize(lightSample.dir);
+    shadowRay.dir = lightDir / d;
     shadowRay.tmin = 0.f;
-    shadowRay.tmax = lightSample.dist;//-1e-4f; // TODO: bias sample point
+    shadowRay.tmax = d;
     shadowRay.time = ray.time;
     shadowRay.dbg = ray.dbg;
     next.rayType = Shadow;
@@ -67,7 +79,6 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
     vec3 dir = normalize(sp.x*u + sp.y*v + sp.z*w);
 
     Ray &aoRay = next.ray;
-    aoRay.ori = hitPosOff;
     aoRay.dir = dir;
     aoRay.tmin = 0.f;
     aoRay.tmax = rendererState.occlusionDistance;
@@ -77,10 +88,6 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
   }
   else if constexpr (Type == Radiance) {
     Ray &bsdfRay = next.ray;
-    if (dot(bsdfSample.dir,sn) > 0.f)
-      bsdfRay.ori = hitPosOff;
-    else
-      bsdfRay.ori = hitPosOff;
     bsdfRay.dir = normalize(bsdfSample.dir);
     bsdfRay.tmin = 0.f;
     bsdfRay.tmax = 1e31f;
@@ -101,13 +108,16 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
   auto &baseColor = shadeState.baseColor;
   auto &shadedColor = shadeState.shadedColor;
   auto &emission = shadeState.emission;
-  auto &hitPosOff = shadeState.hitPosOff;
+  auto &hitPos = shadeState.hitPos;
+  auto &gn = shadeState.gn;
   auto &sn = shadeState.sn;
+  auto &ln = shadeState.ln;
   auto &aoSamples = shadeState.aoSamples;
   auto &aoWeights = shadeState.aoWeights;
   auto &aoCount = shadeState.aoCount;
   auto &bsdfSample = shadeState.bsdfSample;
   auto &lightSample = shadeState.lightSample;
+  auto &misWeightBSDF = shadeState.misWeightBSDF ;
   auto &misWeightNEE = shadeState.misWeightNEE ;
   auto &next = shadeState.next;
   auto &visibility = shadeState.visibility;
@@ -119,6 +129,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
   if (rayType == Radiance) {
 
     baseColor = float3{0.f};
+    shadedColor = float3{0.f};
+    emission = float3{0.f};
     visibility.light = 1.f;
     visibility.ao = 1.f;
     aoSamples = 0;
@@ -126,16 +138,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     aoCount = 0.f;
 
     if (!hitRec.hit) {
-      shadedColor = float3{0.f};
       next.rayType = Miss;
       return;
     }
 
-    float3 hitPos = ray.ori + hitRec.t * ray.dir;
+    hitPos = ray.ori + hitRec.t * ray.dir;
 
     if (hitRec.type == HitRec::Light) {
       const dco::Light &light = getLight(world.allLights, hitRec.objID, onDevice);
-      shadedColor = light.radiance(hitPos,ray.dir);
+      emission = light.radiance(hitPos,ray.dir);
       misWeightNEE = 1.f;
 
       // Multiply by MIS weight:
@@ -149,9 +160,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           lightPDF = light.asPoint.pdf(ray,hitPos);
         }
 
-        float misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
-
-        shadedColor *= misWeightBSDF;
+        misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
       }
 
       next.rayType = Miss;
@@ -164,7 +173,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     dco::AttributeRec attribs = {};
 
     float4 color{1.f};
-    float3 gn{0.f}, tng{0.f}, btng{0.f};
+    float3 tng{0.f}, btng{0.f};
     float3 viewDir = -normalize(ray.dir);
 
     if (hitRec.type == HitRec::Volume) {
@@ -190,7 +199,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       gn = nxfm * gn;
       sn = nxfm * sn;
 
-      sn = faceforward(sn, viewDir, gn);
+      if (dot(gn,viewDir) < 0.f) gn = -gn;
+      if (dot(sn,viewDir) < 0.f) sn = -sn;
 
       color.xyz() = hitRec.asVolume.albedo;
     } else {
@@ -206,7 +216,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       gn = normalize(nxfm * gn);
       sn = normalize(nxfm * sn);
 
-      sn = faceforward(sn, viewDir, gn);
+      if (dot(gn,viewDir) < 0.f) gn = -gn;
+      if (dot(sn,viewDir) < 0.f) sn = -sn;
 
       attribs = getAttributes(geom,
                               inst,
@@ -226,6 +237,28 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         sn = getPerturbedNormal(
             mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID, tng, btng, sn);
       }
+
+      emission = getEmission(mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID);
+      if (bounceID > 0 && rgb_to_luminance(emission) > FLT_MIN) {
+        auto triangle = geom.as<dco::Triangle>(hitRec.primID);
+        const mat4 &xfm = inst.xfms[0];
+        float3 v1 = (xfm * float4(triangle.v1, 1.f)).xyz();
+        float3 v2 = (xfm * float4(triangle.v1 + triangle.e1, 1.f)).xyz();
+        float3 v3 = (xfm * float4(triangle.v1 + triangle.e2, 1.f)).xyz();
+        float A_prim = area(dco::Triangle(v1, v2 - v1, v3 - v1));
+
+        float ld = length(hitPos-ray.ori);
+        float3 L = normalize(hitPos-ray.ori);
+        float LdotNl = dot(-L,gn);
+        if (LdotNl < 0.f) {
+          L = -L;
+          LdotNl = -LdotNl;
+        }
+        float areaPDF = 1.f / (geom.primitives.len * A_prim);
+        //float lightPDF = LdotNl > 1e-12f ? areaPDF * (ld * ld) / LdotNl : 0.f;
+        float lightPDF = areaPDF * (ld * ld) / LdotNl;
+        misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
+      }
     }
 
     if (bounceID==0) {
@@ -237,11 +270,6 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       result.Ns = sn;
       result.albedo = color.xyz();
     }
-
-    // Compute new origin for future rays spawned from this hit pos,
-    // biased by eps:
-    float eps = epsilonFrom(hitPos, ray.dir, hitRec.t);
-    hitPosOff = hitPos + sn * eps;
 
     // Compute motion vector; assume for now the hit was diffuse!
     recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
@@ -256,13 +284,13 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     float lWeight = pickedLight.pdf;
 
     if (dco::validHandle(lightID)) {
-      const dco::Light &light = getLight(world.allLights, lightID, onDevice);
-      lightSample = sampleLight(light, hitPos, ss.random);
+      const dco::LightRef &lightRef = world.allLights[lightID];
+      lightSample = sampleLight(onDevice, lightRef, hitPos, ss.random, ray.debug());
+      ln = lightSample.Nl;
     }
 
     if (rendererState.renderMode == RenderMode::Default) {
       vec3 lightDir = normalize(lightSample.dir);
-      vec3 lightIntensity = lightSample.Le;
       const float NdotL = fmaxf(0.f,dot(sn,lightDir));
 
       bool prevBSDFSAmpleWasSpecular = bsdfSample.isSpecular;
@@ -289,9 +317,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                      &bsdfPDF);
         shadedColor *= lightSample.f;
       }
-      shadedColor *= lightIntensity * NdotL * safe_rcp(lightPDF);
-
-      emission = getEmission(mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID);
+      shadedColor *= lightSample.Le * NdotL * safe_rcp(lightPDF);
 
       if (hitRec.type == HitRec::Volume) {
         // isotropic phase function
@@ -314,7 +340,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       if (dco::validHandle(lightID) && !prevBSDFSAmpleWasSpecular && lightPDF > 0.f) {
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
         if (light.isAreaLight()) {
-          misWeightNEE = power_heuristic(lightPDF,bsdfPDF);
+          misWeightNEE = power_heuristic(lightPDF,bsdfPDF/world.numLights());
         }
         else {
           // sampled a delta light source:
@@ -529,7 +555,7 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
                 float3 ambient= (shadeState.baseColor * rendererState.ambientColor
                         * rendererState.ambientRadiance * shadeState.visibility.ao);
                 intensity += throughput * shadeState.misWeightNEE * direct;
-                intensity += throughput * shadeState.emission;
+                intensity += throughput * shadeState.misWeightBSDF * shadeState.emission;
                 intensity += throughput * ambient;
                 throughput *= shadeState.bsdfSample.f
                     * shadeState.bsdfSample.cosT * safe_rcp(shadeState.bsdfSample.pdf);

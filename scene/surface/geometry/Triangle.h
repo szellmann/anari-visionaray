@@ -13,12 +13,15 @@ struct Triangle : public Geometry
 {
   Triangle(VisionarayGlobalState *s);
 
+  float surfaceArea() const override;
+
   void commitParameters() override;
   void finalize() override;
 
  private:
 
   DeviceBVH<dco::Triangle> m_BVH;
+  float m_surfaceArea{0.f};
 
   helium::ChangeObserverPtr<Array1D> m_index;
   helium::ChangeObserverPtr<Array1D> m_vertexPosition;

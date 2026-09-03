@@ -357,6 +357,7 @@ struct GridAccel
   }
 };
 
+VSNRAY_FUNC
 inline GridAccel createGridAccel()
 {
   GridAccel accel;
@@ -450,6 +451,7 @@ struct SpatialField
   };
 };
 
+VSNRAY_FUNC
 inline SpatialField createSpatialField()
 {
   SpatialField field;
@@ -634,6 +636,7 @@ struct Volume
   aabb bounds;
 };
 
+VSNRAY_FUNC
 inline Volume createVolume()
 {
   Volume vol;
@@ -1625,6 +1628,7 @@ struct Instance
   box1 time;
 };
 
+VSNRAY_FUNC
 inline Instance createInstance()
 {
   Instance inst;
@@ -1795,6 +1799,7 @@ struct Surface
   unsigned matID;
 };
 
+VSNRAY_FUNC
 inline Surface createSurface()
 {
   Surface surf;
@@ -1827,6 +1832,7 @@ struct Geometry
   };
   Type type;
   unsigned geomID;
+  float surfaceArea;
 
   template <typename Primitive>
   VSNRAY_FUNC
@@ -1853,12 +1859,14 @@ struct Geometry
   Array index;
 };
 
+VSNRAY_FUNC
 inline Geometry createGeometry()
 {
   Geometry geom;
   memset(&geom,0,sizeof(geom));
   geom.type = Geometry::Unknown;
   geom.geomID = UINT_MAX;
+  geom.surfaceArea = 0.f;
   return geom;
 }
 
@@ -1952,6 +1960,7 @@ struct Sampler
   }
 };
 
+VSNRAY_FUNC
 inline Sampler createSampler()
 {
   Sampler samp;
@@ -2060,6 +2069,13 @@ struct Material
       MaterialParamF sheenRoughness;
     } asPhysicallyBased;
   };
+
+  VSNRAY_FUNC
+  inline bool isEmissive() const {
+    return type == PhysicallyBased && (
+      rgb_to_luminance(asPhysicallyBased.emissive.rgb) > FLT_MIN ||
+      validHandle(asPhysicallyBased.emissive.samplerID));
+  }
 };
 
 VSNRAY_FUNC
@@ -2184,7 +2200,7 @@ inline vec3 sample_surface(const Quad &q, const vec3 reference_point, RNG &rng)
 
 struct Light
 {
-  enum Type { Directional, Point, Quad, Spot, HDRI, Unknown, };
+  enum Type { Directional, Point, Quad, Spot, HDRI, Geometry, Unknown, };
   enum Side { Front, Back, Both, };
 
   Type type;
@@ -2195,6 +2211,7 @@ struct Light
   inline bool isAreaLight() const {
     return type == Quad ||
            type == HDRI ||
+           type == Geometry ||
            (type == Directional && asDirectional.angular_diameter() > 0.f) ||
            (type == Point && asPoint.radius > 0.f);
   }
@@ -2211,9 +2228,15 @@ struct Light
       return asSpot.intensity(dir);
     else if (type == HDRI)
       return asHDRI.radiance(dir);
+    // else if (type == Geometry)
+    //   return asGeometry.radiance(dir);
+    // ^^^ geometry lights have no radiance() function ^^^
+    // instead, we hit the geometry associated with them w/
+    // our ray and then directly evaluate the emissive component
 
     return {};
   }
+
   union {
     directional_light<float> asDirectional;
     // point light:
@@ -2482,7 +2505,7 @@ struct Light
         float ld = length(hitPos-ray.ori);
         float3 L = normalize(hitPos-ray.ori);
         float3 Nl = get_normal(hit_record<Ray,primitive<unsigned>>{},geometry());
-        float LdotNl = fabsf(dot(-L,Nl));
+        float LdotNl = fmaxf(1e-10f,fabsf(dot(-L,Nl)));
         //float solidAngle = (LdotNl*A) / (ld*ld);
         //return 1.f/solidAngle;
         return (ld*ld) / (LdotNl*A);
@@ -2517,6 +2540,7 @@ struct Light
         float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
         light_sample<float> ls;
         ls.dir = toWorld*L;
+        ls.normal = -ls.dir;
         ls.dist = FLT_MAX;
         ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
         return ls;
@@ -2547,6 +2571,12 @@ struct Light
       }
 
     } asHDRI;
+    struct {
+      unsigned geomID;
+      unsigned matID;
+      float surfaceArea;
+
+    } asGeometry;
   };
 };
 
@@ -2586,6 +2616,7 @@ inline Light xfmLight(const Light &light, const mat4 &xfm)
   return result;
 }
 
+VSNRAY_FUNC
 inline Light createLight()
 {
   Light light;
@@ -2656,6 +2687,7 @@ struct LightSampler
   };
 };
 
+VSNRAY_FUNC
 inline LightSampler createLightSampler()
 {
   LightSampler lightSampler;
@@ -2684,6 +2716,7 @@ struct Group
   unsigned numObjIds;
 };
 
+VSNRAY_FUNC
 inline Group createGroup()
 {
   Group group;
@@ -2708,6 +2741,7 @@ struct World
   { return lightSampler.numLights(); };
 };
 
+VSNRAY_FUNC
 inline World createWorld()
 {
   World world;
@@ -2825,6 +2859,7 @@ struct Camera
   }
 };
 
+VSNRAY_FUNC
 inline Camera createCamera()
 {
   Camera cam;
@@ -3006,6 +3041,7 @@ struct Frame
   }
 };
 
+VSNRAY_FUNC
 inline Frame createFrame()
 {
   Frame frame;

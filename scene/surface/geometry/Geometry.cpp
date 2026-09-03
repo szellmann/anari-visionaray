@@ -61,6 +61,11 @@ dco::BLS Geometry::visionarayBLS() const
   return vBLS;
 }
 
+float Geometry::surfaceArea() const
+{
+  return 0.f;
+}
+
 void Geometry::commitParameters()
 {
   float4 attrV(0.f, 0.f, 0.f, 1.f);
@@ -116,6 +121,7 @@ void Geometry::markFinalized()
 
 void Geometry::dispatch()
 {
+  vgeom.surfaceArea = surfaceArea();  
   deviceState()->dcos.geometries.update(vgeom.geomID, vgeom);
 }
 

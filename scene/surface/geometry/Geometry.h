@@ -24,6 +24,8 @@ struct Geometry : public Object
   dco::Geometry visionarayGeometry() const;
   dco::BLS visionarayBLS() const;
 
+  virtual float surfaceArea() const;
+
   void commitParameters() override;
   void finalize() override;
   void markFinalized() override;

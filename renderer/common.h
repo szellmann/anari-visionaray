@@ -17,6 +17,28 @@ inline float epsilonFrom(const vec3 &P, const vec3 &dir, float t)
   return max_element(vec4(abs(P), max_element(abs(dir)) * t)) * ulpEpsilon;
 }
 
+// Fast, robust origin offset (Ray Tracing Gems Ch. 6 pattern)
+VSNRAY_FUNC inline float3 offsetRayOrigin(const float3 &p, const float3 &n) {
+  constexpr float originError = 1.0f / 32.0f;
+  constexpr float floatScale  = 1.0f / 65536.0f;
+  constexpr float intScale    = 256.0f;
+
+  // Scale offset vector based on spatial magnitude
+  int3 of_i(int(intScale * n.x), int(intScale * n.y), int(intScale * n.z));
+
+  float3 p_i(
+    reinterpret_as_float(reinterpret_as_int(p.x) + ((p.x < 0) ? -of_i.x : of_i.x)),
+    reinterpret_as_float(reinterpret_as_int(p.y) + ((p.y < 0) ? -of_i.y : of_i.y)),
+    reinterpret_as_float(reinterpret_as_int(p.z) + ((p.z < 0) ? -of_i.z : of_i.z))
+  );
+
+  return float3(
+    fabsf(p.x) < originError ? p.x + floatScale * n.x : p_i.x,
+    fabsf(p.y) < originError ? p.y + floatScale * n.y : p_i.y,
+    fabsf(p.z) < originError ? p.z + floatScale * n.z : p_i.z
+  );
+}
+
 struct ScreenSample
 {
   int x, y;
@@ -1574,46 +1596,133 @@ struct LightSample
 {
   float3 Le;
   float3 dir;
+  float3 Nl;
   float3 f;
   float pdf;
   float dist;
-  float dist2;
 };
 
 VSNRAY_FUNC
-inline LightSample sampleLight(const dco::Light &light, vec3f hitPos, Random &rnd)
+inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
+                               const dco::LightRef &lightRef,
+                               vec3f hitPos, Random &rnd, bool dbg=false)
 {
+  dco::Light light = onDevice.lights[lightRef.lightID];
+
+  mat4 xfm = mat4::identity();
+  if (dco::validHandle(lightRef.instID))
+    xfm = onDevice.instances[lightRef.instID].xfms[0];
+
   LightSample result;
   light_sample<float> ls;
   float3 Le{0.f};
   if (light.type == dco::Light::Point) {
+    float4 pos(light.asPoint.position,1.f);
+    pos = xfm * pos;
+    light.asPoint.position = pos.xyz();
+
     ls = light.asPoint.sample(hitPos, rnd);
     Le = light.asPoint.radiance(hitPos);
   } else if (light.type == dco::Light::Quad) {
+    float4 v1(light.asQuad.geometry().v1, 1.f);
+    float3 e1 = light.asQuad.geometry().e1;
+    float3 e2 = light.asQuad.geometry().e2;
+    v1 = xfm * v1;
+    mat3 LU = top_left(xfm);
+    e1 = LU * e1;
+    e2 = LU * e2;
+    light.asQuad.geometry().v1 = v1.xyz();
+    light.asQuad.geometry().e1 = e1;
+    light.asQuad.geometry().e2 = e2;
+
     ls = light.asQuad.sample(hitPos, rnd);
     Le = light.asQuad.radiance(ls.dir);
   } else if (light.type == dco::Light::Directional) {
+    float3 dir = light.asDirectional.direction();
+    mat3 LU = top_left(xfm);
+    light.asDirectional.set_direction(LU * dir);
+
     ls = light.asDirectional.sample(hitPos, rnd);
     Le = light.asDirectional.intensity(hitPos);
   } else if (light.type == dco::Light::Spot) {
+    float4 pos(light.asSpot.position, 1.f);
+    float3 dir = light.asSpot.direction;
+    pos = xfm * pos;
+    mat3 LU = top_left(xfm);
+    light.asSpot.position = pos.xyz();
+    light.asSpot.direction = LU * dir;
+
     ls = light.asSpot.sample(hitPos, rnd);
     Le = light.asSpot.intensity(ls.dir);
   } else if (light.type == dco::Light::HDRI) {
     ls = light.asHDRI.sample(hitPos, rnd);
     Le = light.asHDRI.radiance(ls.dir);
+    // TODO!
+  } else if (light.type == dco::Light::Geometry) {
+    // implement this here b/c of circular dependency on struct
+    // DeviceObjectRegistry, and on getEmission():
+    const dco::Geometry &geom = onDevice.geometries[light.asGeometry.geomID];
+    const dco::Material &mat = onDevice.materials[light.asGeometry.matID];
+
+    dco::LightSampler lightSampler;
+    lightSampler.type = dco::LightSampler::Uniform;
+    lightSampler.asUniform.numLights = geom.primitives.len;
+    auto pickedPrimitive = lightSampler.sample(rnd);
+
+    unsigned primID = pickedPrimitive.lightID;
+
+    float3 samplePos, Ng;
+    float2 uv{0.f};
+    float A_prim;
+
+    if (geom.type == dco::Geometry::Triangle) {
+      auto triangle = geom.as<dco::Triangle>(primID);
+      float3 v1 = (xfm * float4(triangle.v1,1.f)).xyz();
+      float3 v2 = (xfm * float4(triangle.v1+triangle.e1,1.f)).xyz();
+      float3 v3 = (xfm * float4(triangle.v1+triangle.e2,1.f)).xyz();
+      float3 e1 = v2-v1;
+      float3 e2 = v3-v1;
+
+      float u1 = rnd(), u2 = rnd();
+      uv.x = 1.f - sqrtf(u1);
+      uv.y = u2 * sqrtf(u1);
+      samplePos = (1.f - uv.x - uv.y) * v1 + uv.x * v2 + uv.y * v3;
+      Ng = normalize(cross(e1,e2));
+      A_prim = area(dco::Triangle(v1,e1,e2));
+    }
+    else {
+      result.dir = float3(0,0,0);
+      result.Nl = float3(0,0,0);
+      result.pdf = 0.f;
+      result.dist = 0.f;
+      return result;
+    }
+
+    ls.dir = samplePos - hitPos;
+    ls.normal = Ng;
+    ls.dist = length(ls.dir);
+
+    dco::AttributeRec attribs = getAttributes(geom,
+                                              dco::createInstance(),
+                                              samplePos,
+                                              float3{}, // TODO: worldNormal
+                                              float3{}, // TODO: objectPos
+                                              Ng,
+                                              primID,
+                                              uv);
+
+    float3 L = normalize(ls.dir);
+    float LdotNl = fabsf(dot(-L,Ng));
+    float ld2 = ls.dist*ls.dist;
+    ls.pdf = LdotNl > 1e-12f ? (1.f / geom.primitives.len / A_prim) * (ld2 / LdotNl) : 0.f;
+    Le = getEmission(mat, onDevice, attribs, samplePos, primID);
   }
 
   result.Le = Le;
   result.dir = ls.dir;
+  result.Nl = ls.normal;
   result.pdf = ls.pdf;
   result.dist = ls.dist;
-
-  if (light.type == dco::Light::Directional
-    ||light.type == dco::Light::HDRI) {
-    result.dist2 = 1.f; // infinite lights are not attenuated by distance!
-  } else {
-    result.dist2 = ls.dist*ls.dist;
-  }
 
   return result;
 }
@@ -1664,7 +1773,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
                                               inst,
                                               float3{}, // TODO: worldPos
                                               float3{}, // TODO: worldNormal
-                                              float3{}, // TODO: objectNormal
+                                              float3{}, // TODO: objectPos
                                               float3{}, // TODO: objectNormal
                                               hr.prim_id,
                                               uv);

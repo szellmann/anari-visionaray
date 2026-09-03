@@ -429,9 +429,9 @@ inline float rayMarchVolume(ScreenSample &ss,
         if (length(gn) > 1e-10f) {
           auto safe_rcp = [](float f) { return f > 0.f ? 1.f/f : 0.f; };
           for (unsigned lightID=0; lightID<numLights; ++lightID) {
-            const dco::Light &light = getLight(allLights, lightID, onDevice);
+            const dco::LightRef &lightRef = allLights[lightID];
 
-            LightSample ls = sampleLight(light, P, ss.random);
+            LightSample ls = sampleLight(onDevice, lightRef, P, ss.random);
 
             dco::Material mat = dco::createMaterial();
             mat.type = dco::Material::Matte;
@@ -439,7 +439,6 @@ inline float rayMarchVolume(ScreenSample &ss,
             mat.asMatte.color.rgb = sample.xyz();
 
             vec3 lightDir = normalize(ls.dir);
-            vec3 lightIntensity = ls.Le * safe_rcp(ls.dist2);
             const float NdotL = fmaxf(0.f,dot(gn,lightDir));
 
             auto color = evalMaterial(mat,
@@ -451,7 +450,7 @@ inline float rayMarchVolume(ScreenSample &ss,
                                       float3(0.f), float3(0.f), // tangent, bitangent
                                       normalize(viewDir),
                                       lightDir);
-            color = color * lightIntensity * NdotL * safe_rcp(ls.pdf);
+            color = color * ls.Le * NdotL * safe_rcp(ls.pdf);
             shadedColor += color;
           }
         }

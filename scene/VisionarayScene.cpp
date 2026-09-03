@@ -56,8 +56,8 @@ void VisionarayScene::commit()
       if (!dco::validHandle(inst.groupID)) continue;
       dco::Group group = deviceState()->dcos.groups[inst.groupID];
 
-      for (unsigned j=0; j<group.numLights; ++j)
-        m_allLights.alloc({group.lights[j], inst.instID});
+      for (unsigned i=0; i<group.numLights; ++i)
+        m_allLights.alloc({group.lights[i], inst.instID});
     }
 
     initLightSampler();
@@ -83,6 +83,10 @@ void VisionarayScene::release()
   m_BLSs.clear();
   m_worldBLSs.clear();
   m_allLights.clear();
+  for (auto vlight : m_managedLights) {
+    deviceState()->dcos.lights.free(vlight.lightID);
+  }
+  m_managedLights.clear();
 }
 
 void VisionarayScene::reset()
@@ -153,6 +157,19 @@ void VisionarayScene::attachSurface(dco::Surface surf, dco::BLS bls, unsigned us
   dco::Material mat = deviceState()->dcos.materials[surf.matID];
 
   m_materials.set(objID, mat.matID, ~0u);
+
+  if (mat.isEmissive()) {
+    dco::Light light = dco::createLight();
+    light.lightID = deviceState()->dcos.lights.alloc(light);
+    light.type = dco::Light::Geometry;
+    // these must be geom.geomID and mat.matID: surf.{geomID|matID}
+    // would be relative to this group but we need global IDs:
+    light.asGeometry.geomID = geom.geomID;
+    light.asGeometry.matID = mat.matID;
+    deviceState()->dcos.lights.update(light.lightID, light);
+    attachLight(light, ~0u);
+    m_managedLights.push_back(light);
+  }
 }
 
 void VisionarayScene::attachVolume(dco::Volume vol, dco::BLS bls, unsigned userID)
