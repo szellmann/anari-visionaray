@@ -1690,6 +1690,17 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
       Ng = normalize(cross(e1,e2));
       A_prim = area(dco::Triangle(v1,e1,e2));
     }
+    else if (geom.type == dco::Geometry::Sphere) {
+      auto sphere = geom.as<dco::Sphere>(primID);
+      float3 center = (xfm * float4(sphere.center,1.f)).xyz();
+      // TODO: transform
+      float u1 = rnd(), u2 = rnd();
+      float3 unitPos = uniform_sample_sphere(u1,u2);
+      uv = toUV(unitPos);
+      float3 samplePos = center + sphere.radius * unitPos;
+      Ng = unitPos;
+      A_prim = area(sphere);
+    }
     else {
       result.dir = float3(0,0,0);
       result.Nl = float3(0,0,0);

@@ -240,12 +240,19 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       emission = getEmission(mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID);
       if (bounceID > 0 && rgb_to_luminance(emission) > FLT_MIN) {
-        auto triangle = geom.as<dco::Triangle>(hitRec.primID);
-        const mat4 &xfm = inst.xfms[0];
-        float3 v1 = (xfm * float4(triangle.v1, 1.f)).xyz();
-        float3 v2 = (xfm * float4(triangle.v1 + triangle.e1, 1.f)).xyz();
-        float3 v3 = (xfm * float4(triangle.v1 + triangle.e2, 1.f)).xyz();
-        float A_prim = area(dco::Triangle(v1, v2 - v1, v3 - v1));
+        float A_prim = 0.f;
+        if (geom.type == dco::Geometry::Triangle) {
+          auto triangle = geom.as<dco::Triangle>(hitRec.primID);
+          const mat4 &xfm = inst.xfms[0];
+          float3 v1 = (xfm * float4(triangle.v1, 1.f)).xyz();
+          float3 v2 = (xfm * float4(triangle.v1 + triangle.e1, 1.f)).xyz();
+          float3 v3 = (xfm * float4(triangle.v1 + triangle.e2, 1.f)).xyz();
+          A_prim = area(dco::Triangle(v1, v2 - v1, v3 - v1));
+        } else if (geom.type == dco::Geometry::Sphere) {
+          auto sphere = geom.as<dco::Sphere>(hitRec.primID);
+          // TODO: transform? And if so, how do we handle non-uniform scale?
+          A_prim = area(sphere);
+        }
 
         float ld = length(hitPos-ray.ori);
         float3 L = normalize(hitPos-ray.ori);
@@ -254,7 +261,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           L = -L;
           LdotNl = -LdotNl;
         }
-        float areaPDF = 1.f / (geom.primitives.len * A_prim);
+
+        float areaPDF = A_prim > 0.f ? 1.f / (geom.primitives.len * A_prim) : 0.f;
         //float lightPDF = LdotNl > 1e-12f ? areaPDF * (ld * ld) / LdotNl : 0.f;
         float lightPDF = areaPDF * (ld * ld) / LdotNl;
         misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
