@@ -55,17 +55,24 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
   next.ray.ori = offsetRayOrigin(hitPos, gn);
 
   if constexpr (Type == Shadow) {
-    float3 Nl = ln;
-    // orient light normal towards shadow ray origin
-    if (dot(Nl,-lightSample.dir) < 0.f) Nl = -Nl;
+    float3 lightDir = lightSample.dir;
+    float d = lightSample.dist;
 
-    float3 lightPos = hitPos+lightSample.dir;
-    float3 offsetLightPos = offsetRayOrigin(lightPos, Nl);
-    float3 lightDir = offsetLightPos-next.ray.ori;
-    float d = length(lightDir);
+    if (d < FLT_MAX) { // not a directional light
+      // calculate safe distance to avoid self-intersection
+      float3 Nl = ln;
+      // orient light normal towards shadow ray origin
+      if (dot(Nl,-lightSample.dir) < 0.f) Nl = -Nl;
+
+      float3 lightPos = hitPos+lightSample.dir;
+      float3 offsetLightPos = offsetRayOrigin(lightPos, Nl);
+
+      lightDir = offsetLightPos-next.ray.ori;
+      d = length(lightDir);
+    }
 
     Ray &shadowRay = next.ray;
-    shadowRay.dir = lightDir / d;
+    shadowRay.dir = normalize(lightDir);
     shadowRay.tmin = 0.f;
     shadowRay.tmax = d;
     shadowRay.time = ray.time;
