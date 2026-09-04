@@ -52,7 +52,8 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
   auto &next = shadeState.next;
 
   next.rayType = Type;
-  next.ray.ori = offsetRayOrigin(hitPos, gn);
+  const float eps = epsilonFrom(hitPos, ray.dir, length(ray.ori-hitPos));
+  next.ray.ori = hitPos + gn * eps;//offsetRayOrigin(hitPos, gn);
 
   if constexpr (Type == Shadow) {
     float3 lightDir = lightSample.dir;
@@ -65,7 +66,8 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
       if (dot(Nl,-lightSample.dir) < 0.f) Nl = -Nl;
 
       float3 lightPos = hitPos+lightSample.dir;
-      float3 offsetLightPos = offsetRayOrigin(lightPos, Nl);
+      const float epsl = epsilonFrom(lightPos, normalize(-lightSample.dir), d);
+      float3 offsetLightPos = lightPos + ln * epsl;//offsetRayOrigin(lightPos, Nl);
 
       lightDir = offsetLightPos-next.ray.ori;
       d = length(lightDir);
