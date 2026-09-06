@@ -440,12 +440,26 @@ struct DevicePointer
   __device__
   __forceinline__ T &operator*()
   { return *pointer; }
+
+  __device__
+  __forceinline__ const T *operator->() const
+  { return pointer; }
+
+  __device__
+  __forceinline__ T *operator->()
+  { return pointer; }
 #else
   const T &operator*() const
   { return *pointer; }
 
   T &operator*()
   { return *pointer; }
+
+  const T *operator->() const
+  { return pointer; }
+
+  T *operator->()
+  { return pointer; }
 #endif
 
  private:
