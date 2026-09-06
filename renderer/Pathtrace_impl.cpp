@@ -60,7 +60,6 @@ VSNRAY_FUNC inline void prepareNextRay(ShadeState &shadeState,
     float d = lightSample.dist;
 
     if (d < FLT_MAX) { // not a directional light
-      if (ray.debug()) std::cout << length(lightDir) << '\n';
       // calculate safe distance to avoid self-intersection
       float3 Nl = ln;
       // orient light normal towards shadow ray origin

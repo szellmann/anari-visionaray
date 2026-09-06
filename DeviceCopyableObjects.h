@@ -2458,6 +2458,12 @@ struct Light
         squad.S = g0 + g1 - squad.k;
         }
 
+        if (squad.S == 0.f) {
+          // projected area is 0
+          ls.pdf = 0.f;
+          return ls;
+        }
+
         // --- sampling ---------------
 
         float u = rng(), v = rng();
