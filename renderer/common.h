@@ -17,28 +17,6 @@ inline float epsilonFrom(const vec3 &P, const vec3 &dir, float t)
   return max_element(vec4(abs(P), max_element(abs(dir)) * t)) * ulpEpsilon;
 }
 
-// Fast, robust origin offset (Ray Tracing Gems Ch. 6 pattern)
-VSNRAY_FUNC inline float3 offsetRayOrigin(const float3 &p, const float3 &n) {
-  constexpr float originError = 1.0f / 32.0f;
-  constexpr float floatScale  = 1.0f / 65536.0f;
-  constexpr float intScale    = 256.0f;
-
-  // Scale offset vector based on spatial magnitude
-  int3 of_i(int(intScale * n.x), int(intScale * n.y), int(intScale * n.z));
-
-  float3 p_i(
-    reinterpret_as_float(reinterpret_as_int(p.x) + ((p.x < 0) ? -of_i.x : of_i.x)),
-    reinterpret_as_float(reinterpret_as_int(p.y) + ((p.y < 0) ? -of_i.y : of_i.y)),
-    reinterpret_as_float(reinterpret_as_int(p.z) + ((p.z < 0) ? -of_i.z : of_i.z))
-  );
-
-  return float3(
-    fabsf(p.x) < originError ? p.x + floatScale * n.x : p_i.x,
-    fabsf(p.y) < originError ? p.y + floatScale * n.y : p_i.y,
-    fabsf(p.z) < originError ? p.z + floatScale * n.z : p_i.z
-  );
-}
-
 struct ScreenSample
 {
   int x, y;
