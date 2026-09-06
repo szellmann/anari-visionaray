@@ -1675,7 +1675,7 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
       float u1 = rnd(), u2 = rnd();
       float3 unitPos = uniform_sample_sphere(u1,u2);
       uv = toUV(unitPos);
-      float3 samplePos = center + sphere.radius * unitPos;
+      samplePos = center + sphere.radius * unitPos;
       Ng = unitPos;
       A_prim = area(sphere);
     }
