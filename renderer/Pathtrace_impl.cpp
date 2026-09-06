@@ -241,8 +241,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
       float4 tangent = getTangent(geom, hitRec.primID, hitRec.localHitPos, uv);
       if (length(sn) > 0.f && length(tangent.xyz()) > 0.f) {
-        tng = tangent.xyz();
-        btng = cross(sn, tng) * tangent.w;
+        tng = normalize(tangent.xyz());
+        btng = normalize(cross(sn, tng)) * tangent.w;
         sn = getPerturbedNormal(
             mat, onDevice, attribs, hitRec.localHitPos, hitRec.primID, tng, btng, sn);
       }
