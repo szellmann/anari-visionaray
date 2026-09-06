@@ -2943,7 +2943,7 @@ struct Frame
     if (depthBuffer)
       s.depth = depthBuffer[idx];
     if (normalBuffer)
-      s.Ng = normalBuffer[idx];
+      s.Ns = normalBuffer[idx];
     if (motionVecBuffer)
       s.motionVec = motionVecBuffer[idx];
     if (primIdBuffer)
@@ -3029,7 +3029,7 @@ struct Frame
     if (depthBuffer)
       depthBuffer[idx] = s.depth;
     if (normalBuffer)
-      normalBuffer[idx] = s.Ng;
+      normalBuffer[idx] = s.Ns;
     if (albedoBuffer)
       albedoBuffer[idx] = s.albedo;
     if (primIdBuffer)
