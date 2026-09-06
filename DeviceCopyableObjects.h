@@ -2290,8 +2290,9 @@ struct Light
 
             float3 localDir(cosf(phi) * sint, sinf(phi) * sint, cost);
 
-            result.dir = localDir.x*u + localDir.y*v + localDir.z*w;
-            result.dist = length(result.dir);
+            float dist = length(centerDir) * cost - sqrtf(fmaxf(0.f,r2-d2*(1-cost*cost)));
+            result.dir = (localDir.x*u + localDir.y*v + localDir.z*w) * dist;
+            result.dist = dist;
             float solidAngle = constants::two_pi<float>() * oneMinusCostMax;
             result.pdf = (solidAngle > 1e-12f) ? (1.f / solidAngle) : 0.f;
           }
