@@ -511,7 +511,7 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
 #endif
 
         float4 accumColor{0.f};
-        PixelSample closestSample;
+        PixelSample closestSample = {};
         closestSample.depth = 1e31f;
         int spp = rendererState.pixelSamples;
 
