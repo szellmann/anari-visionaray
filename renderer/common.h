@@ -1583,7 +1583,7 @@ struct LightSample
 VSNRAY_FUNC
 inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
                                const dco::LightRef &lightRef,
-                               vec3f hitPos, Random &rnd, bool dbg=false)
+                               vec3f hitPos, Random &rnd)
 {
   dco::Light light = onDevice.lights[lightRef.lightID];
 

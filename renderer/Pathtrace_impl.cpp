@@ -302,7 +302,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     if (dco::validHandle(lightID)) {
       const dco::LightRef &lightRef = world.allLights[lightID];
-      lightSample = sampleLight(onDevice, lightRef, hitPos, ss.random, ray.debug());
+      lightSample = sampleLight(onDevice, lightRef, hitPos, ss.random);
       ln = lightSample.Nl;
     }
 
