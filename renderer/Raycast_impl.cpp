@@ -154,7 +154,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     }
   }
 
-  auto hrl = intersectLights(ss, ray, worldID, onDevice, 0);
+  auto hrl = intersectLights(ray, worldID, onDevice, 0);
 
   // Background
   if (hrl.hit) {

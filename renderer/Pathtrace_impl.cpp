@@ -550,7 +550,7 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
             for (unsigned passID=0, bounceID=0;true;++passID) {
               ray = clipRay(ray, rendererState.clipPlanes, rendererState.numClipPlanes);
               bool shadow = rayType == Shadow || rayType == AO;
-              HitRec hitRec = intersectAll(ss, ray, worldID, onDevice, bounceID, shadow);
+              HitRec hitRec = intersectAll(ray, worldID, onDevice, rng, bounceID, shadow);
               // 1. radiance
               // 2. shadow (optional)
               // 3. AO (optional)

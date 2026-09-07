@@ -1743,9 +1743,8 @@ struct HitRecLight
 template <bool EvalOpacity>
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
-    ScreenSample &ss, Ray ray,
-    const DeviceObjectRegistry &onDevice,
-    unsigned worldID,
+    Ray ray, const DeviceObjectRegistry &onDevice,
+    Random &rng, unsigned worldID,
     bool shadow)
 {
   auto hr = intersectSurfaces(ray, onDevice.TLSs[worldID], shadow);
@@ -1770,7 +1769,7 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
     float opacity
         = getOpacity(mat, onDevice, attribs, hr.isect_pos, hr.prim_id);
 
-    float r = ss.random();
+    float r = rng();
     if (r > opacity) {
       const float3 hitPos = ray.ori + hr.t * ray.dir;
       const float eps = epsilonFrom(hitPos, ray.dir, hr.t);
@@ -1785,10 +1784,9 @@ inline hit_record<Ray, primitive<unsigned>> intersectSurfaces(
 
 VSNRAY_FUNC
 inline dco::HitRecordVolume sampleFreeFlightDistanceAllVolumes(
-    ScreenSample &ss, Ray ray, unsigned worldID,
-    DeviceObjectRegistry onDevice) {
+    Ray ray, unsigned worldID, const DeviceObjectRegistry &onDevice, Random &rng) {
 
-  ray.prd = &ss.random;
+  ray.prd = &rng;
   return intersectVolumes(ray, onDevice.TLSs[worldID]);
 }
 
@@ -1804,7 +1802,7 @@ inline dco::Light getLight(const dco::LightRef *lightRefs, unsigned lightID,
 }
 
 VSNRAY_FUNC
-inline HitRecLight intersectLights(ScreenSample &ss, const Ray &ray, unsigned worldID,
+inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
     const DeviceObjectRegistry &onDevice, unsigned bounceID)
 {
   HitRecLight hr;
@@ -1881,12 +1879,13 @@ struct HitRec
 };
 
 VSNRAY_FUNC
-inline HitRec intersectAll(ScreenSample &ss, const Ray &ray, unsigned worldID,
-    const DeviceObjectRegistry &onDevice, unsigned bounceID, bool shadow)
+inline HitRec intersectAll(
+    const Ray &ray, unsigned worldID,  const DeviceObjectRegistry &onDevice,
+    Random &rng, unsigned bounceID, bool shadow)
 {
-  auto surface = intersectSurfaces<1>(ss, ray, onDevice, worldID, shadow);
-  auto light   = intersectLights(ss, ray, worldID, onDevice, bounceID/*, shadow*/);
-  auto volume  = sampleFreeFlightDistanceAllVolumes(ss, ray, worldID, onDevice/*, shadow*/);
+  auto surface = intersectSurfaces<1>(ray, onDevice, rng, worldID, shadow);
+  auto light   = intersectLights(ray, worldID, onDevice, bounceID/*, shadow*/);
+  auto volume  = sampleFreeFlightDistanceAllVolumes(ray, worldID, onDevice, rng/*, shadow*/);
 
   HitRec hr;
   hr.hit = surface.hit || volume.hit || light.hit;
