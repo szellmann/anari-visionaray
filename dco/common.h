@@ -5,8 +5,27 @@
 
 // visionaray
 #include "visionaray/math/ray.h"
+#include "visionaray/bvh.h"
 // ours
 #include "../common.h"
+
+#if defined(WITH_CUDA) && !defined(__CUDACC__)
+#include <visionaray/cuda/device_vector.h>
+namespace visionaray {
+// visionaray only defines these when compiling with nvcc:
+template <typename P>
+using cuda_bvh          = bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>>;
+} // namespace visionaray
+#endif
+
+#if defined(WITH_HIP) && !defined(__HIPCC__)
+#include <visionaray/hip/device_vector.h>
+namespace visionaray {
+// visionaray only defines these when compiling with hipcc:
+template <typename P>
+using hip_bvh           = bvh_t<hip::device_vector<P>, hip::device_vector<bvh_node>>;
+} // namespace visionaray
+#endif
 
 namespace visionaray
 {
