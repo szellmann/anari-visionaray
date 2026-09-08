@@ -109,6 +109,7 @@ struct Light
         return result;
       }
 
+      VSNRAY_FUNC
       inline float3 intensity(const float3 &refPoint) const
       { return internal.intensity(refPoint); }
 
