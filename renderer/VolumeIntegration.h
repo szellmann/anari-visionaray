@@ -3,8 +3,8 @@
 
 #pragma once
 
+#include "dco/DDA.h"
 #include "renderer/common.h"
-#include "renderer/DDA.h"
 #include "scene/volume/spatial_field/Connectivity.h"
 #include "scene/volume/spatial_field/Plane.h"
 #include "DeviceCopyableObjects.h"

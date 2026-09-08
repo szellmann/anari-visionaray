@@ -3,9 +3,9 @@
 
 #pragma once
 
+#include "dco/DDA.h" // linearIndex() and projectToGrid()
 #include "DeviceCopyableObjects.h"
 #include "VisionarayGlobalState.h"
-#include "GridAccel-common.h"
 
 namespace visionaray {
 
@@ -53,8 +53,8 @@ inline void rasterizeBox(dco::GridAccel accel,
                          const box1f &valueRange,
                          const float stepSize)
 {
-  const vec3i loMC = projectOnGrid(box.min,accel.dims,accel.worldBounds);
-  const vec3i upMC = projectOnGrid(box.max,accel.dims,accel.worldBounds);
+  const vec3i loMC = projectToGrid(box.min,accel.dims,accel.worldBounds);
+  const vec3i upMC = projectToGrid(box.max,accel.dims,accel.worldBounds);
 
   for (int mcz=loMC.z; mcz<=upMC.z; ++mcz) {
     for (int mcy=loMC.y; mcy<=upMC.y; ++mcy) {

@@ -17,22 +17,6 @@ inline float epsilonFrom(const vec3 &P, const vec3 &dir, float t)
   return max_element(vec4(abs(P), max_element(abs(dir)) * t)) * ulpEpsilon;
 }
 
-struct ScreenSample
-{
-  int x, y;
-  int frameID;
-  uint2 frameSize;
-  Random random;
-
-  inline VSNRAY_FUNC bool debug() {
-#if 1
-    return x == frameSize.x/2 && y == frameSize.y/2;
-#else
-    return false;
-#endif
-  }
-};
-
 enum class RenderMode
 {
   Default,

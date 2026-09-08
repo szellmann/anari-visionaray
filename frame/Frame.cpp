@@ -6,8 +6,8 @@
 #include <random>
 #include <thread>
 // ours
-#include "frame/common.h"
-#include "scene/light/HDRI.h"
+#include "dco/Camera.h"
+#include "dco/Frame.h"
 #include "Frame.h"
 #include "for_each.h"
 
