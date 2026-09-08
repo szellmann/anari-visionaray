@@ -48,11 +48,7 @@ struct World
   // flat list of lights with instances associated
   LightRef *allLights;
 
-  LightSampler lightSampler;
-
-  VSNRAY_FUNC
-  inline unsigned numLights() const
-  { return lightSampler.numLights(); };
+  unsigned numLights;
 };
 
 VSNRAY_FUNC
@@ -61,7 +57,7 @@ inline World createWorld()
   World world;
   world.worldID = UINT_MAX;
   world.allLights = nullptr;
-  world.lightSampler = createLightSampler();
+  world.numLights = 0u;
   return world;
 }
 

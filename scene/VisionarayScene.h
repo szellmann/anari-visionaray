@@ -63,7 +63,6 @@ struct VisionarayScene
 
  private:
   void dispatch();
-  void initLightSampler();
 
   VisionarayGlobalState *deviceState();
 };

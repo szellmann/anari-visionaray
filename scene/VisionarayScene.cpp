@@ -59,8 +59,6 @@ void VisionarayScene::commit()
       for (unsigned i=0; i<group.numLights; ++i)
         m_allLights.alloc({group.lights[i], inst.instID});
     }
-
-    initLightSampler();
   } else {
     // Build TLS
     if (!m_BLSs.empty()) {
@@ -233,8 +231,7 @@ void VisionarayScene::dispatch()
     dco::World world = dco::createWorld(); // TODO: move TLS and EPS in here!
     world.allLights = m_allLights.devicePtr();
 
-    world.lightSampler.type = dco::LightSampler::Uniform;
-    world.lightSampler.asUniform.numLights = (unsigned)m_allLights.size();
+    world.numLights = (unsigned)m_allLights.size();
 
     m_state->dcos.worlds.update(m_worldID, world);
   }
@@ -257,11 +254,6 @@ void VisionarayScene::dispatch()
     group.numObjIds = m_objIds.size();
     m_state->dcos.groups.update(m_groupID, group);
   }
-}
-
-void VisionarayScene::initLightSampler()
-{
-  // TODO: more advanced light samplers
 }
 
 VisionarayGlobalState *VisionarayScene::deviceState()

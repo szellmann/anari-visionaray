@@ -9,9 +9,21 @@
 #include "visionaray/sampling.h"
 // ours
 #include "dco/common.h"
+#include "dco/Surface.h"
 #include "dco/sampleCDF.h"
 
-namespace visionaray::dco {
+namespace visionaray {
+namespace dco {
+
+struct LightSample
+{
+  float3 Le;
+  float3 dir;
+  float3 Nl;
+  float3 f;
+  float pdf;
+  float dist;
+};
 
 // Light //
 
@@ -55,7 +67,52 @@ struct Light
   }
 
   union {
-    directional_light<float> asDirectional;
+    struct {
+      directional_light<float> internal;
+
+      VSNRAY_FUNC
+      inline void set_direction(const float3 &dir)
+      { internal.set_direction(dir); }
+
+      VSNRAY_FUNC
+      inline float3 direction() const
+      { return internal.direction(); }
+
+      VSNRAY_FUNC
+      inline void set_cl(const float3 &cl)
+      { internal.set_cl(cl); }
+
+      VSNRAY_FUNC
+      inline void set_kl(float kl)
+      { internal.set_kl(kl); }
+
+      VSNRAY_FUNC
+      inline void set_angular_diameter(float ad)
+      { internal.set_angular_diameter(ad); }
+
+      VSNRAY_FUNC
+      inline float angular_diameter() const
+      { return internal.angular_diameter(); }
+
+      template <typename RNG>
+      VSNRAY_FUNC
+      inline LightSample sample(const float3 &refPoint, RNG &rng) const
+      {
+        light_sample<float> ls = internal.sample(refPoint, rng);
+
+        LightSample result;
+        result.Le = intensity(refPoint);
+        result.dir = ls.dir;
+        result.Nl = ls.normal;
+        result.pdf = ls.pdf;
+        result.dist = ls.dist;
+        return result;
+      }
+
+      inline float3 intensity(const float3 &refPoint) const
+      { return internal.intensity(refPoint); }
+
+    } asDirectional;
     // point light:
     struct {
       float3 position;
@@ -65,16 +122,14 @@ struct Light
 
       template <typename RNG>
       VSNRAY_FUNC
-      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      inline LightSample sample(const float3 &refPoint, RNG &rng) const
       {
-        light_sample<float> result;
+        LightSample result;
         if (radius < FLT_MIN) {
           result.dir = position-refPoint;
           result.dist = length(result.dir);
-          result.normal = normalize(
+          result.Nl = normalize(
               float3(rng() * 2.f - 1.f, rng() * 2.f - 1.f, rng() * 2.f - 1.f));
-          result.area = 1.f;
-          result.delta_light = true;
           result.pdf = 1.f;
         } else {
           float3 centerDir = position-refPoint;
@@ -114,10 +169,9 @@ struct Light
             result.pdf = (solidAngle > 1e-12f) ? (1.f / solidAngle) : 0.f;
           }
 
-          result.normal = normalize(-result.dir);
-          result.area = 4.f*constants::pi<float>()*radius*radius;
-          result.delta_light = false;
+          result.Nl = normalize(-result.dir);
         }
+        result.Le = radiance(refPoint);
         return result;
       }
 
@@ -163,16 +217,17 @@ struct Light
 
       template <typename RNG>
       VSNRAY_FUNC
-      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      inline LightSample sample(const float3 &refPoint, RNG &rng) const
       {
-        light_sample<float> result;
-        result.dir = position-refPoint;
-        result.dist = length(result.dir);
-        result.normal = normalize(
+        const float3 L = position-refPoint;
+
+        LightSample result;
+        result.Le = intensity(L);
+        result.dir = L;
+        result.Nl = normalize(
             float3(rng() * 2.f - 1.f, rng() * 2.f - 1.f, rng() * 2.f - 1.f));
-        result.area = 1.f;
-        result.delta_light = true;
         result.pdf = 1.f;
+        result.dist = length(L);
         return result;
       }
 
@@ -211,12 +266,12 @@ struct Light
 
       template<typename RNG>
       VSNRAY_FUNC
-      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      inline LightSample sample(const float3 &refPoint, RNG &rng) const
       {
         // Quad light sampling technique by Urena et al. (2013)
         // An Area-Preserving Parametrization for Spherical Rectangles
 
-        light_sample<float> ls{};
+        LightSample ls{};
 
         struct {
           float3 o, x, y, z;      // local reference system 'R'
@@ -309,10 +364,8 @@ struct Light
 
         ls.dir = p - refPoint;
         ls.dist = length(ls.dir);
-        ls.intensity = radiance(ls.dir);
-        ls.normal = get_normal(hr, geometry());
-        ls.area = area(geometry());
-        ls.delta_light = false;
+        ls.Le = radiance(ls.dir);
+        ls.Nl = get_normal(hr, geometry());
         ls.pdf = 1.f/squad.S;
 
         return ls;
@@ -357,16 +410,17 @@ struct Light
 
       template <typename RNG>
       VSNRAY_FUNC
-      inline light_sample<float> sample(const float3 &refPoint, RNG &rng) const
+      inline LightSample sample(const float3 &refPoint, RNG &rng) const
       {
         CDFSample sample = sampleCDF(cdf.rows, cdf.lastCol, cdf.width, cdf.height, rng(), rng());
         float invjacobian = cdf.width*cdf.height/float(4*M_PI);
-        float3 L(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
-        light_sample<float> ls;
-        ls.dir = toWorld*L;
-        ls.normal = -ls.dir;
-        ls.dist = FLT_MAX;
+        float3 L = toWorld*float3(toPolar(float2(sample.x/float(cdf.width), sample.y/float(cdf.height))));
+        LightSample ls;
+        ls.Le  = radiance(L);
+        ls.dir = L;
+        ls.Nl = -L;
         ls.pdf = sample.pdfx*sample.pdfy*invjacobian;
+        ls.dist = FLT_MAX;
         return ls;
       }
 
@@ -458,65 +512,12 @@ struct LightRef
   unsigned instID;
 };
 
-// Light source samplers //
+} // namespace visionaray::dco
 
-// Simple uniform sampler
-struct UniformLightSampler
+inline VSNRAY_FUNC int uniformSampleOneLight(Random &rnd, int numLights)
 {
-  struct Sample { unsigned lightID; float pdf; };
-
-  VSNRAY_FUNC
-  inline Sample sample(Random &rnd)
-  {
-    if (numLights == 0)
-      return { UINT_MAX, 0.f };
-
-    unsigned which = unsigned(rnd() * numLights); if (which == numLights) which = 0;
-    return { which, 1.f/numLights };
-  }
-
-  unsigned numLights;
-};
-
-
-// 'polymorphic', so we can switch at runtime (TODO: do we need that?)
-struct LightSampler
-{
-  enum Type { Uniform, Unknown, } type;
-  struct Sample { unsigned lightID; float pdf; };
-
-  VSNRAY_FUNC
-  inline unsigned numLights() const
-  {
-    if (type == Uniform) {
-      return asUniform.numLights;
-    }
-
-    return 0u;
-  }
-
-  VSNRAY_FUNC
-  inline Sample sample(Random &rnd)
-  {
-    if (type == Uniform) {
-      auto s = asUniform.sample(rnd);
-      return {s.lightID,s.pdf};
-    }
-
-    return { UINT_MAX, 0.f };
-  }
-
-  union {
-    UniformLightSampler asUniform;
-  };
-};
-
-VSNRAY_FUNC
-inline LightSampler createLightSampler()
-{
-  LightSampler lightSampler;
-  lightSampler.type = LightSampler::Unknown;
-  return lightSampler;
+  int which = int(rnd() * numLights); if (which == numLights) which = 0;
+  return which;
 }
 
-} // namespace visionaray::dco
+} // namespace visionaray

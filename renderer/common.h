@@ -1554,15 +1554,7 @@ inline BSDFSample sampleMaterial(const dco::Material &mat,
 // Light sampling
 //=========================================================
 
-struct LightSample
-{
-  float3 Le;
-  float3 dir;
-  float3 Nl;
-  float3 f;
-  float pdf;
-  float dist;
-};
+using LightSample = dco::LightSample;
 
 VSNRAY_FUNC
 inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
@@ -1576,15 +1568,11 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
     xfm = onDevice.instances[lightRef.instID].xfms[0];
 
   LightSample result;
-  light_sample<float> ls;
-  float3 Le{0.f};
   if (light.type == dco::Light::Point) {
     float4 pos(light.asPoint.position,1.f);
     pos = xfm * pos;
     light.asPoint.position = pos.xyz();
-
-    ls = light.asPoint.sample(hitPos, rnd);
-    Le = light.asPoint.radiance(hitPos);
+    result = light.asPoint.sample(hitPos, rnd);
   } else if (light.type == dco::Light::Quad) {
     float4 v1(light.asQuad.geometry().v1, 1.f);
     float3 e1 = light.asQuad.geometry().e1;
@@ -1596,16 +1584,12 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
     light.asQuad.geometry().v1 = v1.xyz();
     light.asQuad.geometry().e1 = e1;
     light.asQuad.geometry().e2 = e2;
-
-    ls = light.asQuad.sample(hitPos, rnd);
-    Le = light.asQuad.radiance(ls.dir);
+    result = light.asQuad.sample(hitPos, rnd);
   } else if (light.type == dco::Light::Directional) {
     float3 dir = light.asDirectional.direction();
     mat3 LU = top_left(xfm);
     light.asDirectional.set_direction(LU * dir);
-
-    ls = light.asDirectional.sample(hitPos, rnd);
-    Le = light.asDirectional.intensity(hitPos);
+    result = light.asDirectional.sample(hitPos, rnd);
   } else if (light.type == dco::Light::Spot) {
     float4 pos(light.asSpot.position, 1.f);
     float3 dir = light.asSpot.direction;
@@ -1613,25 +1597,17 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
     mat3 LU = top_left(xfm);
     light.asSpot.position = pos.xyz();
     light.asSpot.direction = LU * dir;
-
-    ls = light.asSpot.sample(hitPos, rnd);
-    Le = light.asSpot.intensity(ls.dir);
+    result = light.asSpot.sample(hitPos, rnd);
   } else if (light.type == dco::Light::HDRI) {
-    ls = light.asHDRI.sample(hitPos, rnd);
-    Le = light.asHDRI.radiance(ls.dir);
-    // TODO!
+    result = light.asHDRI.sample(hitPos, rnd);
+    // TODO: xfm
   } else if (light.type == dco::Light::Geometry) {
     // implement this here b/c of circular dependency on struct
     // DeviceObjectRegistry, and on getEmission():
     const dco::Geometry &geom = onDevice.geometries[light.asGeometry.geomID];
     const dco::Material &mat = onDevice.materials[light.asGeometry.matID];
 
-    dco::LightSampler lightSampler;
-    lightSampler.type = dco::LightSampler::Uniform;
-    lightSampler.asUniform.numLights = geom.primitives.len;
-    auto pickedPrimitive = lightSampler.sample(rnd);
-
-    unsigned primID = pickedPrimitive.lightID;
+    unsigned primID = uniformSampleOneLight(rnd, geom.primitives.len);
 
     float3 samplePos, Ng;
     float2 uv{0.f};
@@ -1671,9 +1647,9 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
       return result;
     }
 
-    ls.dir = samplePos - hitPos;
-    ls.normal = Ng;
-    ls.dist = length(ls.dir);
+    result.dir = samplePos - hitPos;
+    result.Nl = Ng;
+    result.dist = length(result.dir);
 
     dco::AttributeRec attribs = getAttributes(geom,
                                               dco::createInstance(),
@@ -1684,18 +1660,12 @@ inline LightSample sampleLight(const DeviceObjectRegistry &onDevice,
                                               primID,
                                               uv);
 
-    float3 L = normalize(ls.dir);
+    float3 L = normalize(result.dir);
     float LdotNl = fabsf(dot(-L,Ng));
-    float ld2 = ls.dist*ls.dist;
-    ls.pdf = LdotNl > 1e-12f ? (1.f / geom.primitives.len / A_prim) * (ld2 / LdotNl) : 0.f;
-    Le = getEmission(mat, onDevice, attribs, samplePos, primID);
+    float ld2 = result.dist*result.dist;
+    result.pdf = LdotNl > 1e-12f ? (1.f / geom.primitives.len / A_prim) * (ld2 / LdotNl) : 0.f;
+    result.Le = getEmission(mat, onDevice, attribs, samplePos, primID);
   }
-
-  result.Le = Le;
-  result.dir = ls.dir;
-  result.Nl = ls.normal;
-  result.pdf = ls.pdf;
-  result.dist = ls.dist;
 
   return result;
 }
@@ -1791,7 +1761,7 @@ inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
 {
   HitRecLight hr;
   dco::World world = onDevice.worlds[worldID];
-  for (unsigned lightID=0; lightID<world.numLights(); ++lightID) {
+  for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
     const dco::Light &light = getLight(world.allLights, lightID, onDevice);
     if (bounceID == 0 && !light.visible) continue;
     if (light.type == dco::Light::HDRI) {

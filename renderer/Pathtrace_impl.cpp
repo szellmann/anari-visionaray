@@ -169,7 +169,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
           lightPDF = light.asPoint.pdf(ray,hitPos);
         }
 
-        misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
+        misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights);
       }
 
       next.rayType = Miss;
@@ -274,7 +274,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
         float areaPDF = A_prim > 0.f ? 1.f / (geom.primitives.len * A_prim) : 0.f;
         //float lightPDF = LdotNl > 1e-12f ? areaPDF * (ld * ld) / LdotNl : 0.f;
         float lightPDF = areaPDF * (ld * ld) / LdotNl;
-        misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights());
+        misWeightBSDF = power_heuristic(bsdfSample.pdf,lightPDF/world.numLights);
       }
     }
 
@@ -296,9 +296,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    auto pickedLight = world.lightSampler.sample(ss.random);
-    unsigned lightID = pickedLight.lightID;
-    float lWeight = pickedLight.pdf;
+    unsigned lightID = uniformSampleOneLight(ss.random, world.numLights);
+    float lWeight = 1.f/world.numLights;
 
     if (dco::validHandle(lightID)) {
       const dco::LightRef &lightRef = world.allLights[lightID];
@@ -357,7 +356,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       if (dco::validHandle(lightID) && !prevBSDFSAmpleWasSpecular && lightPDF > 0.f) {
         const dco::Light &light = getLight(world.allLights, lightID, onDevice);
         if (light.isAreaLight()) {
-          misWeightNEE = power_heuristic(lightPDF,bsdfPDF/world.numLights());
+          misWeightNEE = power_heuristic(lightPDF,bsdfPDF/world.numLights);
         }
         else {
           // sampled a delta light source:
