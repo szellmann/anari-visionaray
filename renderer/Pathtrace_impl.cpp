@@ -301,6 +301,73 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
+    const auto &mat = onDevice.materials[group.materials[hitRec.objID]];
+
+#define RESERVOIR_SAMPLING
+#ifdef RESERVOIR_SAMPLING
+    auto evalTargetPDF = [&](const LightSample &ls) {
+      vec3 lightDir = normalize(lightSample.dir);
+      const float NdotL = fmaxf(0.f,dot(sn,lightDir));
+      float3 bsdf = evalMaterial(mat,
+                                 onDevice,
+                                 attribs,
+                                 hitRec.localHitPos,
+                                 hitRec.primID,
+                                 gn, sn,
+                                 gn_unflipped,
+                                 tng, btng,
+                                 viewDir,
+                                 lightDir);
+      float3 throughput = ls.Le * bsdf;
+      return rgb_to_luminance(throughput);
+    };
+
+    struct Reservoir {
+      unsigned lightID;
+      LightSample lightSample;
+      float wSum, M, lWeight;
+    } reservoir;
+
+    reservoir.lightID = ~0u;
+    reservoir.wSum = 0.f;
+    reservoir.M = 0.f;
+    reservoir.lWeight = 0.f;
+
+    for (unsigned i=0; i<4; ++i) {
+      unsigned lightID = uniformSampleOneLight(ss.random, world.numLights);
+      float pLight = 1.f/world.numLights;
+
+      const dco::LightRef &lightRef = world.allLights[lightID];
+
+      LightSample candidate = sampleLight(onDevice, lightRef, hitPos, ss.random);
+
+      float pCandidate = pLight * candidate.pdf;
+
+      float target = evalTargetPDF(candidate);
+
+      if (target > 0.f && pCandidate > 0.f) {
+        float w = target/pCandidate;
+        // update reservoir:
+        reservoir.wSum += w;
+        reservoir.M += 1.f;
+        if (ss.random() * reservoir.wSum < w) {
+          reservoir.lightID = lightID;
+          reservoir.lightSample = candidate;
+        }
+      }
+    }
+
+    float finalTarget = evalTargetPDF(reservoir.lightSample);
+    if (finalTarget > 0.f) {
+      reservoir.lWeight = (1.f/finalTarget) * (reservoir.wSum/fmaxf(reservoir.M,1.f));
+    } else {
+      reservoir.lWeight = 0.f;
+    }
+
+    lightSample = reservoir.lightSample;
+    unsigned lightID = reservoir.lightID;
+    float lWeight = reservoir.lWeight;
+#else
     unsigned lightID
         = world.numLights > 0 ? uniformSampleOneLight(ss.random, world.numLights) : ~0u;
     float lWeight = 1.f/world.numLights;
@@ -310,6 +377,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       lightSample = sampleLight(onDevice, lightRef, hitPos, ss.random);
       ln = lightSample.Nl;
     }
+#endif
 
     if (rendererState.renderMode == RenderMode::Default) {
       vec3 lightDir = normalize(lightSample.dir);
@@ -325,7 +393,6 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       else
         shadedColor = float3(1,1,1);
 
-      const auto &mat = onDevice.materials[group.materials[hitRec.objID]];
       if (mat.type != dco::Material::Unknown) {
         lightSample.f = evalMaterial(mat,
                                      onDevice,
@@ -340,7 +407,11 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                      &bsdfPDF);
         shadedColor *= lightSample.f;
       }
+#ifdef RESERVOIR_SAMPLING
+      shadedColor *= lightSample.Le * NdotL * lWeight;
+#else
       shadedColor *= lightSample.Le * NdotL * safe_rcp(lightPDF);
+#endif
 
       if (hitRec.type == HitRec::Volume) {
         // isotropic phase function
