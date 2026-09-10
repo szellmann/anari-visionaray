@@ -296,7 +296,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
-    unsigned lightID = uniformSampleOneLight(ss.random, world.numLights);
+    unsigned lightID
+        = world.numLights > 0 ? uniformSampleOneLight(ss.random, world.numLights) : ~0u;
     float lWeight = 1.f/world.numLights;
 
     if (dco::validHandle(lightID)) {
