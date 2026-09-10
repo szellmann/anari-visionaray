@@ -52,6 +52,7 @@ struct Frame : public helium::BaseFrame
   void wait();
 
  private:
+  void waitOnOutstandingWorkIfNeeded();
   void checkAccumulationReset();
   bool checkTAAReset();
   void mapBuffersOnDevice();

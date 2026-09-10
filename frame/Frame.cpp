@@ -74,6 +74,8 @@ VisionarayGlobalState *Frame::deviceState() const
 
 void Frame::commitParameters()
 {
+  waitOnOutstandingWorkIfNeeded();
+
   m_renderer = getParamObject<Renderer>("renderer");
   m_camera = getParamObject<Camera>("camera");
   m_world = getParamObject<World>("world");
@@ -95,6 +97,8 @@ void Frame::commitParameters()
 
 void Frame::finalize()
 {
+  waitOnOutstandingWorkIfNeeded();
+
   if (!m_renderer) {
     reportMessage(ANARI_SEVERITY_WARNING,
         "missing required parameter 'renderer' on frame");
@@ -463,6 +467,15 @@ void Frame::wait()
     m_future.get();
     this->refDec(helium::RefType::INTERNAL);
   }
+#endif
+}
+
+void Frame::waitOnOutstandingWorkIfNeeded()
+{
+#if !defined(WITH_CUDA) && !defined(WITH_HIP)
+  auto *state = deviceState();
+  if (!state->syncContext->taskQueue.onWorkerThread())
+    wait();
 #endif
 }
 
