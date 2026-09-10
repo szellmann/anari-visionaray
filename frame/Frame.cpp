@@ -239,14 +239,6 @@ void Frame::renderFrame()
     if (!isValid()) {
       reportMessage(
           ANARI_SEVERITY_ERROR, "skipping render of incomplete frame object");
-#ifdef WITH_CUDA
-      // TODO: outside this function!
-#elif defined(WITH_HIP)
-      // TODO: outside this function!
-#else
-      std::fill(m_pixelBuffer.begin(), m_pixelBuffer.end(), 0);
-      state->syncContext->renderingSemaphore.frameEnd();
-#endif
       return;
     }
 
@@ -285,28 +277,6 @@ void Frame::renderFrame()
       cam.asMatrixCam.begin_frame();
 
     if (m_nextFrameReset) {
-#ifdef WITH_CUDA
-      cuda::for_each(state->syncContext->renderingStream, 0, size.x, 0, size.y,
-        [=] VSNRAY_GPU_FUNC (int x, int y) {
-          frame.accumBuffer[x+size.x*y] = vec4{0.f};
-          if (frame.depthBuffer) {
-            frame.depthBuffer[x+size.x*y] = 1e31f;
-          }
-      });
-#elif WITH_HIP
-      hip::for_each(state->syncContext->renderingStream, 0, size.x, 0, size.y,
-        [=] VSNRAY_GPU_FUNC (int x, int y) {
-          frame.accumBuffer[x+size.x*y] = vec4{0.f};
-          if (frame.depthBuffer) {
-            frame.depthBuffer[x+size.x*y] = 1e31f;
-          }
-      });
-#else
-      std::fill(frame.accumBuffer, frame.accumBuffer + size.x * size.y, vec4{0.f});
-      if (frame.depthBuffer) {
-        std::fill(frame.depthBuffer, frame.depthBuffer + size.x * size.y, 1e31f);
-      }
-#endif
       rend.rendererState.accumID = 0;
       m_nextFrameReset = false;
     }

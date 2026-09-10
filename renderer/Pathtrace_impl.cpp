@@ -629,7 +629,7 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
         PixelSample finalSample = closestSample;
         finalSample.color = accumColor*(1.f/spp);
         if (rendererState.taaEnabled)
-          frame.fillGBuffer(x, y, finalSample);
+          frame.fillGBuffer(x, y, rendererState.accumID, finalSample);
         else
           frame.writeSample(x, y, rendererState.accumID, finalSample);
      });

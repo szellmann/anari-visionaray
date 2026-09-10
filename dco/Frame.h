@@ -200,7 +200,7 @@ struct Frame
   }
 
   VSNRAY_FUNC
-  inline void fillGBuffer(int x, int y, PixelSample s) const
+  inline void fillGBuffer(int x, int y, int accumID, PixelSample s) const
   {
     const auto idx = y * size.x + x;
 
@@ -213,7 +213,7 @@ struct Frame
 
     // for the remaining values, only update if
     // depth is closer than the previous sample
-    if (!depthBuffer || s.depth > depthBuffer[idx])
+    if (accumID > 0 && (!depthBuffer || s.depth > depthBuffer[idx]))
       return;
 
     if (depthBuffer)
@@ -233,7 +233,7 @@ struct Frame
   VSNRAY_FUNC
   inline void writeSample(int x, int y, int accumID, PixelSample s) const
   {
-    fillGBuffer(x, y, s);
+    fillGBuffer(x, y, accumID, s);
     toneMap(x, y, accumSample(x, y, accumID, s));
   }
 };
