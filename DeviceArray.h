@@ -111,6 +111,9 @@ struct DeviceArray
   size_t size() const
   { return len; }
 
+  bool empty() const
+  { return len==0; }
+
   void resize(size_t n)
   {
     if (n == len)
@@ -125,13 +128,17 @@ struct DeviceArray
       CUDA_SAFE_CALL(cudaFreeHost(devicePtr));
     }
 
-    CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, n*sizeof(T), cudaHostAllocDefault));
+    devicePtr = nullptr;
 
-    if (temp) {
-      CUDA_SAFE_CALL(cudaMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
-                                cudaMemcpyDeviceToDevice));
-      CUDA_SAFE_CALL(cudaDeviceSynchronize());
-      CUDA_SAFE_CALL(cudaFreeHost(temp));
+    if (n > 0) {
+      CUDA_SAFE_CALL(cudaHostAlloc(&devicePtr, n*sizeof(T), cudaHostAllocDefault));
+
+      if (temp) {
+        CUDA_SAFE_CALL(cudaMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
+                                  cudaMemcpyDeviceToDevice));
+        CUDA_SAFE_CALL(cudaDeviceSynchronize());
+        CUDA_SAFE_CALL(cudaFreeHost(temp));
+      }
     }
 
     len = n;
@@ -229,6 +236,9 @@ struct DeviceArray
   size_t size() const
   { return len; }
 
+  bool empty() const
+  { return len==0; }
+
   void resize(size_t n)
   {
     if (n == len)
@@ -243,13 +253,17 @@ struct DeviceArray
       HIP_SAFE_CALL(hipFree(devicePtr));
     }
 
-    HIP_SAFE_CALL(hipMalloc(&devicePtr, n*sizeof(T)));
+    devicePtr = nullptr;
 
-    if (temp) {
-      HIP_SAFE_CALL(hipMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
-                              hipMemcpyDeviceToDevice));
-      HIP_SAFE_CALL(hipDeviceSynchronize());
-      HIP_SAFE_CALL(hipFree(temp));
+    if (n > 0) {
+      HIP_SAFE_CALL(hipMalloc(&devicePtr, n*sizeof(T)));
+
+      if (temp) {
+        HIP_SAFE_CALL(hipMemcpy(devicePtr, temp, std::min(n, len)*sizeof(T),
+                                hipMemcpyDeviceToDevice));
+        HIP_SAFE_CALL(hipDeviceSynchronize());
+        HIP_SAFE_CALL(hipFree(temp));
+      }
     }
 
     len = n;
@@ -339,6 +353,9 @@ struct DeviceArray
   size_t size() const
   { return len; }
 
+  bool empty() const
+  { return len==0; }
+
   void resize(size_t n)
   {
     if (n == len)
@@ -351,11 +368,15 @@ struct DeviceArray
       std::free(devicePtr);
     }
 
-    devicePtr = (T *)std::malloc(n*sizeof(T));
+    devicePtr = nullptr;
 
-    if (temp) {
-      std::memcpy(devicePtr, temp, std::min(n, len)*sizeof(T));
-      std::free(temp);
+    if (n > 0) {
+      devicePtr = (T *)std::malloc(n*sizeof(T));
+
+      if (temp) {
+        std::memcpy(devicePtr, temp, std::min(n, len)*sizeof(T));
+        std::free(temp);
+      }
     }
 
     len = n;
@@ -586,6 +607,10 @@ struct HostDeviceArray : public std::vector<T>
 
     std::unique_lock<std::mutex> l(mtx);
     deviceData.resize(Base::size());
+
+    if (deviceData.empty())
+      return;
+
 #ifdef WITH_CUDA
     CUDA_SAFE_CALL(cudaMemcpy(deviceData.data(),
                               Base::data(),
