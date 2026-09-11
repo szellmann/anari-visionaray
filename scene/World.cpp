@@ -53,6 +53,8 @@ bool World::getProperty(
 
 void World::commitParameters()
 {
+  auto l = scopeLockObject();
+
   m_zeroSurfaceData = getParamObject<ObjectArray>("surface");
   m_zeroVolumeData = getParamObject<ObjectArray>("volume");
   m_zeroLightData = getParamObject<ObjectArray>("light");
@@ -61,6 +63,8 @@ void World::commitParameters()
 
 void World::finalize()
 {
+  auto l = scopeLockObject();
+
   cleanup();
 
   const bool addZeroInstance =

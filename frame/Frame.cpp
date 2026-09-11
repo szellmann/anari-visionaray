@@ -235,7 +235,7 @@ void Frame::renderFrame()
   this->refInc(helium::RefType::INTERNAL);
   state->syncContext->taskQueue.enqueue([state]() { state->commitBuffer.flush(); });
 
-  m_future = state->syncContext->taskQueue.enqueue([&, state]() {
+  m_future = state->syncContext->taskQueue.enqueue([this, state]() {
     m_eventStart = std::chrono::steady_clock::now();
     state->syncContext->renderingSemaphore.frameStart();
 #endif

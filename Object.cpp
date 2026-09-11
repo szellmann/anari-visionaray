@@ -12,10 +12,7 @@ namespace visionaray {
 
 Object::Object(ANARIDataType type, VisionarayGlobalState *s)
     : helium::BaseObject(type, s)
-{
-  helium::BaseObject::markParameterChanged();
-  s->commitBuffer.addObjectToCommit(this);
-}
+{}
 
 void Object::commitParameters()
 {
