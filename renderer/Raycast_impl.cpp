@@ -50,6 +50,8 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     gn = normalize(nxfm * gn);
     sn = normalize(nxfm * sn);
 
+    vec3f gn_unflipped = gn;
+
     dco::AttributeRec attribs = getAttributes(geom,
                                               inst,
                                               hitPos,
@@ -90,6 +92,7 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
                                    localHitPos,
                                    hr.prim_id,
                                    gn, sn,
+                                   gn_unflipped,
                                    tng, btng,
                                    normalize(viewDir),
                                    lightDir);

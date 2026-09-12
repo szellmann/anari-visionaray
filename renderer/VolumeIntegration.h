@@ -422,6 +422,7 @@ inline float rayMarchVolume(ScreenSample &ss,
         if (sampleGradient(sf,P,delta,gn))
           gn = normalize(gn);
 
+        float3 gn_unflipped = gn;
         gn = faceforward(gn, viewDir, gn);
 
         shadedColor = float3(0.f);
@@ -447,6 +448,7 @@ inline float rayMarchVolume(ScreenSample &ss,
                                       float3(0.f), // objPos, not used..
                                       UINT_MAX, // primID, not used..
                                       gn, gn,
+                                      gn_unflipped,
                                       float3(0.f), float3(0.f), // tangent, bitangent
                                       normalize(viewDir),
                                       lightDir);

@@ -182,6 +182,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     dco::AttributeRec attribs = {};
 
     float4 color{1.f};
+    float3 gn_unflipped{0.f};
     float3 tng{0.f}, btng{0.f};
     float3 viewDir = -normalize(ray.dir);
 
@@ -201,6 +202,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       // TODO: this overwrites the (gradient shading) normal?!
       if (rendererState.ambientSamples > 0 && length(gn) < 1e-3f)
         gn = uniform_sample_sphere(ss.random(), ss.random());
+
+      gn_unflipped = gn;
 
       sn = gn;
 
@@ -224,6 +227,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       mat3 nxfm = getNormalTransform(inst, ray);
       gn = normalize(nxfm * gn);
       sn = normalize(nxfm * sn);
+
+      gn_unflipped = gn;
 
       if (dot(gn,viewDir) < 0.f) gn = -gn;
       if (dot(sn,viewDir) < 0.f) sn = -sn;
@@ -328,6 +333,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                      hitRec.localHitPos,
                                      hitRec.primID,
                                      gn, sn,
+                                     gn_unflipped,
                                      tng, btng,
                                      viewDir,
                                      lightDir,
@@ -349,6 +355,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
                                     hitRec.localHitPos,
                                     hitRec.primID,
                                     gn, sn,
+                                    gn_unflipped,
                                     tng, btng,
                                     viewDir, ss.random);
       }
