@@ -52,6 +52,18 @@ struct BLS
     hip_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
     hip_bvh<dco::Volume>::bvh_ref asVolume;
   };
+#elif defined(WITH_AVX2)
+  union {
+    bvh8<basic_triangle<3,float>>::bvh_ref asTriangle;
+    bvh8<basic_triangle<3,float>>::bvh_ref asQuad;
+    // TODO: port/test the other geometry types, too:
+    bvh4<basic_sphere<float>>::bvh_ref asSphere;
+    bvh4<dco::Cone>::bvh_ref asCone;
+    bvh4<basic_cylinder<float>>::bvh_ref asCylinder;
+    bvh4<dco::BezierCurve>::bvh_ref asBezierCurve;
+    bvh4<dco::ISOSurface>::bvh_ref asISOSurface;
+    bvh4<dco::Volume>::bvh_ref asVolume;
+  };
 #else
   union {
     bvh4<basic_triangle<3,float>>::bvh_ref asTriangle;

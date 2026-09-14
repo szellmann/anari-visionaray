@@ -211,6 +211,8 @@ void Triangle::finalize()
   vBLS.type = dco::BLS::Triangle;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
   vBLS.asTriangle = m_BVH.deviceBVH2();
+#elif defined(WITH_AVX2)
+  vBLS.asTriangle = m_BVH.deviceBVH8();
 #else
   vBLS.asTriangle = m_BVH.deviceBVH4();
 #endif
