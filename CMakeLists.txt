@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(anari_library_visionaray LANGUAGES C CXX)
 
 include(GNUInstallDirs)
+include(cmake/SetTargetArch.cmake)
 
 # build external libraries
 
@@ -41,6 +42,9 @@ option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" ON)
 set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
 
 add_library(${PROJECT_NAME} SHARED)
+# detect and enable SIMD arch:
+set_target_arch(${PROJECT_NAME})
+
 anari_generate_queries(
   DEVICE_TARGET ${PROJECT_NAME}
   CPP_NAMESPACE visionaray
