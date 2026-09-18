@@ -28,9 +28,14 @@ void Pathtrace::commitParameters()
 void Pathtrace::finalize()
 {
   Renderer::finalize();
+
+  int ambientSamples = m_ambientSamples;
+  if (rgb_to_luminance(m_ambientColor * m_ambientRadiance) < FLT_MIN)
+    ambientSamples = 0;
+
   vrend.rendererState.maxBounce = m_maxBounce;
   vrend.rendererState.occlusionDistance = m_occlusionDistance;
-  vrend.rendererState.ambientSamples = m_ambientSamples;
+  vrend.rendererState.ambientSamples = ambientSamples;
   vrend.rendererState.pixelSamples = m_pixelSamples;
   vrend.rendererState.sampleLimit = m_sampleLimit;
   vrend.rendererState.taaEnabled = m_taaEnabled;
