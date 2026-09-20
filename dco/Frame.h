@@ -155,14 +155,24 @@ struct Frame
       int2 prevID = int2(float2(x,y) + motionVecBuffer[idx].xy());
       prevID = clamp(prevID, int2(0), int2(size)-int2(1));
       const auto prevIdx = prevID.y * size.x + prevID.x;
+
+      float3 currAlbedo = taa.currAlbedoBuffer[idx];
+      float3 prevAlbedo = taa.prevAlbedoBuffer[prevIdx];
+
+      float albedoDiff = length(currAlbedo - prevAlbedo);
+
       float alpha = taa.alpha;
-      if (!(fabsf(taa.prevAlbedoBuffer[prevIdx].x-taa.currAlbedoBuffer[idx].x) < 1e-2f
-         && fabsf(taa.prevAlbedoBuffer[prevIdx].y-taa.currAlbedoBuffer[idx].y) < 1e-2f
-         && fabsf(taa.prevAlbedoBuffer[prevIdx].z-taa.currAlbedoBuffer[idx].z) < 1e-2f)) {
-        alpha = 1.f;
-      }
+
       float prevX = x + motionVecBuffer[idx].x;
       float prevY = y + motionVecBuffer[idx].y;
+
+      bool outOfBounds = prevX < 0.f || prevX >= (float)size.x ||
+                         prevY < 0.f || prevY >= (float)size.y;
+
+      if (outOfBounds || albedoDiff > 0.05f) {
+        alpha = 1.f;
+      }
+
       float2 texCoord((prevX+0.5f)/size.x, (prevY+0.5f)/size.y);
       float4 history = tex2D(taa.history, texCoord);
       taa.currBuffer[idx] = (1-alpha)*history + alpha*s.color;
