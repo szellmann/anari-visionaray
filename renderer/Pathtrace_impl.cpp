@@ -291,15 +291,15 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
       result.Ng = gn;
       result.Ns = sn;
       result.albedo = color.xyz();
+
+      // Compute motion vector; assume for now the hit was diffuse!
+      recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
+      vec3 prevWP, currWP;
+      project(prevWP, hitPos, rendererState.prevMV, rendererState.prevPR, viewport);
+      project(currWP, hitPos, rendererState.currMV, rendererState.currPR, viewport);
+
+      result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
     }
-
-    // Compute motion vector; assume for now the hit was diffuse!
-    recti viewport{0,0,(int)ss.frameSize.x,(int)ss.frameSize.y};
-    vec3 prevWP, currWP;
-    project(prevWP, hitPos, rendererState.prevMV, rendererState.prevPR, viewport);
-    project(currWP, hitPos, rendererState.currMV, rendererState.currPR, viewport);
-
-    result.motionVec = float4(prevWP.xy() - currWP.xy(), 0.f, 1.f);
 
     unsigned lightID
         = world.numLights > 0 ? uniformSampleOneLight(ss.random, world.numLights) : ~0u;
