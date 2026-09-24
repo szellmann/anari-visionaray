@@ -13,6 +13,23 @@
 
 namespace visionaray {
 
+// Helpers ////////////////////////////////////////////////////////////////////
+
+template<typename Array>
+void *mapHostDeviceArray(Array &arr, bool onDevice=false)
+{
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  if (!onDevice) {
+    arr.unmapDevice();
+    return (void *)arr.hostPtr();
+  } else {
+    return arr.devicePtr();
+  }
+#else
+  return arr.devicePtr();
+#endif
+}
+
 // Frame definitions //////////////////////////////////////////////////////////
 
 Frame::Frame(VisionarayGlobalState *s) : helium::BaseFrame(s)

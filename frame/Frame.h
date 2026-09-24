@@ -80,21 +80,6 @@ struct Frame : public helium::BaseFrame
 
   dco::Frame vframe;
 
-  template <typename Array>
-  void *mapHostDeviceArray(Array &arr, bool onDevice=false)
-  {
-#ifdef WITH_CUDA
-    if (!onDevice) {
-      arr.unmapDevice();
-      return (void *)arr.hostPtr();
-    } else {
-      return arr.devicePtr();
-    }
-#else
-    return arr.devicePtr();
-#endif
-  }
-
   HostDeviceArray<uint32_t> m_pixelBuffer;
   HostDeviceArray<float> m_depthBuffer;
   HostDeviceArray<float3> m_normalBuffer;
