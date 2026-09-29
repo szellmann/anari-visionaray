@@ -5,8 +5,8 @@
 
 #include "array/Array1D.h"
 #include "array/ObjectArray.h"
+#include "dco/SpatialField.h"
 #include "SpatialField.h"
-#include "UElemGrid.h"
 
 namespace visionaray {
 
