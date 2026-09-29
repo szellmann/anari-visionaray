@@ -138,6 +138,7 @@ set(SOURCES
     scene/volume/spatial_field/Connectivity.cpp
     scene/volume/spatial_field/SpatialField.cpp
     scene/volume/spatial_field/StructuredRegularField.cpp
+    scene/volume/GaussianSplat.cpp
     scene/volume/TransferFunction1D.cpp
     scene/volume/Volume.cpp
     scene/Group.cpp

@@ -5,6 +5,7 @@
 #include "common.h"
 #include "Volume.h"
 // subtypes
+#include "GaussianSplat.h"
 #include "TransferFunction1D.h"
 
 namespace visionaray {
@@ -38,7 +39,9 @@ uint32_t Volume::id() const
 
 Volume *Volume::createInstance(std::string_view subtype, VisionarayGlobalState *s)
 {
-  if (subtype == "transferFunction1D")
+  if (subtype == "gaussianSplat")
+    return new GaussianSplat(s);
+  else if (subtype == "transferFunction1D")
     return new TransferFunction1D(s);
   else
     return (Volume *)new UnknownObject(ANARI_VOLUME, s);
