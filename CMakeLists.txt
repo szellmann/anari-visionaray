@@ -41,7 +41,32 @@ endif()
 option(ANARI_VISIONARAY_ENABLE_NANOVDB "Enable NanoVDB spatial field type" ON)
 set(nanovdb ${ANARI_VISIONARAY_ENABLE_NANOVDB})
 
+set(ANARI_VISIONARAY_LIBRARY_NAME visionaray CACHE STRING
+  "ANARI library name: filename libanari_library_<name>.so and entrypoint anari_library_<name>_new_library")
+if(NOT ANARI_VISIONARAY_LIBRARY_NAME MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")
+  message(FATAL_ERROR
+    "ANARI_VISIONARAY_LIBRARY_NAME must be a valid C identifier (it is pasted into a symbol name): '${ANARI_VISIONARAY_LIBRARY_NAME}'")
+endif()
+
+set(ANARI_VISIONARAY_CUDA_LIBRARY_NAME visionaray_cuda CACHE STRING
+  "ANARI library name: filename libanari_library_<name>.so and entrypoint anari_library_<name>_new_library")
+if(NOT ANARI_VISIONARAY_CUDA_LIBRARY_NAME MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")
+  message(FATAL_ERROR
+    "ANARI_VISIONARAY_CUDA_LIBRARY_NAME must be a valid C identifier (it is pasted into a symbol name): '${ANARI_VISIONARAY_CUDA_LIBRARY_NAME}'")
+endif()
+
+set(ANARI_VISIONARAY_HIP_LIBRARY_NAME visionaray_hip CACHE STRING
+  "ANARI library name: filename libanari_library_<name>.so and entrypoint anari_library_<name>_new_library")
+if(NOT ANARI_VISIONARAY_HIP_LIBRARY_NAME MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")
+  message(FATAL_ERROR
+    "ANARI_VISIONARAY_HIP_LIBRARY_NAME must be a valid C identifier (it is pasted into a symbol name): '${ANARI_VISIONARAY_HIP_LIBRARY_NAME}'")
+endif()
+
 add_library(${PROJECT_NAME} SHARED)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+  OUTPUT_NAME anari_library_${ANARI_VISIONARAY_LIBRARY_NAME})
+
 # detect and enable SIMD arch:
 set_target_arch(${PROJECT_NAME})
 
@@ -54,6 +79,8 @@ anari_generate_queries(
 
 if (cuda)
   add_library(${PROJECT_NAME}_cuda SHARED)
+  set_target_properties(${PROJECT_NAME}_cuda PROPERTIES
+    OUTPUT_NAME anari_library_${ANARI_VISIONARAY_CUDA_LIBRARY_NAME})
   anari_generate_queries(
     DEVICE_TARGET ${PROJECT_NAME}_cuda
     CPP_NAMESPACE visionaray
@@ -64,6 +91,8 @@ endif()
 
 if (hip)
   add_library(${PROJECT_NAME}_hip SHARED)
+  set_target_properties(${PROJECT_NAME}_hip PROPERTIES
+    OUTPUT_NAME anari_library_${ANARI_VISIONARAY_HIP_LIBRARY_NAME})
   anari_generate_queries(
     DEVICE_TARGET ${PROJECT_NAME}_hip
     CPP_NAMESPACE visionaray
@@ -133,6 +162,8 @@ target_sources(${PROJECT_NAME} PRIVATE
   scene/volume/spatial_field/UnstructuredField.cpp
   scene/VisionarayScene.cpp
 )
+set_source_files_properties(VisionarayLibrary.cpp PROPERTIES
+  COMPILE_DEFINITIONS ANARI_VISIONARAY_LIBRARY_NAME=${ANARI_VISIONARAY_LIBRARY_NAME})
 if(WIN32)
   target_compile_definitions(${PROJECT_NAME} PRIVATE _USE_MATH_DEFINES)
 endif()
@@ -186,6 +217,8 @@ if (cuda)
     scene/VisionarayScene.cu
     PROPERTIES COMPILE_FLAGS "--extended-lambda --expt-relaxed-constexpr"
   )
+  set_source_files_properties(VisionarayLibrary.cpp PROPERTIES
+    COMPILE_DEFINITIONS ANARI_VISIONARAY_CUDA_LIBRARY_NAME=${ANARI_VISIONARAY_CUDA_LIBRARY_NAME})
   target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE WITH_CUDA=1)
   if(WIN32)
     target_compile_definitions(${PROJECT_NAME}_cuda PRIVATE _USE_MATH_DEFINES)
@@ -230,6 +263,8 @@ if (hip)
     renderer/Raycast_impl.hip
     scene/VisionarayScene.hip
   )
+  set_source_files_properties(VisionarayLibrary.cpp PROPERTIES
+    COMPILE_DEFINITIONS ANARI_VISIONARAY_HIP_LIBRARY_NAME=${ANARI_VISIONARAY_HIP_LIBRARY_NAME})
   target_compile_definitions(${PROJECT_NAME}_hip PRIVATE WITH_HIP=1)
   if(WIN32)
     target_compile_definitions(${PROJECT_NAME}_hip PRIVATE _USE_MATH_DEFINES)

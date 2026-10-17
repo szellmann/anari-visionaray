@@ -46,25 +46,48 @@ const char **VisionarayLibrary::getDeviceExtensions(const char * /*deviceType*/)
 
 // Define library entrypoint //////////////////////////////////////////////////
 
+// Extra indirection forces VISRTX_LIBRARY_NAME to expand before the entrypoint
+// macro pastes it into the symbol name (## suppresses expansion of its operands).
+#define VSNRAY_ENTRYPOINT_EXPAND(name, h, s, sp)                               \
+  ANARI_DEFINE_LIBRARY_ENTRYPOINT(name, h, s, sp)
+
 #ifdef WITH_CUDA
-extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
-    visionaray_cuda, handle, scb, scbPtr)
-{
-  return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
-}
+
+#ifndef ANARI_VISIONARAY_CUDA_LIBRARY_NAME
+#define ANARI_VISIONARAY_CUDA_LIBRARY_NAME visionaray_cuda
+#endif
+
+#define VSNRAY_LIBRARY_ENTRYPOINT(h, s, sp)                                    \
+  VSNRAY_ENTRYPOINT_EXPAND(ANARI_VISIONARAY_CUDA_LIBRARY_NAME, h, s, sp)
+
 #elif defined(WITH_HIP)
+
+#ifndef ANARI_VISIONARAY_HIP_LIBRARY_NAME
+#define ANARI_VISIONARAY_HIP_LIBRARY_NAME visionaray_hip
+#endif
+
+#define VSNRAY_LIBRARY_ENTRYPOINT(h, s, sp)                                    \
+  VSNRAY_ENTRYPOINT_EXPAND(ANARI_VISIONARAY_LIBRARY_NAME, h, s, sp)
+
 extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
-    visionaray_hip, handle, scb, scbPtr)
+    ANARI_VISIONARAY_HIP_LIBRARY_NAME, handle, scb, scbPtr)
 {
   return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
 }
 #else
-extern "C" VISIONARAY_DEVICE_INTERFACE ANARI_DEFINE_LIBRARY_ENTRYPOINT(
-    visionaray, handle, scb, scbPtr)
+#ifndef ANARI_VISIONARAY_LIBRARY_NAME
+#define ANARI_VISIONARAY_LIBRARY_NAME visionaray
+#endif
+
+#define VSNRAY_LIBRARY_ENTRYPOINT(h, s, sp)                                    \
+  VSNRAY_ENTRYPOINT_EXPAND(ANARI_VISIONARAY_LIBRARY_NAME, h, s, sp)
+
+#endif
+
+extern "C" VISIONARAY_DEVICE_INTERFACE VSNRAY_LIBRARY_ENTRYPOINT(handle, scb, scbPtr)
 {
   return (ANARILibrary) new visionaray::VisionarayLibrary(handle, scb, scbPtr);
 }
-#endif
 
 extern "C" VISIONARAY_DEVICE_INTERFACE ANARIDevice anariNewVisionarayDevice(
     ANARIStatusCallback defaultCallback, const void *userPtr)
