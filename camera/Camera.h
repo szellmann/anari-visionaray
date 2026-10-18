@@ -3,6 +3,9 @@
 
 #pragma once
 
+// std
+#include <string>
+// ours
 #include "DeviceCopyableObjects.h"
 #include "Object.h"
 
@@ -28,6 +31,8 @@ struct Camera : public Object
   vec3f m_up;
   box2f m_imageRegion;
   box1f m_shutter;
+  std::string m_rollingShutterDirection;
+  float m_rollingShutterDuration;
 };
 
 } // namespace visionaray

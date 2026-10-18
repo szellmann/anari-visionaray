@@ -36,11 +36,19 @@ void Camera::commitParameters()
   m_up = normalize(getParam<visionaray::vec3f>("up", visionaray::vec3f(0.f, 1.f, 0.f)));
   m_imageRegion = getParam<box2f>("imageRegion", box2f{{0.f,0.f}, {1.f,1.f}});
   m_shutter = getParam<box1f>("shutter", box1f(0.5f, 0.5f));
+  m_rollingShutterDirection = getParamString("rollingShutterDirection", "none");
+  m_rollingShutterDuration = getParam<float>("rollingShutterDuration", 0.f);
 }
 
 void Camera::finalize()
 {
   vcam.shutter = m_shutter;
+  if (m_rollingShutterDirection == "left") vcam.rollingShutterDirection = dco::Camera::Left;
+  else if (m_rollingShutterDirection == "right") vcam.rollingShutterDirection = dco::Camera::Right;
+  else if (m_rollingShutterDirection == "down") vcam.rollingShutterDirection = dco::Camera::Down;
+  else if (m_rollingShutterDirection == "up") vcam.rollingShutterDirection = dco::Camera::Up;
+  else vcam.rollingShutterDirection = dco::Camera::None;
+  vcam.rollingShutterDuration = m_rollingShutterDuration;
 }
 
 } // namespace visionaray

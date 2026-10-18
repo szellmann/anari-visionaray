@@ -37,6 +37,8 @@ void AnariCamera::commit()
   anari::setParameter(anariDevice, anariCamera, "up", up);
   anari::math::float2 shutter(0.f, 1.f);
   anariSetParameter(anariDevice, anariCamera, "shutter", ANARI_FLOAT32_BOX1, &shutter);
+  anari::setParameter(anariDevice, anariCamera, "rollingShutterDirection", "down");
+  anari::setParameter(anariDevice, anariCamera, "rollingShutterDuration", 0.005f);
   anari::setParameter(anariDevice, anariCamera, "apertureRadius", .1f);
   anari::setParameter(anariDevice, anariCamera, "focusDistance",
       fmaxf(1e-2f, length(direction)));

@@ -19,6 +19,8 @@ struct Camera
   Type type;
   unsigned camID;
   box1 shutter;
+  float rollingShutterDuration;
+  enum RollingShutterDirection { Down, Up, Right, Left, None, } rollingShutterDirection;
   thin_lens_camera asPinholeCam;
   union {
     matrix_camera asMatrixCam;
@@ -113,7 +115,19 @@ struct Camera
     else if (type == Matrix)
       ray = asMatrixCam.primary_ray(Ray{}, x, y, width, height);
 
-    ray.time = lerp_r(shutter.min, shutter.max, rng());
+    // compute rolling shutter
+    float2 screen((x + 0.5f) / width, (y + 0.5f) / height);
+
+    float spatialFactor = 0.f;
+
+    if (rollingShutterDirection == Left) spatialFactor = 1.f-screen.x;
+    else if (rollingShutterDirection == Right) spatialFactor = screen.x;
+    else if (rollingShutterDirection == Down) spatialFactor = screen.y;
+    else if (rollingShutterDirection == Up) spatialFactor = 1.f-screen.y;
+
+    float lineStartTime = shutter.min + (spatialFactor * rollingShutterDuration);
+
+    ray.time = lineStartTime + (shutter.max - shutter.min) * rng();
 
     return ray;
   }

@@ -12,6 +12,7 @@
       "khr_camera_orthographic",
       "khr_camera_perspective",
       "khr_camera_shutter",
+      "khr_camera_rolling_shutter",
       "khr_device_synchronization",
       "khr_frame_accumulation",
       "khr_frame_channel_normal",
