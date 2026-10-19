@@ -15,6 +15,8 @@ namespace visionaray {
 // visionaray only defines these when compiling with nvcc:
 template <typename P>
 using cuda_bvh          = bvh_t<cuda::device_vector<P>, cuda::device_vector<bvh_node>>;
+template <typename P>
+using cuda_cwbvh        = cwbvh_t<cuda::device_vector<P>, cuda::device_vector<cwbvh_node>>;
 } // namespace visionaray
 #endif
 

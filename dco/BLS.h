@@ -32,14 +32,14 @@ struct BLS
   unsigned localID;
 #ifdef WITH_CUDA
   union {
-    cuda_bvh<basic_triangle<3,float>>::bvh_ref asTriangle;
-    cuda_bvh<basic_triangle<3,float>>::bvh_ref asQuad;
-    cuda_bvh<basic_sphere<float>>::bvh_ref asSphere;
-    cuda_bvh<dco::Cone>::bvh_ref asCone;
-    cuda_bvh<basic_cylinder<float>>::bvh_ref asCylinder;
-    cuda_bvh<dco::BezierCurve>::bvh_ref asBezierCurve;
-    cuda_bvh<dco::ISOSurface>::bvh_ref asISOSurface;
-    cuda_bvh<dco::Volume>::bvh_ref asVolume;
+    cuda_cwbvh<basic_triangle<3,float>>::bvh_ref asTriangle;
+    cuda_cwbvh<basic_triangle<3,float>>::bvh_ref asQuad;
+    cuda_cwbvh<basic_sphere<float>>::bvh_ref asSphere;
+    cuda_cwbvh<dco::Cone>::bvh_ref asCone;
+    cuda_cwbvh<basic_cylinder<float>>::bvh_ref asCylinder;
+    cuda_cwbvh<dco::BezierCurve>::bvh_ref asBezierCurve;
+    cuda_cwbvh<dco::ISOSurface>::bvh_ref asISOSurface;
+    cuda_cwbvh<dco::Volume>::bvh_ref asVolume;
   };
 #elif defined(WITH_HIP)
   union {
@@ -144,24 +144,25 @@ inline hit_record<Ray, primitive<unsigned>> intersectBLS(const Ray &ray, const B
 {
   hit_record<Ray, primitive<unsigned>> hr;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
+  default_intersector isect;
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))
-    hr = intersect(ray,bls.asTriangle);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asTriangle,isect);
   else if (bls.type == BLS::Quad && (ray.intersectionMask & Ray::Quad))
-    hr = intersect(ray,bls.asQuad);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asQuad,isect);
   else if (bls.type == BLS::Sphere && (ray.intersectionMask & Ray::Sphere))
-    hr = intersect(ray,bls.asSphere);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asSphere,isect);
   else if (bls.type == BLS::Cone && (ray.intersectionMask & Ray::Cone))
-    hr = intersect(ray,bls.asCone);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asCone,isect);
   else if (bls.type == BLS::Cylinder && (ray.intersectionMask & Ray::Cylinder))
-    hr = intersect(ray,bls.asCylinder);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asCylinder,isect);
   else if (bls.type == BLS::BezierCurve && (ray.intersectionMask & Ray::BezierCurve))
-    hr = intersect(ray,bls.asBezierCurve);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asBezierCurve,isect);
   else if (bls.type == BLS::ISOSurface && (ray.intersectionMask & Ray::ISOSurface))
-    hr = intersect(ray,bls.asISOSurface);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asISOSurface,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::Volume))
-    hr = intersect(ray,bls.asVolume);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asVolume,isect);
   else if (bls.type == BLS::Volume && (ray.intersectionMask & Ray::VolumeBounds))
-    hr = intersect(ray,bls.asVolume);
+    hr = intersect_ray1_cwbvh<TT>(ray,bls.asVolume,isect);
 #else
   default_intersector isect;
   if (bls.type == BLS::Triangle && (ray.intersectionMask & Ray::Triangle))

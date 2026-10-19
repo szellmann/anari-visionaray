@@ -36,14 +36,17 @@ struct DeviceBVH
   typedef cuda_bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
   typedef bvh8<P> DeviceBVH8;
+  typedef cuda_cwbvh<P> DeviceCWBVH;
 #elif defined(WITH_HIP)
   typedef hip_bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
   typedef bvh8<P> DeviceBVH8;
+  typedef cwbvh<P> DeviceCWBVH;
 #else
   typedef bvh<P> DeviceBVH2;
   typedef bvh4<P> DeviceBVH4;
   typedef bvh8<P> DeviceBVH8;
+  typedef cwbvh<P> DeviceCWBVH;
 #endif
 
   DeviceBVH(VisionarayGlobalState *s);
@@ -53,9 +56,10 @@ struct DeviceBVH
   //=======================================================
   // get device refs, *rebuild BVHs* if outdated
   //=======================================================
-  typename DeviceBVH2::bvh_ref deviceBVH2();
-  typename DeviceBVH4::bvh_ref deviceBVH4();
-  typename DeviceBVH8::bvh_ref deviceBVH8();
+  typename DeviceBVH2::bvh_ref  deviceBVH2();
+  typename DeviceBVH4::bvh_ref  deviceBVH4();
+  typename DeviceBVH8::bvh_ref  deviceBVH8();
+  typename DeviceCWBVH::bvh_ref deviceCWBVH();
 
   //=======================================================
   // get BVH bounds, *no BVH rebuilds*
@@ -66,13 +70,15 @@ struct DeviceBVH
   TimeStamp lastRebuildTime() const;
 
  private:
-  void rebuildHostBVH2();
+  void rebuildHostBVH2(int max_allowed_leaf_size = -1);
   void rebuildHostBVH4();
   void rebuildHostBVH8();
+  void rebuildHostCWBVH();
 
   void rebuildDeviceBVH2();
   void rebuildDeviceBVH4();
   void rebuildDeviceBVH8();
+  void rebuildDeviceCWBVH();
 
   template<typename DST_T, typename SRC_T>
   inline void copyBVH(DST_T &dst, const SRC_T &src);
@@ -82,10 +88,12 @@ struct DeviceBVH
   bvh<P>          m_hostBVH2;
   bvh4<P>         m_hostBVH4;
   bvh8<P>         m_hostBVH8;
+  cwbvh<P>        m_hostCWBVH;
 
   DeviceBVH2      m_deviceBVH2;
   DeviceBVH4      m_deviceBVH4;
   DeviceBVH8      m_deviceBVH8;
+  DeviceCWBVH     m_deviceCWBVH;
 
   const P        *m_primitives{nullptr};
   unsigned        m_numPrimitives{0};
@@ -98,6 +106,7 @@ struct DeviceBVH
     TimeStamp BVH2{0};
     TimeStamp BVH4{0};
     TimeStamp BVH8{0};
+    TimeStamp CWBVH{0};
   } m_hostRebuild, m_deviceRebuild;
 };
 
@@ -139,6 +148,12 @@ typename DeviceBVH<P>::DeviceBVH8::bvh_ref DeviceBVH<P>::deviceBVH8() {
 }
 
 template<typename P>
+typename DeviceBVH<P>::DeviceCWBVH::bvh_ref DeviceBVH<P>::deviceCWBVH() {
+  rebuildDeviceCWBVH();
+  return m_deviceCWBVH.ref();
+}
+
+template<typename P>
 aabb DeviceBVH<P>::getBounds() {
   if (m_hostBVH2.num_nodes()) {
     return m_hostBVH2.node(0).get_bounds();
@@ -146,6 +161,8 @@ aabb DeviceBVH<P>::getBounds() {
     return m_hostBVH4.node(0).get_bounds();
   } else if (m_hostBVH8.num_nodes()) {
     return m_hostBVH8.node(0).get_bounds();
+  } else if (m_hostCWBVH.num_nodes()) {
+    return m_hostCWBVH.node(0).get_bounds();
   }
 
   if (m_deviceBVH2.num_nodes()) {
@@ -196,6 +213,22 @@ aabb DeviceBVH<P>::getBounds() {
     memcpy(&n,m_deviceBVH8.nodes().data(),sizeof(n));
 #endif
     return n.get_bounds();
+  } else if (m_deviceCWBVH.num_nodes()) {
+    cwbvh_node n;
+#if defined(WITH_CUDA)
+    CUDA_SAFE_CALL(cudaMemcpyAsync(&n,m_deviceCWBVH.nodes().data(),sizeof(n),
+                                   cudaMemcpyDeviceToHost,
+                                   deviceState()->syncContext->copyStream));
+    CUDA_SAFE_CALL(cudaStreamSynchronize(deviceState()->syncContext->copyStream));
+#elif defined(WITH_HIP)
+    HIP_SAFE_CALL(hipMemcpyAsync(&n,m_deviceCWBVH.nodes().data(),sizeof(n),
+                                 hipMemcpyDeviceToHost,
+                                 deviceState()->syncContext->copyStream));
+    HIP_SAFE_CALL(hipStreamSynchronize(deviceState()->syncContext->copyStream));
+#else
+    memcpy(&n,m_deviceCWBVH.nodes().data(),sizeof(n));
+#endif
+    return n.get_bounds();
   }
 
   aabb inval;
@@ -217,13 +250,15 @@ TimeStamp DeviceBVH<P>::lastRebuildTime() const {
   return std::max(m_hostRebuild.BVH2,std::max(
                   m_hostRebuild.BVH4,std::max(
                   m_hostRebuild.BVH8,std::max(
+                  m_hostRebuild.CWBVH,std::max(
                   m_deviceRebuild.BVH2,std::max(
-                  m_deviceRebuild.BVH4,
-                  m_deviceRebuild.BVH8)))));
+                  m_deviceRebuild.BVH4,std::max(
+                  m_deviceRebuild.BVH8,
+                  m_deviceRebuild.CWBVH)))))));
 }
 
 template<typename P>
-void DeviceBVH<P>::rebuildHostBVH2() {
+void DeviceBVH<P>::rebuildHostBVH2(int max_allowed_leaf_size) {
   if (m_hostRebuild.BVH2 >= m_lastUpdate) {
     return;
   }
@@ -254,12 +289,13 @@ void DeviceBVH<P>::rebuildHostBVH2() {
 #endif
 
   if (m_flags & BVH_FLAG_PREFER_FAST_BUILD) {
+    assert(max_allowed_leaf_size == -1);
     lbvh_builder builder;
     m_hostBVH2 = builder.build(bvh<P>{},hPrimitives,m_numPrimitives);
   } else {
     binned_sah_builder builder;
     builder.enable_spatial_splits(m_flags & BVH_FLAG_ENABLE_SPATIAL_SPLITS);
-    m_hostBVH2 = builder.build(bvh<P>{},hPrimitives,m_numPrimitives);
+    m_hostBVH2 = builder.build(bvh<P>{},hPrimitives,m_numPrimitives,max_allowed_leaf_size);
   }
 
 #if defined(WITH_CUDA)
@@ -317,6 +353,24 @@ void DeviceBVH<P>::rebuildHostBVH8() {
   }
 
   m_hostRebuild.BVH8 = newTimeStamp();
+}
+
+template<typename P>
+void DeviceBVH<P>::rebuildHostCWBVH() {
+  if (m_hostRebuild.CWBVH >= m_lastUpdate) {
+    return;
+  }
+
+  rebuildHostBVH2(3);
+
+  if (m_hostBVH2.num_nodes() && m_hostBVH2.nodes()[0].get_bounds().valid()) {
+    cwbvh_collapser collapser;
+    collapser.collapse(m_hostBVH2, m_hostCWBVH, deviceState()->syncContext->threadPool);
+  } else {
+    m_hostCWBVH = {};
+  }
+
+  m_hostRebuild.CWBVH = newTimeStamp();
 }
 
 template<typename P>
@@ -415,26 +469,35 @@ void DeviceBVH<P>::rebuildDeviceBVH8() {
 }
 
 template<typename P>
+void DeviceBVH<P>::rebuildDeviceCWBVH() {
+  if (m_deviceRebuild.CWBVH >= m_lastUpdate) {
+    return;
+  }
+
+  rebuildHostCWBVH();
+
+  copyBVH(m_deviceCWBVH, m_hostCWBVH);
+
+  m_deviceRebuild.CWBVH = newTimeStamp();
+}
+
+template<typename P>
 template<typename DST_T, typename SRC_T>
 inline void DeviceBVH<P>::copyBVH(DST_T &dst, const SRC_T &src) {
 #if defined(WITH_CUDA)
-  if constexpr (std::is_same_v<DST_T,cuda_bvh<P>>) {
-    dst.nodes().resize(src.nodes().size());
-    dst.primitives().resize(src.primitives().size());
+  dst.nodes().resize(src.nodes().size());
+  dst.primitives().resize(src.primitives().size());
 
-    CUDA_SAFE_CALL(cudaMemcpyAsync(dst.nodes().data(), src.nodes().data(),
-                                   sizeof(src.nodes()[0])*src.nodes().size(),
-                                   cudaMemcpyDefault,
-                                   deviceState()->syncContext->copyStream));
-    CUDA_SAFE_CALL(cudaMemcpyAsync(dst.primitives().data(), src.primitives().data(),
-                                   sizeof(src.primitives()[0])*src.primitives().size(),
-                                   cudaMemcpyDefault,
-                                   deviceState()->syncContext->copyStream));
-  } else {
-#endif
-    dst = DST_T(src);
-#if defined(WITH_CUDA)
-  }
+  CUDA_SAFE_CALL(cudaMemcpyAsync(dst.nodes().data(), src.nodes().data(),
+                                 sizeof(src.nodes()[0])*src.nodes().size(),
+                                 cudaMemcpyDefault,
+                                 deviceState()->syncContext->copyStream));
+  CUDA_SAFE_CALL(cudaMemcpyAsync(dst.primitives().data(), src.primitives().data(),
+                                 sizeof(src.primitives()[0])*src.primitives().size(),
+                                 cudaMemcpyDefault,
+                                 deviceState()->syncContext->copyStream));
+#else
+  dst = DST_T(src);
 #endif
 }
 
