@@ -125,7 +125,7 @@ void BezierCurve::finalize()
 
   vBLS.type = dco::BLS::BezierCurve;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-  vBLS.asBezierCurve = m_BVH.deviceBVH2();
+  vBLS.asBezierCurve = m_BVH.deviceCWBVH();
 #else
   vBLS.asBezierCurve = m_BVH.deviceBVH4();
 #endif
