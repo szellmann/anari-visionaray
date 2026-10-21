@@ -292,11 +292,6 @@ void Frame::renderFrame()
     VisionarayScene &scene = m_world->visionarayScene();
     scene.copyToDevice();
 
-    if (cam.type == dco::Camera::Pinhole)
-      cam.asPinholeCam.begin_frame();
-    else if (cam.type == dco::Camera::Matrix)
-      cam.asMatrixCam.begin_frame();
-
     if (m_nextFrameReset) {
       rend.rendererState.accumID = 0;
       m_nextFrameReset = false;
@@ -315,11 +310,6 @@ void Frame::renderFrame()
       auto worldID = scene.m_worldID;
 
       rend.renderFrame(frame, cam, size, state, worldID, frameID);
-
-      if (cam.type == dco::Camera::Pinhole)
-        cam.asPinholeCam.end_frame();
-      else if (cam.type == dco::Camera::Matrix)
-        cam.asMatrixCam.end_frame();
 
       rend.rendererState.prevMV = rend.rendererState.currMV;
       rend.rendererState.prevPR = rend.rendererState.currPR;
