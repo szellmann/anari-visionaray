@@ -25,14 +25,16 @@ struct Camera
     matrix_camera asMatrixCam;
 
     struct {
-      void init(float3 pos, float3 dir, float3 up, float fovy, float aspect,
-                box2f image_region, float lensRadius, float focalDistance)
+      void init(float3 pos, float3 dir, float3 up, float fovy, float aspect, float near,
+                float far, box2f image_region, float lensRadius, float focalDistance)
       {
         this->pos  = pos;
         this->dir  = dir;
         this->up   = up;
         this->fovy = fovy;
         this->aspect = aspect;
+        this->near = near;
+        this->far = far;
         this->image_region = image_region;
         this->lensRadius = lensRadius;
         this->focalDistance = focalDistance;
@@ -51,8 +53,6 @@ struct Camera
             s.z, u.z, f.z, 0.0f,
             -dot(pos, s), -dot(pos, u), -dot(pos, f), 1.0f
             );
-
-        float near = 0.001f, far = 1000.f;
 
         float fd = cot(fovy * 0.5f);
 
@@ -90,8 +90,8 @@ struct Camera
         Ray r;
         r.ori = pos;
         r.dir = normalize(U*u+V*v+W);
-        r.tmin = 0.f;
-        r.tmax = FLT_MAX;
+        r.tmin = near / dot(r.dir,this->dir);
+        r.tmax = far < FLT_MAX ? far / dot(r.dir,this->dir) : far;
 
         float3 lens_du(normalize(U));
         float3 lens_dv(normalize(V));
@@ -125,8 +125,10 @@ struct Camera
       }
       float3 pos, dir, up;
       float fovy, aspect;
+      float near, far;
       float lensRadius, focalDistance;
       box2f image_region;
+
       float3 U, V, W;
       mat4 view, proj;
     } asPinholeCam;

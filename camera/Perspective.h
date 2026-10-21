@@ -19,6 +19,8 @@ struct Perspective : public Camera
    float m_aspect{1.f};
    float m_apertureRadius{0.f};
    float m_focusDistance{1.f};
+   float m_near{0.0f};
+   float m_far{FLT_MAX};
    float3 m_dir_du;
    float3 m_dir_dv;
    float3 m_dir_00;
