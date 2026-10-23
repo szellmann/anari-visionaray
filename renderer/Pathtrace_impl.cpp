@@ -603,10 +603,16 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
             }
 
             if (firstHit.hit) {
-              // if we hit an invisible light with a primary ray we render
-              // the background color:
-              if (!(firstHit.type==HitRec::Light && !firstHit.asLight.visible)) {
+              if (firstHit.type != HitRec::Light) {
                 ps.color = float4(intensity,1.f);
+              } else {
+                // if we hit an invisible light with a primary ray we render
+                // the background color:
+                const dco::Light &light
+                    = getLight(onDevice.worlds[worldID].allLights, firstHit.objID, onDevice);
+                if (light.visible) {
+                  ps.color = float4(intensity,1.f);
+                }
               }
             }
 

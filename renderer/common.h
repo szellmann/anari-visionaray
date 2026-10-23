@@ -1707,7 +1707,6 @@ struct HitRecLight
 {
   bool hit{false};
   float t{FLT_MAX};
-  bool lightVisible{false};
   unsigned lightID{UINT_MAX};
 };
 
@@ -1778,6 +1777,7 @@ inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
 {
   HitRecLight hr;
   dco::World world = onDevice.worlds[worldID];
+  bool lightVisible = false;
   for (unsigned lightID=0; lightID<world.numLights; ++lightID) {
     const dco::Light &light = getLight(world.allLights, lightID, onDevice);
     if (bounceID == 0 && !light.visible) continue;
@@ -1785,14 +1785,13 @@ inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
       HitRecLight hrl = {};
       hrl.hit = true;
       hrl.t = FLT_MAX;
-      hrl.lightVisible = light.visible;
+      lightVisible = light.visible;
       if (hrl.hit && hrl.t < hr.t
           || !hr.hit
           // if we have more than one HDRI, we have to pick an arbitrary
           // one but prefer visible over invisible lights:
-          || (hrl.t == hr.t &&  (light.visible && !hr.lightVisible))) {
+          || (hrl.t == hr.t &&  (light.visible && !lightVisible))) {
         hr.hit = true;
-        hr.lightVisible = light.visible;
         hr.t = FLT_MAX;
         hr.lightID = lightID;
       }
@@ -1804,7 +1803,7 @@ inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
       if (hrl.hit && hrl.t < hr.t) {
         hr.hit = true;
         hr.t = hrl.t;
-        hr.lightVisible = light.visible;
+        lightVisible = light.visible;
         hr.lightID = lightID;
       }
     } else if (light.type == dco::Light::Point) {
@@ -1814,7 +1813,7 @@ inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
       if (hrl.hit && hrl.t < hr.t) {
         hr.hit = true;
         hr.t = hrl.t;
-        hr.lightVisible = light.visible;
+        lightVisible = light.visible;
         hr.lightID = lightID;
       }
     }
@@ -1844,7 +1843,6 @@ struct HitRec
       float3 albedo;
     } asVolume;
     struct {
-      bool visible;
     } asLight;
   };
 };
@@ -1869,7 +1867,6 @@ inline HitRec intersectAll(
     hr.primID           = 0u; // (TODO)
     hr.objID            = light.lightID;
     hr.instID           = UINT_MAX; // (TODO)
-    hr.asLight.visible  = light.lightVisible;
   } else if (volume.hit && (!surface.hit || volume.t < surface.t)
               && (!light.hit || volume.t < light.t)) {
     hr.type             = HitRec::Volume;
