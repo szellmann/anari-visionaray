@@ -25,16 +25,16 @@ struct Camera
     matrix_camera asMatrixCam;
 
     struct {
-      void init(float3 pos, float3 dir, float3 up, float fovy, float aspect, float near,
-                float far, box2f image_region, float lensRadius, float focalDistance)
+      void init(float3 pos, float3 dir, float3 up, float fovy, float aspect, float nearPlane,
+                float farPlane, box2f image_region, float lensRadius, float focalDistance)
       {
         this->pos  = pos;
         this->dir  = dir;
         this->up   = up;
         this->fovy = fovy;
         this->aspect = aspect;
-        this->near = near;
-        this->far = far;
+        this->nearPlane = nearPlane;
+        this->farPlane = farPlane;
         this->image_region = image_region;
         this->lensRadius = lensRadius;
         this->focalDistance = focalDistance;
@@ -68,8 +68,8 @@ struct Camera
 
         proj(2, 0) = 0.0f;
         proj(2, 1) = 0.0f;
-        proj(2, 2) = (far + near) / (near - far);
-        proj(2, 3) = (2.0f * far * near) / (near - far);
+        proj(2, 2) = (farPlane + nearPlane) / (nearPlane - farPlane);
+        proj(2, 3) = (2.0f * farPlane * nearPlane) / (nearPlane - farPlane);
 
         proj(3, 0) = 0.0f;
         proj(3, 1) = 0.0f;
@@ -90,8 +90,8 @@ struct Camera
         Ray r;
         r.ori = pos;
         r.dir = normalize(U*u+V*v+W);
-        r.tmin = near / dot(r.dir,this->dir);
-        r.tmax = far < FLT_MAX ? far / dot(r.dir,this->dir) : far;
+        r.tmin = nearPlane / dot(r.dir,this->dir);
+        r.tmax = farPlane < FLT_MAX ? farPlane / dot(r.dir,this->dir) : farPlane;
 
         float3 lens_du(normalize(U));
         float3 lens_dv(normalize(V));
@@ -125,7 +125,7 @@ struct Camera
       }
       float3 pos, dir, up;
       float fovy, aspect;
-      float near, far;
+      float nearPlane, farPlane;
       float lensRadius, focalDistance;
       box2f image_region;
 
