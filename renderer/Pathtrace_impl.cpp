@@ -146,7 +146,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     aoWeights = 0.f;
     aoCount = 0.f;
 
-    if (!hitRec.hit) {
+    if (!hitRec.hit()) {
       next.rayType = Miss;
       return;
     }
@@ -435,10 +435,8 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
     return;
   } else if (rayType == Shadow) {
     // Shadow ray? Finalize light visibility term:
-    int surfV = (hitRec.hit && hitRec.type==HitRec::Surface) ? 0 : 1;
-    int volV = (hitRec.hit && hitRec.type==HitRec::Volume) ? 0 : 1;
-    float volTr = (hitRec.hit && hitRec.type==HitRec::Volume) ?
-        volV*hitRec.asVolume.Tr : 1.f;
+    int surfV = hitRec.type==HitRec::Surface ? 0 : 1;
+    float volTr = hitRec.type==HitRec::Volume ? 0.f : 1.f;
 
     visibility.light = surfV * volTr;
 
@@ -459,7 +457,7 @@ inline void shade(ScreenSample &ss, const Ray &ray, RayType rayType, unsigned wo
 
     float weight = fmaxf(0.f, dot(ray.dir,sn));
     aoWeights += weight;
-    if (weight > 0.f && hitRec.hit) {
+    if (weight > 0.f && hitRec.hit()) {
       aoCount += weight;
     }
 
@@ -602,7 +600,7 @@ void VisionarayRendererPathtrace::renderFrame(DevicePointer<DeviceObjectRegistry
               }
             }
 
-            if (firstHit.hit) {
+            if (firstHit.hit()) {
               if (firstHit.type != HitRec::Light) {
                 ps.color = float4(intensity,1.f);
               } else {

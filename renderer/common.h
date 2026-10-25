@@ -1827,8 +1827,7 @@ inline HitRecLight intersectLights(const Ray &ray, unsigned worldID,
 
 struct HitRec
 {
-  enum Type { Surface, Volume, Light, } type;
-  bool hit;
+  enum Type { Surface, Volume, Light, None, } type;
   float t;
   float3 localHitPos;
   unsigned primID;
@@ -1839,12 +1838,14 @@ struct HitRec
       float u, v;
     } asSurface;
     struct {
-      float Tr;
       float3 albedo;
     } asVolume;
     struct {
     } asLight;
   };
+
+  VSNRAY_FUNC inline bool hit() const
+  { return type != None; }
 };
 
 VSNRAY_FUNC
@@ -1857,7 +1858,6 @@ inline HitRec intersectAll(
   auto volume  = sampleFreeFlightDistanceAllVolumes(ray, worldID, onDevice, rng/*, shadow*/);
 
   HitRec hr;
-  hr.hit = surface.hit || volume.hit || light.hit;
   // light-hit takes precedence over surface and volume (<=)
   if (light.hit && (!surface.hit || light.t <= surface.t)
               && (!volume.hit || light.t <= volume.t)) {
@@ -1875,7 +1875,6 @@ inline HitRec intersectAll(
     hr.primID           = volume.primID;
     hr.objID            = volume.localID;
     hr.instID           = volume.instID;
-    hr.asVolume.Tr      = volume.Tr;
     hr.asVolume.albedo  = volume.albedo;
   } else if (surface.hit) {
     hr.type             = HitRec::Surface;
@@ -1886,6 +1885,8 @@ inline HitRec intersectAll(
     hr.instID           = surface.inst_id;
     hr.asSurface.u      = surface.u;
     hr.asSurface.v      = surface.v;
+  } else {
+    hr.type             = HitRec::None;
   }
 
   return hr;

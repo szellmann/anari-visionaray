@@ -105,8 +105,6 @@ struct HitRecordVolume
   float t{FLT_MAX};
   float3 isect_pos;
   float3 albedo{0.f,0.f,0.f};
-  float extinction{0.f};
-  float Tr{1.f};
   int volID{-1}; // global to the device
   int primID{-1};
   int instID{-1};
@@ -303,8 +301,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       hrv.volID = vol.volID;
       hrv.localID = 0;//hr.geom_id;
       hrv.albedo = ((float3 *)vol.asGaussianSplat.colors.data)[hr.prim_id];
-      hrv.Tr = 0.f;
-      hrv.extinction = 1.f;
     }
     return hr;
   }
@@ -317,8 +313,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
   dco::GridAccel grid = sf.gridAccel;
 
   float3 albedo;
-  float Tr{1.f};
-  float extinction{0.f};
   float unitDistance = vol.unitDistance;
   float invUnitDistance{1.f};
 
@@ -345,9 +339,7 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
         float u = rnd();
         if (sample.w >= u * majorant) {
           albedo = sample.xyz();
-          extinction = sample.w;
           hr.hit = true;
-          Tr = 0.f;
           hr.t = t;
           hr.isect_pos = ray.ori + ray.dir * hr.t;
           hr.prim_id = primID;
@@ -390,8 +382,6 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray ray, const Volume &vol
       hrv.volID = vol.volID;
       hrv.localID = hr.geom_id;
       hrv.albedo = albedo;
-      hrv.Tr = Tr;
-      hrv.extinction = extinction;
     }
   }
 
