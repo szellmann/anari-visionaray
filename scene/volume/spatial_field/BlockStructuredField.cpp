@@ -15,19 +15,25 @@ BlockStructuredField::BlockStructuredField(VisionarayGlobalState *d)
 
 void BlockStructuredField::commitParameters()
 {
-  m_params.refinementRatio = getParamObject<helium::Array1D>("refinementRatio");
-  m_params.blockBounds = getParamObject<helium::Array1D>("block.bounds");
+  m_params.blockOrigins = getParamObject<helium::Array1D>("block.origin");
+  m_params.blockDims = getParamObject<helium::Array1D>("block.dimensions");
   m_params.blockLevel = getParamObject<helium::Array1D>("block.level");
   m_params.data = getParamObject<helium::Array1D>("data");
-  m_params.gridOrigin = getParam<float3>("gridOrigin", float3(0.f));
-  m_params.gridSpacing = getParam<float3>("gridSpacing", float3(1.f));
+  m_params.gridOrigin = getParam<float3>("origin", float3(0.f));
+  m_params.gridSpacing = getParam<float3>("spacing", float3(1.f));
 }
 
 void BlockStructuredField::finalize()
 {
-  if (!m_params.blockBounds) {
+  if (!m_params.blockOrigins) {
     reportMessage(ANARI_SEVERITY_WARNING,
-        "missing required parameter 'block.bounds' on amr spatial field");
+        "missing required parameter 'block.origin' on amr spatial field");
+    return;
+  }
+
+  if (!m_params.blockDims) {
+    reportMessage(ANARI_SEVERITY_WARNING,
+        "missing required parameter 'block.dimensions' on amr spatial field");
     return;
   }
 
@@ -43,31 +49,29 @@ void BlockStructuredField::finalize()
     return;
   }
 
-  size_t numLevels = m_params.refinementRatio->totalSize();
-  size_t numBlocks = m_params.blockBounds->totalSize();
-  auto *refinementRatio = m_params.refinementRatio->beginAs<unsigned>();
-  auto *blockBounds = m_params.blockBounds->beginAs<aabbi>();
+  size_t numBlocks = m_params.blockOrigins->totalSize();
+  auto *blockOrigins = m_params.blockOrigins->beginAs<int3>();
+  auto *blockDims = m_params.blockDims->beginAs<int3>();
   auto *blockLevels = m_params.blockLevel->beginAs<int>();
   auto *data = m_params.data->beginAs<float>();
 
   m_scalars.clear();
   m_blocks.resize(numBlocks);
 
-  std::vector<aabb> levelBounds(numLevels);
-  for (auto &lb : levelBounds) {
-    lb.invalidate();
+  std::vector<aabb> levelBounds;
+
+  int maxLevel = -1;
+  for (size_t i=0; i<numBlocks; ++i) {
+    maxLevel = std::max(maxLevel,blockLevels[i]);
   }
 
   for (size_t i=0; i<numBlocks; ++i) {
-    int3 blockSize = blockBounds[i].max - blockBounds[i].min + int3(1);
+    int3 blockSize = blockDims[i];
 
-    m_blocks[i].bounds = blockBounds[i];
+    m_blocks[i].bounds = aabbi(blockOrigins[i], blockOrigins[i] + blockDims[i]);
     m_blocks[i].level = blockLevels[i];
     m_blocks[i].scalarOffset = m_scalars.size();
     m_blocks[i].valueRange = box1f(FLT_MAX,-FLT_MAX);
-
-    float cellWidth = powf((float)refinementRatio[blockLevels[i]], (float)blockLevels[i]);
-    (void)cellWidth; // ignore for now
 
     for (int j=0; j<blockSize.x*blockSize.y*blockSize.z; ++j) {
       size_t index = size_t(m_blocks[i].scalarOffset) + j;
@@ -146,16 +150,16 @@ __global__ void BlockStructuredField_buildGridGPU(dco::GridAccel    vaccel,
     return;
 
   const auto &block = blocks[blockID];
-  int cellSize = block.cellSize();
+  float cellSize = block.cellSize();
 
   for (int z=0; z<block.numCells().z; ++z) {
     for (int y=0; y<block.numCells().y; ++y) {
       for (int x=0; x<block.numCells().x; ++x) {
         vec3i cellID(x,y,z);
-        vec3i cell_lower = (block.bounds.min+cellID)*cellSize;
-        vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
-        box3f cellBounds(vec3f(cell_lower)-vec3f(cellSize*0.5f),
-                         vec3f(cell_upper)+vec3f(cellSize*0.5f)); // +/- filterDomain
+        vec3f cell_lower = vec3f(block.bounds.min+cellID)*cellSize;
+        vec3f cell_upper = vec3f(block.bounds.min+cellID+vec3i(1))*cellSize;
+        box3f cellBounds(cell_lower-vec3f(cellSize*0.5f),
+                         cell_upper+vec3f(cellSize*0.5f)); // +/- filterDomain
         float scalar = block.getScalar(x,y,z);
 
         rasterizeBox(vaccel,cellBounds,box1f(scalar),cellSize);
@@ -203,15 +207,15 @@ void BlockStructuredField::buildGrid()
   parallel::for_each(deviceState()->syncContext->threadPool, 0, numBlocks,
     [&](size_t blockID) {
       const auto &block = m_blocks[blockID];
-      int cellSize = block.cellSize();
+      float cellSize = block.cellSize();
       for (int z=0; z<block.numCells().z; ++z) {
         for (int y=0; y<block.numCells().y; ++y) {
           for (int x=0; x<block.numCells().x; ++x) {
             vec3i cellID(x,y,z);
-            vec3i cell_lower = (block.bounds.min+cellID)*cellSize;
-            vec3i cell_upper = (block.bounds.min+cellID+vec3i(1))*cellSize;
-            box3f cellBounds(vec3f(cell_lower)+m_params.gridOrigin-vec3f(cellSize*0.5f),
-                             vec3f(cell_upper)+m_params.gridOrigin+vec3f(cellSize*0.5f)); // +/- filterDomain
+            vec3f cell_lower = vec3f(block.bounds.min+cellID)*cellSize;
+            vec3f cell_upper = vec3f(block.bounds.min+cellID+vec3i(1))*cellSize;
+            box3f cellBounds(cell_lower+m_params.gridOrigin-vec3f(cellSize*0.5f),
+                             cell_upper+m_params.gridOrigin+vec3f(cellSize*0.5f)); // +/- filterDomain
             float scalar = block.getScalar(x,y,z);
 
             rasterizeBox(vaccel,cellBounds,box1f(scalar),cellSize);

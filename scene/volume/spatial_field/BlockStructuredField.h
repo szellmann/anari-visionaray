@@ -38,13 +38,13 @@ struct BlockStructuredField : public SpatialField
   struct Parameters
   {
     Parameters(helium::BaseObject *observer)
-      : refinementRatio(observer)
-      , blockBounds(observer)
+      : blockOrigins(observer)
+      , blockDims(observer)
       , blockLevel(observer)
       , data(observer)
     {}
-    helium::ChangeObserverPtr<helium::Array1D> refinementRatio;
-    helium::ChangeObserverPtr<helium::Array1D> blockBounds;
+    helium::ChangeObserverPtr<helium::Array1D> blockOrigins;
+    helium::ChangeObserverPtr<helium::Array1D> blockDims;
     helium::ChangeObserverPtr<helium::Array1D> blockLevel;
     helium::ChangeObserverPtr<helium::Array1D> data;
     float3 gridOrigin{0.f, 0.f, 0.f};

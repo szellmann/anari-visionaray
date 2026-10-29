@@ -201,19 +201,19 @@ struct Block
   }
 
   VSNRAY_FUNC
-  int cellSize() const
-  { return 1<<level; }
+  float cellSize() const
+  { return 1.f/(1<<level); }
 
   VSNRAY_FUNC
   int3 numCells() const
-  { return bounds.max-bounds.min+int3(1); }
+  { return bounds.max-bounds.min; }
 
   VSNRAY_FUNC
   aabb worldBounds() const
   {
     return aabb(
-      float3(bounds.min)*float(cellSize()),
-      float3(bounds.max+int3(1))*float(cellSize())
+      float3(bounds.min)*cellSize(),
+      float3(bounds.max)*cellSize()
     );
   }
 
@@ -223,15 +223,6 @@ struct Block
     const float3 cellSize2(cellSize()*0.5f);
     const aabb wb = worldBounds();
     return aabb(wb.min-cellSize2, wb.max+cellSize2);
-  }
-
-  VSNRAY_FUNC
-  aabb cellBounds(const vec3i cellID) const
-  {
-    aabb cb;
-    cb.min = float3(bounds.min+cellID)*float(cellSize());
-    cb.max = float3(bounds.max+cellID+int3(1))*float(cellSize());
-    return cb;
   }
 };
 
