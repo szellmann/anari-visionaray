@@ -6,6 +6,7 @@
 // std
 #include <cstdlib>
 // visionaray
+#include "visionaray/bvh.h"
 #if defined(WITH_CUDA)
 #include "visionaray/cuda/safe_call.h"
 #if defined(__CUDACC__)
@@ -17,7 +18,6 @@
 #include "visionaray/detail/bvh/hip_lbvh.h"
 #endif
 #endif
-#include "visionaray/bvh.h"
 // ours
 #include "TimeStamp.h"
 #include "VisionarayGlobalState.h"

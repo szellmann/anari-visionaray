@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "DeviceBVH.h"
 #include "SpatialField.h"
 #include "array/Array1D.h"
 #include "array/ObjectArray.h"
@@ -27,11 +28,7 @@ struct BlockStructuredField : public SpatialField
   HostDeviceArray<dco::Block> m_blocks;
   HostDeviceArray<float> m_scalars;
   // sampling accel
-#ifdef WITH_CUDA
-  cuda_bvh<dco::Block> m_samplingBVH;
-#else
-  bvh4<dco::Block> m_samplingBVH;
-#endif
+  DeviceBVH<dco::Block> m_samplingBVH;
 
   aabb m_bounds;
 

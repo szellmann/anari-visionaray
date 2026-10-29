@@ -445,9 +445,11 @@ struct SpatialField
     } asUnstructured;
     struct {
 #ifdef WITH_CUDA
-      cuda_bvh<Block>::bvh_ref samplingBVH;
+      cuda_cwbvh<Block>::bvh_ref samplingBVH;
 #elif defined(WITH_HIP)
       hip_bvh<Block>::bvh_ref samplingBVH;
+#elif defined(WITH_AVX2)
+      bvh8<Block>::bvh_ref samplingBVH;
 #else
       bvh4<Block>::bvh_ref samplingBVH;
 #endif
@@ -545,7 +547,9 @@ inline bool sampleField(const SpatialField &sf, vec3 P, float &value, int &primI
 
     default_intersector isect;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
-    auto hr = intersect(ray, sf.asBlockStructured.samplingBVH);
+    auto hr = intersect_ray1_cwbvh<detail::AnyHit>(ray,
+                                                   sf.asBlockStructured.samplingBVH,
+                                                   isect);
 #else
     auto hr = intersect_ray1_bvhN<detail::AnyHit>(ray,
                                                   sf.asBlockStructured.samplingBVH,

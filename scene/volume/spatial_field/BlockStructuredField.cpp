@@ -8,7 +8,7 @@
 namespace visionaray {
 
 BlockStructuredField::BlockStructuredField(VisionarayGlobalState *d)
-    : SpatialField(d), m_params(this)
+    : SpatialField(d), m_samplingBVH(d), m_params(this)
 {
   vfield.type = dco::SpatialField::BlockStructured;
 }
@@ -102,19 +102,16 @@ void BlockStructuredField::finalize()
 
   // sampling BVH
 
-  binned_sah_builder builder;
-  builder.enable_spatial_splits(false);
+  m_samplingBVH.update(m_blocks.data(), m_blocks.size(),
+                       BVH_FLAG_ENABLE_SPATIAL_SPLITS | BVH_FLAG_NO_STREAM_SYNCHRONIZE);
 
-  auto samplingBVH2 = builder.build(bvh<dco::Block>{}, m_blocks.data(), m_blocks.size());
-
-#ifdef WITH_CUDA
-  m_samplingBVH = cuda_bvh<dco::Block>(samplingBVH2);
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+  vfield.asBlockStructured.samplingBVH = m_samplingBVH.deviceCWBVH();
+#elif defined(WITH_AVX2)
+  vfield.asBlockStructured.samplingBVH = m_samplingBVH.deviceBVH8();
 #else
-  bvh_collapser collapser;
-  collapser.collapse(samplingBVH2, m_samplingBVH, deviceState()->syncContext->threadPool);
+  vfield.asBlockStructured.samplingBVH = m_samplingBVH.deviceBVH4();
 #endif
-
-  vfield.asBlockStructured.samplingBVH = m_samplingBVH.ref();
 
   mat3 S = mat3::scaling(voxelBounds.size()/m_bounds.size());
   vec3 T = voxelBounds.min-m_bounds.min;
@@ -131,7 +128,8 @@ void BlockStructuredField::finalize()
 
 bool BlockStructuredField::isValid() const
 {
-  return m_samplingBVH.num_nodes();
+  return m_params.blockOrigins && m_params.blockDims &&
+      m_params.blockLevel && m_params.data;
 }
 
 aabb BlockStructuredField::bounds() const
