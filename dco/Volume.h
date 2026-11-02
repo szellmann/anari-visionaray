@@ -179,7 +179,18 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray r, const Gaussian &g)
   Random &rnd = *prd.rnd;
 
   auto woodcock = [&](float t0, float t1) {
-    const float majorant = g.alpha;
+    // Closest distance to origin:
+    float denom = dot(r.dir,r.dir);
+    if (denom == 0.f) denom = 1.f;
+    float tv = -dot(r.ori, r.dir) / denom;
+    float t_clamp = clamp(tv,t0,t1);
+
+    // Compute minimum squared distance on this segment:
+    float3 P_clamp = r.ori + r.dir * t_clamp;
+    float r2_min = dot(P_clamp, P_clamp);
+
+    // Compute tight majorant for this segment:
+    const float majorant = g.alpha * expf(-0.5f*r2_min);
     float t = t0;
 
     while (1) {
