@@ -155,8 +155,8 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray r, const Gaussian &g)
   auto B = dot(r.dir, oc);
   // numerically more stable version for large distance between ray origin and sphere center
   auto t_local = -B / A;
-  auto p_local = oc + t_local * r.dir;
-  auto C_local = radius * radius - dot(p_local, p_local);
+  auto P_local = oc + t_local * r.dir;
+  auto C_local = radius * radius - dot(P_local, P_local);
 
   bool valid = C_local >= 0.f;
 
@@ -179,32 +179,45 @@ inline hit_record<Ray, primitive<unsigned>> intersect(Ray r, const Gaussian &g)
   Random &rnd = *prd.rnd;
 
   auto woodcock = [&](float t0, float t1) {
-    // Closest distance to origin:
+    // Quadratic coefficients for ray/splat
+    auto t_local = -B / A;
+    auto P_local = oc + t_local * r.dir;
     float denom = dot(r.dir,r.dir);
     if (denom == 0.f) denom = 1.f;
     float tv = -dot(r.ori, r.dir) / denom;
     float t_clamp = clamp(tv,t0,t1);
 
     // Compute minimum squared distance on this segment:
-    float3 P_clamp = r.ori + r.dir * t_clamp;
-    float r2_min = dot(P_clamp, P_clamp);
+    float r2_min = dot(P_local, P_local);
 
     // Compute tight majorant for this segment:
+#ifdef __CUDA_ARCH__
+    const float majorant = g.alpha * __expf(-0.5f*r2_min);
+#else
     const float majorant = g.alpha * expf(-0.5f*r2_min);
+#endif
+    if (majorant <= 0.f)
+      return FLT_MAX;
+
     float t = t0;
 
     while (1) {
-      if (majorant <= 0.f)
-        break;
-
+#ifdef __CUDA_ARCH__
+      t -= (__logf(1.f - rnd()) / (majorant));
+#else
       t -= (logf(1.f - rnd()) / (majorant));
+#endif
 
       if (t > t1)
         break;
 
-      float3 P = r.ori+r.dir*t;
-      float r2 = dot(P,P);
+      float dt = t - t_local;
+      float r2 = r2_min + A * dt * dt;
+#ifdef __CUDA_ARCH__
+      float w = g.alpha*__expf(-0.5f*r2);
+#else
       float w = g.alpha*expf(-0.5f*r2);
+#endif
       float u = rnd();
       if (w >= u * majorant) {
         return t;
