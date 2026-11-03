@@ -10,7 +10,7 @@ namespace visionaray::dco {
 
 // Gaussian primitive //
 
-struct Gaussian : public primitive<unsigned>
+struct VSNRAY_ALIGN(64) Gaussian : public primitive<unsigned>
 {
   float3 pos;
   quatf rot;
