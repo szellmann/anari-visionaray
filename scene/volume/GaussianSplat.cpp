@@ -89,7 +89,7 @@ void GaussianSplat::finalize()
 
   m_splatBVH.update((const dco::Gaussian *)vvol.asGaussianSplat.primitives.data,
                     vvol.asGaussianSplat.primitives.len,
-                    BVH_FLAG_ENABLE_SPATIAL_SPLITS | BVH_FLAG_NO_STREAM_SYNCHRONIZE);
+                    /*BVH_FLAG_ENABLE_SPATIAL_SPLITS |*/ BVH_FLAG_NO_STREAM_SYNCHRONIZE);
 
   vvol.bounds = m_bounds;
   vvol.unitDistance = 1.f; // ignored (TODO?)
