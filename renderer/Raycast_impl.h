@@ -4,7 +4,6 @@
 #pragma once
 
 #include "renderer/common.h"
-#include "renderer/VolumeIntegration.h"
 #include "SyncContext.h"
 
 namespace visionaray {

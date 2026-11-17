@@ -1,6 +1,7 @@
 // Copyright 2023-2026 Stefan Zellmann
 // SPDX-License-Identifier: Apache-2.0
 
+#include "renderer/VolumeIntegration.h"
 #include "for_each.h"
 #include "Raycast_impl.h"
 
