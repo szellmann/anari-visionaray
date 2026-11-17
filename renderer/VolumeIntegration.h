@@ -371,6 +371,54 @@ inline float elementMarchVolume(ScreenSample &ss,
 // Ray marching 3DGS
 //=========================================================
 
+struct GaussianSplatIntersector : basic_intersector<GaussianSplatIntersector> {
+  using basic_intersector<GaussianSplatIntersector>::operator();
+
+  int count = 0;
+  #define K 32
+  struct {
+    float t;
+    float alpha;
+    int prim_id;
+    int geom_id;
+  } hits[K];
+
+  VSNRAY_FUNC
+  hit_record<Ray, primitive<unsigned>> operator()(const Ray &ray, const dco::Gaussian &g) {
+    auto hr = intersect(ray, g);
+
+    if (hr.hit) {
+      if (count < K) {
+        int i = count - 1;
+        while (i >= 0 && hr.t < hits[i].t) {
+          hits[i+1] = hits[i];
+          i--;
+        }
+        hits[i+1] = {hr.t, hr.u/*alpha*/, hr.prim_id, hr.geom_id};
+        count++;
+      }
+
+      // BVH traversal isn't guaranteed to be ordered. If the array is full but
+      // we found a closer hit than the furthest, insert that:
+      else {
+        if (hr.t < hits[K-1].t) {
+          int i = K-2;
+          while (i >= 0 && hr.t < hits[i].t) {
+            hits[i+1] = hits[i];
+            i--;
+          }
+          hits[i+1] = {hr.t, hr.u/*alpha*/, hr.prim_id, hr.geom_id};
+        }
+      }
+    }
+
+    // Don't report a hit: we will use this->count to check if we hit anything
+    hit_record<Ray, primitive<unsigned>> result;
+    result.hit = false;
+    return result;
+  }
+};
+
 VSNRAY_FUNC
 inline float rayMarchGaussianSplats(ScreenSample &ss,
                                     const DeviceObjectRegistry &onDevice,
@@ -386,26 +434,29 @@ inline float rayMarchGaussianSplats(ScreenSample &ss,
   float t = FLT_MAX;
 
   for (;;)  {
-    default_intersector isect;
+    GaussianSplatIntersector isect;
 #if defined(WITH_CUDA) || defined(WITH_HIP)
     auto hr = intersect_ray1_cwbvh<detail::ClosestHit>(ray,vol.asGaussianSplat.splatBVH,isect);
 #else
     auto hr = intersect_ray1_bvhN<detail::ClosestHit>(ray,vol.asGaussianSplat.splatBVH,isect);
 #endif
 
-    if (!hr.hit) break;
+    if (isect.count == 0) break;
 
-    float g_alpha = hr.u;
-    float3 g_color = ((float3 *)vol.asGaussianSplat.colors.data)[hr.prim_id];
+    for (int i=0; i<isect.count; ++i) {
+      float g_t = isect.hits[i].t;
+      float g_alpha = isect.hits[i].alpha;
+      int g_prim_id = isect.hits[i].prim_id;
+      float3 g_color = ((float3 *)vol.asGaussianSplat.colors.data)[g_prim_id];
 
-    color += transmittance * g_alpha * g_color;
-    transmittance *= 1.f - g_alpha;
+      color += transmittance * g_alpha * g_color;
+      transmittance *= 1.f - g_alpha;
 
-    if (t == FLT_MAX) t = hr.t;
+      if (t == FLT_MAX) t = g_t;
+    }
 
     if (transmittance < 0.001f) break;
-
-    ray.tmin = hr.t + 1e-4f;
+    ray.tmin = isect.hits[isect.count-1].t + 1e-4f;
   }
 
   alpha = 1.f - transmittance;
