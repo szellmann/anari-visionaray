@@ -329,11 +329,16 @@ inline vec4 getTangent(
 }
 
 VSNRAY_FUNC
-inline vec4 getAttribute(const dco::Geometry &geom,
-                         const dco::Instance &inst,
-                         dco::Attribute attrib,
-                         unsigned primID,
-                         const vec2 uv)
+#ifdef __CUDACC__
+static __noinline__
+#else
+inline
+#endif
+vec4 getAttribute(const dco::Geometry &geom,
+                  const dco::Instance &inst,
+                  dco::Attribute attrib,
+                  unsigned primID,
+                  const vec2 uv)
 {
   vec4f color{0.f, 0.f, 0.f, 1.f};
 
