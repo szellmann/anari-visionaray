@@ -412,9 +412,11 @@ struct GaussianSplatIntersector : basic_intersector<GaussianSplatIntersector> {
       }
     }
 
-    // Don't report a hit: we will use this->count to check if we hit anything
+    // Only report hits for node culling. "Real" hits are checked for
+    // by inspecting this->count
     hit_record<Ray, primitive<unsigned>> result;
-    result.hit = false;
+    result.hit = (count == K);
+    result.t   = result.hit ? hits[K-1].t : FLT_MAX;
     return result;
   }
 };
