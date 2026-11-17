@@ -190,7 +190,14 @@ inline PixelSample renderSample(ScreenSample &ss, Ray ray, unsigned worldID,
     localRay.ori = (invXfm * float4(ray.ori, 1.f)).xyz();
     localRay.dir = (invXfm * float4(ray.dir, 0.f)).xyz();
 
-    if (vol.field.type == dco::SpatialField::Unstructured) {
+    if (vol.type == dco::Volume::GaussianSplat) {
+      rayMarchGaussianSplats(ss,
+                             onDevice,
+                             localRay,
+                             vol,
+                             color,
+                             alpha);
+    } else if (vol.field.type == dco::SpatialField::Unstructured) {
       // Unstructured volumes: element marching
       elementMarchVolume<0>(ss,
                             onDevice,

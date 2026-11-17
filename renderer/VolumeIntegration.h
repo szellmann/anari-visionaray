@@ -368,6 +368,52 @@ inline float elementMarchVolume(ScreenSample &ss,
 }
 
 //=========================================================
+// Ray marching 3DGS
+//=========================================================
+
+VSNRAY_FUNC
+inline float rayMarchGaussianSplats(ScreenSample &ss,
+                                    const DeviceObjectRegistry &onDevice,
+                                    Ray ray,
+                                    const dco::Volume &vol,
+                                    float3 &color,
+                                    float& alpha)
+{
+  ray.intersectionMask = Ray::GaussianResponse;
+
+  color = float3(0,0,0);
+  float transmittance = 1.f;
+  float t = FLT_MAX;
+
+  for (;;)  {
+    default_intersector isect;
+#if defined(WITH_CUDA) || defined(WITH_HIP)
+    auto hr = intersect_ray1_cwbvh<detail::ClosestHit>(ray,vol.asGaussianSplat.splatBVH,isect);
+#else
+    auto hr = intersect_ray1_bvhN<detail::ClosestHit>(ray,vol.asGaussianSplat.splatBVH,isect);
+#endif
+
+    if (!hr.hit) break;
+
+    float g_alpha = hr.u;
+    float3 g_color = ((float3 *)vol.asGaussianSplat.colors.data)[hr.prim_id];
+
+    color += transmittance * g_alpha * g_color;
+    transmittance *= 1.f - g_alpha;
+
+    if (t == FLT_MAX) t = hr.t;
+
+    if (transmittance < 0.001f) break;
+
+    ray.tmin = hr.t + 1e-4f;
+  }
+
+  alpha = 1.f - transmittance;
+
+  return t;
+}
+
+//=========================================================
 // Ray marching all other field types
 //=========================================================
 

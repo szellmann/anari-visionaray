@@ -48,6 +48,8 @@ struct Ray : basic_ray<float>
     ISOSurface = 0x80,
     Volume = 0x100,
     VolumeBounds = 0x200,
+    GaussianFull = 0x400,
+    GaussianResponse = 0x800,
   };
   unsigned intersectionMask = (unsigned)All;
   float time{0.f};

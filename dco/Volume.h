@@ -122,6 +122,48 @@ struct VolumePRD
 VSNRAY_FUNC
 inline hit_record<Ray, primitive<unsigned>> intersect(Ray r, const Gaussian &g)
 {
+  if (r.intersectionMask & Ray::GaussianResponse) {
+    hit_record<Ray, primitive<unsigned>> result;
+    result.hit = false;
+
+    // compute point of maximum response:
+    mat3 S = mat3::scaling(g.scale);
+    mat4 R4 = rotation(normalize(g.rot));
+    mat3 R(R4.col0.xyz(),R4.col1.xyz(),R4.col2.xyz());
+
+    mat3 SI = inverse(S);
+    mat3 RI = transpose(R);
+
+    mat3 M_inv = SI * RI;
+
+    float3 o = M_inv * (r.ori - g.pos);
+    float3 d = M_inv * r.dir;
+
+    float dd = dot(d,d);
+    float tmax = -dot(o,d) / dd;
+
+    if (tmax < r.tmin) return result;
+
+    // squared distance at closest approach:
+    float3 p = o + tmax * d;
+    float dist2 = dot(p,p);
+
+    // test against cutoff (3 units):
+    if (dist2 > 3*3) return result;
+
+#ifdef __CUDA_ARCH__
+    const float alpha = g.alpha * __expf(-0.5f*dist2);
+#else
+    const float alpha = g.alpha * expf(-0.5f*dist2);
+#endif
+    result.hit     = true;
+    result.u       = alpha; // route alpha through barycentric-u
+    result.t       = tmax;
+    result.prim_id = g.prim_id;
+    result.geom_id = g.geom_id;
+    return result;
+  }
+
   auto xfm = [g](Ray r) {
     mat3 S = mat3::scaling(g.scale);
     mat4 R4 = rotation(normalize(g.rot));

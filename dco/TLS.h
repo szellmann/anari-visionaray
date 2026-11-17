@@ -65,7 +65,7 @@ inline HitRecordVolume intersectVolumes(Ray ray, const TLS &tls)
   prd.rnd = (Random *)ray.prd;
   ray.prd = &prd;
 
-  ray.intersectionMask = Ray::Volume;
+  ray.intersectionMask = Ray::Volume | Ray::GaussianFull;
   auto hr = intersect(ray, tls);
 
   result.primID = hr.prim_id;
