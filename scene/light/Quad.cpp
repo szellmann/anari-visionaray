@@ -21,9 +21,15 @@ void QuadLight::commitParameters()
   m_edge1 = getParam<vec3>("edge1", vec3(1.f, 0.f, 0.f));
   m_edge2 = getParam<vec3>("edge2", vec3(0.f, 1.f, 0.f));
   m_side = getParamString("side", "front");
-  m_intensity = std::clamp(getParam<float>("intensity", 1.f),
-      0.f,
-      std::numeric_limits<float>::max());
+  if (getParam("intensity", ANARI_FLOAT32, &m_intensity)) {
+    m_intensity = std::clamp(m_intensity, 0.f, std::numeric_limits<float>::max());
+  } else if (getParam("power", ANARI_FLOAT32, &m_intensity)) {
+    m_intensity = std::clamp(m_intensity, 0.f, std::numeric_limits<float>::max());
+    m_intensity /= constants::pi<float>();
+  } else if (getParam("radiance", ANARI_FLOAT32, &m_intensity)) {
+    m_intensity = std::clamp(m_intensity, 0.f, std::numeric_limits<float>::max());
+    m_intensity *= length(cross(m_edge1, m_edge2));
+  }
 }
 
 void QuadLight::finalize()
