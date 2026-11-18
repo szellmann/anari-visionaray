@@ -208,7 +208,7 @@ inline void getNormals(const dco::Geometry &geom,
     if (geom.faceVarying.normal.len
         && geom.faceVarying.normal.typeInfo.dataType == ANARI_FLOAT32_VEC3) {
       uint3 index(3 * primID, 3 * primID + 1, 3 * primID + 2);
-      auto *normals = (const vec3 *)geom.vertex.normal.data;
+      auto *normals = (const vec3 *)geom.faceVarying.normal.data;
       vec3 n1 = normals[index.x];
       vec3 n2 = normals[index.y];
       vec3 n3 = normals[index.z];
